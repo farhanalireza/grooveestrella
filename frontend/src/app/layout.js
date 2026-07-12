@@ -1,8 +1,9 @@
-// src/app/layout.js
 import "./globals.css";
 import { Providers } from "./providers";
 import AppLayout from "./AppLayout";
 import { Space_Grotesk, Inter } from "next/font/google";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
@@ -18,24 +19,30 @@ const inter = Inter({
 
 export const metadata = {
   title: "GrooveEstrella | Premium Music Discovery & Social Sharing",
-  description: "Discover curated Spotify tracks, albums, artists, and playlists. Create custom GrooveCards, scan QR codes, and share your favorite tracks seamlessly.",
+  description:
+    "Discover curated Spotify tracks, albums, artists, and playlists. Create custom GrooveCards, scan QR codes, and share your favorite tracks seamlessly.",
+  manifest: "/manifest.json",
+  themeColor: "#07090F",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "GrooveEstrella",
+  },
+  formatDetection: {
+    telephone: false,
+  },
 };
-
-import { ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en" className={`h-full ${spaceGrotesk.variable} ${inter.variable}`}>
-      <body className="min-h-full flex flex-col scrollb-none antialiased font-sans">
+      <body className="min-h-full flex flex-col scrollb-none antialiased font-sans bg-[#07090F] text-[#F4F7FF]">
         <Providers>
-          <AppLayout>
-            {children}
-          </AppLayout>
+          <AppLayout>{children}</AppLayout>
         </Providers>
-        <ToastContainer 
-          position="bottom-right" 
-          autoClose={2500} 
+        <ToastContainer
+          position="bottom-right"
+          autoClose={2500}
           hideProgressBar={false}
           newestOnTop={false}
           closeOnClick
