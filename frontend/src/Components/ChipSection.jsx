@@ -2,7 +2,6 @@
 import React, { useState } from 'react';
 import Chip from './Chip';
 import CategorySelector from './CategorySelector';
-import '../index.css';
 
 const ChipSection = ({ onChipSelect }) => {
   const categories = {

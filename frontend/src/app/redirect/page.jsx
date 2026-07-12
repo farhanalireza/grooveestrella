@@ -1,0 +1,95 @@
+// src/app/redirect/page.jsx
+"use client";
+
+import { useEffect, useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Loader } from "lucide-react";
+
+function RedirectContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [redirectInfo, setRedirectInfo] = useState(null);
+
+  useEffect(() => {
+    const page = searchParams.get("page");
+
+    if (!page) {
+      router.push("/404");
+      return;
+    }
+
+    const redirectMap = {
+      "the-code-breakers": {
+        url: "https://the-code-breakers.vercel.app",
+        newTab: true,
+        name: "The Code Breakers Website",
+      },
+      "discord": {
+        url: "https://discord.gg/your-invite",
+        newTab: true,
+        name: "OopsVincent Discord",
+      },
+      "portfolio": {
+        url: "https://oopsvincent.vercel.app",
+        newTab: false,
+        name: "Vincent’s Portfolio",
+      },
+    };
+
+    const redirectData = redirectMap[page];
+
+    if (redirectData) {
+      setRedirectInfo({ ...redirectData, key: page });
+      console.log(`[Analytics] Redirecting to "${redirectData.name}" (${redirectData.url})`);
+      
+      const timeout = setTimeout(() => {
+        if (redirectData.newTab) {
+          window.open(redirectData.url, "_blank", "noopener noreferrer");
+        } else {
+          window.location.href = redirectData.url;
+        }
+      }, 2000);
+
+      return () => clearTimeout(timeout);
+    } else {
+      router.push("/404");
+    }
+  }, [searchParams, router]);
+
+  if (!redirectInfo) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#07090F] text-[#F4F7FF] px-6 text-center">
+        <Loader className="animate-spin w-8 h-8 text-[#60A5FA] mb-4" />
+        <span className="text-lg">Preparing redirect...</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-[#07090F] text-[#F4F7FF] px-6 text-center">
+      <h1 className="text-2xl font-semibold mb-4">You're being redirected</h1>
+      <p className="text-[#F4F7FF]/80 mb-2">
+        We're taking you to: <span className="text-[#F4F7FF] font-bold underline my-6 tracking-wide">{redirectInfo.name}</span>
+      </p>
+      <p className="text-xs text-[#8992A5]/70 mt-4">
+        If you're not redirected within a few seconds,{" "}
+        <a href={redirectInfo.url} target={redirectInfo.newTab ? "_blank" : "_self"} rel="noopener noreferrer" className="underline text-[#60A5FA]">
+          click here
+        </a>.
+      </p>
+    </div>
+  );
+}
+
+export default function RedirectPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#07090F] text-[#F4F7FF] px-6 text-center">
+        <Loader className="animate-spin w-8 h-8 text-[#60A5FA] mb-4" />
+        <span className="text-lg">Loading...</span>
+      </div>
+    }>
+      <RedirectContent />
+    </Suspense>
+  );
+}

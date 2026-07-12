@@ -40,10 +40,7 @@ const Pagination = ({ currentPage, totalPages, prevUrl, nextUrl, getDataFromDB }
     <div className="flex flex-wrap justify-center gap-2 text-white m-5">
       {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => {
         const offset = (pageNum - 1) * 10;
-        const baseUrl = nextUrl || prevUrl || `${API_BASE_URL}/songs?offset=${offset}&limit=10`;
-        const url = new URL(baseUrl);
-        url.searchParams.set("offset", offset);
-        url.searchParams.set("limit", 10);
+        const pageUrl = `${API_BASE_URL}/songs?offset=${offset}&limit=10`;
 
         return (
           <motion.button
@@ -53,7 +50,7 @@ const Pagination = ({ currentPage, totalPages, prevUrl, nextUrl, getDataFromDB }
             className={`px-3 py-1 rounded-md font-semibold transition-all duration-200 ${
               currentPage === pageNum ? "bg-yellow-400 text-black" : "bg-gray-800 text-white hover:bg-gray-600"
             }`}
-            onClick={() => getDataFromDB(url.toString())}
+            onClick={() => getDataFromDB(pageUrl)}
           >
             {pageNum}
           </motion.button>

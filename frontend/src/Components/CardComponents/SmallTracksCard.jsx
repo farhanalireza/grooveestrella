@@ -1,10 +1,8 @@
-import { PlayButton } from "./PlayButton";
-import { usePlayer } from "../../contexts/PlayerContext";
-import { MoreVertical, Bookmark, EllipsisVertical, CirclePlay } from "lucide-react";
-import { faYoutube } from "@fortawesome/free-brands-svg-icons";
-import { useState, useEffect, useRef } from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { useNavigate } from "react-router-dom";
+// src/Components/CardComponents/SmallTracksCard.jsx
+import { Bookmark, BookmarkCheck, EllipsisVertical, Link as LinkIcon, Music as MusicIcon, ListMusic } from "lucide-react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "react-toastify";
 import {
     DropdownMenu,
     DropdownMenuTrigger,
@@ -12,6 +10,28 @@ import {
     DropdownMenuItem,
     DropdownMenuSeparator,
 } from "../ui/dropdown-menu";
+
+const YouTubeIcon = ({ size = 20, className }) => (
+  <svg 
+    viewBox="0 0 24 24" 
+    fill="currentColor" 
+    className={className} 
+    style={{ width: size, height: size }}
+  >
+    <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+  </svg>
+);
+
+const handleClick = (url) => {
+    if (url) window.open(url, "_blank");
+};
+
+const copyToClipboard = (text) => {
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+        navigator.clipboard.writeText(text);
+        toast.success("Link copied to clipboard! 📋");
+    }
+};
 
 export const AlbumTrackCard = ({
     title,
@@ -21,143 +41,170 @@ export const AlbumTrackCard = ({
     trackURI,
     trackID,
     pos,
+    duration,
+    coverImage,
 }) => {
-    const { showPlayer } = usePlayer();
-    const [menuOpen, setMenuOpen] = useState(false);
-    const navigate = useNavigate();
-    const menuRef = useRef(null);
+    const router = useRouter();
+    const [saved, setSaved] = useState(false);
 
-    const handlePlayClick = () => {
-        if (trackURI && trackURI.startsWith("spotify:")) {
-            showPlayer(trackURI, true, { position: pos });
-        } else {
-            console.warn("Invalid Spotify URI:", trackURI);
-        }
-    };
-
-    const handleClick = (url) => {
-        window.open(url, "_blank");
-    };
-
-    const handleSave = () => {
-        toggleSave();
-    };
-
-    // Close menu when clicking outside
     useEffect(() => {
-        const handleClickOutside = (event) => {
-            if (menuRef.current && !menuRef.current.contains(event.target)) {
-                setMenuOpen(false);
-            }
-        };
+        const savedSongs = JSON.parse(localStorage.getItem("savedSongs")) || [];
+        const isSaved = savedSongs.some(s => s.trackURI === trackURI || s.trackId === trackID);
+        setSaved(isSaved);
+    }, [trackURI, trackID]);
 
-        if (menuOpen) {
-            document.addEventListener('mousedown', handleClickOutside);
+    const toggleSave = (e) => {
+        e.stopPropagation();
+        const savedSongs = JSON.parse(localStorage.getItem("savedSongs")) || [];
+        if (saved) {
+            const updated = savedSongs.filter(s => s.trackURI !== trackURI && s.trackId !== trackID);
+            localStorage.setItem("savedSongs", JSON.stringify(updated));
+            setSaved(false);
+            toast.info(`"${title}" removed from your library.`);
+        } else {
+            const newSong = {
+                title,
+                artist,
+                spoURL,
+                trackURI,
+                trackId: trackID,
+            };
+            savedSongs.push(newSong);
+            localStorage.setItem("savedSongs", JSON.stringify(savedSongs));
+            setSaved(true);
+            toast.success(`"${title}" saved to library! 🎵`);
         }
+    };
 
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
-        };
-    }, [menuOpen]);
+    const artistsQuery = artist?.map(a => a.name).join(' ') || '';
+    const appleURL = `https://music.apple.com/us/search?term=${encodeURIComponent(title + ' ' + artistsQuery)}`;
+    const tidalURL = `https://listen.tidal.com/search?q=${encodeURIComponent(title + ' ' + artistsQuery)}`;
+    const soundcloudURL = `https://soundcloud.com/search?q=${encodeURIComponent(title + ' ' + artistsQuery)}`;
 
     return (
-        <div className="flex items-center justify-between px-3 sm:px-4 py-2 border border-gray-700 hover:bg-gray-800 transition-colors duration-300 rounded-xl w-full min-w-0">
-            <div className="flex items-center gap-3 sm:gap-5 min-w-0 flex-1">
-                <div className="flex-shrink-0">
-                    <PlayButton onPlay={handlePlayClick} />
+        <div className="group flex items-center justify-between p-3.5 bg-zinc-900/20 backdrop-blur-md border border-white/5 hover:border-emerald-500/20 hover:bg-white/5 rounded-2xl transition-all duration-300 w-full min-w-0 relative">
+            <div className="flex items-center gap-4 min-w-0 flex-1">
+                <div className="flex-shrink-0 w-6 flex items-center justify-center">
+                    <span className="text-zinc-500 group-hover:text-emerald-400 font-bold text-sm transition-colors">{pos + 1}</span>
                 </div>
 
-                {/* Title & Artist - with proper overflow handling */}
-                <div className="flex flex-col gap-1 min-w-0 flex-1">
-                    <h3
-                        className="text-sm font-semibold text-white truncate cursor-pointer hover:underline leading-tight"
+                <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+                    <h3 
+                        className="text-sm font-bold text-white truncate cursor-pointer hover:text-emerald-400 transition-colors"
                         title={title}
-                        onClick={() => navigate(`/track/${trackID}`)}
+                        onClick={() => router.push(`/track/${trackID}`)}
                     >
                         {title}
                     </h3>
-                    <div className="text-xs text-gray-300 truncate">
-                        {artist.map((a, i) => (
-                            <span key={a.id}>
-                                <span
-                                    className="hover:underline cursor-pointer"
-                                    onClick={() => navigate(`/artist/${a.id}`)}
-                                    title={a.name}
-                                >
-                                    {a.name}
-                                </span>
-                                {i < artist.length - 1 && ", "}
+                    <div className="text-xs text-zinc-400 truncate">
+                        {artist?.map((a, i) => (
+                            <span 
+                                key={a.id || i} 
+                                className="hover:underline cursor-pointer"
+                                onClick={() => a.id && router.push(`/artist/${a.id}`)}
+                            >
+                                {a.name}{i < artist.length - 1 && ", "}
                             </span>
                         ))}
                     </div>
                 </div>
             </div>
 
-            {/* Buttons */}
-            <div className="flex items-center gap-2 flex-shrink-0">
-                {/* Desktop Buttons */}
-                <div className="hidden sm:flex items-center gap-3">
-                    <img
-                        src="/2024-spotify-logo-icon/Primary_Logo_Green_RGB.svg"
-                        className="w-6 h-6 cursor-pointer hover:opacity-80 transition-opacity"
-                        onClick={() => handleClick(spoURL)}
-                        alt="Spotify"
-                    />
-                    <FontAwesomeIcon
-                        icon={faYoutube}
-                        className="text-2xl cursor-pointer text-red-500 hover:text-red-400 transition-colors"
-                        onClick={() => handleClick(YTURL)}
-                    />
-                </div>
+            <div className="flex items-center gap-3 flex-shrink-0 ml-4">
+                {duration && <span className="text-xs text-zinc-500 font-medium">{duration}</span>}
+                
+                {/* Save button */}
+                <button 
+                    onClick={toggleSave}
+                    className={`p-1.5 rounded-lg hover:bg-white/10 transition duration-200 ${saved ? "text-emerald-400" : "text-zinc-500 hover:text-white"}`}
+                >
+                    {saved ? <BookmarkCheck size={16} /> : <Bookmark size={16} />}
+                </button>
 
-                {/* Mobile Menu Toggle */}
-                <div className="sm:hidden relative" ref={menuRef}>
-                    <MoreVertical
-                        size={20}
-                        className="cursor-pointer text-white hover:text-gray-300 transition-colors"
-                        onClick={() => setMenuOpen((prev) => !prev)}
-                    />
-
-                    {/* Dropdown Menu */}
-                    {menuOpen && (
-                        <div className="absolute right-0 top-8 z-50 bg-gray-900 border border-gray-700 rounded-md shadow-lg w-44 p-2 space-y-1 text-sm">
-                            <div
-                                className="flex items-center gap-3 text-white hover:bg-gray-800 p-2 rounded cursor-pointer transition-colors"
-                                onClick={() => {
-                                    handleClick(spoURL);
-                                    setMenuOpen(false);
-                                }}
+                {/* Dropdown Menu for external platforms */}
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <button className="p-1.5 rounded-lg hover:bg-white/10 text-zinc-400 hover:text-white transition">
+                            <EllipsisVertical size={16} />
+                        </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent 
+                        className="bg-zinc-900/95 backdrop-blur-2xl text-white min-w-[180px] rounded-2xl p-2 border border-white/10 shadow-2xl"
+                        align="end"
+                        sideOffset={8}
+                    >
+                        <DropdownMenuItem
+                            onSelect={() => {
+                                const trackToAdd = {
+                                    title,
+                                    artist: Array.isArray(artist) ? artist : [{ name: artist || 'Unknown Artist' }],
+                                    spoURL,
+                                    image: coverImage || '',
+                                    trackId: trackID,
+                                    trackURI: trackURI,
+                                };
+                                window.dispatchEvent(new CustomEvent('open-playlist-picker', { detail: { track: trackToAdd } }));
+                            }}
+                            className="cursor-pointer px-3 py-2 hover:bg-white/10 rounded-xl transition flex items-center gap-2 text-emerald-400"
+                        >
+                            <ListMusic size={14} />
+                            Add to Playlist
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                            onSelect={() => router.push(`/track/${trackID}`)}
+                            className="cursor-pointer px-3 py-2 hover:bg-white/10 rounded-xl transition flex items-center gap-2"
+                        >
+                            <MusicIcon size={14} className="text-emerald-400" />
+                            Track Details
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                            onSelect={() => copyToClipboard(spoURL || `${window.location.origin}/track/${trackID}`)}
+                            className="cursor-pointer px-3 py-2 hover:bg-white/10 rounded-xl transition flex items-center gap-2"
+                        >
+                            <LinkIcon size={14} className="text-zinc-400" />
+                            Copy Link
+                        </DropdownMenuItem>
+                        
+                        <DropdownMenuSeparator className="my-1 bg-white/5" />
+                        
+                        {spoURL && (
+                            <DropdownMenuItem
+                                onSelect={() => handleClick(spoURL)}
+                                className="cursor-pointer px-3 py-2 hover:bg-white/10 rounded-xl transition flex items-center gap-2"
                             >
-                                <img
-                                    src="/2024-spotify-logo-icon/Primary_Logo_Green_RGB.svg"
-                                    className="w-4 h-4"
-                                    alt="Spotify"
-                                />
-                                Open in Spotify
-                            </div>
-                            <div
-                                className="flex items-center gap-3 text-white hover:bg-gray-800 p-2 rounded cursor-pointer transition-colors"
-                                onClick={() => {
-                                    handleClick(YTURL);
-                                    setMenuOpen(false);
-                                }}
+                                <img src="/2024-spotify-logo-icon/Primary_Logo_Green_RGB.svg" className="w-4 h-4" alt="Spotify" />
+                                Spotify
+                            </DropdownMenuItem>
+                        )}
+                        {YTURL && (
+                            <DropdownMenuItem
+                                onSelect={() => handleClick(YTURL)}
+                                className="cursor-pointer px-3 py-2 hover:bg-white/10 rounded-xl transition flex items-center gap-2"
                             >
-                                <FontAwesomeIcon icon={faYoutube} className="w-4 h-4 text-red-500" />
-                                Open on YouTube
-                            </div>
-                            <div
-                                className="flex items-center gap-3 text-white hover:bg-gray-800 p-2 rounded cursor-pointer transition-colors"
-                                onClick={() => {
-                                    handleSave();
-                                    setMenuOpen(false);
-                                }}
-                            >
-                                <Bookmark size={16} />
-                                Save Track
-                            </div>
-                        </div>
-                    )}
-                </div>
+                                <YouTubeIcon size={16} className="text-red-500" />
+                                YouTube
+                            </DropdownMenuItem>
+                        )}
+                        <DropdownMenuItem
+                            onSelect={() => handleClick(appleURL)}
+                            className="cursor-pointer px-3 py-2 hover:bg-white/10 rounded-xl transition flex items-center gap-2"
+                        >
+                            <span className="text-[#FC3C44] font-extrabold text-[10px]"></span> Apple Music
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                            onSelect={() => handleClick(tidalURL)}
+                            className="cursor-pointer px-3 py-2 hover:bg-white/10 rounded-xl transition flex items-center gap-2"
+                        >
+                            <span className="text-cyan-400 font-extrabold text-[10px]">❖</span> Tidal
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                            onSelect={() => handleClick(soundcloudURL)}
+                            className="cursor-pointer px-3 py-2 hover:bg-white/10 rounded-xl transition flex items-center gap-2"
+                        >
+                            <span className="text-orange-500 font-extrabold text-[10px]">☁</span> SoundCloud
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
             </div>
         </div>
     );
@@ -174,180 +221,166 @@ export const ArtistTrackCard = ({
     pos,
     duration,
 }) => {
-    const { showPlayer } = usePlayer();
-    const [menuOpen, setMenuOpen] = useState(false);
-    const navigate = useNavigate();
-    const menuRef = useRef(null);
-        const [saved, setSaved] = useState(false);
-
-
-    // console.log(albumID);
-
+    const router = useRouter();
+    const [saved, setSaved] = useState(false);
 
     useEffect(() => {
         const savedSongs = JSON.parse(localStorage.getItem("savedSongs")) || [];
-        const isSaved = savedSongs.some(
-            (album) => album.trackURI === trackURI
-        );
+        const isSaved = savedSongs.some(s => s.trackURI === trackURI || s.trackId === trackID);
         setSaved(isSaved);
-    }, [trackURI]);
+    }, [trackURI, trackID]);
 
-    function toggleSave() {
+    const toggleSave = (e) => {
+        e.stopPropagation();
         const savedSongs = JSON.parse(localStorage.getItem("savedSongs")) || [];
-
         if (saved) {
-            // REMOVE by trackURI
-            const updated = savedSongs.filter(song => song.trackURI !== trackURI);
+            const updated = savedSongs.filter(s => s.trackURI !== trackURI && s.trackId !== trackID);
             localStorage.setItem("savedSongs", JSON.stringify(updated));
             setSaved(false);
+            toast.info(`"${title}" removed from your library.`);
         } else {
-            // ADD the song
             const newSong = {
                 title,
-                artist,
                 spoURL,
-                image: url,
-                popularity,
-                explicit,
+                image: coverImage,
                 trackURI,
                 album,
+                trackId: trackID,
             };
             savedSongs.push(newSong);
             localStorage.setItem("savedSongs", JSON.stringify(savedSongs));
             setSaved(true);
-        }
-    }
-
-    const handlePlayClick = () => {
-        if (trackURI && trackURI.startsWith("spotify:")) {
-            showPlayer(trackURI, true, { position: pos });
-        } else {
-            console.warn("Invalid Spotify URI:", trackURI);
+            toast.success(`"${title}" saved to library! 🎵`);
         }
     };
 
-    const handleClick = (url) => {
-        window.open(url, "_blank");
-    };
-
-    const handleSave = () => {
-        toggleSave();
-    };
-
-    // Close menu when clicking outside
-    useEffect(() => {
-        const handleClickOutside = (event) => {
-            if (menuRef.current && !menuRef.current.contains(event.target)) {
-                setMenuOpen(false);
-            }
-        };
-
-        if (menuOpen) {
-            document.addEventListener('mousedown', handleClickOutside);
-        }
-
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
-        };
-    }, [menuOpen]);
+    const artistsQuery = typeof album === "string" ? album : album?.name || "";
+    const appleURL = `https://music.apple.com/us/search?term=${encodeURIComponent(title + ' ' + artistsQuery)}`;
+    const tidalURL = `https://listen.tidal.com/search?q=${encodeURIComponent(title + ' ' + artistsQuery)}`;
+    const soundcloudURL = `https://soundcloud.com/search?q=${encodeURIComponent(title + ' ' + artistsQuery)}`;
 
     return (
-        <div className="flex items-center justify-between px-3 sm:px-4 py-2 border border-gray-700 hover:bg-gray-800 transition-colors duration-300 rounded-xl w-full min-w-0 relative">
-            <div className="flex items-center gap-3 sm:gap-5 min-w-0 flex-1">
-                {/* Album Cover */}
-                <div className="flex-shrink-0 relative group">
-                    <img
-                        src={coverImage}
-                        alt={title}
-                        className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg object-cover"
-                        onError={(e) => {
-                            e.target.src = '/default-cover.png'; // Fallback image
-                        }}
-                    />
-                    <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
-                        <PlayButton onPlay={handlePlayClick} size="small" />
-                    </div>
+        <div className="group flex items-center justify-between p-3.5 bg-zinc-900/20 backdrop-blur-md border border-white/5 hover:border-purple-500/20 hover:bg-white/5 rounded-2xl transition-all duration-300 w-full min-w-0 relative">
+            <div className="flex items-center gap-4 min-w-0 flex-1">
+                <div className="flex-shrink-0 w-6 flex items-center justify-center">
+                    <span className="text-zinc-500 group-hover:text-purple-400 font-bold text-sm transition-colors">{pos + 1}</span>
                 </div>
 
-                {/* Title & Album */}
-                <div className="flex flex-col gap-1 min-w-0 flex-1">
-                    <h3
-                        className="text-sm font-semibold text-white truncate cursor-pointer hover:underline leading-tight"
+                <div className="flex-shrink-0 relative w-10 h-10 rounded-lg overflow-hidden bg-zinc-800 border border-white/5">
+                    <img
+                        src={coverImage || "https://placehold.co/100x100?text=Cover"}
+                        alt={title}
+                        className="w-full h-full object-cover"
+                    />
+                </div>
+
+                <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+                    <h3 
+                        className="text-sm font-bold text-white truncate cursor-pointer hover:text-purple-400 transition-colors"
                         title={title}
-                        onClick={() => navigate(`/album/${album.id}`)}
+                        onClick={() => router.push(`/track/${trackID}`)}
                     >
                         {title}
                     </h3>
-                    <div className="text-xs text-gray-300 truncate">
-                        {/* <span
-                            className="hover:underline cursor-pointer"
-                            onClick={() => navigate(`/album/${album.id}`)}
-                            title={album.name}
-                        >
-                            {album.name}
-                        </span> */}
-                    </div>
+                    <span className="text-xs text-zinc-500 truncate">{album?.name || album}</span>
                 </div>
-
-                {/* Duration - visible on larger screens */}
-                {duration && (
-                    <div className="hidden md:block flex-shrink-0 text-xs text-gray-400">
-                        {duration}
-                    </div>
-                )}
             </div>
 
-            {/* Buttons */}
-            <div className="flex items-center gap-2 flex-shrink-0">
-                {/* Desktop Buttons */}
-                <div className="hidden sm:flex items-center gap-3">
-                    <img
-                        src="/2024-spotify-logo-icon/Primary_Logo_Green_RGB.svg"
-                        className="w-6 h-6 cursor-pointer hover:opacity-80 transition-opacity"
-                        onClick={() => handleClick(spoURL)}
-                        alt="Spotify"
-                    />
-                    <FontAwesomeIcon
-                        icon={faYoutube}
-                        className="text-2xl cursor-pointer text-red-500 hover:text-red-400 transition-colors"
-                        onClick={() => handleClick(YTURL)}
-                    />
-                </div>
+            <div className="flex items-center gap-3 flex-shrink-0 ml-4">
+                {duration && <span className="text-xs text-zinc-500 font-medium">{duration}</span>}
+                
+                {/* Save button */}
+                <button 
+                    onClick={toggleSave}
+                    className={`p-1.5 rounded-lg hover:bg-white/10 transition duration-200 ${saved ? "text-purple-400" : "text-zinc-500 hover:text-white"}`}
+                >
+                    {saved ? <BookmarkCheck size={16} /> : <Bookmark size={16} />}
+                </button>
 
-                {/* Mobile Menu Toggle */}
-                <div className="flex sm:hidden justify-end items-start z-30 absolute bottom-0 right-1">
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <button className="text-white p-2 rounded-md hover:bg-white/10 transition">
-                                <EllipsisVertical />
-                            </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent className="bg-black text-white min-w-[8rem] rounded-md p-1 z-200">
+                {/* Dropdown Menu for external platforms */}
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <button className="p-1.5 rounded-lg hover:bg-white/10 text-zinc-400 hover:text-white transition">
+                            <EllipsisVertical size={16} />
+                        </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent 
+                        className="bg-zinc-900/95 backdrop-blur-2xl text-white min-w-[180px] rounded-2xl p-2 border border-white/10 shadow-2xl"
+                        align="end"
+                        sideOffset={8}
+                    >
+                        <DropdownMenuItem
+                            onSelect={() => {
+                                const trackToAdd = {
+                                    title,
+                                    artist: [{ name: typeof album === "string" ? album : album?.name || "Unknown Artist" }],
+                                    spoURL,
+                                    image: coverImage || '',
+                                    trackId: trackID,
+                                    trackURI: trackURI,
+                                };
+                                window.dispatchEvent(new CustomEvent('open-playlist-picker', { detail: { track: trackToAdd } }));
+                            }}
+                            className="cursor-pointer px-3 py-2 hover:bg-white/10 rounded-xl transition flex items-center gap-2 text-emerald-400"
+                        >
+                            <ListMusic size={14} />
+                            Add to Playlist
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                            onSelect={() => router.push(`/track/${trackID}`)}
+                            className="cursor-pointer px-3 py-2 hover:bg-white/10 rounded-xl transition flex items-center gap-2"
+                        >
+                            <MusicIcon size={14} className="text-purple-400" />
+                            Track Details
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                            onSelect={() => copyToClipboard(spoURL || `${window.location.origin}/track/${trackID}`)}
+                            className="cursor-pointer px-3 py-2 hover:bg-white/10 rounded-xl transition flex items-center gap-2"
+                        >
+                            <LinkIcon size={14} className="text-zinc-400" />
+                            Copy Link
+                        </DropdownMenuItem>
+                        
+                        <DropdownMenuSeparator className="my-1 bg-white/5" />
+                        
+                        {spoURL && (
                             <DropdownMenuItem
-                                onSelect={handlePlayClick}
-                                className="cursor-pointer px-3 py-2 hover:bg-white/10"
+                                onSelect={() => handleClick(spoURL)}
+                                className="cursor-pointer px-3 py-2 hover:bg-white/10 rounded-xl transition flex items-center gap-2"
                             >
-                                <CirclePlay className="mr-2" size={16} /> Play
+                                <img src="/2024-spotify-logo-icon/Primary_Logo_Green_RGB.svg" className="w-4 h-4" alt="Spotify" />
+                                Spotify
                             </DropdownMenuItem>
-                            <DropdownMenuSeparator className="my-1 bg-gray-700" />
+                        )}
+                        {YTURL && (
                             <DropdownMenuItem
-                                onSelect={handleSave}
-                                className="cursor-pointer px-3 py-2 hover:bg-white/10"
+                                onSelect={() => handleClick(YTURL)}
+                                className="cursor-pointer px-3 py-2 hover:bg-white/10 rounded-xl transition flex items-center gap-2"
                             >
-                                {saved ? (
-                                    <>
-                                        <BookmarkCheck className="mr-2" size={16} /> Saved
-                                    </>
-                                ) : (
-                                    <>
-                                        <Bookmark className="mr-2" size={16} /> Save
-                                    </>
-                                )}
+                                <YouTubeIcon size={16} className="text-red-500" />
+                                YouTube
                             </DropdownMenuItem>
-
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                </div>
+                        )}
+                        <DropdownMenuItem
+                            onSelect={() => handleClick(appleURL)}
+                            className="cursor-pointer px-3 py-2 hover:bg-white/10 rounded-xl transition flex items-center gap-2"
+                        >
+                            <span className="text-[#FC3C44] font-extrabold text-[10px]"></span> Apple Music
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                            onSelect={() => handleClick(tidalURL)}
+                            className="cursor-pointer px-3 py-2 hover:bg-white/10 rounded-xl transition flex items-center gap-2"
+                        >
+                            <span className="text-cyan-400 font-extrabold text-[10px]">❖</span> Tidal
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                            onSelect={() => handleClick(soundcloudURL)}
+                            className="cursor-pointer px-3 py-2 hover:bg-white/10 rounded-xl transition flex items-center gap-2"
+                        >
+                            <span className="text-orange-500 font-extrabold text-[10px]">☁</span> SoundCloud
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
             </div>
         </div>
     );
@@ -364,190 +397,178 @@ export const PlaylistTrackCard = ({
     trackID,
     pos,
     duration,
-    addedAt, // When track was added to playlist
 }) => {
-    const { showPlayer } = usePlayer();
-    const [menuOpen, setMenuOpen] = useState(false);
-    const navigate = useNavigate();
-    const menuRef = useRef(null);
+    const router = useRouter();
+    const [saved, setSaved] = useState(false);
 
-    const handlePlayClick = () => {
-        if (trackURI && trackURI.startsWith("spotify:")) {
-            showPlayer(trackURI, true, { position: pos });
-        } else {
-            console.warn("Invalid Spotify URI:", trackURI);
-        }
-    };
-
-    const handleClick = (url) => {
-        window.open(url, "_blank");
-    };
-
-    const handleSave = () => {
-        toggleSave();
-    };
-
-    const handleRemoveFromPlaylist = () => {
-        console.log("Remove from playlist", title);
-        // Your remove logic here
-    };
-
-    // Close menu when clicking outside
     useEffect(() => {
-        const handleClickOutside = (event) => {
-            if (menuRef.current && !menuRef.current.contains(event.target)) {
-                setMenuOpen(false);
-            }
-        };
+        const savedSongs = JSON.parse(localStorage.getItem("savedSongs")) || [];
+        const isSaved = savedSongs.some(s => s.trackURI === trackURI || s.trackId === trackID);
+        setSaved(isSaved);
+    }, [trackURI, trackID]);
 
-        if (menuOpen) {
-            document.addEventListener('mousedown', handleClickOutside);
+    const toggleSave = (e) => {
+        e.stopPropagation();
+        const savedSongs = JSON.parse(localStorage.getItem("savedSongs")) || [];
+        if (saved) {
+            const updated = savedSongs.filter(s => s.trackURI !== trackURI && s.trackId !== trackID);
+            localStorage.setItem("savedSongs", JSON.stringify(updated));
+            setSaved(false);
+            toast.info(`"${title}" removed from your library.`);
+        } else {
+            const newSong = {
+                title,
+                artist,
+                spoURL,
+                image: coverImage,
+                trackURI,
+                album,
+                trackId: trackID,
+            };
+            savedSongs.push(newSong);
+            localStorage.setItem("savedSongs", JSON.stringify(savedSongs));
+            setSaved(true);
+            toast.success(`"${title}" saved to library! 🎵`);
         }
+    };
 
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
-        };
-    }, [menuOpen]);
+    const artistsQuery = artist?.map(a => a.name).join(' ') || '';
+    const appleURL = `https://music.apple.com/us/search?term=${encodeURIComponent(title + ' ' + artistsQuery)}`;
+    const tidalURL = `https://listen.tidal.com/search?q=${encodeURIComponent(title + ' ' + artistsQuery)}`;
+    const soundcloudURL = `https://soundcloud.com/search?q=${encodeURIComponent(title + ' ' + artistsQuery)}`;
 
     return (
-        <div className="flex items-center justify-between px-3 sm:px-4 py-2 border border-gray-700 hover:bg-gray-800 transition-colors duration-300 rounded-xl w-full min-w-0">
-            <div className="flex items-center gap-3 sm:gap-5 min-w-0 flex-1">
-                {/* Album Cover */}
-                <div className="flex-shrink-0 relative group">
-                    <img
-                        src={coverImage}
-                        alt={title}
-                        className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg object-cover"
-                        onError={(e) => {
-                            e.target.src = '/default-cover.png'; // Fallback image
-                        }}
-                    />
-                    <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
-                        <PlayButton onPlay={handlePlayClick} size="small" />
-                    </div>
+        <div className="group flex items-center justify-between p-3.5 bg-zinc-900/20 backdrop-blur-md border border-white/5 hover:border-orange-500/20 hover:bg-white/5 rounded-2xl transition-all duration-300 w-full min-w-0 relative">
+            <div className="flex items-center gap-4 min-w-0 flex-1">
+                <div className="flex-shrink-0 w-6 flex items-center justify-center">
+                    <span className="text-zinc-500 group-hover:text-orange-400 font-bold text-sm transition-colors">{pos + 1}</span>
                 </div>
 
-                {/* Title & Artist */}
-                <div className="flex flex-col gap-1 min-w-0 flex-1">
-                    <h3
-                        className="text-sm font-semibold text-white truncate cursor-pointer hover:underline leading-tight"
+                <div className="flex-shrink-0 relative w-10 h-10 rounded-lg overflow-hidden bg-zinc-800 border border-white/5">
+                    <img
+                        src={coverImage || "https://placehold.co/100x100?text=Cover"}
+                        alt={title}
+                        className="w-full h-full object-cover"
+                    />
+                </div>
+
+                <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+                    <h3 
+                        className="text-sm font-bold text-white truncate cursor-pointer hover:text-orange-400 transition-colors"
                         title={title}
-                        onClick={() => navigate(`/track/${trackID}`)}
+                        onClick={() => router.push(`/track/${trackID}`)}
                     >
                         {title}
                     </h3>
-                    <div className="text-xs text-gray-300 truncate">
-                        {artist.map((a, i) => (
-                            <span key={a.id}>
-                                <span
-                                    className="hover:underline cursor-pointer"
-                                    onClick={() => navigate(`/artist/${a.id}`)}
-                                    title={a.name}
-                                >
-                                    {a.name}
-                                </span>
-                                {i < artist.length - 1 && ", "}
+                    <div className="text-xs text-zinc-400 truncate">
+                        {artist?.map((a, i) => (
+                            <span 
+                                key={a.id || i} 
+                                className="hover:underline cursor-pointer"
+                                onClick={() => a.id && router.push(`/artist/${a.id}`)}
+                            >
+                                {a.name}{i < artist.length - 1 && ", "}
                             </span>
                         ))}
-                        {album && (
-                            <>
-                                <span className="mx-1">•</span>
-                                <span
-                                    className="hover:underline cursor-pointer"
-                                    onClick={() => navigate(`/album/${album.id}`)}
-                                    title={album.name}
-                                >
-                                    {album.name}
-                                </span>
-                            </>
-                        )}
                     </div>
-                </div>
-
-                {/* Duration and Added Date - visible on larger screens */}
-                <div className="hidden lg:flex flex-col items-end gap-1 flex-shrink-0 text-xs text-gray-400">
-                    {addedAt && <span>{addedAt}</span>}
-                    {duration && <span>{duration}</span>}
                 </div>
             </div>
 
-            {/* Buttons */}
-            <div className="flex items-center gap-2 flex-shrink-0">
-                {/* Desktop Buttons */}
-                <div className="hidden sm:flex items-center gap-3">
-                    <img
-                        src="/2024-spotify-logo-icon/Primary_Logo_Green_RGB.svg"
-                        className="w-6 h-6 cursor-pointer hover:opacity-80 transition-opacity"
-                        onClick={() => handleClick(spoURL)}
-                        alt="Spotify"
-                    />
-                    <FontAwesomeIcon
-                        icon={faYoutube}
-                        className="text-2xl cursor-pointer text-red-500 hover:text-red-400 transition-colors"
-                        onClick={() => handleClick(YTURL)}
-                    />
-                </div>
+            <div className="flex items-center gap-3 flex-shrink-0 ml-4">
+                {duration && <span className="text-xs text-zinc-500 font-medium">{duration}</span>}
+                
+                {/* Save button */}
+                <button 
+                    onClick={toggleSave}
+                    className={`p-1.5 rounded-lg hover:bg-white/10 transition duration-200 ${saved ? "text-orange-400" : "text-zinc-500 hover:text-white"}`}
+                >
+                    {saved ? <BookmarkCheck size={16} /> : <Bookmark size={16} />}
+                </button>
 
-                {/* Mobile Menu Toggle */}
-                <div className="sm:hidden relative" ref={menuRef}>
-                    <MoreVertical
-                        size={20}
-                        className="cursor-pointer text-white hover:text-gray-300 transition-colors"
-                        onClick={() => setMenuOpen((prev) => !prev)}
-                    />
-
-                    {/* Dropdown Menu */}
-                    {menuOpen && (
-                        <div className="absolute right-0 top-8 z-50 bg-gray-900 border border-gray-700 rounded-md shadow-lg w-48 p-2 space-y-1 text-sm">
-                            <div
-                                className="flex items-center gap-3 text-white hover:bg-gray-800 p-2 rounded cursor-pointer transition-colors"
-                                onClick={() => {
-                                    handleClick(spoURL);
-                                    setMenuOpen(false);
-                                }}
+                {/* Dropdown Menu for external platforms */}
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <button className="p-1.5 rounded-lg hover:bg-white/10 text-zinc-400 hover:text-white transition">
+                            <EllipsisVertical size={16} />
+                        </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent 
+                        className="bg-zinc-900/95 backdrop-blur-2xl text-white min-w-[180px] rounded-2xl p-2 border border-white/10 shadow-2xl"
+                        align="end"
+                        sideOffset={8}
+                    >
+                        <DropdownMenuItem
+                            onSelect={() => {
+                                const trackToAdd = {
+                                    title,
+                                    artist: Array.isArray(artist) ? artist : [{ name: artist || 'Unknown Artist' }],
+                                    spoURL,
+                                    image: coverImage || '',
+                                    trackId: trackID,
+                                    trackURI: trackURI,
+                                };
+                                window.dispatchEvent(new CustomEvent('open-playlist-picker', { detail: { track: trackToAdd } }));
+                            }}
+                            className="cursor-pointer px-3 py-2 hover:bg-white/10 rounded-xl transition flex items-center gap-2 text-emerald-400"
+                        >
+                            <ListMusic size={14} />
+                            Add to Playlist
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                            onSelect={() => router.push(`/track/${trackID}`)}
+                            className="cursor-pointer px-3 py-2 hover:bg-white/10 rounded-xl transition flex items-center gap-2"
+                        >
+                            <MusicIcon size={14} className="text-orange-400" />
+                            Track Details
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                            onSelect={() => copyToClipboard(spoURL || `${window.location.origin}/track/${trackID}`)}
+                            className="cursor-pointer px-3 py-2 hover:bg-white/10 rounded-xl transition flex items-center gap-2"
+                        >
+                            <LinkIcon size={14} className="text-zinc-400" />
+                            Copy Link
+                        </DropdownMenuItem>
+                        
+                        <DropdownMenuSeparator className="my-1 bg-white/5" />
+                        
+                        {spoURL && (
+                            <DropdownMenuItem
+                                onSelect={() => handleClick(spoURL)}
+                                className="cursor-pointer px-3 py-2 hover:bg-white/10 rounded-xl transition flex items-center gap-2"
                             >
-                                <img
-                                    src="/2024-spotify-logo-icon/Primary_Logo_Green_RGB.svg"
-                                    className="w-4 h-4"
-                                    alt="Spotify"
-                                />
-                                Open in Spotify
-                            </div>
-                            <div
-                                className="flex items-center gap-3 text-white hover:bg-gray-800 p-2 rounded cursor-pointer transition-colors"
-                                onClick={() => {
-                                    handleClick(YTURL);
-                                    setMenuOpen(false);
-                                }}
+                                <img src="/2024-spotify-logo-icon/Primary_Logo_Green_RGB.svg" className="w-4 h-4" alt="Spotify" />
+                                Spotify
+                            </DropdownMenuItem>
+                        )}
+                        {YTURL && (
+                            <DropdownMenuItem
+                                onSelect={() => handleClick(YTURL)}
+                                className="cursor-pointer px-3 py-2 hover:bg-white/10 rounded-xl transition flex items-center gap-2"
                             >
-                                <FontAwesomeIcon icon={faYoutube} className="w-4 h-4 text-red-500" />
-                                Open on YouTube
-                            </div>
-                            <div
-                                className="flex items-center gap-3 text-white hover:bg-gray-800 p-2 rounded cursor-pointer transition-colors"
-                                onClick={() => {
-                                    handleSave();
-                                    setMenuOpen(false);
-                                }}
-                            >
-                                <Bookmark size={16} />
-                                Save Track
-                            </div>
-                            <div
-                                className="flex items-center gap-3 text-white hover:bg-gray-800 p-2 rounded cursor-pointer transition-colors"
-                                onClick={() => {
-                                    handleRemoveFromPlaylist();
-                                    setMenuOpen(false);
-                                }}
-                            >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                                Remove from Playlist
-                            </div>
-                        </div>
-                    )}
-                </div>
+                                <YouTubeIcon size={16} className="text-red-500" />
+                                YouTube
+                            </DropdownMenuItem>
+                        )}
+                        <DropdownMenuItem
+                            onSelect={() => handleClick(appleURL)}
+                            className="cursor-pointer px-3 py-2 hover:bg-white/10 rounded-xl transition flex items-center gap-2"
+                        >
+                            <span className="text-[#FC3C44] font-extrabold text-[10px]"></span> Apple Music
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                            onSelect={() => handleClick(tidalURL)}
+                            className="cursor-pointer px-3 py-2 hover:bg-white/10 rounded-xl transition flex items-center gap-2"
+                        >
+                            <span className="text-cyan-400 font-extrabold text-[10px]">❖</span> Tidal
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                            onSelect={() => handleClick(soundcloudURL)}
+                            className="cursor-pointer px-3 py-2 hover:bg-white/10 rounded-xl transition flex items-center gap-2"
+                        >
+                            <span className="text-orange-500 font-extrabold text-[10px]">☁</span> SoundCloud
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
             </div>
         </div>
     );
@@ -562,87 +583,82 @@ export const SmallTrackCardWithCover = ({
     trackURI,
     trackID,
     pos,
-    subtitle, // For playlist description or additional info
+    subtitle,
 }) => {
-    const { showPlayer } = usePlayer();
-    const [menuOpen, setMenuOpen] = useState(false);
-    const navigate = useNavigate();
-    const menuRef = useRef(null);
+    const router = useRouter();
+    const [saved, setSaved] = useState(false);
 
-    const handlePlayClick = () => {
-        if (trackURI && trackURI.startsWith("spotify:")) {
-            showPlayer(trackURI, true, { position: pos });
-        } else {
-            console.warn("Invalid Spotify URI:", trackURI);
-        }
-    };
-
-    const handleClick = (url) => {
-        window.open(url, "_blank");
-    };
-
-    const handleSave = () => {
-        toggleSave();
-    };
-
-    // Close menu when clicking outside
     useEffect(() => {
-        const handleClickOutside = (event) => {
-            if (menuRef.current && !menuRef.current.contains(event.target)) {
-                setMenuOpen(false);
-            }
-        };
+        const savedSongs = JSON.parse(localStorage.getItem("savedSongs")) || [];
+        const isSaved = savedSongs.some(s => s.trackURI === trackURI || s.trackId === trackID);
+        setSaved(isSaved);
+    }, [trackURI, trackID]);
 
-        if (menuOpen) {
-            document.addEventListener('mousedown', handleClickOutside);
+    const toggleSave = (e) => {
+        e.stopPropagation();
+        const savedSongs = JSON.parse(localStorage.getItem("savedSongs")) || [];
+        if (saved) {
+            const updated = savedSongs.filter(s => s.trackURI !== trackURI && s.trackId !== trackID);
+            localStorage.setItem("savedSongs", JSON.stringify(updated));
+            setSaved(false);
+            toast.info(`"${title}" removed from your library.`);
+        } else {
+            const newSong = {
+                title,
+                artist,
+                spoURL,
+                image: coverImage,
+                trackURI,
+                trackId: trackID,
+            };
+            savedSongs.push(newSong);
+            localStorage.setItem("savedSongs", JSON.stringify(savedSongs));
+            setSaved(true);
+            toast.success(`"${title}" saved to library! 🎵`);
         }
+    };
 
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
-        };
-    }, [menuOpen]);
+    const artistsQuery = Array.isArray(artist) ? artist.map(a => a.name).join(' ') : subtitle || "";
+    const appleURL = `https://music.apple.com/us/search?term=${encodeURIComponent(title + ' ' + artistsQuery)}`;
+    const tidalURL = `https://listen.tidal.com/search?q=${encodeURIComponent(title + ' ' + artistsQuery)}`;
+    const soundcloudURL = `https://soundcloud.com/search?q=${encodeURIComponent(title + ' ' + artistsQuery)}`;
 
     return (
-        <div className="flex items-center justify-between px-3 sm:px-4 py-3 border border-gray-700 hover:bg-gray-800 transition-colors duration-300 rounded-xl w-full min-w-0">
-            <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
-                {/* Album/Playlist Cover */}
-                <div className="flex-shrink-0 relative group">
-                    <img
-                        src={coverImage}
-                        alt={title}
-                        className="w-12 h-12 sm:w-14 sm:h-14 rounded-lg object-cover"
-                        onError={(e) => {
-                            e.target.src = '/default-cover.png'; // Fallback image
-                        }}
-                    />
-                    <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
-                        <PlayButton onPlay={handlePlayClick} size="small" />
+        <div className="group flex items-center justify-between p-3 bg-zinc-900/20 backdrop-blur-md border border-white/5 hover:border-emerald-500/20 hover:bg-white/5 rounded-2xl transition-all duration-300 w-full min-w-0">
+            <div className="flex items-center gap-4 min-w-0 flex-1">
+                {pos !== undefined && (
+                    <div className="flex-shrink-0 w-6 flex items-center justify-center">
+                        <span className="text-zinc-500 group-hover:text-emerald-400 font-bold text-sm transition-colors">{pos + 1}</span>
                     </div>
+                )}
+
+                <div className="flex-shrink-0 relative w-11 h-11 sm:w-12 sm:h-12 rounded-xl overflow-hidden bg-zinc-800 border border-white/5">
+                    <img
+                        src={coverImage || "https://placehold.co/100x100?text=Cover"}
+                        alt={title}
+                        className="w-full h-full object-cover"
+                    />
                 </div>
 
-                {/* Title & Artist/Subtitle */}
-                <div className="flex flex-col gap-1 min-w-0 flex-1">
+                <div className="flex flex-col gap-0.5 min-w-0 flex-1">
                     <h3
-                        className="text-sm sm:text-base font-semibold text-white truncate cursor-pointer hover:underline leading-tight"
+                        className="text-sm font-bold text-white truncate cursor-pointer hover:text-emerald-400 transition-colors leading-tight"
                         title={title}
-                        onClick={() => navigate(`/track/${trackID}`)}
+                        onClick={() => router.push(`/track/${trackID}`)}
                     >
                         {title}
                     </h3>
-                    <div className="text-xs sm:text-sm text-gray-300 truncate">
+                    <div className="text-xs text-zinc-400 truncate">
                         {subtitle ? (
                             <span title={subtitle}>{subtitle}</span>
                         ) : (
                             artist?.map((a, i) => (
-                                <span key={a.id}>
-                                    <span
-                                        className="hover:underline cursor-pointer"
-                                        onClick={() => navigate(`/artist/${a.id}`)}
-                                        title={a.name}
-                                    >
-                                        {a.name}
-                                    </span>
-                                    {i < artist.length - 1 && ", "}
+                                <span 
+                                    key={a.id || i}
+                                    className="hover:underline cursor-pointer"
+                                    onClick={() => a.id && router.push(`/artist/${a.id}`)}
+                                >
+                                    {a.name}{i < artist.length - 1 && ", "}
                                 </span>
                             ))
                         )}
@@ -650,79 +666,99 @@ export const SmallTrackCardWithCover = ({
                 </div>
             </div>
 
-            {/* Buttons */}
-            <div className="flex items-center gap-2 flex-shrink-0">
-                {/* Desktop Buttons */}
-                <div className="hidden sm:flex items-center gap-3">
-                    {spoURL && (
-                        <img
-                            src="/2024-spotify-logo-icon/Primary_Logo_Green_RGB.svg"
-                            className="w-6 h-6 cursor-pointer hover:opacity-80 transition-opacity"
-                            onClick={() => handleClick(spoURL)}
-                            alt="Spotify"
-                        />
-                    )}
-                    {YTURL && (
-                        <FontAwesomeIcon
-                            icon={faYoutube}
-                            className="text-2xl cursor-pointer text-red-500 hover:text-red-400 transition-colors"
-                            onClick={() => handleClick(YTURL)}
-                        />
-                    )}
-                </div>
+            <div className="flex items-center gap-3 flex-shrink-0 ml-4">
+                {/* Save button */}
+                <button 
+                    onClick={toggleSave}
+                    className={`p-1.5 rounded-lg hover:bg-white/10 transition duration-200 ${saved ? "text-emerald-400" : "text-zinc-500 hover:text-white"}`}
+                >
+                    {saved ? <BookmarkCheck size={16} /> : <Bookmark size={16} />}
+                </button>
 
-                {/* Mobile Menu Toggle */}
-                <div className="sm:hidden relative" ref={menuRef}>
-                    <MoreVertical
-                        size={20}
-                        className="cursor-pointer text-white hover:text-gray-300 transition-colors"
-                        onClick={() => setMenuOpen((prev) => !prev)}
-                    />
-
-                    {/* Dropdown Menu */}
-                    {menuOpen && (
-                        <div className="absolute right-0 top-8 z-50 bg-gray-900 border border-gray-700 rounded-md shadow-lg w-44 p-2 space-y-1 text-sm">
-                            {spoURL && (
-                                <div
-                                    className="flex items-center gap-3 text-white hover:bg-gray-800 p-2 rounded cursor-pointer transition-colors"
-                                    onClick={() => {
-                                        handleClick(spoURL);
-                                        setMenuOpen(false);
-                                    }}
-                                >
-                                    <img
-                                        src="/2024-spotify-logo-icon/Primary_Logo_Green_RGB.svg"
-                                        className="w-4 h-4"
-                                        alt="Spotify"
-                                    />
-                                    Open in Spotify
-                                </div>
-                            )}
-                            {YTURL && (
-                                <div
-                                    className="flex items-center gap-3 text-white hover:bg-gray-800 p-2 rounded cursor-pointer transition-colors"
-                                    onClick={() => {
-                                        handleClick(YTURL);
-                                        setMenuOpen(false);
-                                    }}
-                                >
-                                    <FontAwesomeIcon icon={faYoutube} className="w-4 h-4 text-red-500" />
-                                    Open on YouTube
-                                </div>
-                            )}
-                            <div
-                                className="flex items-center gap-3 text-white hover:bg-gray-800 p-2 rounded cursor-pointer transition-colors"
-                                onClick={() => {
-                                    handleSave();
-                                    setMenuOpen(false);
-                                }}
+                {/* Dropdown Menu for external platforms */}
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <button className="p-1.5 rounded-lg hover:bg-white/10 text-zinc-400 hover:text-white transition">
+                            <EllipsisVertical size={16} />
+                        </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent 
+                        className="bg-zinc-900/95 backdrop-blur-2xl text-white min-w-[180px] rounded-2xl p-2 border border-white/10 shadow-2xl"
+                        align="end"
+                        sideOffset={8}
+                    >
+                        <DropdownMenuItem
+                            onSelect={() => {
+                                const trackToAdd = {
+                                    title,
+                                    artist: Array.isArray(artist) ? artist : [{ name: artist || subtitle || 'Unknown Artist' }],
+                                    spoURL,
+                                    image: coverImage || '',
+                                    trackId: trackID,
+                                    trackURI: trackURI,
+                                };
+                                window.dispatchEvent(new CustomEvent('open-playlist-picker', { detail: { track: trackToAdd } }));
+                            }}
+                            className="cursor-pointer px-3 py-2 hover:bg-white/10 rounded-xl transition flex items-center gap-2 text-emerald-400"
+                        >
+                            <ListMusic size={14} />
+                            Add to Playlist
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                            onSelect={() => router.push(`/track/${trackID}`)}
+                            className="cursor-pointer px-3 py-2 hover:bg-white/10 rounded-xl transition flex items-center gap-2"
+                        >
+                            <MusicIcon size={14} className="text-emerald-400" />
+                            Track Details
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                            onSelect={() => copyToClipboard(spoURL || `${window.location.origin}/track/${trackID}`)}
+                            className="cursor-pointer px-3 py-2 hover:bg-white/10 rounded-xl transition flex items-center gap-2"
+                        >
+                            <LinkIcon size={14} className="text-zinc-400" />
+                            Copy Link
+                        </DropdownMenuItem>
+                        
+                        <DropdownMenuSeparator className="my-1 bg-white/5" />
+                        
+                        {spoURL && (
+                            <DropdownMenuItem
+                                onSelect={() => handleClick(spoURL)}
+                                className="cursor-pointer px-3 py-2 hover:bg-white/10 rounded-xl transition flex items-center gap-2"
                             >
-                                <Bookmark size={16} />
-                                Save Track
-                            </div>
-                        </div>
-                    )}
-                </div>
+                                <img src="/2024-spotify-logo-icon/Primary_Logo_Green_RGB.svg" className="w-4 h-4" alt="Spotify" />
+                                Spotify
+                            </DropdownMenuItem>
+                        )}
+                        {YTURL && (
+                            <DropdownMenuItem
+                                onSelect={() => handleClick(YTURL)}
+                                className="cursor-pointer px-3 py-2 hover:bg-white/10 rounded-xl transition flex items-center gap-2"
+                            >
+                                <YouTubeIcon size={16} className="text-red-500" />
+                                YouTube
+                            </DropdownMenuItem>
+                        )}
+                        <DropdownMenuItem
+                            onSelect={() => handleClick(appleURL)}
+                            className="cursor-pointer px-3 py-2 hover:bg-white/10 rounded-xl transition flex items-center gap-2"
+                        >
+                            <span className="text-[#FC3C44] font-extrabold text-[10px]"></span> Apple Music
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                            onSelect={() => handleClick(tidalURL)}
+                            className="cursor-pointer px-3 py-2 hover:bg-white/10 rounded-xl transition flex items-center gap-2"
+                        >
+                            <span className="text-cyan-400 font-extrabold text-[10px]">❖</span> Tidal
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                            onSelect={() => handleClick(soundcloudURL)}
+                            className="cursor-pointer px-3 py-2 hover:bg-white/10 rounded-xl transition flex items-center gap-2"
+                        >
+                            <span className="text-orange-500 font-extrabold text-[10px]">☁</span> SoundCloud
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
             </div>
         </div>
     );

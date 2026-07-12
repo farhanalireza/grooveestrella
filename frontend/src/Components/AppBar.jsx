@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Search,
   ListMusic,
@@ -17,14 +17,14 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 
 const AppBar = ({ selectedSection, setSection }) => {
-  const navigate = useNavigate();
-  const location = useLocation();
+  const router = useRouter();
+  const pathname = usePathname();
   const [showMore, setShowMore] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Set section based on route path
   useEffect(() => {
-    const path = location.pathname;
+    const path = pathname;
 
     if (path === "/") setSection("Music");
     else if (path.startsWith("/search")) setSection("Search");
@@ -35,7 +35,7 @@ const AppBar = ({ selectedSection, setSection }) => {
     else if (path.startsWith("/library/saved")) setSection("Saved");
     else if (path.startsWith("/chat")) setSection("Chat");
     else setSection("");
-  }, [location.pathname]);
+  }, [pathname]);
 
   const navItems = [
     {
@@ -61,12 +61,6 @@ const AppBar = ({ selectedSection, setSection }) => {
       icon: <ListMusic size={20} />, 
       section: "Playlist",
       route: "/library"
-    },
-    {
-      label: "Saved",
-      icon: <Download size={20} />,
-      section: "Saved",
-      route: "/library/saved"
     },
     {
       label: "Settings",
@@ -138,12 +132,6 @@ const AppBar = ({ selectedSection, setSection }) => {
       icon: <Newspaper size={18} />, 
       section: "Review",
       route: "/feedback"
-    },
-    {
-        label: "Saved",
-        icon: <Download size={18} />,
-        section: "Saved",
-        route: "/library/saved"
     }
   ];
 
@@ -154,7 +142,7 @@ const AppBar = ({ selectedSection, setSection }) => {
     }
     
     setSection(item.section);
-    navigate(item.route);
+    router.push(item.route);
     window.scrollTo(0, 0);
     setShowMore(false);
     setSidebarOpen(false); // Close sidebar on navigation
@@ -222,29 +210,35 @@ const AppBar = ({ selectedSection, setSection }) => {
               {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
             </motion.button>
             
-            <h1 className="text-xl font-bold text-white cursor-pointer flex justify-center items-center" onClick={() => {navigate("/")}}>
-                <img src="/in.svg" alt="logo" className="w-8" />
-              Groove<span className="text-green-400">Estrella</span>
-            </h1>
+            <div className="flex items-center gap-2 cursor-pointer" onClick={() => router.push("/")}>
+              <img src="/in.svg" alt="GrooveEstrella" className="w-8 h-8 object-contain" />
+              <span className="text-xl font-bold text-white tracking-tight">GrooveEstrella</span>
+            </div>
           </div>
 
-          {/* Quick Actions */}
-          <div className="flex items-center gap-2">
-            <motion.button
-              onClick={() => navigate("/search")}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className={`p-2 rounded-lg transition-colors duration-200 ${
-                selectedSection === "Search" 
-                  ? "bg-white text-black" 
-                  : "bg-white/10 hover:bg-white/20 text-white"
-              }`}
+          {/* Center search bar placeholder (Desktop only) */}
+          <div className="hidden md:flex flex-grow max-w-md mx-4 relative">
+            <input
+              type="text"
+              placeholder="Search songs, playlists..."
+              className="w-full bg-zinc-800 text-white rounded-full py-1.5 pl-10 pr-4 text-sm focus:outline-none focus:ring-1 focus:ring-green-400"
+              onClick={() => router.push("/search")}
+              readOnly
+            />
+            <Search className="absolute left-3 top-2 text-zinc-400" size={16} />
+          </div>
+
+          {/* Right Icons (Desktop only) */}
+          <div className="hidden md:flex items-center gap-4">
+            <button
+              className="p-1.5 rounded-full text-zinc-400 hover:text-white transition"
+              onClick={() => router.push("/account")}
             >
               <Search size={18} />
-            </motion.button>
+            </button>
             
             <motion.button
-              onClick={() => navigate("/account")}
+              onClick={() => router.push("/account")}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               className={`p-2 rounded-lg transition-colors duration-200 ${

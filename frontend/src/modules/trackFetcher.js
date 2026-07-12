@@ -12,7 +12,7 @@ export async function fetchTracksFromDB({ keyOrUrl, limit, spotifyToken, setTrac
     const data = await response.json();
     const tracks = data.results || [];
 
-    const parsedUrl = new URL(url);
+    const parsedUrl = new URL(url, typeof window !== 'undefined' ? window.location.origin : 'http://localhost');
     const offset = parseInt(parsedUrl.searchParams.get("offset")) || 0;
 
     setPaginationStates({

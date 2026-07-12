@@ -1,13 +1,13 @@
 // PlaylistsOverview.jsx
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useRouter } from 'next/navigation';
 
 const PlaylistsOverview = ({ playlists, onSelectPlaylist }) => {
-    const navigate = useNavigate();
+    const router = useRouter();
     console.log(playlists);
 
     const openPlaylist = (id) => {
-        navigate(`/playlist/${id}`);
+        router.push(`/playlist/${id}`);
     }
     
     return (

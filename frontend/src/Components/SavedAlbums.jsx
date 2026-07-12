@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useRouter } from 'next/navigation';
 
 const SavedAlbums = ({ albums, onSelectAlbum }) => {
-    const navigate = useNavigate();
+    const router = useRouter();
   const [hasAlbums, setHasAlbums] = useState([]);
   console.log(albums);
   
     function openArtist(id) {
-        navigate(`/artist/${id}`);
+        router.push(`/artist/${id}`);
     }
 
     function openAlbum(id) {
-        navigate(`/album/${id}`);
+        router.push(`/album/${id}`);
     }
 
   return (

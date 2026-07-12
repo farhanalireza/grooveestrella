@@ -1,10 +1,10 @@
+// src/Components/CardComponents/AlbumsCard.jsx
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Bookmark, BookmarkCheck, Calendar, Play } from "lucide-react";
-import { SpotifyButton, YouTubeButton } from "../MusicButtons";
-import { usePlayer } from "../../contexts/PlayerContext";
-import { useNavigate } from "react-router-dom";
+import { Bookmark, BookmarkCheck, Disc } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { ShareTrackComponent } from "./ShareTrackComponent";
+import { toast } from "react-toastify";
 
 export const AlbumCard = ({
   id,
@@ -13,93 +13,81 @@ export const AlbumCard = ({
   artist,
   trackURI,
 }) => {
-    // console.log(artist);
-    
-  const navigate = useNavigate();
+  const router = useRouter();
   const [saved, setSaved] = useState(false);
-  const { showPlayer } = usePlayer();
 
-useEffect(() => {
-  const savedAlbums = JSON.parse(localStorage.getItem("savedAlbums")) || [];
-  const isSaved = savedAlbums.some(album => album.id === id); // ✅ match on id
-  setSaved(isSaved);
-}, [id]);
+  useEffect(() => {
+    const savedAlbums = JSON.parse(localStorage.getItem("savedAlbums")) || [];
+    const isSaved = savedAlbums.some(album => album.id === id);
+    setSaved(isSaved);
+  }, [id]);
 
-const toggleSave = () => {
-  const savedAlbums = JSON.parse(localStorage.getItem("savedAlbums")) || [];
+  const toggleSave = () => {
+    const savedAlbums = JSON.parse(localStorage.getItem("savedAlbums")) || [];
 
-  if (saved) {
-    const updated = savedAlbums.filter(album => album.id !== id);
-    localStorage.setItem("savedAlbums", JSON.stringify(updated));
-    setSaved(false);
-  } else {
-    const newAlbum = {
-      id,
-      title,
-      artist: artist,
-      image: url,
-      type: "album",
-      trackURI,
-    };
-    savedAlbums.push(newAlbum);
-    localStorage.setItem("savedAlbums", JSON.stringify(savedAlbums));
-    setSaved(true);
-  }
-};
-
-    const handleSave = () => {
-        toggleSave();
+    if (saved) {
+      const updated = savedAlbums.filter(album => album.id !== id);
+      localStorage.setItem("savedAlbums", JSON.stringify(updated));
+      setSaved(false);
+      toast.info(`"${title}" removed from your library.`);
+    } else {
+      const newAlbum = {
+        id,
+        title,
+        artist,
+        image: url,
+        type: "album",
+        trackURI,
+      };
+      savedAlbums.push(newAlbum);
+      localStorage.setItem("savedAlbums", JSON.stringify(savedAlbums));
+      setSaved(true);
+      toast.success(`"${title}" saved to your library! 💿`);
     }
-
-  const handleClick = (url) => {
-    if (url) window.open(url, "_blank");
   };
 
-    const handleCardClick = (e) => {
-        // Prevent conflict when clicking save button
-        if (e.target.closest(".noskip")) return;
-        navigate(`/album/${id}`);
-    };
+  const handleSave = (e) => {
+    e.stopPropagation();
+    toggleSave();
+  };
 
-  const handlePlay = () => {
-    if (trackURI?.startsWith("spotify:album:")) {
-      showPlayer(trackURI, true); // context_uri mode
-    } else {
-      console.warn("[AlbumCard] Invalid album URI:", trackURI);
-    }
+  const handleCardClick = (e) => {
+    if (e.target.closest(".noskip")) return;
+    router.push(`/album/${id}`);
   };
 
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.9, y: 20 }}
-      whileInView={{ opacity: 1, scale: 1, y: 0 }}
-      whileHover={{ scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-50px" }}
+      whileHover={{ y: -6 }}
       onClick={handleCardClick}
-      className="relative w-64 bg-gradient-to-br from-blue-900/80 to-slate-900/80 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden shadow-2xl hover:shadow-blue-500/10 transition-all duration-500"
+      className="group relative w-48 sm:w-64 bg-[#10141F]/60 backdrop-blur-xl border border-[#2563EB]/10 hover:border-[#60A5FA]/30 rounded-3xl overflow-hidden shadow-2xl transition-all duration-500 cursor-pointer flex flex-col justify-between"
     >
-      {/* Album Cover */}
-      <div className="relative overflow-hidden rounded-xl p-5">
-        <img
-          src={url}
-          alt={title}
-          className="w-auto h-auto object-cover transition-transform duration-700 hover:scale-110"
-        />
-
-        {/* Play Button */}
-        <button
-          onClick={handlePlay}
-          className="no-click absolute bottom-2 right-2 z-20 bg-white text-black p-2 rounded-full shadow hover:scale-110 transition"
-          title="Play Album"
+      {/* Vinyl Disc Hover Interaction */}
+      <div className="relative aspect-square w-full p-4 overflow-hidden flex items-center justify-center">
+        {/* Vinyl Disc Peek */}
+        <motion.div 
+          className="absolute w-[80%] aspect-square rounded-full bg-[#07090F] border border-[#10141F] shadow-xl flex items-center justify-center z-0 transition-transform duration-500 group-hover:translate-x-12 group-hover:rotate-45"
         >
-          <Play size={20} />
-        </button>
-      </div>
+          <div className="w-[30%] aspect-square rounded-full border border-[#10141F] bg-[#10141F] flex items-center justify-center">
+            <div className="w-[20%] aspect-square rounded-full bg-[#07090F]" />
+          </div>
+        </motion.div>
 
-      {/* Content */}
-      <div className="relative p-4 space-y-3">
-        {/* Save & Share Container */}
-        <div className="absolute top-4 right-4 z-10 flex items-center gap-2 noskip">
+        {/* Cover Image */}
+        <div className="relative z-10 w-full h-full rounded-2xl overflow-hidden shadow-lg bg-[#10141F]">
+          <img
+            src={url || "https://placehold.co/300x300?text=No+Cover"}
+            alt={title}
+            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#07090F] via-[#07090F]/20 to-transparent opacity-60" />
+        </div>
+
+        {/* Save & Share controls over image */}
+        <div className="absolute top-6 right-6 z-20 flex items-center gap-1.5 noskip">
           <ShareTrackComponent
             trackId={id}
             title={title}
@@ -107,34 +95,51 @@ const toggleSave = () => {
             url={url}
             type="album"
           />
-          {saved ? (
-            <BookmarkCheck stroke="white" fill="green" onClick={handleSave} className="cursor-pointer" />
-          ) : (
-            <Bookmark stroke="white" onClick={handleSave} className="cursor-pointer" />
-          )}
+          <button
+            onClick={handleSave}
+            className={`p-2 rounded-full backdrop-blur-md transition-all duration-300 shadow-md ${
+              saved 
+                ? "bg-[#2563EB] text-[#F4F7FF] scale-110" 
+                : "bg-[#07090F]/70 text-[#F4F7FF]/80 hover:bg-[#07090F] hover:text-[#F4F7FF]"
+            }`}
+          >
+            {saved ? <BookmarkCheck size={14} /> : <Bookmark size={14} />}
+          </button>
         </div>
+      </div>
 
-        <div>
-          <h3 className="text-xl w-[90%] font-bold text-white truncate cursor-pointer hover:underline" title={title}>
-
+      {/* Content Section */}
+      <div className="p-4 pt-1 flex flex-col justify-between flex-grow gap-2">
+        <div className="space-y-1">
+          <h3 
+            className="text-sm sm:text-base font-bold text-white truncate hover:text-[#60A5FA] transition-colors"
+            title={title}
+          >
             {title}
           </h3>
-          <h4 className="truncate text-white">
-{Array.isArray(artist) &&
-  artist.map((a, i) => (
-    <span
-      key={a.id}
-      className="text-gray-300 text-sm truncate cursor-pointer hover:underline noskip"
-      title={a.name}
-      onClick={() => navigate(`/artist/${a.id}`)}
-    >
-      {a.name}{i < artist.length - 1 && ', '}
-    </span>
-))}
-          </h4>
-            <h2 className="text-sm text-gray-400">
-                album
-            </h2>
+          <div className="text-xs text-[#8992A5] truncate">
+            {Array.isArray(artist) ? (
+              artist.map((a, i) => (
+                <span
+                  key={a.id || i}
+                  className="hover:underline hover:text-white noskip cursor-pointer"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    a.id && router.push(`/artist/${a.id}`);
+                  }}
+                >
+                  {a.name}{i < artist.length - 1 && ', '}
+                </span>
+              ))
+            ) : (
+              <span>Various Artists</span>
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1.5 text-[10px] text-[#8992A5]/70 font-semibold uppercase tracking-wider">
+          <Disc size={12} className="text-[#2563EB]" />
+          <span>Album</span>
         </div>
       </div>
     </motion.div>

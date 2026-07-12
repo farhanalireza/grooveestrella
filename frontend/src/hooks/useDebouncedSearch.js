@@ -13,6 +13,18 @@ const useDebouncedSearch = (searchTerm, searchType, setLoading, setResults) => {
         fetchToken();
     }, []);
 
+    // Perform immediate search on token load if query exists (e.g., from URL query parameters)
+    useEffect(() => {
+        if (spotifyToken && searchTerm && searchTerm.trim() !== "") {
+            fetchSpotifySearchResults(
+                searchTerm,
+                searchType,
+                setResults,
+                setLoading
+            );
+        }
+    }, [spotifyToken]);
+
     const debouncedSearch = useMemo(() => {
         return debounce(async (query, type) => {
             if (spotifyToken && query.trim() !== "") {

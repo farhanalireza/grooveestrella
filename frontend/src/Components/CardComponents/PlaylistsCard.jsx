@@ -1,11 +1,11 @@
-import { PlayButton } from "./PlayButton";
-import { usePlayer } from "../../contexts/PlayerContext";
+// src/Components/CardComponents/PlaylistsCard.jsx
 import { motion } from "framer-motion";
-import { Bookmark, BookmarkCheck, User } from "lucide-react";
-import { SpotifyButton, YouTubeButton } from "../MusicButtons";
+import { Bookmark, BookmarkCheck, User, ListMusic } from "lucide-react";
+import { SpotifyButton } from "../MusicButtons";
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useRouter } from "next/navigation";
 import { ShareTrackComponent } from "./ShareTrackComponent";
+import { toast } from "react-toastify";
 
 export const PlaylistCard = ({
   url,
@@ -18,28 +18,27 @@ export const PlaylistCard = ({
   trackURI,
   id,
 }) => {
-    const navigate = useNavigate();
-  const { showPlayer } = usePlayer();
+  const router = useRouter();
   const [saved, setSaved] = useState(false);
 
-  // Load save state
   useEffect(() => {
     const savedPlaylists = JSON.parse(localStorage.getItem("savedPlaylists")) || [];
     const isAlreadySaved = savedPlaylists.some(
-      (p) => p.trackURI === trackURI && p.title === title && p.owner === owner
+      (p) => p.id === id || (p.trackURI === trackURI && p.title === title)
     );
     setSaved(isAlreadySaved);
-  }, [title, owner, trackURI]);
+  }, [title, trackURI, id]);
 
   const toggleSave = () => {
     const savedPlaylists = JSON.parse(localStorage.getItem("savedPlaylists")) || [];
 
     if (saved) {
       const updated = savedPlaylists.filter(
-        (p) => !(p.trackURI === trackURI && p.title === title && p.owner === owner)
+        (p) => !(p.id === id || (p.trackURI === trackURI && p.title === title))
       );
       localStorage.setItem("savedPlaylists", JSON.stringify(updated));
       setSaved(false);
+      toast.info(`"${title}" removed from your library.`);
     } else {
       const newPlaylist = {
         title,
@@ -54,15 +53,13 @@ export const PlaylistCard = ({
       savedPlaylists.push(newPlaylist);
       localStorage.setItem("savedPlaylists", JSON.stringify(savedPlaylists));
       setSaved(true);
+      toast.success(`"${title}" saved to your library! 📁`);
     }
   };
 
-  const handlePlayClick = () => {
-    if (trackURI?.startsWith("spotify:")) {
-      showPlayer(trackURI, true); // context_uri playback
-    } else {
-      console.warn("Invalid Spotify URI:", trackURI);
-    }
+  const handleSave = (e) => {
+    e.stopPropagation();
+    toggleSave();
   };
 
   const handleClick = (url) => {
@@ -71,80 +68,89 @@ export const PlaylistCard = ({
     }
   };
 
-  const openPlaylist = (id) => {
-        navigate(`/playlist/${id}`)
-  }
+  const handleCardClick = () => {
+    router.push(`/playlist/${id}`);
+  };
 
   const truncatedDesc =
-    description?.length > 100 ? description.slice(0, 97) + "..." : description;
+    description?.length > 70 ? description.slice(0, 67) + "..." : description;
 
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.9, y: 20 }}
-      whileInView={{ opacity: 1, scale: 1, y: 0 }}
-      whileHover={{ scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
-      className="relative w-64 bg-gradient-to-br from-orange-900/80 to-black/80 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden shadow-2xl hover:shadow-orange-500/10 transition-all duration-500"
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-50px" }}
+      whileHover={{ y: -6 }}
+      onClick={handleCardClick}
+      className="group relative w-48 sm:w-64 bg-[#10141F]/60 backdrop-blur-xl border border-[#2563EB]/10 hover:border-[#60A5FA]/30 rounded-3xl overflow-hidden shadow-2xl transition-all duration-500 cursor-pointer flex flex-col justify-between"
     >
-      {/* Controls */}
-      <div className="absolute top-0 right-0 flex gap-2 items-center z-10 p-2">
-        <PlayButton onPlay={handlePlayClick} />
-        <ShareTrackComponent
-          trackId={id}
-          title={title}
-          artist={owner || 'Playlist'}
-          url={url}
-          type="playlist"
-        />
-        {saved ? (
-          <BookmarkCheck
-            stroke="white"
-            fill="#22c55e"
-            onClick={toggleSave}
-            className="cursor-pointer hover:scale-110 transition"
-          />
-        ) : (
-          <Bookmark
-            stroke="white"
-            onClick={toggleSave}
-            className="cursor-pointer hover:scale-110 transition"
-          />
-        )}
-      </div>
-
-      {/* Playlist Cover */}
-      <div className="relative overflow-hidden">
+      {/* Cover Image Section */}
+      <div className="relative aspect-square w-full overflow-hidden bg-[#10141F]">
         <img
-          src={url || "/placeholder.jpg"}
+          src={url || "https://placehold.co/300x300?text=No+Cover"}
           alt={title || "Untitled Playlist"}
-          className="w-full h-48 object-cover transition-transform duration-700 hover:scale-110"
+          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-      </div>
-
-      {/* Content */}
-      <div className="p-4 space-y-3">
-        <div>
-          <h3 className="text-xl font-bold text-white truncate hover:underline cursor-pointer" title={title} onClick={() => openPlaylist(id)}>
-            {title || "Untitled Playlist"}
-          </h3>
-          <div className="flex items-center gap-1 text-gray-300 text-sm">
-            <User size={14} />
-            <span>{owner ? `by ${owner}` : "Unknown Creator"}</span>
-          </div>
+        <div className="absolute inset-0 bg-gradient-to-t from-[#07090F] via-[#07090F]/20 to-transparent opacity-60" />
+        
+        {/* Save & Share overlays */}
+        <div className="absolute top-3 right-3 z-20 flex items-center gap-1.5 noskip" onClick={(e) => e.stopPropagation()}>
+          <ShareTrackComponent
+            trackId={id}
+            title={title}
+            artist={owner || 'Playlist'}
+            url={url}
+            type="playlist"
+          />
+          <button
+            onClick={handleSave}
+            className={`p-2 rounded-full backdrop-blur-md transition-all duration-300 shadow-md ${
+              saved 
+                ? "bg-[#2563EB] text-[#F4F7FF] scale-110" 
+                : "bg-[#07090F]/70 text-[#F4F7FF]/80 hover:bg-[#07090F] hover:text-white"
+            }`}
+          >
+            {saved ? <BookmarkCheck size={14} /> : <Bookmark size={14} />}
+          </button>
         </div>
 
-        {description && (
-          <p className="text-gray-400 text-sm leading-relaxed">{truncatedDesc}</p>
-        )}
+        {/* Public/Private Badge */}
+        <div className="absolute bottom-3 left-3 z-10 flex gap-2">
+          <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider ${
+            isPublic ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-red-500/20 text-red-400 border border-red-500/30"
+          }`}>
+            {isPublic ? "Public" : "Private"}
+          </span>
+        </div>
+      </div>
 
-        <p className={isPublic ? "text-green-500" : "text-red-500"}>
-          {isPublic ? "PUBLIC" : "PRIVATE"}
-        </p>
+      {/* Content Section */}
+      <div className="p-4 flex flex-col justify-between flex-grow gap-2">
+        <div className="space-y-1">
+          <h3 
+            className="text-sm sm:text-base font-bold text-white truncate group-hover:text-[#60A5FA] transition-colors" 
+            title={title}
+          >
+            {title || "Untitled Playlist"}
+          </h3>
+          <div className="flex items-center gap-1 text-[11px] text-[#8992A5]">
+            <User size={12} className="text-[#8992A5]/70" />
+            <span className="truncate">{owner ? `by ${owner}` : "Unknown Creator"}</span>
+          </div>
+          {truncatedDesc && (
+            <p className="text-[11px] text-[#8992A5]/60 line-clamp-2 mt-1 leading-normal">{truncatedDesc}</p>
+          )}
+        </div>
 
-        {/* Buttons */}
-        <div className="space-y-2 pt-2 flex flex-col">
-          <SpotifyButton clickHandle={() => handleClick(spoURL)} />
+        <div className="space-y-3 mt-1">
+          <div className="flex items-center gap-1.5 text-[10px] text-[#8992A5]/70 font-semibold uppercase tracking-wider">
+            <ListMusic size={12} className="text-[#2563EB]" />
+            <span>Playlist</span>
+          </div>
+
+          <div className="noskip" onClick={(e) => e.stopPropagation()}>
+            <SpotifyButton clickHandle={() => handleClick(spoURL)} />
+          </div>
         </div>
       </div>
     </motion.div>

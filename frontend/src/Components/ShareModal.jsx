@@ -35,7 +35,7 @@ export default function ShareModal({
     const [qrColor, setQrColor] = useState('9333ea'); // Purple hex without hash
 
     // Generate clean share url based on current site host
-    const shareUrl = `${window.location.origin}/${type}/${itemId}`;
+    const shareUrl = `${window.location.origin}/s/spotify/${type}/${itemId}`;
 
     const themes = {
         cosmic: 'bg-gradient-to-br from-indigo-950 via-purple-950 to-slate-950 border border-purple-500/20 shadow-[0_0_50px_rgba(147,51,234,0.15)]',
@@ -70,7 +70,24 @@ export default function ShareModal({
     const handleDownloadCard = async () => {
         if (!cardRef.current) return;
         setIsGenerating(true);
+        const disabledSheets = [];
         try {
+            // Temporarily disable cross-origin stylesheets that trigger SecurityError
+            if (typeof document !== 'undefined') {
+                for (let i = 0; i < document.styleSheets.length; i++) {
+                    const sheet = document.styleSheets[i];
+                    try {
+                        // Attempt to access cssRules to check for cross-origin security restriction
+                        const _rules = sheet.cssRules;
+                    } catch (e) {
+                        if (sheet.ownerNode) {
+                            sheet.ownerNode.disabled = true;
+                            disabledSheets.push(sheet.ownerNode);
+                        }
+                    }
+                }
+            }
+
             // Generate the data URL image representation of the element
             const dataUrl = await toPng(cardRef.current, {
                 quality: 1.0,
@@ -93,6 +110,10 @@ export default function ShareModal({
             console.error('Error generating card image:', error);
             alert('Failed to generate high-quality image. Try copying the link instead!');
         } finally {
+            // Restore disabled stylesheets
+            disabledSheets.forEach(node => {
+                node.disabled = false;
+            });
             setIsGenerating(false);
         }
     };
@@ -144,7 +165,13 @@ export default function ShareModal({
 
     return createPortal(
         <AnimatePresence>
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-lg overflow-y-auto">
+            <motion.div 
+                key="share-modal-overlay"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#07090F]/90 backdrop-blur-lg overflow-y-auto"
+            >
                 {/* Backdrop Click to Close */}
                 <div className="absolute inset-0 cursor-default" onClick={onClose} />
 
@@ -154,42 +181,42 @@ export default function ShareModal({
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.9, y: 30 }}
                     transition={{ type: 'spring', damping: 25, stiffness: 220 }}
-                    className="relative w-full max-w-4xl max-h-[90vh] md:max-h-none overflow-y-auto md:overflow-visible bg-slate-950/90 border border-white/10 rounded-3xl shadow-2xl z-10 grid grid-cols-1 md:grid-cols-2"
+                    className="relative w-full max-w-4xl max-h-[90vh] md:max-h-none overflow-y-auto md:overflow-visible bg-[#10141F]/60 border border-[#2563EB]/10 backdrop-blur-xl rounded-3xl shadow-2xl z-10 grid grid-cols-1 md:grid-cols-2"
                 >
                     {/* Close Button */}
                     <button 
                         onClick={onClose} 
-                        className="absolute top-4 right-4 p-2 rounded-full bg-white/5 hover:bg-white/15 text-gray-400 hover:text-white transition-all z-20"
+                        className="absolute top-4 right-4 p-2 rounded-full bg-white/[0.03] hover:bg-[#2563EB]/15 text-[#8992A5] hover:text-[#F4F7FF] transition-all z-20"
                     >
                         <X size={20} />
                     </button>
 
                     {/* Column 1: Live GrooveCard Card Preview */}
-                    <div className="flex flex-col items-center justify-center p-6 border-b md:border-b-0 md:border-r border-white/10 bg-black/40 rounded-t-3xl md:rounded-tr-none md:rounded-l-3xl">
-                        <div className="text-xs uppercase tracking-widest text-purple-400 font-bold mb-4">
+                    <div className="flex flex-col items-center justify-center p-6 border-b md:border-b-0 md:border-r border-[#2563EB]/15 bg-[#07090F]/40 rounded-t-3xl md:rounded-tr-none md:rounded-l-3xl">
+                        <div className="text-xs uppercase tracking-widest text-[#60A5FA] font-bold mb-4">
                             GrooveCard Preview
                         </div>
 
                         {/* Capture Container */}
                         <div 
                             ref={cardRef} 
-                            className={`w-full max-w-[320px] rounded-2xl p-5 flex flex-col items-center select-none text-white ${themes[cardTheme]} transition-all duration-500`}
+                            className={`w-full max-w-[320px] rounded-2xl p-5 flex flex-col items-center select-none text-[#F4F7FF] ${themes[cardTheme]} transition-all duration-500`}
                         >
                             {/* Card Header: Type Badge */}
                             <div className="w-full flex justify-between items-center mb-4">
-                                <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 text-xs font-semibold tracking-wider uppercase text-purple-200">
+                                <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#2563EB]/10 text-xs font-semibold tracking-wider uppercase text-blue-200">
                                     <Music2 size={12} />
                                     {type}
                                 </div>
                                 {explicit && (
-                                    <span className="bg-red-500/80 px-2 py-0.5 rounded text-[10px] font-bold text-white tracking-widest">
+                                    <span className="bg-red-500/80 px-2 py-0.5 rounded text-[10px] font-bold text-[#F4F7FF] tracking-widest">
                                         E
                                     </span>
                                 )}
                             </div>
 
                             {/* Cover Art Image */}
-                            <div className="relative w-48 h-48 rounded-xl overflow-hidden shadow-xl mb-4 group border border-white/5">
+                            <div className="relative w-48 h-48 rounded-xl overflow-hidden shadow-xl mb-4 group border border-[#2563EB]/10">
                                 <img
                                     src={imageUrl || "/placeholder.jpg"}
                                     alt={title}
@@ -203,7 +230,7 @@ export default function ShareModal({
                                 <h3 className="text-lg font-bold truncate leading-tight mb-1" title={title}>
                                     {title}
                                 </h3>
-                                <p className="text-sm text-gray-300 truncate" title={Array.isArray(artist) ? artist.map(a => a.name).join(', ') : artist}>
+                                <p className="text-sm text-[#F4F7FF]/80 truncate" title={Array.isArray(artist) ? artist.map(a => a.name).join(', ') : artist}>
                                     {Array.isArray(artist) ? artist.map(a => a.name).join(', ') : artist}
                                 </p>
                                 {popularity && (
@@ -214,27 +241,34 @@ export default function ShareModal({
                             </div>
 
                             {/* Embedded QR Code */}
-                            <div className="relative group bg-gray-950 p-3 rounded-xl border border-white/5 shadow-inner">
+                            <div className="relative group bg-[#07090F] p-3 rounded-xl border border-[#2563EB]/10 shadow-inner">
                                 <img
                                     src={qrApi}
                                     alt="Sharing QR Code"
                                     className="w-28 h-28 rounded-md transition-all duration-300"
+                                    crossOrigin="anonymous"
                                 />
                                 <button 
                                     onClick={() => setZoomQR(true)}
-                                    className="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-xl text-white cursor-pointer"
+                                    className="absolute inset-0 flex items-center justify-center bg-[#07090F]/60 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-xl text-[#F4F7FF] cursor-pointer"
                                 >
                                     <Maximize2 size={20} />
                                 </button>
                             </div>
-                            <div className="text-[10px] text-gray-400 mt-2 text-center uppercase tracking-widest">
+                            <div className="text-[10px] text-[#8992A5] mt-2 text-center uppercase tracking-widest">
                                 Scan to discover on GrooveEstrella
                             </div>
 
                             {/* Watermark branding */}
-                            <div className="mt-4 flex items-center gap-1.5 text-xs text-white/40 font-semibold uppercase tracking-wider border-t border-white/5 pt-3 w-full justify-center">
-                                <img src="/in.svg" alt="Logo" className="h-3.5 w-auto opacity-40" />
-                                <span>GrooveEstrella</span>
+                            <div className="mt-4 flex flex-col items-center gap-1.5 border-t border-[#2563EB]/10 pt-3 w-full justify-center">
+                                <div className="flex items-center gap-1.5 text-xs text-white/40 font-semibold uppercase tracking-wider">
+                                    <img src="/in.svg" alt="Logo" className="h-3.5 w-auto opacity-40" />
+                                    <span>GrooveEstrella</span>
+                                </div>
+                                <div className="text-[8px] text-[#8992A5]/70 flex items-center gap-0.5 mt-0.5">
+                                    <span>Data from</span>
+                                    <span className="font-bold text-[#1DB954]">Spotify</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -243,13 +277,13 @@ export default function ShareModal({
                     <div className="flex flex-col justify-between p-5 md:p-8 space-y-6 md:space-y-0">
                         <div className="space-y-6">
                             <div>
-                                <h2 className="text-2xl font-black text-white mb-1">Share Music</h2>
-                                <p className="text-sm text-gray-400">Personalize and share your music cards with others.</p>
+                                <h2 className="text-2xl font-black text-[#F4F7FF] mb-1">Share Music</h2>
+                                <p className="text-sm text-[#8992A5]">Personalize and share your music cards with others.</p>
                             </div>
 
                             {/* Customizer: Themes */}
                             <div className="space-y-2">
-                                <label className="text-xs uppercase tracking-wider text-gray-400 font-bold">
+                                <label className="text-xs uppercase tracking-wider text-[#8992A5] font-bold">
                                     Card Theme
                                 </label>
                                 <div className="grid grid-cols-4 gap-2">
@@ -259,8 +293,8 @@ export default function ShareModal({
                                             onClick={() => setCardTheme(t)}
                                             className={`px-3 py-2 text-xs font-semibold rounded-lg capitalize border transition-all ${
                                                 cardTheme === t 
-                                                    ? 'bg-white text-black border-white' 
-                                                    : 'bg-white/5 text-gray-300 border-white/10 hover:bg-white/10'
+                                                    ? 'bg-[#2563EB] text-[#F4F7FF] border-[#2563EB]' 
+                                                    : 'bg-white/[0.03] text-[#F4F7FF]/80 border-[#2563EB]/15 hover:bg-[#2563EB]/10'
                                             }`}
                                         >
                                             {t}
@@ -271,7 +305,7 @@ export default function ShareModal({
 
                             {/* Customizer: QR Color */}
                             <div className="space-y-2">
-                                <label className="text-xs uppercase tracking-wider text-gray-400 font-bold">
+                                <label className="text-xs uppercase tracking-wider text-[#8992A5] font-bold">
                                     QR Code Color
                                 </label>
                                 <div className="flex flex-wrap gap-2">
@@ -281,7 +315,7 @@ export default function ShareModal({
                                             onClick={() => setQrColor(color.hex)}
                                             className={`w-8 h-8 rounded-full border transition-all flex items-center justify-center ${color.class} ${
                                                 qrColor === color.hex 
-                                                    ? 'border-white scale-110 shadow-lg ring-2 ring-purple-500/50' 
+                                                    ? 'border-white scale-110 shadow-lg ring-2 ring-[#2563EB]/40' 
                                                     : 'border-transparent scale-100 hover:scale-105'
                                             }`}
                                             title={color.label}
@@ -302,7 +336,7 @@ export default function ShareModal({
                                 <button
                                     onClick={handleDownloadCard}
                                     disabled={isGenerating}
-                                    className="flex items-center justify-center gap-2 py-3.5 px-4 bg-purple-600 hover:bg-purple-700 active:scale-95 text-white font-bold rounded-2xl transition-all shadow-lg hover:shadow-purple-500/20 disabled:opacity-50"
+                                    className="flex items-center justify-center gap-2 py-3.5 px-4 bg-[#2563EB] hover:bg-[#2563EB]/80 active:scale-95 text-[#F4F7FF] font-bold rounded-2xl transition-all shadow-lg hover:shadow-[#2563EB]/20 disabled:opacity-50"
                                 >
                                     <Download size={18} />
                                     {isGenerating ? 'Saving...' : 'Save Image'}
@@ -310,7 +344,7 @@ export default function ShareModal({
 
                                 <button
                                     onClick={handleCopyLink}
-                                    className="flex items-center justify-center gap-2 py-3.5 px-4 bg-white/10 hover:bg-white/15 active:scale-95 text-white font-bold rounded-2xl transition-all border border-white/15"
+                                    className="flex items-center justify-center gap-2 py-3.5 px-4 bg-[#2563EB]/10 hover:bg-[#2563EB]/15 active:scale-95 text-[#F4F7FF] font-bold rounded-2xl transition-all border border-[#2563EB]/15"
                                 >
                                     {copied ? (
                                         <>
@@ -328,14 +362,14 @@ export default function ShareModal({
 
                             {/* Native / Social Share Grid */}
                             <div className="space-y-2">
-                                <div className="text-xs uppercase tracking-wider text-gray-400 font-bold">
+                                <div className="text-xs uppercase tracking-wider text-[#8992A5] font-bold">
                                     Direct Share
                                 </div>
                                 <div className="flex gap-2">
                                     {navigator.share && (
                                         <button
                                             onClick={handleNativeShare}
-                                            className="p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-all flex-1 flex items-center justify-center gap-2 font-bold text-sm"
+                                            className="p-3 bg-[#2563EB] hover:bg-[#2563EB]/80 text-[#F4F7FF] rounded-xl transition-all flex-1 flex items-center justify-center gap-2 font-bold text-sm"
                                         >
                                             <Share2 size={16} />
                                             Share sheet
@@ -343,7 +377,7 @@ export default function ShareModal({
                                     )}
                                     <button
                                         onClick={handleShareTwitter}
-                                        className="p-3 bg-white/5 hover:bg-white/10 text-white rounded-xl transition-all flex items-center justify-center flex-1 font-bold text-sm border border-white/5"
+                                        className="p-3 bg-white/[0.03] hover:bg-[#2563EB]/10 text-[#F4F7FF] rounded-xl transition-all flex items-center justify-center flex-1 font-bold text-sm border border-[#2563EB]/10"
                                     >
                                         Twitter/X
                                     </button>
@@ -363,21 +397,19 @@ export default function ShareModal({
                             </div>
                         </div>
                     </div>
-                </motion.div>
-            </div>
-
                 {/* QR Code Full Zoom Overlay */}
                 <AnimatePresence>
                     {zoomQR && (
                         <motion.div 
+                            key="qr-zoom-overlay"
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/95 p-6 backdrop-blur-xl"
+                            className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#07090F]/95 p-6 backdrop-blur-xl"
                         >
                             <button 
                                 onClick={() => setZoomQR(false)}
-                                className="absolute top-6 right-6 p-3 rounded-full bg-white/5 hover:bg-white/15 text-white transition-all"
+                                className="absolute top-6 right-6 p-3 rounded-full bg-white/[0.03] hover:bg-[#2563EB]/15 text-[#F4F7FF] transition-all cursor-pointer"
                             >
                                 <Minimize2 size={24} />
                             </button>
@@ -385,20 +417,22 @@ export default function ShareModal({
                                 initial={{ scale: 0.9 }}
                                 animate={{ scale: 1 }}
                                 exit={{ scale: 0.9 }}
-                                className="bg-slate-950 p-6 rounded-3xl border border-white/10 shadow-2xl text-center max-w-sm"
+                                className="bg-[#07090F] p-6 rounded-3xl border border-[#2563EB]/10 shadow-2xl text-center max-w-sm"
                             >
-                                <h3 className="text-xl font-bold text-white mb-2 truncate">{title}</h3>
-                                <p className="text-sm text-gray-400 mb-6 truncate">{Array.isArray(artist) ? artist.map(a => a.name).join(', ') : artist}</p>
+                                <h3 className="text-xl font-bold text-[#F4F7FF] mb-2 truncate">{title}</h3>
+                                <p className="text-sm text-[#8992A5] mb-6 truncate">{Array.isArray(artist) ? artist.map(a => a.name).join(', ') : artist}</p>
                                 <img
                                     src={qrApi.replace('size=400x400', 'size=800x800')}
                                     alt="Large QR Code"
-                                    className="w-72 h-72 rounded-xl mx-auto shadow-inner border border-white/5 mb-4"
+                                    className="w-72 h-72 rounded-xl mx-auto shadow-inner border border-[#2563EB]/10 mb-4"
                                 />
-                                <div className="text-xs text-gray-500 uppercase tracking-widest">Scan to Discover</div>
+                                <div className="text-xs text-[#8992A5]/70 uppercase tracking-widest">Scan to Discover</div>
                             </motion.div>
                         </motion.div>
                     )}
                 </AnimatePresence>
+                </motion.div>
+            </motion.div>
         </AnimatePresence>,
         document.body
     );

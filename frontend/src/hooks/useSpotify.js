@@ -203,4 +203,63 @@ async function fetchSpotifySearchResults(
   }
 }
 
-export { getSpotifyToken, fetchSpotifyData, fetchSpotifySearchResults };
+async function fetchSpotifyRecommendations(seedGenres, limit = 12, spotifyToken) {
+  try {
+    const token = spotifyToken || await getSpotifyToken();
+    if (!token) return [];
+
+    let genre = seedGenres;
+    if (!genre) {
+      const defaultSeeds = ["pop", "rock", "hip-hop", "jazz", "electronic", "classical", "k-pop", "dance", "country", "romance"];
+      genre = defaultSeeds[Math.floor(Math.random() * defaultSeeds.length)];
+    }
+
+    // List of common English characters to inject diversity and filter for standard songs
+    const chars = ['a', 'e', 'i', 'o', 'u', 's', 't', 'r', 'n', 'd', 'l', 'c'];
+    const randomChar = chars[Math.floor(Math.random() * chars.length)];
+
+    // Combine genre filter and wildcard character query, and apply US market filter
+    const query = `genre:"${genre}" ${randomChar}`;
+    
+    // Keep offset small (0 to 10) so we get the most relevant/popular matches for that wildcard
+    const offset = Math.floor(Math.random() * 10);
+
+    const response = await fetch(
+      `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=${limit}&offset=${offset}&market=US`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      console.error(`Spotify recommendations API search error: ${response.status}`);
+      return [];
+    }
+
+    const data = await response.json();
+    const tracksList = data.tracks?.items || [];
+    
+    return tracksList.map((track) => ({
+      title: track.name,
+      url: track.album?.images?.[0]?.url || "https://placehold.co/300x300?text=No+Image",
+      artists: track.artists.map((artist) => ({
+        name: artist.name,
+        id: artist.id,
+      })),
+      spoURL: track.external_urls?.spotify,
+      popularity: track.popularity,
+      type: "track",
+      explicit: track.explicit,
+      trackURI: track.uri,
+      albumID: track.album?.id,
+      trackId: track.id,
+    }));
+  } catch (error) {
+    console.error("Error fetching Spotify recommendations via search:", error);
+    return [];
+  }
+}
+
+export { getSpotifyToken, fetchSpotifyData, fetchSpotifySearchResults, fetchSpotifyRecommendations };

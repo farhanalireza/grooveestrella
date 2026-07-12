@@ -1,8 +1,8 @@
 // src/Components/Footer.jsx
-import { useNavigate } from "react-router-dom";
+import { useRouter } from "next/navigation";
 
 export default function Footer() {
-    const navigate = useNavigate();
+    const router = useRouter();
 
     return (
         <footer className="md:pb-42 pb-50 px-6 pt-6 text-center text-[13px] text-gray-400 bg-black/70 backdrop-blur-md border-t border-white/10 w-full z-40">
@@ -11,7 +11,7 @@ export default function Footer() {
                     © 2025{" "}
                     <span
                         className="text-white font-semibold hover:text-green-400 transition cursor-pointer"
-                        onClick={() => navigate("/redirect?page=the-code-breakers")}
+                        onClick={() => router.push("/redirect?page=the-code-breakers")}
                     >
                         The Code Breakers
                     </span>{" "}
@@ -22,14 +22,14 @@ export default function Footer() {
                     Built by{" "}
                     <span
                         className="text-green-400 underline hover:text-green-300 cursor-pointer transition"
-                        onClick={() => navigate("/redirect?page=the-code-breakers")}
+                        onClick={() => router.push("/redirect?page=the-code-breakers")}
                     >
                         The Code Breakers
                     </span>{" "}
                     &{" "}
                     <span
                         className="text-blue-400 underline hover:text-blue-300 cursor-pointer transition"
-                        onClick={() => navigate("/credits")}
+                        onClick={() => router.push("/credits")}
                     >
                         our team
                     </span>{" "}
@@ -44,7 +44,7 @@ export default function Footer() {
                     Full team credits{" "}
                     <span
                         className="text-red-500 underline hover:text-red-400 cursor-pointer"
-                        onClick={() => navigate("/credits")}
+                        onClick={() => router.push("/credits")}
                     >
                         here
                     </span>
@@ -53,12 +53,12 @@ export default function Footer() {
 
                 <div className="flex justify-center items-center gap-4">
                     <p className="text-red-500 underline hover:text-red-400 cursor-pointer active:text-red-100 transition-all duration-200"
-                        onClick={() => navigate("/privacy")}
+                        onClick={() => router.push("/privacy")}
                     >
                         Privacy Policy
                     </p>
                     <p className="text-red-500 underline hover:text-red-400 cursor-pointer active:text-red-100 transition-all duration-200"
-                        onClick={() => navigate("/terms")}
+                        onClick={() => router.push("/terms")}
                     >
                         Terms and Conditions
                     </p>

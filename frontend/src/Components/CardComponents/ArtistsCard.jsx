@@ -1,11 +1,11 @@
+// src/Components/CardComponents/ArtistsCard.jsx
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Bookmark, BookmarkCheck, Users, Award } from "lucide-react";
 import { SpotifyButton, YouTubeButton } from "../MusicButtons";
-import { useNavigate } from "react-router-dom";
-import { usePlayer } from "../../contexts/PlayerContext";
-import { PlayButton } from "./PlayButton";
+import { useRouter } from "next/navigation";
 import { ShareArtistComponent } from "../ArtistShareComponent";
+import { toast } from "react-toastify";
 
 export const ArtistCard = ({
     url,
@@ -17,21 +17,14 @@ export const ArtistCard = ({
     id,
     URI,
 }) => {
-    console.log(artist);
-
-    const navigate = useNavigate();
-    const { showPlayer } = usePlayer();
-
+    const router = useRouter();
     const [saved, setSaved] = useState(false);
 
-    // Check localStorage on mount
     useEffect(() => {
         const savedArtists = JSON.parse(localStorage.getItem("savedArtists")) || [];
-        const isSaved = savedArtists.some(a => a.id === id); // ✅ match directly on ID prop
+        const isSaved = savedArtists.some(a => a.id === id);
         setSaved(isSaved);
     }, [id]);
-
-
 
     const toggleSave = () => {
         const savedArtists = JSON.parse(localStorage.getItem("savedArtists")) || [];
@@ -40,10 +33,11 @@ export const ArtistCard = ({
             const updated = savedArtists.filter((a) => a.id !== id);
             localStorage.setItem("savedArtists", JSON.stringify(updated));
             setSaved(false);
+            toast.info(`"${artist}" removed from your library.`);
         } else {
             const newArtist = {
                 id,
-                artist,   // string like "Adele"
+                title: artist,
                 spoURL,
                 YTURL,
                 image: url,
@@ -51,15 +45,15 @@ export const ArtistCard = ({
                 popularity,
                 uri: URI,
             };
-
             savedArtists.push(newArtist);
             localStorage.setItem("savedArtists", JSON.stringify(savedArtists));
             setSaved(true);
+            toast.success(`"${artist}" saved to your library! 🎙️`);
         }
     };
 
-
-    const handleSave = () => {
+    const handleSave = (e) => {
+        e.stopPropagation();
         toggleSave();
     };
 
@@ -68,91 +62,79 @@ export const ArtistCard = ({
     };
 
     const handleCardClick = (e) => {
-        // Prevent conflict when clicking save button
         if (e.target.closest(".noskip")) return;
-        navigate(`/artist/${id}`);
-    };
-
-    const handlePlayClick = () => {
-        if (URI?.startsWith("spotify:artist:")) {
-            showPlayer(URI, true); // context_uri mode
-        } else {
-            console.warn("[ArtistCard] Invalid album URI:", URI);
-        }
+        router.push(`/artist/${id}`);
     };
 
     return (
         <motion.div
-            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-            whileInView={{ opacity: 1, scale: 1, y: 0 }}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-50px" }}
+            whileHover={{ y: -6 }}
             onClick={handleCardClick}
-            className="relative w-72 bg-gradient-to-br from-purple-900/80 to-black/80 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden shadow-2xl hover:shadow-purple-500/10 transition-all duration-500"
+            className="group relative w-48 sm:w-64 bg-[#10141F]/60 backdrop-blur-xl border border-[#2563EB]/10 hover:border-[#60A5FA]/30 rounded-3xl overflow-hidden shadow-2xl transition-all duration-500 cursor-pointer flex flex-col justify-between p-4"
         >
-            {/* Save Icon */}
-            <div className="absolute right-2 top-2 flex justify-between items-center mb-6 noskip">
+            {/* Top Bar with Actions */}
+            <div className="absolute top-4 right-4 z-20 flex items-center gap-1.5 noskip">
+                <ShareArtistComponent
+                    artistId={id}
+                    name={artist}
+                    imageUrl={url}
+                    followers={followers}
+                    popularity={popularity}
+                    genres={[]}
+                />
+                <button
+                    onClick={handleSave}
+                    className={`p-2 rounded-full backdrop-blur-md transition-all duration-300 shadow-md ${
+                        saved 
+                            ? "bg-[#2563EB] text-[#F4F7FF] scale-110" 
+                            : "bg-[#07090F]/70 text-[#F4F7FF]/80 hover:bg-[#07090F] hover:text-[#F4F7FF]"
+                    }`}
+                >
+                    {saved ? <BookmarkCheck size={14} /> : <Bookmark size={14} />}
+                </button>
+            </div>
 
-                <div className="flex items-center gap-2 noskip">
-                    {/* Add Share Component */}
-                    <ShareArtistComponent
-                        artistId={id}
-                        name={artist}
-                        imageUrl={url}
-                        followers={followers}
-                        popularity={popularity}
-                        genres={artist.genres}
+            {/* Profile Avatar Image */}
+            <div className="flex justify-center my-6">
+                <div className="relative w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden shadow-lg bg-[#10141F] ring-4 ring-[#2563EB]/20 group-hover:ring-[#2563EB]/40 transition-all duration-500">
+                    <img
+                        src={url || "https://placehold.co/150x150?text=No+Image"}
+                        alt={artist}
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                     />
-
-                    {saved ? (
-                        <BookmarkCheck stroke="white" fill="green" onClick={handleSave} className="cursor-pointer" />
-                    ) : (
-                        <Bookmark stroke="white" onClick={handleSave} className="cursor-pointer" />
-                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#07090F]/20 to-transparent" />
                 </div>
             </div>
 
-            <div className="absolute top-5 left-5 flex gap-2 items-center z-10 noskip">
-                <PlayButton onPlay={handlePlayClick} />
-            </div>
-
-            <div className="p-6">
-                {/* Artist Image */}
-                <div className="flex justify-center mb-6">
-                    <div className="relative">
-                        <img
-                            src={url}
-                            alt={artist}
-                            className="w-32 h-32 rounded-full object-cover ring-4 ring-purple-500/30 transition-transform duration-500 hover:scale-105"
-                        />
-                        <div className="absolute inset-0 rounded-full bg-gradient-to-t from-purple-600/20 to-transparent" />
-                    </div>
-                </div>
-
-                {/* Info */}
-                <div className="text-center space-y-4">
-                    <h2 className="text-3xl font-bold text-white" title={artist}>
+            {/* Artist Info & Platform redirection */}
+            <div className="flex flex-col flex-grow justify-between gap-3 text-center">
+                <div className="space-y-1">
+                    <h2 
+                        className="text-base sm:text-lg font-bold text-white truncate hover:text-[#60A5FA] transition-colors duration-200" 
+                        title={artist}
+                    >
                         {artist}
                     </h2>
 
-                    <div className="flex items-center justify-center gap-2 text-gray-300">
-                        <Users size={18} />
-                        <span>{followers?.toLocaleString()} Followers</span>
+                    <div className="flex items-center justify-center gap-1 text-[11px] text-[#8992A5]">
+                        <Users size={12} className="text-[#8992A5]/70" />
+                        <span>{followers?.toLocaleString() || "0"} Followers</span>
                     </div>
+                </div>
 
-                    <div
-                        className={`flex items-center justify-center gap-2 ${popularity >= 80 ? "text-green-400" : "text-yellow-400"
-                            }`}
-                    >
-                        <Award size={18} />
+                <div className="space-y-3">
+                    <div className={`flex items-center justify-center gap-1.5 text-xs font-semibold ${popularity >= 80 ? "text-emerald-400" : "text-yellow-400/80"}`}>
+                        <Award size={14} />
                         <span>Popularity: {popularity}</span>
                         {popularity >= 80 && <span title="Trending">🔥</span>}
                     </div>
 
-
-                    <div className="space-y-2 pt-2 flex flex-col noskip">
+                    <div className="flex flex-col gap-1.5 pt-1 noskip">
                         <SpotifyButton clickHandle={() => handleClick(spoURL)} />
-                        <YouTubeButton clickHandle={() => handleClick(`https://www.youtube.com/results?search_query=${artist}`)} />
+                        <YouTubeButton clickHandle={() => handleClick(`https://www.youtube.com/results?search_query=${encodeURIComponent(artist)}`)} />
                     </div>
                 </div>
             </div>
