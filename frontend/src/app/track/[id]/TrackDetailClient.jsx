@@ -15,6 +15,7 @@ export default function TrackDetailClient({ id, initialData }) {
     const [saved, setSaved] = useState(false);
     const [error, setError] = useState(null);
     const [showQR, setShowQR] = useState(false);
+    const [qrFullScreen, setQrFullScreen] = useState(false);
     const [currentUrl, setCurrentUrl] = useState("");
 
     useEffect(() => {
@@ -121,10 +122,10 @@ export default function TrackDetailClient({ id, initialData }) {
 
     const artistsName = track.artists.map(a => a.name).join(', ');
     const coverUrl = track.album?.images?.[0]?.url || 'https://placehold.co/600x600?text=No+Cover';
-    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&color=60A5FA&bgcolor=10141F&data=${encodeURIComponent(currentUrl)}`;
+    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&color=60A5FA&bgcolor=10141F&ecc=H&data=${encodeURIComponent(currentUrl)}`;
 
     return (
-        <div className="relative min-h-screen bg-[#07090F] text-[#F4F7FF] p-6 md:pl-20 md:pr-20 lg:pl-40 lg:pr-40 pt-12 overflow-hidden">
+        <div className="relative min-h-screen bg-[#07090F] text-[#F4F7FF] p-4 pb-32 sm:p-6 md:pl-20 md:pr-20 lg:pl-40 lg:pr-40 pt-12 overflow-hidden">
             {/* Blurry Backdrop Glow */}
             <div 
                 className="absolute top-0 left-0 right-0 h-[50vh] opacity-15 blur-[120px] pointer-events-none z-0 bg-cover bg-center"
@@ -175,7 +176,7 @@ export default function TrackDetailClient({ id, initialData }) {
             </div>
 
             {/* Track Info Glassmorphic Card Container */}
-            <div className="relative z-10 mt-14 sm:mt-6 bg-[#10141F]/60 backdrop-blur-xl border border-[#2563EB]/10 rounded-3xl p-6 sm:p-8 flex flex-col md:flex-row items-center gap-8 sm:gap-12 shadow-2xl mb-12">
+            <div className="relative z-10 mt-14 sm:mt-6 w-full bg-transparent sm:bg-[#10141F]/60 sm:backdrop-blur-xl border-0 sm:border border-transparent sm:border-[#2563EB]/10 rounded-none sm:rounded-3xl p-2 sm:p-8 flex flex-col md:flex-row items-center gap-8 sm:gap-12 sm:shadow-2xl mb-12">
                 {/* Vinyl Record Container */}
                 <div className="relative flex-shrink-0 w-48 h-48 sm:w-56 sm:h-56 md:w-64 md:h-64 flex items-center justify-center">
                     {/* Spinning Vinyl Record Backing */}
@@ -258,12 +259,48 @@ export default function TrackDetailClient({ id, initialData }) {
             {showQR && (
                 <div className="relative z-10 bg-[#10141F]/60 backdrop-blur-xl border border-[#2563EB]/10 rounded-3xl p-6 flex flex-col items-center gap-4 text-center max-w-sm mx-auto shadow-2xl mb-12 animate-fade-in">
                     <h3 className="text-sm font-bold text-white uppercase tracking-wider">Scan to Share Track</h3>
-                    <div className="w-40 h-40 p-2.5 bg-[#10141F] border border-[#2563EB]/10 rounded-2xl flex items-center justify-center shadow-inner">
+                    <div 
+                        onClick={() => setQrFullScreen(true)}
+                        className="relative w-40 h-40 p-2.5 bg-[#10141F] border border-[#2563EB]/10 rounded-2xl flex items-center justify-center shadow-inner cursor-zoom-in group/qr transition duration-300 hover:border-[#60A5FA]/30"
+                        title="Click to full screen QR"
+                    >
                         <img src={qrCodeUrl} alt="QR Code" className="w-full h-full object-contain rounded-lg" />
+                        {/* Centered Logo Overlay */}
+                        <div className="absolute w-10 h-10 bg-[#10141F] border border-[#2563EB]/25 rounded-full flex items-center justify-center shadow-lg p-1.5 transition duration-300 group-hover/qr:scale-110">
+                            <img src="/in.svg" alt="Groove Logo" className="w-full h-full object-contain" />
+                        </div>
                     </div>
                     <p className="text-xs text-[#8992A5] max-w-[240px]">
-                        Scan this QR code with your phone camera to share or open this track card instantly.
+                        Scan this QR code with your phone camera to share or open this track card instantly. Click code to view in full screen.
                     </p>
+                </div>
+            )}
+
+            {/* Full-screen QR Modal */}
+            {qrFullScreen && (
+                <div 
+                    className="fixed inset-0 bg-black/90 backdrop-blur-md z-[500] flex flex-col items-center justify-center p-6 animate-fade-in"
+                    onClick={() => setQrFullScreen(false)}
+                >
+                    <div className="max-w-md w-full flex flex-col items-center gap-6" onClick={(e) => e.stopPropagation()}>
+                        <h3 className="text-lg font-bold text-white uppercase tracking-widest font-display">Scan QR Code</h3>
+                        <div className="relative w-72 h-72 sm:w-80 sm:h-80 p-4 bg-[#10141F] border border-[#2563EB]/20 rounded-3xl flex items-center justify-center shadow-2xl">
+                            <img src={qrCodeUrl} alt="QR Code" className="w-full h-full object-contain rounded-xl" />
+                            {/* Centered Logo Overlay */}
+                            <div className="absolute w-16 h-16 bg-[#10141F] border border-[#2563EB]/20 rounded-full flex items-center justify-center shadow-xl p-2.5">
+                                <img src="/in.svg" alt="Groove Logo" className="w-full h-full object-contain" />
+                            </div>
+                        </div>
+                        <p className="text-sm text-[#8992A5] text-center max-w-[280px]">
+                            Scan with your phone's camera to instantly view and share this track card.
+                        </p>
+                        <button
+                            onClick={() => setQrFullScreen(false)}
+                            className="px-6 py-2.5 bg-[#2563EB] hover:bg-[#60A5FA] text-white font-bold text-xs uppercase tracking-wider rounded-xl transition cursor-pointer"
+                        >
+                            Close
+                        </button>
+                    </div>
                 </div>
             )}
         </div>

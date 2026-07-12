@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Bookmark, BookmarkCheck, Disc } from "lucide-react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { ShareTrackComponent } from "./ShareTrackComponent";
 import { toast } from "react-toastify";
 
@@ -63,7 +64,7 @@ export const AlbumCard = ({
       viewport={{ once: true, margin: "-50px" }}
       whileHover={{ y: -6 }}
       onClick={handleCardClick}
-      className="group relative w-48 sm:w-64 bg-[#10141F]/60 backdrop-blur-xl border border-[#2563EB]/10 hover:border-[#60A5FA]/30 rounded-3xl overflow-hidden shadow-2xl transition-all duration-500 cursor-pointer flex flex-col justify-between"
+      className="group relative w-full sm:w-64 mx-auto bg-[#10141F]/60 backdrop-blur-xl border border-[#2563EB]/10 hover:border-[#60A5FA]/30 rounded-3xl overflow-hidden shadow-2xl transition-all duration-500 cursor-pointer flex flex-col justify-between"
     >
       {/* Vinyl Disc Hover Interaction */}
       <div className="relative aspect-square w-full p-4 overflow-hidden flex items-center justify-center">
@@ -120,16 +121,21 @@ export const AlbumCard = ({
           <div className="text-xs text-[#8992A5] truncate">
             {Array.isArray(artist) ? (
               artist.map((a, i) => (
-                <span
-                  key={a.id || i}
-                  className="hover:underline hover:text-white noskip cursor-pointer"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    a.id && router.push(`/artist/${a.id}`);
-                  }}
-                >
-                  {a.name}{i < artist.length - 1 && ', '}
-                </span>
+                a.id ? (
+                  <Link
+                    key={a.id}
+                    href={`/artist/${a.id}`}
+                    onClick={(e) => e.stopPropagation()}
+                    className="hover:underline hover:text-white noskip cursor-pointer"
+                    title={a.name}
+                  >
+                    {a.name}{i < artist.length - 1 && ', '}
+                  </Link>
+                ) : (
+                  <span key={i} title={a.name}>
+                    {a.name}{i < artist.length - 1 && ', '}
+                  </span>
+                )
               ))
             ) : (
               <span>Various Artists</span>

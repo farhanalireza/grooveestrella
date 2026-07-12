@@ -38,7 +38,7 @@ const SearchComp = ({ initialQuery = "", handleChange }) => {
             <div className="relative flex items-center bg-[#10141F]/60 backdrop-blur-xl border border-[#2563EB]/10 focus-within:border-[#60A5FA]/30 rounded-3xl p-4 shadow-2xl transition duration-300">
                 <Search size={22} className="text-[#8992A5]/60 ml-2 flex-shrink-0" />
                 <input
-                    className="flex-1 bg-transparent px-4 text-[#F4F7FF] text-base md:text-lg outline-none placeholder-[#8992A5]/50"
+                    className="flex-1 min-w-0 bg-transparent px-4 text-[#F4F7FF] text-base md:text-lg outline-none placeholder-[#8992A5]/50"
                     type="text"
                     placeholder="Search songs, artists, albums, or playlists..."
                     value={searchQuery}

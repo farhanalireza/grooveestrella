@@ -41,7 +41,7 @@ export default function SearchPage() {
     }
 
     return (
-        <div className="min-h-screen bg-[#07090F] text-[#F4F7FF] p-6 md:pl-10 md:pr-10 lg:pl-32 lg:pr-32 pt-12">
+        <div className="min-h-screen bg-[#07090F] text-[#F4F7FF] p-6 pb-24 md:pl-10 md:pr-10 lg:pl-32 lg:pr-32 pt-12">
             {/* Header / Search Controls */}
             <div className="mb-8">
                 <SearchComp initialQuery={searchTerm} handleChange={handleSearchChange} />

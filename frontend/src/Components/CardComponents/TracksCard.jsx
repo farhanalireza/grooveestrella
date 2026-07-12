@@ -6,7 +6,8 @@ import { motion } from "framer-motion";
 import { Bookmark, BookmarkCheck, Award, EllipsisVertical, Share2, ListMusic } from "lucide-react";
 import { SpotifyButton, YouTubeButton } from "../MusicButtons";
 import { useRouter } from "next/navigation";
-import ShareModal from "../ShareModal";
+import GrooveCardComposer from "../GrooveCardComposer";
+import Link from "next/link";
 import { toast } from "react-toastify";
 import {
     DropdownMenu,
@@ -71,6 +72,10 @@ export const TrackCard = ({
         toggleSave();
     };
 
+    const handleClick = (link) => {
+        if (link) window.open(link, "_blank");
+    };
+
     const handleCardClick = (e) => {
         if (e.target.closest(".noskip")) return;
         router.push(`/track/${trackId}`);
@@ -83,7 +88,7 @@ export const TrackCard = ({
             viewport={{ once: true, margin: "-50px" }}
             whileHover={{ y: -8, scale: 1.02 }}
             onClick={handleCardClick}
-            className="group relative w-48 sm:w-64 bg-[#10141F]/60 backdrop-blur-xl border border-[#2563EB]/10 hover:border-[#60A5FA]/30 rounded-3xl overflow-hidden shadow-2xl transition-all duration-500 cursor-pointer flex flex-col justify-between"
+            className="group relative w-full sm:w-64 mx-auto bg-[#10141F]/60 backdrop-blur-xl border border-[#2563EB]/10 hover:border-[#60A5FA]/30 rounded-3xl overflow-hidden shadow-2xl transition-all duration-500 cursor-pointer flex flex-col justify-between"
         >
             {/* Image Section */}
             <div className="relative aspect-square w-full overflow-hidden bg-[#10141F]">
@@ -126,17 +131,21 @@ export const TrackCard = ({
                     
                     <div className="flex flex-wrap gap-x-1 text-xs text-[#8992A5]">
                         {artist.map((a, i) => (
-                            <span
-                                key={a.id || i}
-                                className="cursor-pointer hover:underline hover:text-[#F4F7FF] transition-colors duration-200"
-                                title={a.name}
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    a.id && router.push(`/artist/${a.id}`);
-                                }}
-                            >
-                                {a.name}{i < artist.length - 1 && ','}
-                            </span>
+                            a.id ? (
+                                <Link
+                                    key={a.id}
+                                    href={`/artist/${a.id}`}
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="cursor-pointer hover:underline hover:text-[#F4F7FF] transition-colors duration-200"
+                                    title={a.name}
+                                >
+                                    {a.name}{i < artist.length - 1 && ','}
+                                </Link>
+                            ) : (
+                                <span key={i} title={a.name}>
+                                    {a.name}{i < artist.length - 1 && ','}
+                                </span>
+                            )
                         ))}
                     </div>
                 </div>
@@ -144,22 +153,19 @@ export const TrackCard = ({
                 {/* Details Footer */}
                 <div className="space-y-3">
                     <div className="flex justify-between items-center text-xs">
-                        <div className={`flex items-center gap-1 font-medium ${popularity >= 80 ? "text-emerald-400" : "text-yellow-400/80"}`}>
-                            <Award size={14} />
-                            <span>Popularity: {popularity}</span>
-                            {popularity >= 80 && <span title="Trending">🔥</span>}
+                        {/* Popularity Badge Pill */}
+                        <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                            popularity >= 80 
+                                ? "bg-emerald-500/10 border border-emerald-500/20 text-emerald-400" 
+                                : "bg-yellow-500/10 border border-yellow-500/20 text-yellow-400/80"
+                        }`}>
+                            <Award size={11} className="shrink-0" />
+                            <span>Pop: {popularity}</span>
+                            {popularity >= 80 && <span className="text-xs">🔥</span>}
                         </div>
 
                         {/* Actions menu */}
-                        <div className="flex gap-2">
-                            <ShareTrackComponent
-                                trackId={trackId}
-                                title={title}
-                                artist={artist}
-                                url={url}
-                                popularity={popularity}
-                                explicit={explicit}
-                            />
+                        <div className="flex gap-2 noskip">
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                     <button className="p-1 rounded-lg hover:bg-[#2563EB]/10 text-[#8992A5] hover:text-[#F4F7FF] transition">
@@ -191,7 +197,7 @@ export const TrackCard = ({
                                         onSelect={() => setIsShareOpen(true)}
                                         className="cursor-pointer px-3 py-2 hover:bg-[#2563EB]/10 rounded-xl transition flex items-center gap-2"
                                     >
-                                        <Share2 size={14} className="text-[#8992A5]" /> Share Card
+                                        <Share2 size={14} className="text-[#8992A5]" /> Create GrooveCard
                                     </DropdownMenuItem>
                                     <DropdownMenuSeparator className="my-1 bg-[#2563EB]/5" />
                                     <DropdownMenuItem
@@ -216,16 +222,10 @@ export const TrackCard = ({
                             </DropdownMenu>
                         </div>
                     </div>
-
-                    {/* Platform Redirect Action Buttons */}
-                    <div className="flex flex-col gap-1.5 pt-1">
-                        <SpotifyButton clickHandle={() => handleClick(spoURL)} />
-                        <YouTubeButton clickHandle={() => handleClick(`https://www.youtube.com/results?search_query=${encodeURIComponent(title + " " + artist.map(a => a.name).join(' '))}`)} />
-                    </div>
                 </div>
             </div>
 
-            <ShareModal
+            <GrooveCardComposer
                 isOpen={isShareOpen}
                 onClose={() => setIsShareOpen(false)}
                 itemId={trackId || trackURI?.split(':')[2]}

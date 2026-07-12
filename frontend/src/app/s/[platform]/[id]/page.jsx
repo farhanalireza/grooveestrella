@@ -12,7 +12,7 @@ export async function generateMetadata({ params }) {
 
   if (!metadata) {
     return {
-      title: 'Track Not Found | GrooveEstrella',
+      title: 'Track Not Found | GrooveLink',
       description: 'The requested music track could not be resolved.',
     };
   }
@@ -23,7 +23,7 @@ export async function generateMetadata({ params }) {
     description: `Open and share "${metadata.title}" by ${metadata.artist} across Spotify, Apple Music, YouTube Music, TIDAL, Deezer and more.`,
     openGraph: {
       title: titleText,
-      description: `Access "${metadata.title}" on your preferred streaming service instantly via GrooveEstrella.`,
+      description: `Access "${metadata.title}" on your preferred streaming service instantly via GrooveLink.`,
       images: [
         {
           url: metadata.coverArt,
@@ -82,45 +82,12 @@ export default async function UniversalLinkPage({ params }) {
   const platformLinks = generatePlatformLinks(metadata);
 
   return (
-    <div className="min-h-screen bg-black/65 text-white flex flex-col justify-between font-sans relative overflow-hidden">
-
-      {/* Header */}
-      <header className="border-b border-white/5 bg-black/20 backdrop-blur-md sticky top-0 z-40">
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 hover:opacity-95 transition">
-            <img src="/in.svg" alt="GrooveEstrella" className="w-8 h-8 object-contain" />
-            <span className="font-bold tracking-tight text-white font-display text-lg">GrooveEstrella</span>
-          </Link>
-
-          <Link 
-            href="/settings" 
-            className="p-2 text-zinc-400 hover:text-white rounded-lg hover:bg-white/5 transition"
-            title="Redirect Settings"
-          >
-            <Settings className="w-5 h-5" />
-          </Link>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="flex-grow flex items-center justify-center py-6 relative z-10">
-        <TrackDetailsClient 
-          metadata={metadata} 
-          platformLinks={platformLinks} 
-          currentUrl={currentUrl} 
-        />
-      </main>
-
-      {/* Footer */}
-      <footer className="border-t border-white/5 bg-black/10 py-6 text-center text-xs text-zinc-500 relative z-10">
-        <div className="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p>© {new Date().getFullYear()} GrooveEstrella. The easiest way to share music.</p>
-          <div className="flex gap-4">
-            <Link href="/" className="hover:text-zinc-300 transition">Converter</Link>
-            <Link href="/settings" className="hover:text-zinc-300 transition">Preferences</Link>
-          </div>
-        </div>
-      </footer>
-    </div>
+    <main className="flex-grow flex items-center justify-center py-6 relative z-10">
+      <TrackDetailsClient 
+        metadata={metadata} 
+        platformLinks={platformLinks} 
+        currentUrl={currentUrl} 
+      />
+    </main>
   );
 }

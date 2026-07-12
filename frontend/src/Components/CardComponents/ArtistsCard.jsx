@@ -2,7 +2,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Bookmark, BookmarkCheck, Users, Award } from "lucide-react";
-import { SpotifyButton, YouTubeButton } from "../MusicButtons";
 import { useRouter } from "next/navigation";
 import { ShareArtistComponent } from "../ArtistShareComponent";
 import { toast } from "react-toastify";
@@ -73,7 +72,7 @@ export const ArtistCard = ({
             viewport={{ once: true, margin: "-50px" }}
             whileHover={{ y: -6 }}
             onClick={handleCardClick}
-            className="group relative w-48 sm:w-64 bg-[#10141F]/60 backdrop-blur-xl border border-[#2563EB]/10 hover:border-[#60A5FA]/30 rounded-3xl overflow-hidden shadow-2xl transition-all duration-500 cursor-pointer flex flex-col justify-between p-4"
+            className="group relative w-full sm:w-64 mx-auto bg-[#10141F]/60 backdrop-blur-xl border border-[#2563EB]/10 hover:border-[#60A5FA]/30 rounded-3xl overflow-hidden shadow-2xl transition-all duration-500 cursor-pointer flex flex-col justify-between p-4"
         >
             {/* Top Bar with Actions */}
             <div className="absolute top-4 right-4 z-20 flex items-center gap-1.5 noskip">
@@ -130,11 +129,6 @@ export const ArtistCard = ({
                         <Award size={14} />
                         <span>Popularity: {popularity}</span>
                         {popularity >= 80 && <span title="Trending">🔥</span>}
-                    </div>
-
-                    <div className="flex flex-col gap-1.5 pt-1 noskip">
-                        <SpotifyButton clickHandle={() => handleClick(spoURL)} />
-                        <YouTubeButton clickHandle={() => handleClick(`https://www.youtube.com/results?search_query=${encodeURIComponent(artist)}`)} />
                     </div>
                 </div>
             </div>
