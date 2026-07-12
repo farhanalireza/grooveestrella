@@ -78,7 +78,7 @@ export default function LibraryPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#07090F] text-[#F4F7FF] p-6 md:pl-20 md:pr-20 lg:pl-40 lg:pr-40 pt-12">
+    <div className="min-h-screen bg-[#07090F] text-[#F4F7FF] p-6 pb-24 md:pl-20 md:pr-20 lg:pl-40 lg:pr-40 pt-12">
       {/* Title */}
       <div className="flex items-center gap-3 mb-8">
         <FolderHeart className="w-8 h-8 text-[#60A5FA]" />

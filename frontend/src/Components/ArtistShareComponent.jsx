@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Share2 } from 'lucide-react';
-import ShareModal from './ShareModal';
+import GrooveCardComposer from './GrooveCardComposer';
 
 export const ShareArtistComponent = ({
     artistId,
@@ -32,12 +32,12 @@ export const ShareArtistComponent = ({
                 whileTap={{ scale: 0.9 }}
                 onClick={handleButtonClick}
                 className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-all duration-200 text-white flex items-center justify-center cursor-pointer shadow-md"
-                title="Share Artist Card"
+                title="Create GrooveCard"
             >
                 <Share2 size={16} />
             </motion.button>
 
-            <ShareModal
+            <GrooveCardComposer
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
                 itemId={artistId}

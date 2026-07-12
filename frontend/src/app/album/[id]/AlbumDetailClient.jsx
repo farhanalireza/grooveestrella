@@ -113,7 +113,7 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
     const coverUrl = album.images?.[0]?.url || 'https://placehold.co/600x600?text=No+Cover';
 
     return (
-        <div className="relative min-h-screen bg-[#07090F] text-[#F4F7FF] p-6 md:pl-20 md:pr-20 lg:pl-40 lg:pr-40 pt-12 overflow-hidden">
+        <div className="relative min-h-screen bg-[#07090F] text-[#F4F7FF] p-4 pb-32 sm:p-6 md:pl-20 md:pr-20 lg:pl-40 lg:pr-40 pt-12 overflow-hidden">
             {/* Blurry Backdrop Glow */}
             <div 
                 className="absolute top-0 left-0 right-0 h-[50vh] opacity-15 blur-[120px] pointer-events-none z-0 bg-cover bg-center"
@@ -154,7 +154,7 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
             </div>
 
             {/* Album Card Details Container */}
-            <div className="relative z-10 mt-14 sm:mt-6 bg-[#10141F]/60 backdrop-blur-xl border border-[#2563EB]/10 rounded-3xl p-6 sm:p-8 flex flex-col md:flex-row items-center gap-8 sm:gap-12 shadow-2xl mb-12">
+            <div className="relative z-10 mt-14 sm:mt-6 w-full bg-transparent sm:bg-[#10141F]/60 sm:backdrop-blur-xl border-0 sm:border border-transparent sm:border-[#2563EB]/10 rounded-none sm:rounded-3xl p-2 sm:p-8 flex flex-col md:flex-row items-center gap-8 sm:gap-12 sm:shadow-2xl mb-12">
                 {/* Album Cover Art */}
                 <div className="relative flex-shrink-0 w-48 h-48 sm:w-56 sm:h-56 md:w-64 md:h-64 rounded-2xl overflow-hidden shadow-2xl bg-[#10141F] ring-1 ring-[#2563EB]/15">
                     <img src={coverUrl} alt={album.name} className="w-full h-full object-cover transition-transform duration-500 hover:scale-105" />

@@ -1,7 +1,6 @@
 // src/Components/CardComponents/PlaylistsCard.jsx
 import { motion } from "framer-motion";
 import { Bookmark, BookmarkCheck, User, ListMusic } from "lucide-react";
-import { SpotifyButton } from "../MusicButtons";
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ShareTrackComponent } from "./ShareTrackComponent";
@@ -62,12 +61,6 @@ export const PlaylistCard = ({
     toggleSave();
   };
 
-  const handleClick = (url) => {
-    if (url) {
-      window.open(url, "_blank");
-    }
-  };
-
   const handleCardClick = () => {
     router.push(`/playlist/${id}`);
   };
@@ -82,7 +75,7 @@ export const PlaylistCard = ({
       viewport={{ once: true, margin: "-50px" }}
       whileHover={{ y: -6 }}
       onClick={handleCardClick}
-      className="group relative w-48 sm:w-64 bg-[#10141F]/60 backdrop-blur-xl border border-[#2563EB]/10 hover:border-[#60A5FA]/30 rounded-3xl overflow-hidden shadow-2xl transition-all duration-500 cursor-pointer flex flex-col justify-between"
+      className="group relative w-full sm:w-64 mx-auto bg-[#10141F]/60 backdrop-blur-xl border border-[#2563EB]/10 hover:border-[#60A5FA]/30 rounded-3xl overflow-hidden shadow-2xl transition-all duration-500 cursor-pointer flex flex-col justify-between"
     >
       {/* Cover Image Section */}
       <div className="relative aspect-square w-full overflow-hidden bg-[#10141F]">
@@ -146,10 +139,6 @@ export const PlaylistCard = ({
           <div className="flex items-center gap-1.5 text-[10px] text-[#8992A5]/70 font-semibold uppercase tracking-wider">
             <ListMusic size={12} className="text-[#2563EB]" />
             <span>Playlist</span>
-          </div>
-
-          <div className="noskip" onClick={(e) => e.stopPropagation()}>
-            <SpotifyButton clickHandle={() => handleClick(spoURL)} />
           </div>
         </div>
       </div>
