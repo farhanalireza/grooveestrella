@@ -1,203 +1,189 @@
 // src/services/api.js
 import axios from 'axios';
 
-// Public high-speed music catalog API (iTunes Store Search API)
-const ITUNES_SEARCH_URL = 'https://itunes.apple.com/search';
-const ITUNES_LOOKUP_URL = 'https://itunes.apple.com/lookup';
 const MUSICBRAINZ_BASE = 'https://musicbrainz.org/ws/2';
 const USER_AGENT = 'GrooveEstrella/2.0 ( https://github.com/farhanalireza/grooveestrella )';
+const ITUNES_SEARCH_URL = 'https://itunes.apple.com/search';
 
-// Fallback tracks when device has no internet connection
-export const FALLBACK_TRACKS = [
-  {
-    id: 'f-tr-1',
-    trackId: 'f-tr-1',
-    title: 'Starboy',
-    name: 'Starboy',
-    artist: 'The Weeknd, Daft Punk',
-    artists: [{ name: 'The Weeknd' }, { name: 'Daft Punk' }],
-    album: 'Starboy',
-    albumId: 'f-al-starboy',
-    image: 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=600&auto=format&fit=crop&q=80',
-    coverArt: 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=600&auto=format&fit=crop&q=80',
-    duration: 230000,
-    duration_ms: 230000,
-    releaseDate: '2016-09-21',
-    releaseYear: '2016',
-    type: 'track',
-    popularity: 92,
-    rating: { value: 4.6 },
-    genres: ['R&B', 'Pop', 'Synthpop'],
-    tags: [
-      { label: 'r&b', count: 12 },
-      { label: 'pop', count: 9 },
-      { label: 'synthwave', count: 7 },
-      { label: 'dance', count: 5 },
-    ],
-    description: 'Starboy is the title track of The Weeknd’s third studio album, featuring French electronic duo Daft Punk. The song blends electro-pop sensibilities with dark R&B lyricism.',
-  },
-  {
-    id: 'f-tr-2',
-    trackId: 'f-tr-2',
-    title: 'Blinding Lights',
-    name: 'Blinding Lights',
-    artist: 'The Weeknd',
-    artists: [{ name: 'The Weeknd' }],
-    album: 'After Hours',
-    albumId: 'f-al-2',
-    image: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600&auto=format&fit=crop&q=80',
-    coverArt: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600&auto=format&fit=crop&q=80',
-    duration: 200000,
-    duration_ms: 200000,
-    releaseDate: '2019-11-29',
-    releaseYear: '2019',
-    type: 'track',
-    popularity: 98,
-    rating: { value: 4.9 },
-    genres: ['Synthwave', '80s Pop', 'Electro'],
-    tags: [
-      { label: 'synthwave', count: 18 },
-      { label: '80s', count: 14 },
-      { label: 'pop', count: 10 },
-      { label: 'retrowave', count: 8 },
-    ],
-    description: 'Blinding Lights is a global phenomenon known for its driving retro synthesizer hook and soaring 80s aesthetic.',
-  },
-  {
-    id: 'f-tr-3',
-    trackId: 'f-tr-3',
-    title: 'Midnight City',
-    name: 'Midnight City',
-    artist: 'M83',
-    artists: [{ name: 'M83' }],
-    album: "Hurry Up, We're Dreaming",
-    albumId: 'f-al-m83',
-    image: 'https://images.unsplash.com/photo-1518609878373-06d740f60d8b?w=600&auto=format&fit=crop&q=80',
-    coverArt: 'https://images.unsplash.com/photo-1518609878373-06d740f60d8b?w=600&auto=format&fit=crop&q=80',
-    duration: 243000,
-    duration_ms: 243000,
-    releaseDate: '2011-08-16',
-    releaseYear: '2011',
-    type: 'track',
-    popularity: 88,
-    rating: { value: 4.7 },
-    genres: ['Shoegaze', 'Synthpop', 'Indie Rock'],
-    tags: [
-      { label: 'electronic', count: 15 },
-      { label: 'indie', count: 11 },
-      { label: 'dreampop', count: 9 },
-    ],
-    description: 'Midnight City defined early 2010s dream-electronic anthems, famous for its iconic vocoder riffs and climactic saxophone solo.',
-  },
-];
+// In-memory cache for fast snappy performance and to respect rate limits
+const memoryCache = new Map();
+const CACHE_TTL_MS = 1000 * 60 * 60 * 4; // 4 hours
 
-export const FALLBACK_ALBUMS = [
-  {
-    id: 'f-al-1',
-    title: 'Random Access Memories',
-    name: 'Random Access Memories',
-    artist: 'Daft Punk',
-    artists: [{ name: 'Daft Punk' }],
-    releaseYear: '2013',
-    releaseDate: '2013-05-17',
-    image: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=600&auto=format&fit=crop&q=80',
-    coverArt: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=600&auto=format&fit=crop&q=80',
-    total_tracks: 13,
-    totalDurationMs: 4463000,
-    type: 'album',
-    rating: { value: 4.8 },
-    genres: ['Nu-Disco', 'Funk', 'Electronic'],
-    tags: [
-      { label: 'french house', count: 22 },
-      { label: 'disco', count: 18 },
-      { label: 'funk', count: 16 },
-      { label: 'masterpiece', count: 14 },
-    ],
-    description: 'Random Access Memories is the fourth studio album by French electronic duo Daft Punk. A tribute to late 1970s and early 1980s American music, recorded using live session musicians and vintage analog hardware.',
-    variations: [
-      { id: 'rel-orig', year: 2013, format: 'Vinyl LP', country: 'Global', isOriginal: true, label: '★ Original Release (2013)' },
-      { id: 'rel-cd', year: 2013, format: 'CD Standard', country: 'US', label: 'Columbia Digipak (2013)' },
-      { id: 'rel-10th', year: 2023, format: '10th Anniversary Expanded 3LP', country: 'Global', label: 'Anniversary & Modern Remasters (2023)' },
-    ],
-  },
-  {
-    id: 'f-al-2',
-    title: 'After Hours',
-    name: 'After Hours',
-    artist: 'The Weeknd',
-    artists: [{ name: 'The Weeknd' }],
-    releaseYear: '2020',
-    releaseDate: '2020-03-20',
-    image: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600&auto=format&fit=crop&q=80',
-    coverArt: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600&auto=format&fit=crop&q=80',
-    total_tracks: 14,
-    totalDurationMs: 3374000,
-    type: 'album',
-    rating: { value: 4.7 },
-    genres: ['Synthwave', 'Dark R&B', 'Electropop'],
-    tags: [
-      { label: 'synthwave', count: 19 },
-      { label: 'r&b', count: 15 },
-      { label: '80s', count: 12 },
-    ],
-    description: 'After Hours is the fourth studio album by Canadian singer The Weeknd. Set across nocturnal cityscapes, it explores heartbreak, loneliness, and hedonism.',
-    variations: [
-      { id: 'rel-orig-ah', year: 2020, format: 'Digital Master', country: 'Global', isOriginal: true, label: '★ Original Release (2020)' },
-      { id: 'rel-deluxe-ah', year: 2020, format: 'Deluxe CD', country: 'US', label: 'Deluxe Edition Bonus Tracks (2020)' },
-    ],
-  },
-];
-
-export const FALLBACK_ARTISTS = [
-  {
-    id: 'f-ar-1',
-    title: 'The Weeknd',
-    name: 'The Weeknd',
-    artist: 'The Weeknd',
-    image: 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=600&auto=format&fit=crop&q=80',
-    coverArt: 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=600&auto=format&fit=crop&q=80',
-    followers: 84000000,
-    popularity: 96,
-    rating: { value: 4.8 },
-    genres: ['R&B', 'Pop', 'Synthwave', 'Alternative R&B'],
-    tags: [
-      { label: 'r&b', count: 28 },
-      { label: 'pop', count: 24 },
-      { label: 'synthpop', count: 19 },
-      { label: 'soul', count: 12 },
-    ],
-    description: 'Abel Makkonen Tesfaye, known professionally as The Weeknd, is a Canadian singer, songwriter, and record producer known for his sonic versatility and dark lyricism.',
-    type: 'artist',
-  },
-  {
-    id: 'f-ar-2',
-    title: 'David Bowie',
-    name: 'David Bowie',
-    artist: 'David Bowie',
-    image: 'https://images.unsplash.com/photo-1498038432885-c6f3f1b912ee?w=600&auto=format&fit=crop&q=80',
-    coverArt: 'https://images.unsplash.com/photo-1498038432885-c6f3f1b912ee?w=600&auto=format&fit=crop&q=80',
-    followers: 18000000,
-    popularity: 92,
-    rating: { value: 4.9 },
-    genres: ['Glam Rock', 'Art Rock', 'Classic Rock', 'Proto-Punk'],
-    tags: [
-      { label: 'glam rock', count: 32 },
-      { label: 'classic rock', count: 29 },
-      { label: 'art rock', count: 25 },
-      { label: 'legend', count: 20 },
-    ],
-    description: 'David Robert Jones, known professionally as David Bowie, was an English singer, songwriter, and actor. He is regarded as one of the most influential musicians of the 20th century.',
-    type: 'artist',
-  },
-];
-
-// Helper to upscale iTunes low-res 100x100 artwork to crisp 600x600 or 1000x1000
-function getHighResArtwork(url, size = 600) {
-  if (!url) return 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600&auto=format&fit=crop&q=80';
-  return url.replace('100x100bb', `${size}x${size}bb`).replace('60x60bb', `${size}x${size}bb`);
+function getCached(key) {
+  const item = memoryCache.get(key);
+  if (!item) return null;
+  if (Date.now() - item.timestamp > CACHE_TTL_MS) {
+    memoryCache.delete(key);
+    return null;
+  }
+  return item.data;
 }
 
-// Generate cross-platform streaming links for any track title + artist
+function setCached(key, data) {
+  if (memoryCache.size > 500) {
+    const oldestKey = memoryCache.keys().next().value;
+    memoryCache.delete(oldestKey);
+  }
+  memoryCache.set(key, { timestamp: Date.now(), data });
+}
+
+// Rate-limited MusicBrainz queue (1 request every 1000ms max to prevent HTTP 503)
+let requestQueue = Promise.resolve();
+let lastRequestTime = 0;
+const MIN_INTERVAL_MS = 1050;
+
+function rateLimitedGet(url, params = {}) {
+  const executeWithRetry = async (attempt = 1) => {
+    const now = Date.now();
+    const timeSinceLast = now - lastRequestTime;
+    if (timeSinceLast < MIN_INTERVAL_MS) {
+      await new Promise((resolve) => setTimeout(resolve, MIN_INTERVAL_MS - timeSinceLast));
+    }
+    lastRequestTime = Date.now();
+
+    try {
+      return await axios.get(url, {
+        params: {
+          ...params,
+          fmt: 'json',
+        },
+        headers: {
+          'User-Agent': USER_AGENT,
+          Accept: 'application/json',
+        },
+        timeout: 10000,
+      });
+    } catch (err) {
+      const status = err.response?.status;
+      if ((status === 503 || status === 429 || !err.response) && attempt < 3) {
+        const backoff = attempt * 1200;
+        await new Promise((resolve) => setTimeout(resolve, backoff));
+        return executeWithRetry(attempt + 1);
+      }
+      throw err;
+    }
+  };
+
+  const nextPromise = requestQueue.then(() => executeWithRetry(1), () => executeWithRetry(1));
+  requestQueue = nextPromise;
+  return nextPromise;
+}
+
+/**
+ * Universal artwork resolver using Apple CDN (600x600 high res), Deezer, and Cover Art Archive
+ */
+export async function resolveOpenArtwork(title, artist = '', rgId = null, relId = null) {
+  const cleanTitle = (title || '').trim();
+  const cleanArtist = (artist || '').trim();
+  const query = `${cleanTitle} ${cleanArtist}`.trim();
+  const cacheKey = `img_${query.toLowerCase()}_${rgId || relId || ''}`;
+  const cached = getCached(cacheKey);
+  if (cached) return cached;
+
+  // 1. Try iTunes Store API (Ultra-fast Apple CDN, 600x600 crisp artwork)
+  try {
+    const itunesRes = await axios.get(ITUNES_SEARCH_URL, {
+      params: {
+        term: query || cleanTitle,
+        entity: rgId ? 'album' : 'song',
+        limit: 1,
+      },
+      timeout: 3500,
+    });
+    const item = itunesRes.data?.results?.[0];
+    if (item?.artworkUrl100) {
+      const highRes = item.artworkUrl100.replace('100x100bb.jpg', '600x600bb.jpg').replace('100x100bb', '600x600bb');
+      setCached(cacheKey, highRes);
+      return highRes;
+    }
+  } catch (_) {}
+
+  // 2. Try Deezer public API
+  try {
+    const deezerRes = await axios.get(`https://api.deezer.com/search/${rgId ? 'album' : 'track'}`, {
+      params: { q: query || cleanTitle, limit: 1 },
+      timeout: 3000,
+    });
+    const item = deezerRes.data?.data?.[0];
+    const deezerCover = item?.album?.cover_xl || item?.album?.cover_big || item?.cover_xl || item?.cover_big;
+    if (deezerCover) {
+      setCached(cacheKey, deezerCover);
+      return deezerCover;
+    }
+  } catch (_) {}
+
+  // 3. Cover Art Archive
+  if (rgId) {
+    const caa = `https://coverartarchive.org/release-group/${rgId}/front-500`;
+    setCached(cacheKey, caa);
+    return caa;
+  }
+  if (relId) {
+    const caa = `https://coverartarchive.org/release/${relId}/front-500`;
+    setCached(cacheKey, caa);
+    return caa;
+  }
+
+  // 4. Fallback high-res music visual
+  const fallback = 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600&auto=format&fit=crop&q=80';
+  setCached(cacheKey, fallback);
+  return fallback;
+}
+
+/**
+ * Resolves authentic historical lore and biographies from Wikipedia REST API / Wikidata
+ */
+export async function resolveWikipediaDescription(title, artist = '') {
+  const query = `${title || ''}`.trim();
+  if (!query) return null;
+
+  const cacheKey = `wiki_${query.toLowerCase()}_${(artist || '').toLowerCase()}`;
+  const cached = getCached(cacheKey);
+  if (cached) return cached;
+
+  // 1. Direct Wikipedia search by title
+  try {
+    const sumRes = await axios.get(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(query)}`, {
+      headers: { 'User-Agent': USER_AGENT },
+      timeout: 3500,
+    });
+    if (sumRes.data?.extract && sumRes.data?.type !== 'disambiguation' && sumRes.data.extract.length > 50) {
+      setCached(cacheKey, sumRes.data.extract);
+      return sumRes.data.extract;
+    }
+  } catch (_) {}
+
+  // 2. Search title with artist e.g. "Ziggy Stardust (album)" or "Thriller (Michael Jackson album)"
+  if (artist) {
+    try {
+      const sumRes = await axios.get(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(`${query} (album)`)}`, {
+        headers: { 'User-Agent': USER_AGENT },
+        timeout: 3500,
+      });
+      if (sumRes.data?.extract && sumRes.data?.type !== 'disambiguation') {
+        setCached(cacheKey, sumRes.data.extract);
+        return sumRes.data.extract;
+      }
+    } catch (_) {}
+
+    try {
+      const sumRes = await axios.get(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(`${query} (${artist} album)`)}`, {
+        headers: { 'User-Agent': USER_AGENT },
+        timeout: 3500,
+      });
+      if (sumRes.data?.extract && sumRes.data?.type !== 'disambiguation') {
+        setCached(cacheKey, sumRes.data.extract);
+        return sumRes.data.extract;
+      }
+    } catch (_) {}
+  }
+
+  return null;
+}
+
+/**
+ * Generate cross-platform streaming links
+ */
 export function generateStreamingLinks(title, artist) {
   const query = encodeURIComponent(`${title || ''} ${artist || ''}`.trim());
   return {
@@ -213,561 +199,732 @@ export function generateStreamingLinks(title, artist) {
 }
 
 /**
- * Searches music catalog using the fast, public iTunes Search API
+ * Searches MusicBrainz catalog with Popularity Promotion to ensure legendary
+ * mainstream releases (Pink Floyd, David Bowie, Michael Jackson, Queen, etc.) appear first
  */
 export const searchCatalog = async (query = '', type = 'track', limit = 20) => {
   const cleanQuery = (query || '').trim();
-  const searchKeyword = cleanQuery || 'Top Hits';
+  if (!cleanQuery) return [];
+
+  const cacheKey = `search_${type}_${cleanQuery.toLowerCase()}_${limit}`;
+  const cached = getCached(cacheKey);
+  if (cached) return cached;
 
   try {
-    let entity = 'song';
-    if (type === 'album') entity = 'album';
-    if (type === 'artist') entity = 'musicArtist';
+    // -------------------------------------------------------------
+    // ALBUM SEARCH
+    // -------------------------------------------------------------
+    if (type === 'album') {
+      // 1. Fast popular resolver via iTunes (provides authentic mainstream ranking for classic albums)
+      let popularHit = null;
+      try {
+        const itRes = await axios.get(ITUNES_SEARCH_URL, {
+          params: { term: cleanQuery, entity: 'album', limit: 2 },
+          timeout: 2500,
+        });
+        if (itRes.data?.results?.[0]) {
+          popularHit = itRes.data.results[0];
+        }
+      } catch (_) {}
 
-    const response = await axios.get(ITUNES_SEARCH_URL, {
-      params: {
-        term: searchKeyword,
-        entity,
-        limit,
-        media: 'music',
-      },
-      timeout: 8000,
+      // 2. Query MusicBrainz release-groups with Lucene phrase boost
+      const albumLuceneQuery = cleanQuery.includes(' ')
+        ? `releasegroup:"${cleanQuery}"^4 OR "${cleanQuery}"^2 OR (${cleanQuery})`
+        : cleanQuery;
+
+      const mbRes = await rateLimitedGet(`${MUSICBRAINZ_BASE}/release-group/`, {
+        query: albumLuceneQuery,
+        limit: Math.max(limit, 10),
+      });
+
+      let releaseGroups = mbRes.data?.['release-groups'] || [];
+
+      // If popular hit exists, find its authentic MusicBrainz release-group and promote to top
+      if (popularHit && popularHit.collectionName) {
+        const cleanPopAlbum = popularHit.collectionName.replace(/\s*\(.*?\)\s*/g, '').replace(/\[.*?\]/g, '').replace(/remaster(ed)?/i, '').trim();
+        const cleanPopArtist = (popularHit.artistName || '').trim();
+
+        try {
+          const specificRes = await rateLimitedGet(`${MUSICBRAINZ_BASE}/release-group/`, {
+            query: `releasegroup:"${cleanPopAlbum}" AND artist:"${cleanPopArtist}"`,
+            limit: 2,
+          });
+          const specificRgs = specificRes.data?.['release-groups'] || [];
+          if (specificRgs.length > 0) {
+            const canonicalRg = specificRgs[0];
+            // Remove any duplicate if present and prepend at index 0
+            const filteredRgs = releaseGroups.filter((rg) => rg.id !== canonicalRg.id);
+            releaseGroups = [canonicalRg, ...filteredRgs];
+          }
+        } catch (_) {}
+      }
+
+      const results = await Promise.all(
+        releaseGroups.slice(0, limit).map(async (rg) => {
+          const artistCredit = rg['artist-credit']?.map((a) => a.name).join('') || 'Various Artists';
+          const artistsList = rg['artist-credit']?.map((a) => ({
+            name: a.name,
+            id: a.artist?.id || '',
+          })) || [{ name: artistCredit, id: '' }];
+
+          const coverUrl = await resolveOpenArtwork(rg.title, artistCredit, rg.id);
+          const releaseDate = rg['first-release-date'] || null;
+          let releaseYear = null;
+          if (releaseDate) {
+            const parsed = new Date(releaseDate).getFullYear();
+            if (!isNaN(parsed)) releaseYear = parsed;
+          }
+
+          return {
+            id: rg.id,
+            name: rg.title,
+            title: rg.title,
+            artist: artistsList,
+            artists: artistsList,
+            image: coverUrl,
+            coverArt: coverUrl,
+            url: coverUrl,
+            releaseDate: releaseDate,
+            releaseYear: releaseYear,
+            type: 'album',
+            primaryType: rg['primary-type'] || 'Album',
+            trackURI: `musicbrainz:album:${rg.id}`,
+            popularity: rg.score || 85,
+            rating: { value: 4.6 },
+          };
+        })
+      );
+
+      setCached(cacheKey, results);
+      return results;
+    }
+
+    // -------------------------------------------------------------
+    // ARTIST SEARCH
+    // -------------------------------------------------------------
+    if (type === 'artist') {
+      let popularHit = null;
+      try {
+        const itRes = await axios.get(ITUNES_SEARCH_URL, {
+          params: { term: cleanQuery, entity: 'musicArtist', limit: 2 },
+          timeout: 2500,
+        });
+        if (itRes.data?.results?.[0]) {
+          popularHit = itRes.data.results[0];
+        }
+      } catch (_) {}
+
+      const response = await rateLimitedGet(`${MUSICBRAINZ_BASE}/artist/`, {
+        query: cleanQuery,
+        limit: limit,
+      });
+
+      let artists = response.data?.artists || [];
+
+      if (popularHit && popularHit.artistName) {
+        try {
+          const specificRes = await rateLimitedGet(`${MUSICBRAINZ_BASE}/artist/`, {
+            query: `artist:"${popularHit.artistName}"`,
+            limit: 2,
+          });
+          const specificArts = specificRes.data?.['artists'] || [];
+          if (specificArts.length > 0) {
+            const canonicalArt = specificArts[0];
+            const filteredArts = artists.filter((a) => a.id !== canonicalArt.id);
+            artists = [canonicalArt, ...filteredArts];
+          }
+        } catch (_) {}
+      }
+
+      const results = await Promise.all(
+        artists.slice(0, limit).map(async (art) => {
+          const tags = art.tags?.map((t) => t.name) || [];
+          const score = art.score || 80;
+          const coverUrl = await resolveOpenArtwork(art.name, art.name);
+
+          return {
+            id: art.id,
+            title: art.name,
+            name: art.name,
+            artist: art.name,
+            country: art.country || 'Global',
+            type: 'artist',
+            genres: tags.slice(0, 5),
+            image: coverUrl,
+            coverArt: coverUrl,
+            url: coverUrl,
+            followers: score ? score * 125000 : 500000,
+            popularity: score,
+            rating: { value: 4.7 },
+            trackURI: `musicbrainz:artist:${art.id}`,
+          };
+        })
+      );
+
+      setCached(cacheKey, results);
+      return results;
+    }
+
+    // -------------------------------------------------------------
+    // TRACK SEARCH (Default)
+    // -------------------------------------------------------------
+    let popularHit = null;
+    try {
+      const itRes = await axios.get(ITUNES_SEARCH_URL, {
+        params: { term: cleanQuery, entity: 'song', limit: 2 },
+        timeout: 2500,
+      });
+      if (itRes.data?.results?.[0]) {
+        popularHit = itRes.data.results[0];
+      }
+    } catch (_) {}
+
+    const trackLuceneQuery = cleanQuery.includes(' ')
+      ? `recording:"${cleanQuery}"^4 OR "${cleanQuery}"^2 OR (${cleanQuery})`
+      : cleanQuery;
+
+    const response = await rateLimitedGet(`${MUSICBRAINZ_BASE}/recording/`, {
+      query: trackLuceneQuery,
+      limit: Math.max(limit, 10),
     });
 
-    const items = response.data?.results || [];
-    if (!items.length) {
-      return getFilteredFallbacks(cleanQuery, type);
-    }
+    let recordings = response.data?.recordings || [];
 
-    if (type === 'album') {
-      return items.map((item) => ({
-        id: String(item.collectionId),
-        title: item.collectionName || 'Untitled Album',
-        name: item.collectionName || 'Untitled Album',
-        artist: item.artistName || 'Unknown Artist',
-        artists: [{ name: item.artistName || 'Unknown Artist' }],
-        album: item.collectionName,
-        releaseYear: item.releaseDate ? item.releaseDate.substring(0, 4) : '2024',
-        releaseDate: item.releaseDate,
-        image: getHighResArtwork(item.artworkUrl100, 600),
-        coverArt: getHighResArtwork(item.artworkUrl100, 600),
-        url: getHighResArtwork(item.artworkUrl100, 600),
-        type: 'album',
-        trackCount: item.trackCount || 0,
-        total_tracks: item.trackCount || 0,
-        rating: { value: 4.6 },
-      }));
-    }
+    if (popularHit && popularHit.trackName) {
+      const cleanTrack = popularHit.trackName.replace(/\s*\(.*?\)\s*/g, '').trim();
+      const cleanArtist = (popularHit.artistName || '').trim();
 
-    if (type === 'artist') {
-      return items.map((item, idx) => ({
-        id: String(item.artistId),
-        title: item.artistName || 'Unknown Artist',
-        name: item.artistName || 'Unknown Artist',
-        artist: item.artistName,
-        genre: item.primaryGenreName || 'Music',
-        genres: [item.primaryGenreName || 'Music'],
-        image: FALLBACK_ARTISTS[idx % FALLBACK_ARTISTS.length].image,
-        coverArt: FALLBACK_ARTISTS[idx % FALLBACK_ARTISTS.length].image,
-        url: FALLBACK_ARTISTS[idx % FALLBACK_ARTISTS.length].image,
-        followers: 1500000 + (idx * 250000),
-        popularity: 85,
-        rating: { value: 4.7 },
-        type: 'artist',
-      }));
+      try {
+        const specificRes = await rateLimitedGet(`${MUSICBRAINZ_BASE}/recording/`, {
+          query: `recording:"${cleanTrack}" AND artist:"${cleanArtist}"`,
+          limit: 2,
+        });
+        const specificRecs = specificRes.data?.['recordings'] || [];
+        if (specificRecs.length > 0) {
+          const canonicalRec = specificRecs[0];
+          const filteredRecs = recordings.filter((r) => r.id !== canonicalRec.id);
+          recordings = [canonicalRec, ...filteredRecs];
+        }
+      } catch (_) {}
     }
+    const results = await Promise.all(
+      recordings.slice(0, limit).map(async (rec) => {
+        const artistCredit = rec['artist-credit']?.map((a) => a.name).join('') || 'Unknown Artist';
+        const artistsList = rec['artist-credit']?.map((a) => ({
+          name: a.name,
+          id: a.artist?.id || a.id || '',
+        })) || [{ name: artistCredit, id: '' }];
 
-    // Default: Tracks
-    return items.map((item) => ({
-      id: String(item.trackId),
-      trackId: String(item.trackId),
-      title: item.trackName || 'Untitled Track',
-      name: item.trackName || 'Untitled Track',
-      artist: item.artistName || 'Unknown Artist',
-      artists: [{ name: item.artistName || 'Unknown Artist' }],
-      album: item.collectionName || '',
-      albumId: String(item.collectionId || ''),
-      image: getHighResArtwork(item.artworkUrl100, 600),
-      coverArt: getHighResArtwork(item.artworkUrl100, 600),
-      url: getHighResArtwork(item.artworkUrl100, 600),
-      previewUrl: item.previewUrl,
-      duration: item.trackTimeMillis || 0,
-      duration_ms: item.trackTimeMillis || 0,
-      releaseDate: item.releaseDate,
-      releaseYear: item.releaseDate ? item.releaseDate.substring(0, 4) : '2024',
-      type: 'track',
-      trackURI: item.trackViewUrl,
-      popularity: 88,
-      rating: { value: 4.6 },
-    }));
+        const primaryRelease = rec.releases?.[0];
+        const rgId = primaryRelease?.['release-group']?.id;
+        const relId = primaryRelease?.id;
+        const albumTitle = primaryRelease?.title || rec.title;
+        const tags = rec.tags?.map((t) => t.name) || [];
+
+        const coverUrl = await resolveOpenArtwork(rec.title, artistCredit, rgId, relId);
+        const releaseDate = primaryRelease?.date || rec['first-release-date'] || null;
+        let releaseYear = null;
+        if (releaseDate) {
+          const parsed = new Date(releaseDate).getFullYear();
+          if (!isNaN(parsed)) releaseYear = parsed;
+        }
+
+        return {
+          id: rec.id,
+          trackId: rec.id,
+          title: rec.title,
+          name: rec.title,
+          artist: artistsList,
+          artists: artistsList,
+          album: albumTitle,
+          albumId: rgId || relId || rec.id,
+          image: coverUrl,
+          coverArt: coverUrl,
+          url: coverUrl,
+          releaseDate: releaseDate,
+          releaseYear: releaseYear,
+          duration: rec.length || 0,
+          duration_ms: rec.length || 0,
+          genres: tags.slice(0, 5),
+          popularity: rec.score ? Math.min(100, Math.max(60, rec.score)) : 80,
+          rating: { value: 4.6 },
+          trackURI: `musicbrainz:track:${rec.id}`,
+          type: 'track',
+        };
+      })
+    );
+
+    setCached(cacheKey, results);
+    return results;
   } catch (err) {
-    console.warn('Catalog search error, returning fallback results:', err.message);
-    return getFilteredFallbacks(cleanQuery, type);
+    console.warn(`Catalog search error for "${query}":`, err.message);
+    return [];
   }
 };
 
-function getFilteredFallbacks(query, type) {
-  const clean = (query || '').toLowerCase();
-  if (type === 'artist') {
-    return clean
-      ? FALLBACK_ARTISTS.filter((a) => a.title.toLowerCase().includes(clean))
-      : FALLBACK_ARTISTS;
+/**
+ * Fetch complete album details, real tracklist, and lore directly from MusicBrainz + Wikipedia
+ */
+export const fetchAlbum = async (id, targetReleaseId = null) => {
+  if (!id) throw new Error('Album ID is required');
+
+  const cleanId = String(id).trim();
+  const cacheKey = targetReleaseId ? `album_${cleanId}_${targetReleaseId}` : `album_${cleanId}`;
+  const cached = getCached(cacheKey);
+  if (cached && cached.tracks && cached.tracks.length > 0) return cached;
+
+  try {
+    let rgData = null;
+    let releases = [];
+
+    // 1. First attempt lookup as a MusicBrainz release-group
+    try {
+      const rgRes = await rateLimitedGet(`${MUSICBRAINZ_BASE}/release-group/${cleanId}`, {
+        inc: 'artists+releases+tags+ratings+url-rels+annotation',
+      });
+      rgData = rgRes.data;
+      releases = rgData.releases || [];
+    } catch (_) {}
+
+    // 2. If not a release-group, it might be a release ID directly
+    let primaryRelease = null;
+    if (!rgData) {
+      try {
+        const relRes = await rateLimitedGet(`${MUSICBRAINZ_BASE}/release/${cleanId}`, {
+          inc: 'release-groups+recordings+artist-credits+tags+ratings+url-rels+annotation',
+        });
+        primaryRelease = relRes.data;
+        const foundRgId = primaryRelease['release-group']?.id;
+        if (foundRgId) {
+          const rgRes = await rateLimitedGet(`${MUSICBRAINZ_BASE}/release-group/${foundRgId}`, {
+            inc: 'artists+releases+tags+ratings+url-rels+annotation',
+          });
+          rgData = rgRes.data;
+          releases = rgData.releases || [];
+        }
+      } catch (_) {}
+    }
+
+    let albumTitle = rgData?.title || primaryRelease?.title || 'Album';
+    let artistCredit = rgData?.['artist-credit']?.map((a) => a.name).join('') || primaryRelease?.['artist-credit']?.map((a) => a.name).join('') || 'Various Artists';
+    let artistsList = rgData?.['artist-credit']?.map((a) => ({
+      name: a.name,
+      id: a.artist?.id || '',
+    })) || [{ name: artistCredit, id: '' }];
+
+    // Prioritize the original standard release matching first-release-date
+    const firstReleaseDate = rgData?.['first-release-date'] || primaryRelease?.date || '';
+    const canonicalSorted = [...releases].sort((a, b) => {
+      if (a.status === 'Official' && b.status !== 'Official') return -1;
+      if (b.status === 'Official' && a.status !== 'Official') return 1;
+      if (firstReleaseDate) {
+        if (a.date === firstReleaseDate && b.date !== firstReleaseDate) return -1;
+        if (b.date === firstReleaseDate && a.date !== firstReleaseDate) return 1;
+      }
+      return (a.date || '9999').localeCompare(b.date || '9999');
+    });
+
+    const canonicalOriginal = canonicalSorted[0];
+    const canonicalOriginalId = canonicalOriginal?.id;
+    const canonicalOriginalDate = canonicalOriginal?.date || firstReleaseDate || null;
+    const canonicalOriginalYear = canonicalOriginalDate ? new Date(canonicalOriginalDate).getFullYear() : null;
+
+    // Format available variations/editions for this album
+    const variations = releases.map((r) => {
+      const isOriginal = (firstReleaseDate && r.date === firstReleaseDate) || r.id === canonicalOriginalId;
+      const year = r.date ? new Date(r.date).getFullYear() : null;
+      return {
+        id: r.id,
+        title: r.title,
+        date: r.date || 'Unknown',
+        year: year,
+        country: r.country || 'Global',
+        status: r.status || 'Official',
+        isOriginal: isOriginal,
+        label: isOriginal
+          ? `★ Original Release (${year || 'Classic'})`
+          : `${year ? `${year} ` : ''}${r.country ? `[${r.country}] ` : ''}Edition`.trim(),
+      };
+    });
+
+    // Determine release candidates to pull the real tracklist
+    let releaseCandidates = [];
+    if (targetReleaseId) {
+      releaseCandidates = [targetReleaseId, ...canonicalSorted.map((r) => r.id)];
+    } else if (primaryRelease?.id) {
+      releaseCandidates = [primaryRelease.id, ...canonicalSorted.map((r) => r.id)];
+    } else {
+      releaseCandidates = canonicalSorted.map((r) => r.id);
+      if (cleanId && !releaseCandidates.includes(cleanId)) {
+        releaseCandidates.push(cleanId);
+      }
+    }
+
+    // Fetch the tracks of the release candidate
+    let tracks = [];
+    let relData = primaryRelease || null;
+    let successfulReleaseId = null;
+
+    for (const candId of releaseCandidates.slice(0, 3)) {
+      try {
+        const relRes = await rateLimitedGet(`${MUSICBRAINZ_BASE}/release/${candId}`, {
+          inc: 'recordings+artist-credits+tags+ratings+url-rels+annotation',
+        });
+        const currentRel = relRes.data;
+        const candidateTracks = [];
+        const media = currentRel.media || [];
+
+        for (const m of media) {
+          for (const t of m.tracks || []) {
+            const recId = t.recording?.id || t.id;
+            const trackTitle = t.title || t.recording?.title || 'Track';
+            const trackArtists = (t['artist-credit'] && t['artist-credit'].length > 0)
+              ? t['artist-credit'].map((a) => ({ name: a.name, id: a.artist?.id || '' }))
+              : artistsList;
+
+            candidateTracks.push({
+              id: recId,
+              trackId: recId,
+              title: trackTitle,
+              name: trackTitle,
+              pos: t.position || candidateTracks.length + 1,
+              trackNumber: t.position || candidateTracks.length + 1,
+              duration: t.length || t.recording?.length || 0,
+              duration_ms: t.length || t.recording?.length || 0,
+              artist: (trackArtists[0]?.name) || artistCredit,
+              artists: trackArtists,
+              trackURI: `musicbrainz:track:${recId}`,
+              type: 'track',
+            });
+          }
+        }
+
+        if (candidateTracks.length > 0) {
+          tracks = candidateTracks;
+          relData = currentRel;
+          successfulReleaseId = candId;
+          break;
+        }
+      } catch (_) {}
+    }
+
+    // Resolve real album cover
+    const coverUrl = await resolveOpenArtwork(albumTitle, artistCredit, rgData?.id, successfulReleaseId);
+
+    // Active release date & year
+    const activeReleaseDate = relData?.date || canonicalOriginalDate || firstReleaseDate || '1972-06-16';
+    let activeReleaseYear = null;
+    if (activeReleaseDate) {
+      const parsed = new Date(activeReleaseDate).getFullYear();
+      if (!isNaN(parsed)) activeReleaseYear = parsed;
+    }
+
+    // Tags & Genres
+    const allTagsList = [...(rgData?.tags || []), ...(relData?.tags || [])];
+    const tagMap = new Map();
+    for (const t of allTagsList) {
+      const name = typeof t === 'string' ? t : t.name;
+      if (!name) continue;
+      const count = (typeof t === 'object' && t.count) || 1;
+      tagMap.set(name, (tagMap.get(name) || 0) + count);
+    }
+    const tags = Array.from(tagMap.keys());
+    const allTags = Array.from(tagMap.entries()).map(([name, count]) => ({ label: name, count }));
+
+    // Authentic Wikipedia Overview / Lore
+    const wikiDesc = await resolveWikipediaDescription(albumTitle, artistCredit);
+    const description = wikiDesc || rgData?.annotation || relData?.annotation ||
+      `"${albumTitle}" is an acclaimed studio release by ${artistCredit}. Featuring celebrated arrangements and timeless songwriting.`;
+
+    // Total Duration
+    const totalDurationMs = tracks.reduce((acc, t) => acc + (t.duration_ms || t.duration || 0), 0);
+
+    // Rating
+    const rawRating = rgData?.rating || relData?.rating;
+    const ratingValue = (rawRating && rawRating.value !== undefined && rawRating.value !== null)
+      ? Number(rawRating.value)
+      : 4.6;
+    const rating = {
+      value: ratingValue,
+      votesCount: rawRating?.['votes-count'] || 35,
+    };
+
+    const albumObj = {
+      id: cleanId,
+      name: albumTitle,
+      title: albumTitle,
+      artist: artistCredit,
+      artists: artistsList,
+      image: coverUrl,
+      coverArt: coverUrl,
+      url: coverUrl,
+      releaseDate: activeReleaseDate,
+      releaseYear: activeReleaseYear,
+      originalReleaseDate: canonicalOriginalDate || firstReleaseDate,
+      originalReleaseYear: canonicalOriginalYear,
+      total_tracks: tracks.length,
+      trackCount: tracks.length,
+      totalDurationMs: totalDurationMs,
+      genres: tags.slice(0, 6),
+      tags: allTags.length > 0 ? allTags : [
+        { label: 'classic rock', count: 18 },
+        { label: 'album rock', count: 14 },
+        { label: 'glam rock', count: 10 },
+      ],
+      description: description,
+      rating: rating,
+      selectedReleaseId: successfulReleaseId || canonicalOriginalId,
+      variations: variations.length > 0 ? variations : [
+        { id: 'v-orig', label: `★ Original Release (${activeReleaseYear || '1972'})` },
+        { id: 'v-cd', label: 'Early CD & Masters (1980s)' },
+        { id: 'v-anniv', label: 'Anniversary & Modern Remasters (2010+)' },
+      ],
+      type: 'album',
+      platformLinks: generateStreamingLinks(albumTitle, artistCredit),
+    };
+
+    const payload = {
+      ...albumObj,
+      album: albumObj,
+      tracks: tracks,
+    };
+
+    setCached(cacheKey, payload);
+    return payload;
+  } catch (err) {
+    console.warn(`MusicBrainz album lookup failed for "${cleanId}", trying search fallback...`);
+    try {
+      const searchRes = await searchCatalog(cleanId, 'album', 1);
+      if (searchRes && searchRes[0] && searchRes[0].id !== cleanId) {
+        return await fetchAlbum(searchRes[0].id);
+      }
+    } catch (_) {}
+    throw err;
   }
-  if (type === 'album') {
-    return clean
-      ? FALLBACK_ALBUMS.filter((a) => a.title.toLowerCase().includes(clean))
-      : FALLBACK_ALBUMS;
-  }
-  return clean
-    ? FALLBACK_TRACKS.filter((t) => t.title.toLowerCase().includes(clean) || t.artist.toLowerCase().includes(clean))
-    : FALLBACK_TRACKS;
-}
+};
 
 /**
- * Fetch track by ID or Title
+ * Fetch complete track details, score, and lore directly from MusicBrainz + Wikipedia
  */
 export const fetchTrack = async (id) => {
   if (!id) throw new Error('Track ID is required');
 
   const cleanId = String(id).trim();
+  const cacheKey = `track_${cleanId}`;
+  const cached = getCached(cacheKey);
+  if (cached) return cached;
 
-  // 1. If numeric, query iTunes lookup directly
-  if (/^\d+$/.test(cleanId)) {
-    try {
-      const response = await axios.get(ITUNES_LOOKUP_URL, {
-        params: { id: cleanId, entity: 'song' },
-        timeout: 8000,
-      });
-      const item = response.data?.results?.[0];
-      if (item && item.trackName) {
-        const cover = getHighResArtwork(item.artworkUrl100, 800);
-        return {
-          id: String(item.trackId),
-          trackId: String(item.trackId),
-          title: item.trackName,
-          name: item.trackName,
-          artist: item.artistName,
-          artists: [{ id: String(item.artistId || ''), name: item.artistName }],
-          album: item.collectionName,
-          albumId: String(item.collectionId || ''),
-          albumObj: { id: String(item.collectionId || ''), name: item.collectionName, images: [{ url: cover }] },
-          image: cover,
-          coverArt: cover,
-          previewUrl: item.previewUrl,
-          duration: item.trackTimeMillis,
-          duration_ms: item.trackTimeMillis,
-          releaseDate: item.releaseDate,
-          releaseYear: item.releaseDate ? item.releaseDate.substring(0, 4) : '2024',
-          type: 'track',
-          popularity: 90,
-          rating: { value: 4.6 },
-          genres: [item.primaryGenreName || 'Rock/Pop'],
-          tags: [
-            { label: (item.primaryGenreName || 'Rock').toLowerCase(), count: 9 },
-            { label: 'classic', count: 6 },
-            { label: 'hit', count: 4 },
-          ],
-          description: `"${item.trackName}" by ${item.artistName} from the album "${item.collectionName || 'Single'}". Available for high fidelity playback and cross-platform streaming.`,
-          platformLinks: generateStreamingLinks(item.trackName, item.artistName),
-        };
-      }
-    } catch (err) {
-      console.warn('iTunes track lookup error:', err.message);
+  try {
+    const response = await rateLimitedGet(`${MUSICBRAINZ_BASE}/recording/${cleanId}`, {
+      inc: 'artists+releases+release-groups+ratings+tags+url-rels+annotation',
+    });
+
+    const rec = response.data;
+    if (!rec || !rec.title) throw new Error('Recording not found');
+
+    const artistCredit = rec['artist-credit']?.map((a) => a.name).join('') || 'Unknown Artist';
+    const artistsList = rec['artist-credit']?.map((a) => ({
+      name: a.name,
+      id: a.artist?.id || a.id || '',
+    })) || [{ name: artistCredit, id: '' }];
+
+    const primaryRelease = rec.releases?.[0];
+    const rgId = primaryRelease?.['release-group']?.id;
+    const relId = primaryRelease?.id;
+    const albumTitle = primaryRelease?.title || rec.title;
+    const tags = rec.tags?.map((t) => t.name) || [];
+
+    const coverUrl = await resolveOpenArtwork(rec.title, artistCredit, rgId, relId);
+    const releaseDate = primaryRelease?.date || rec['first-release-date'] || null;
+    let releaseYear = null;
+    if (releaseDate) {
+      const parsed = new Date(releaseDate).getFullYear();
+      if (!isNaN(parsed)) releaseYear = parsed;
     }
-  }
 
-  // 2. If UUID (MusicBrainz ID)
-  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cleanId)) {
-    try {
-      const mbRes = await axios.get(`${MUSICBRAINZ_BASE}/recording/${cleanId}?fmt=json&inc=artists+releases+tags+ratings`, {
-        headers: { 'User-Agent': USER_AGENT, Accept: 'application/json' },
-        timeout: 8000,
-      });
-      const data = mbRes.data;
-      if (data && data.title) {
-        const artistName = data['artist-credit']?.[0]?.name || data['artist-credit']?.[0]?.artist?.name || 'Unknown Artist';
-        const artistId = data['artist-credit']?.[0]?.artist?.id || '';
-        const release = data.releases?.[0] || {};
-        const releaseName = release.title || '';
-        const releaseId = release.id || '';
+    // Wiki description
+    const wikiDesc = await resolveWikipediaDescription(rec.title, artistCredit);
+    const description = wikiDesc || rec.annotation ||
+      `"${rec.title}" is a renowned recording by ${artistCredit}, featured on the album "${albumTitle}".`;
 
-        // Search iTunes for artwork
-        const searchItems = await searchCatalog(`${data.title} ${artistName}`, 'track', 1);
-        const cover = searchItems[0]?.image || 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=600&auto=format&fit=crop&q=80';
+    const rawRating = rec.rating;
+    const ratingValue = (rawRating && rawRating.value !== undefined && rawRating.value !== null)
+      ? Number(rawRating.value)
+      : 4.6;
 
-        return {
-          id: cleanId,
-          trackId: cleanId,
-          title: data.title,
-          name: data.title,
-          artist: artistName,
-          artists: [{ id: artistId, name: artistName }],
-          album: releaseName,
-          albumId: releaseId,
-          albumObj: { id: releaseId, name: releaseName, images: [{ url: cover }] },
-          image: cover,
-          coverArt: cover,
-          duration: data.length || 240000,
-          duration_ms: data.length || 240000,
-          releaseDate: release.date || '1972-06-16',
-          releaseYear: release.date ? release.date.substring(0, 4) : '1972',
-          type: 'track',
-          popularity: 92,
-          rating: { value: 4.7 },
-          genres: data.tags?.map((t) => t.name) || ['Classic Rock', 'Glam Rock'],
-          tags: data.tags?.map((t) => ({ label: t.name, count: t.count || 5 })) || [
-            { label: 'rock', count: 8 },
-            { label: 'album rock', count: 7 },
-            { label: 'glam rock', count: 5 },
-          ],
-          description: `"${data.title}" by ${artistName}. A foundational recording released under ${releaseName || 'catalog'}.`,
-          platformLinks: generateStreamingLinks(data.title, artistName),
-        };
-      }
-    } catch (mbErr) {
-      console.warn('MusicBrainz track lookup error:', mbErr.message);
-    }
-  }
-
-  // 3. Fallback search by term
-  const searchResults = await searchCatalog(cleanId, 'track', 1);
-  if (searchResults && searchResults[0]) {
-    const item = searchResults[0];
-    return {
-      ...item,
-      artists: item.artists || [{ name: item.artist }],
-      albumObj: { id: item.albumId, name: item.album, images: [{ url: item.image }] },
-      rating: item.rating || { value: 4.6 },
-      tags: [
-        { label: 'rock', count: 8 },
-        { label: 'pop', count: 6 },
-        { label: 'curated', count: 5 },
+    const trackData = {
+      id: rec.id,
+      trackId: rec.id,
+      name: rec.title,
+      title: rec.title,
+      artist: artistCredit,
+      artists: artistsList,
+      album: albumTitle,
+      albumId: rgId || relId || rec.id,
+      image: coverUrl,
+      coverArt: coverUrl,
+      url: coverUrl,
+      releaseDate: releaseDate,
+      releaseYear: releaseYear,
+      duration: rec.length || 240000,
+      duration_ms: rec.length || 240000,
+      genres: tags.slice(0, 5),
+      tags: rec.tags?.map((t) => ({ label: t.name, count: t.count || 5 })) || [
+        { label: 'rock', count: 12 },
+        { label: 'classic', count: 8 },
       ],
-      description: `"${item.title}" by ${item.artist}. An outstanding track representative with timeless appeal.`,
-      platformLinks: generateStreamingLinks(item.title, item.artist),
+      description: description,
+      rating: { value: ratingValue, votesCount: rawRating?.['votes-count'] || 25 },
+      popularity: rec.score ? Math.min(100, Math.max(60, rec.score)) : 88,
+      platformLinks: generateStreamingLinks(rec.title, artistCredit),
+      type: 'track',
     };
-  }
 
-  // 4. Default fallback
-  const found = FALLBACK_TRACKS.find((t) => t.id === cleanId || t.trackId === cleanId) || FALLBACK_TRACKS[0];
-  return {
-    ...found,
-    platformLinks: generateStreamingLinks(found.title, found.artist),
-  };
+    setCached(cacheKey, trackData);
+    return trackData;
+  } catch (err) {
+    console.warn(`MusicBrainz track lookup failed for "${cleanId}", trying search fallback...`);
+    try {
+      const searchRes = await searchCatalog(cleanId, 'track', 1);
+      if (searchRes && searchRes[0] && searchRes[0].id !== cleanId) {
+        return await fetchTrack(searchRes[0].id);
+      }
+    } catch (_) {}
+    throw err;
+  }
 };
 
 /**
- * Fetch album by ID or Title
- */
-export const fetchAlbum = async (id) => {
-  if (!id) throw new Error('Album ID is required');
-
-  const cleanId = String(id).trim();
-
-  // 1. If numeric iTunes collectionId
-  if (/^\d+$/.test(cleanId)) {
-    try {
-      const response = await axios.get(ITUNES_LOOKUP_URL, {
-        params: { id: cleanId, entity: 'song' },
-        timeout: 8000,
-      });
-      const items = response.data?.results || [];
-      const albumMeta = items[0] || {};
-      const cover = getHighResArtwork(albumMeta.artworkUrl100, 800);
-
-      const tracks = items.slice(1).map((t, idx) => ({
-        id: String(t.trackId || idx + 1),
-        trackId: String(t.trackId || idx + 1),
-        title: t.trackName || `Track ${idx + 1}`,
-        name: t.trackName || `Track ${idx + 1}`,
-        artist: t.artistName || albumMeta.artistName || '',
-        artists: [{ id: String(t.artistId || ''), name: t.artistName || albumMeta.artistName }],
-        album: albumMeta.collectionName || '',
-        image: cover,
-        coverArt: cover,
-        duration: t.trackTimeMillis || 0,
-        duration_ms: t.trackTimeMillis || 0,
-        trackNumber: t.trackNumber || idx + 1,
-        previewUrl: t.previewUrl,
-        type: 'track',
-      }));
-
-      const totalDuration = tracks.reduce((acc, cur) => acc + (cur.duration || 0), 0);
-
-      const albumObj = {
-        id: String(albumMeta.collectionId || cleanId),
-        title: albumMeta.collectionName || 'Album Details',
-        name: albumMeta.collectionName || 'Album Details',
-        artist: albumMeta.artistName || 'Unknown Artist',
-        artists: [{ id: String(albumMeta.artistId || ''), name: albumMeta.artistName || 'Unknown Artist' }],
-        image: cover,
-        coverArt: cover,
-        url: cover,
-        releaseDate: albumMeta.releaseDate || '2024',
-        releaseYear: albumMeta.releaseDate ? albumMeta.releaseDate.substring(0, 4) : '2024',
-        total_tracks: albumMeta.trackCount || tracks.length,
-        trackCount: albumMeta.trackCount || tracks.length,
-        totalDurationMs: totalDuration,
-        type: 'album',
-        rating: { value: 4.8 },
-        genres: [albumMeta.primaryGenreName || 'Rock/Pop'],
-        tags: [
-          { label: (albumMeta.primaryGenreName || 'Rock').toLowerCase(), count: 12 },
-          { label: 'classic', count: 8 },
-          { label: 'vinyl', count: 7 },
-        ],
-        description: `"${albumMeta.collectionName}" is a studio album by ${albumMeta.artistName}, containing ${albumMeta.trackCount || tracks.length} tracks.`,
-        variations: [
-          { id: 'rel-orig', year: albumMeta.releaseDate?.substring(0, 4) || 2020, format: 'Original Master', country: 'Global', isOriginal: true, label: `★ Original Release (${albumMeta.releaseDate?.substring(0, 4) || 'Classic'})` },
-          { id: 'rel-remaster', year: 2024, format: 'Digital Remaster', country: 'Global', label: 'Anniversary & Modern Remasters (2024)' },
-        ],
-      };
-
-      return {
-        ...albumObj,
-        album: albumObj,
-        tracks,
-      };
-    } catch (err) {
-      console.warn('iTunes album lookup error:', err.message);
-    }
-  }
-
-  // 2. If UUID MusicBrainz ID
-  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cleanId)) {
-    try {
-      const mbRes = await axios.get(`${MUSICBRAINZ_BASE}/release/${cleanId}?fmt=json&inc=recordings+artists+release-groups+tags+ratings`, {
-        headers: { 'User-Agent': USER_AGENT, Accept: 'application/json' },
-        timeout: 8000,
-      });
-      const data = mbRes.data;
-      if (data && data.title) {
-        const artistName = data['artist-credit']?.[0]?.name || data['artist-credit']?.[0]?.artist?.name || 'Various Artists';
-        const artistId = data['artist-credit']?.[0]?.artist?.id || '';
-
-        // Artwork search
-        const searchItems = await searchCatalog(`${data.title} ${artistName}`, 'album', 1);
-        const cover = searchItems[0]?.image || 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=600&auto=format&fit=crop&q=80';
-
-        const rawTracks = data.media?.[0]?.tracks || [];
-        const tracks = rawTracks.map((t, idx) => ({
-          id: t.recording?.id || String(idx + 1),
-          trackId: t.recording?.id || String(idx + 1),
-          title: t.title || t.recording?.title || `Track ${idx + 1}`,
-          name: t.title || t.recording?.title || `Track ${idx + 1}`,
-          artist: t['artist-credit']?.[0]?.name || artistName,
-          artists: [{ id: artistId, name: artistName }],
-          album: data.title,
-          image: cover,
-          coverArt: cover,
-          duration: t.length || t.recording?.length || 210000,
-          duration_ms: t.length || t.recording?.length || 210000,
-          trackNumber: t.position || idx + 1,
-          type: 'track',
-        }));
-
-        const totalDuration = tracks.reduce((acc, cur) => acc + (cur.duration || 0), 0);
-
-        const albumObj = {
-          id: cleanId,
-          title: data.title,
-          name: data.title,
-          artist: artistName,
-          artists: [{ id: artistId, name: artistName }],
-          image: cover,
-          coverArt: cover,
-          url: cover,
-          releaseDate: data.date || '1972-06-16',
-          releaseYear: data.date ? data.date.substring(0, 4) : '1972',
-          total_tracks: tracks.length,
-          trackCount: tracks.length,
-          totalDurationMs: totalDuration,
-          type: 'album',
-          rating: { value: 4.8 },
-          genres: data.tags?.map((t) => t.name) || ['Glam Rock', 'Classic Rock'],
-          tags: data.tags?.map((t) => ({ label: t.name, count: t.count || 5 })) || [
-            { label: 'glam rock', count: 14 },
-            { label: 'classic rock', count: 10 },
-            { label: 'album rock', count: 9 },
-          ],
-          description: `"${data.title}" is an iconic release by ${artistName}.`,
-          variations: [
-            { id: 'rel-orig', year: data.date?.substring(0, 4) || 1972, format: 'Original Master', country: 'UK', isOriginal: true, label: `★ Original Release (${data.date?.substring(0, 4) || '1972'})` },
-            { id: 'rel-cd', year: 1984, format: 'CD Master', country: 'US', label: 'Early CD & Masters (1980s)' },
-            { id: 'rel-anniv', year: 2012, format: '40th Anniversary Remaster', country: 'Global', label: 'Anniversary & Modern Remasters (2010+)' },
-          ],
-        };
-
-        return {
-          ...albumObj,
-          album: albumObj,
-          tracks,
-        };
-      }
-    } catch (mbErr) {
-      console.warn('MusicBrainz album lookup error:', mbErr.message);
-    }
-  }
-
-  // 3. Fallback search
-  const searchResults = await searchCatalog(cleanId, 'album', 1);
-  if (searchResults && searchResults[0]) {
-    const item = searchResults[0];
-    const tracks = FALLBACK_TRACKS.map((t, idx) => ({
-      ...t,
-      album: item.title,
-      image: item.image,
-      trackNumber: idx + 1,
-    }));
-    const totalDuration = tracks.reduce((acc, cur) => acc + (cur.duration || 0), 0);
-
-    const albumObj = {
-      ...item,
-      totalDurationMs: totalDuration,
-      rating: { value: 4.8 },
-      genres: ['Classic Rock', 'Glam Rock'],
-      tags: [
-        { label: 'album rock', count: 12 },
-        { label: 'classic rock', count: 8 },
-        { label: 'vinyl', count: 7 },
-      ],
-      description: `"${item.title}" by ${item.artist}. A seminal album with incredible sonic craftsmanship.`,
-      variations: [
-        { id: 'rel-orig', year: item.releaseYear || '1972', format: 'Vinyl LP', country: 'Global', isOriginal: true, label: `★ Original Release (${item.releaseYear || '1972'})` },
-        { id: 'rel-reissue', year: '2024', format: 'Modern Remaster', country: 'Global', label: 'Anniversary & Modern Remasters (2024)' },
-      ],
-    };
-
-    return {
-      ...albumObj,
-      album: albumObj,
-      tracks,
-    };
-  }
-
-  // 4. Default fallback
-  const found = FALLBACK_ALBUMS.find((a) => a.id === cleanId) || FALLBACK_ALBUMS[0];
-  return {
-    ...found,
-    album: found,
-    tracks: FALLBACK_TRACKS.map((t, i) => ({ ...t, trackNumber: i + 1 })),
-  };
-};
-
-/**
- * Fetch artist by ID or Name
+ * Fetch complete artist details, real discography, and top tracks directly from MusicBrainz + Wikipedia
  */
 export const fetchArtist = async (id) => {
   if (!id) throw new Error('Artist ID is required');
 
   const cleanId = String(id).trim();
+  const cacheKey = `artist_${cleanId}`;
+  const cached = getCached(cacheKey);
+  if (cached) return cached;
 
-  // 1. If numeric iTunes artistId
-  if (/^\d+$/.test(cleanId)) {
-    try {
-      const response = await axios.get(ITUNES_LOOKUP_URL, {
-        params: { id: cleanId, entity: 'song', limit: 25 },
-        timeout: 8000,
-      });
-      const items = response.data?.results || [];
-      const artistMeta = items[0] || {};
+  try {
+    const artistRes = await rateLimitedGet(`${MUSICBRAINZ_BASE}/artist/${cleanId}`, {
+      inc: 'tags+ratings+url-rels+annotation',
+    });
+    const artistData = artistRes.data;
+    if (!artistData || !artistData.name) throw new Error('Artist not found');
 
-      // Separate tracks and albums
-      const topTracks = items.slice(1, 11).map((t, idx) => ({
-        id: String(t.trackId || idx + 1),
-        trackId: String(t.trackId || idx + 1),
-        title: t.trackName,
-        name: t.trackName,
-        artist: t.artistName,
-        album: t.collectionName,
-        albumId: String(t.collectionId || ''),
-        image: getHighResArtwork(t.artworkUrl100, 600),
-        coverArt: getHighResArtwork(t.artworkUrl100, 600),
-        duration: t.trackTimeMillis,
-        previewUrl: t.previewUrl,
-        type: 'track',
-      }));
+    const releaseGroupsRes = await rateLimitedGet(`${MUSICBRAINZ_BASE}/release-group`, {
+      artist: cleanId,
+      type: 'album|single',
+      limit: 12,
+    });
+    const recordingsRes = await rateLimitedGet(`${MUSICBRAINZ_BASE}/recording`, {
+      artist: cleanId,
+      limit: 10,
+    });
 
-      // Search albums for artist
-      const albumsRes = await axios.get(ITUNES_LOOKUP_URL, {
-        params: { id: cleanId, entity: 'album', limit: 8 },
-        timeout: 8000,
-      });
-      const albumItems = (albumsRes.data?.results || []).slice(1);
-      const albums = albumItems.map((a) => ({
-        id: String(a.collectionId),
-        title: a.collectionName,
-        name: a.collectionName,
-        artist: a.artistName,
-        releaseYear: a.releaseDate ? a.releaseDate.substring(0, 4) : '2024',
-        image: getHighResArtwork(a.artworkUrl100, 600),
-        coverArt: getHighResArtwork(a.artworkUrl100, 600),
-        type: 'album',
-      }));
+    const artistName = artistData.name;
+    const coverUrl = await resolveOpenArtwork(artistName, artistName);
+    const tags = artistData.tags?.map((t) => t.name) || [];
 
-      return {
-        id: String(artistMeta.artistId || cleanId),
-        title: artistMeta.artistName || 'Artist Profile',
-        name: artistMeta.artistName || 'Artist Profile',
-        artist: artistMeta.artistName || 'Artist Profile',
-        genre: artistMeta.primaryGenreName || 'Rock',
-        genres: [artistMeta.primaryGenreName || 'Rock', 'Pop', 'Alternative'],
-        image: topTracks[0]?.image || 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=800&auto=format&fit=crop&q=80',
-        coverArt: topTracks[0]?.image || 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=800&auto=format&fit=crop&q=80',
-        followers: 16500000,
-        popularity: 94,
-        rating: { value: 4.8 },
-        tags: [
-          { label: 'rock', count: 18 },
-          { label: 'classic', count: 14 },
-          { label: 'legend', count: 10 },
-        ],
-        description: `${artistMeta.artistName} is a celebrated musical artist with a wide catalogue of acclaimed tracks and albums across the globe.`,
-        topTracks: topTracks.length > 0 ? topTracks : FALLBACK_TRACKS,
-        albums: albums.length > 0 ? albums : FALLBACK_ALBUMS,
-      };
-    } catch (err) {
-      console.warn('iTunes artist lookup error:', err.message);
+    // Wiki description
+    const wikiDesc = await resolveWikipediaDescription(artistName);
+    const description = wikiDesc || artistData.annotation ||
+      `${artistName} is one of music history's celebrated and influential recording artists.`;
+
+    // Process top albums
+    const rawRgs = releaseGroupsRes.data?.['release-groups'] || [];
+    const seenNames = new Set();
+    const albums = [];
+    for (const rg of rawRgs) {
+      if (!seenNames.has(rg.title)) {
+        seenNames.add(rg.title);
+        const albumCover = await resolveOpenArtwork(rg.title, artistName, rg.id);
+        const releaseDate = rg['first-release-date'] || null;
+        let releaseYear = null;
+        if (releaseDate) {
+          const parsed = new Date(releaseDate).getFullYear();
+          if (!isNaN(parsed)) releaseYear = parsed;
+        }
+
+        albums.push({
+          id: rg.id,
+          title: rg.title,
+          name: rg.title,
+          url: albumCover,
+          image: albumCover,
+          coverArt: albumCover,
+          artist: artistName,
+          releaseDate: releaseDate,
+          releaseYear: releaseYear,
+          type: 'album',
+        });
+      }
     }
-  }
 
-  // 2. Search fallback
-  const searchResults = await searchCatalog(cleanId, 'artist', 1);
-  if (searchResults && searchResults[0]) {
-    const item = searchResults[0];
-    const topTracksSearch = await searchCatalog(item.name || cleanId, 'track', 6);
-    const albumsSearch = await searchCatalog(item.name || cleanId, 'album', 6);
+    // Process top tracks
+    const rawRecs = recordingsRes.data?.recordings || [];
+    const topTracks = await Promise.all(
+      rawRecs.map(async (rec) => {
+        const primaryRel = rec.releases?.[0];
+        const trackCover = await resolveOpenArtwork(rec.title, artistName, primaryRel?.['release-group']?.id, primaryRel?.id);
 
-    return {
-      id: item.id,
-      title: item.name,
-      name: item.name,
-      artist: item.name,
-      genre: item.genre || 'Rock',
-      genres: [item.genre || 'Rock', 'Art Rock', 'Glam Rock'],
-      image: item.image,
-      coverArt: item.image,
-      followers: item.followers || 15000000,
-      popularity: 92,
-      rating: { value: 4.8 },
-      tags: [
-        { label: 'glam rock', count: 16 },
-        { label: 'classic rock', count: 12 },
-        { label: 'art rock', count: 9 },
+        return {
+          id: rec.id,
+          trackId: rec.id,
+          title: rec.title,
+          name: rec.title,
+          url: trackCover,
+          image: trackCover,
+          coverArt: trackCover,
+          artist: artistName,
+          album: primaryRel?.title || '',
+          albumId: primaryRel?.id || '',
+          duration: rec.length || 210000,
+          duration_ms: rec.length || 210000,
+          type: 'track',
+        };
+      })
+    );
+
+    const rawRating = artistData.rating;
+    const ratingValue = (rawRating && rawRating.value !== undefined && rawRating.value !== null)
+      ? Number(rawRating.value)
+      : 4.8;
+
+    const formatted = {
+      id: artistData.id,
+      name: artistName,
+      title: artistName,
+      artist: artistName,
+      image: coverUrl,
+      coverArt: coverUrl,
+      url: coverUrl,
+      genres: tags.slice(0, 5),
+      tags: artistData.tags?.map((t) => ({ label: t.name, count: t.count || 5 })) || [
+        { label: 'rock', count: 20 },
+        { label: 'classic', count: 15 },
       ],
-      description: `${item.name} is one of the most celebrated and innovative musical icons in music history.`,
-      topTracks: topTracksSearch.length > 0 ? topTracksSearch : FALLBACK_TRACKS,
-      albums: albumsSearch.length > 0 ? albumsSearch : FALLBACK_ALBUMS,
+      description: description,
+      followers: 18000000,
+      popularity: 94,
+      rating: { value: ratingValue, votesCount: rawRating?.['votes-count'] || 50 },
+      topTracks: topTracks,
+      albums: albums,
+      type: 'artist',
     };
-  }
 
-  // 3. Fallback
-  const found = FALLBACK_ARTISTS.find((a) => a.id === cleanId) || FALLBACK_ARTISTS[0];
-  return {
-    ...found,
-    topTracks: FALLBACK_TRACKS,
-    albums: FALLBACK_ALBUMS,
-  };
+    setCached(cacheKey, formatted);
+    return formatted;
+  } catch (err) {
+    console.warn(`MusicBrainz artist lookup failed for "${cleanId}", trying search fallback...`);
+    try {
+      const searchRes = await searchCatalog(cleanId, 'artist', 1);
+      if (searchRes && searchRes[0] && searchRes[0].id !== cleanId) {
+        return await fetchArtist(searchRes[0].id);
+      }
+    } catch (_) {}
+    throw err;
+  }
 };
 
 export function isUrl(string) {
@@ -775,14 +932,10 @@ export function isUrl(string) {
   return /^(https?:\/\/|www\.)[^\s/$.?#].[^\s]*$/i.test(string.trim());
 }
 
-/**
- * Converts music links to universal routing links
- */
 export const convertUrl = async (url) => {
   if (!url || !url.trim()) throw new Error('Music link is required');
   const cleanUrl = url.trim();
 
-  // Extract song keywords from common URL structures
   let term = cleanUrl;
   try {
     const parsed = new URL(cleanUrl);
@@ -796,7 +949,7 @@ export const convertUrl = async (url) => {
   }
 
   const results = await searchCatalog(term, 'track', 5);
-  const track = results[0] || FALLBACK_TRACKS[0];
+  const track = results[0];
 
   return {
     success: true,

@@ -11,7 +11,7 @@ import {
   Platform,
   Modal,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -33,6 +33,7 @@ import {
   GrooveCardModal,
   MusicLoreAndReviews,
   GrooveLoader,
+  GrooveAppBar,
 } from '../../src/components';
 
 function msToMmSs(ms) {
@@ -48,6 +49,7 @@ function msToMmSs(ms) {
 export default function TrackDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   const [track, setTrack] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -154,7 +156,9 @@ export default function TrackDetailScreen() {
   const coverUrl = track?.coverArt || track?.image || 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=600&auto=format&fit=crop&q=80';
   const durationText = msToMmSs(track?.duration_ms || track?.duration);
   const popularityScore = track?.popularity || 85;
-  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&color=60A5FA&bgcolor=10141F&ecc=H&data=${encodeURIComponent(`https://grooveestrella.app/track/${encodeURIComponent(track?.id || id)}`)}`;
+  const canonicalMbid = track?.id || id;
+  const canonicalTrackUrl = `https://grooveestrella.com/s/musicbrainz/track/${canonicalMbid}`;
+  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&color=60A5FA&bgcolor=10141F&ecc=H&data=${encodeURIComponent(canonicalTrackUrl)}`;
 
   const artistsList = Array.isArray(track?.artists)
     ? track.artists
@@ -168,62 +172,66 @@ export default function TrackDetailScreen() {
         <View style={styles.backdropOverlay} />
       </View>
 
-      {/* Top Action Header */}
-      <View style={styles.header}>
-        {/* Back Button */}
-        <TouchableOpacity
-          style={styles.circleBtn}
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            router.back();
-          }}
-          hitSlop={10}
-        >
-          <Ionicons name="arrow-back" size={20} color="#8992A5" />
-        </TouchableOpacity>
+      {/* Apple Music Style Unified App Bar */}
+      <GrooveAppBar
+        title={trackTitle}
+        subtitle={trackArtist}
+        saved={saved}
+        onToggleSave={handleToggleSave}
+        onShare={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          setShowGrooveCardModal(true);
+        }}
+        onOpenLink={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          setShowGrooveLinkModal(true);
+        }}
+        rightActions={
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <TouchableOpacity
+              style={[styles.circleBtn, showQR && styles.circleBtnActive]}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setShowQR(!showQR);
+              }}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons name="qr-code-outline" size={17} color={showQR ? '#FFFFFF' : '#8992A5'} />
+            </TouchableOpacity>
 
-        {/* Right Action Icons: QR, Share GrooveCard, Bookmark */}
-        <View style={styles.headerRightActions}>
-          {/* QR Code toggle */}
-          <TouchableOpacity
-            style={[styles.circleBtn, showQR && styles.circleBtnActive]}
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              setShowQR(!showQR);
-            }}
-            hitSlop={10}
-          >
-            <Ionicons name="qr-code-outline" size={18} color={showQR ? '#FFFFFF' : '#8992A5'} />
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.circleBtn}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                setShowGrooveCardModal(true);
+              }}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons name="share-social-outline" size={17} color="#8992A5" />
+            </TouchableOpacity>
 
-          {/* Share / GrooveCard */}
-          <TouchableOpacity
-            style={styles.circleBtn}
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-              setShowGrooveCardModal(true);
-            }}
-            hitSlop={10}
-          >
-            <Ionicons name="share-social-outline" size={18} color="#8992A5" />
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.circleBtn, saved && styles.circleBtnActive]}
+              onPress={handleToggleSave}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons
+                name={saved ? 'bookmark' : 'bookmark-outline'}
+                size={17}
+                color={saved ? '#FFFFFF' : '#8992A5'}
+              />
+            </TouchableOpacity>
+          </View>
+        }
+      />
 
-          {/* Bookmark */}
-          <TouchableOpacity
-            style={[styles.circleBtn, saved && styles.circleBtnActive]}
-            onPress={handleToggleSave}
-            hitSlop={10}
-          >
-            <Ionicons
-              name={saved ? 'bookmark' : 'bookmark-outline'}
-              size={18}
-              color={saved ? '#FFFFFF' : '#8992A5'}
-            />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingTop: insets.top + (Platform.OS === 'ios' ? 64 : 70) },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Hero Card Container (matches web app Track Card) */}
         <Animated.View entering={FadeInDown.duration(400)} style={styles.heroCard}>
           {/* Spinning Vinyl Record Hero Component */}
@@ -367,7 +375,11 @@ export default function TrackDetailScreen() {
             >
               <Image source={{ uri: qrCodeUrl }} style={styles.qrImage} />
               <View style={styles.qrLogoBadge}>
-                <Ionicons name="musical-note" size={18} color="#2563EB" />
+                <Image
+                  source={require('../../assets/icon.png')}
+                  style={styles.qrAppLogo}
+                  resizeMode="contain"
+                />
               </View>
             </TouchableOpacity>
             <Text style={styles.qrDescription}>
@@ -385,7 +397,11 @@ export default function TrackDetailScreen() {
                 <View style={styles.modalQrWrapper}>
                   <Image source={{ uri: qrCodeUrl }} style={styles.modalQrImage} />
                   <View style={styles.modalQrLogo}>
-                    <Ionicons name="musical-notes" size={24} color="#2563EB" />
+                    <Image
+                      source={require('../../assets/icon.png')}
+                      style={styles.modalQrLogoIcon}
+                      resizeMode="contain"
+                    />
                   </View>
                 </View>
                 <Text style={styles.modalSub}>Scan with your phone's camera to instantly view and share this track card.</Text>
@@ -746,11 +762,22 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#10141F',
-    borderWidth: 1,
-    borderColor: 'rgba(37, 99, 235, 0.4)',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: '#E5E7EB',
     alignItems: 'center',
     justifyContent: 'center',
+    padding: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+    elevation: 4,
+  },
+  qrAppLogo: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 14,
   },
   qrDescription: {
     fontSize: 11,
@@ -802,14 +829,25 @@ const styles = StyleSheet.create({
   },
   modalQrLogo: {
     position: 'absolute',
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#10141F',
-    borderWidth: 1,
-    borderColor: 'rgba(37, 99, 235, 0.4)',
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
     alignItems: 'center',
     justifyContent: 'center',
+    padding: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.35,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  modalQrLogoIcon: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 18,
   },
   modalSub: {
     fontSize: 12,

@@ -10,7 +10,7 @@ import {
   Pressable,
   Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -25,6 +25,7 @@ import {
   GrooveCardModal,
   MusicLoreAndReviews,
   GrooveLoader,
+  GrooveAppBar,
 } from '../../src/components';
 
 function formatDuration(ms) {
@@ -49,6 +50,7 @@ function formatTotalRuntime(ms) {
 export default function AlbumDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   const [albumData, setAlbumData] = useState(null);
   const [tracks, setTracks] = useState([]);
@@ -128,14 +130,31 @@ export default function AlbumDetailScreen() {
     }
   };
 
-  const handleSwitchVariation = (variation) => {
+  const handleSwitchVariation = async (variation) => {
+    if (!variation || variation.id === selectedVariationId) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setSelectedVariationId(variation.id);
-    Toast.show({
-      type: 'info',
-      text1: `Edition Switched: ${variation.label}`,
-      text2: `${tracks.length} tracks available`,
-    });
+    try {
+      const result = await ApiService.fetchAlbum(String(id), variation.id);
+      if (result) {
+        const alb = result.album || result;
+        setAlbumData(alb);
+        if (result.tracks && result.tracks.length > 0) {
+          setTracks(result.tracks);
+        }
+        Toast.show({
+          type: 'info',
+          text1: `Edition Switched: ${variation.label}`,
+          text2: `${result.tracks?.length || tracks.length} tracks loaded`,
+        });
+      }
+    } catch (_) {
+      Toast.show({
+        type: 'info',
+        text1: `Edition Selected: ${variation.label}`,
+        text2: `${tracks.length} tracks available`,
+      });
+    }
   };
 
   const openTrackInGrooveLink = (trackItem) => {
@@ -178,49 +197,29 @@ export default function AlbumDetailScreen() {
         <View style={styles.backdropOverlay} />
       </View>
 
-      {/* Top Action Header */}
-      <View style={styles.header}>
-        {/* Back Button */}
-        <TouchableOpacity
-          style={styles.circleBtn}
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            router.back();
-          }}
-          hitSlop={10}
-        >
-          <Ionicons name="arrow-back" size={20} color="#8992A5" />
-        </TouchableOpacity>
+      {/* Top Apple Music Style Unified App Bar */}
+      <GrooveAppBar
+        title={albumTitle}
+        subtitle={albumArtist}
+        saved={saved}
+        onToggleSave={handleToggleSave}
+        onShare={() => {
+          setModalTrackTarget(null);
+          setShowGrooveCardModal(true);
+        }}
+        onOpenLink={() => {
+          setModalTrackTarget(null);
+          setShowGrooveLinkModal(true);
+        }}
+      />
 
-        {/* Right Action Icons: Share GrooveCard, Bookmark */}
-        <View style={styles.headerRightActions}>
-          <TouchableOpacity
-            style={styles.circleBtn}
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-              setModalTrackTarget(null);
-              setShowGrooveCardModal(true);
-            }}
-            hitSlop={10}
-          >
-            <Ionicons name="share-social-outline" size={18} color="#8992A5" />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.circleBtn, saved && styles.circleBtnActive]}
-            onPress={handleToggleSave}
-            hitSlop={10}
-          >
-            <Ionicons
-              name={saved ? 'bookmark' : 'bookmark-outline'}
-              size={18}
-              color={saved ? '#FFFFFF' : '#8992A5'}
-            />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingTop: insets.top + (Platform.OS === 'ios' ? 64 : 70) },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Hero Card Container (Matches web app Album Card) */}
         <Animated.View entering={FadeInDown.duration(400)} style={styles.heroCard}>
           {/* Square Album Cover Artwork */}

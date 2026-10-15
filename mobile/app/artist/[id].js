@@ -10,7 +10,7 @@ import {
   Pressable,
   Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -25,6 +25,7 @@ import {
   GrooveCardModal,
   MusicLoreAndReviews,
   GrooveLoader,
+  GrooveAppBar,
 } from '../../src/components';
 
 function formatFollowers(num) {
@@ -45,6 +46,7 @@ function formatDuration(ms) {
 export default function ArtistDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   const [artist, setArtist] = useState(null);
   const [topTracks, setTopTracks] = useState([]);
@@ -148,49 +150,32 @@ export default function ArtistDetailScreen() {
         <View style={styles.backdropOverlay} />
       </View>
 
-      {/* Top Action Header */}
-      <View style={styles.header}>
-        {/* Back Button */}
-        <TouchableOpacity
-          style={styles.circleBtn}
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            router.back();
-          }}
-          hitSlop={10}
-        >
-          <Ionicons name="arrow-back" size={20} color="#8992A5" />
-        </TouchableOpacity>
+      {/* Top Apple Music Style Unified App Bar */}
+      <GrooveAppBar
+        title={artistName}
+        subtitle="Artist Profile"
+        saved={saved}
+        onToggleSave={handleToggleSave}
+        onShare={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          setModalItemTarget(null);
+          setShowGrooveCardModal(true);
+        }}
+        onOpenLink={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          setModalItemTarget(null);
+          setShowGrooveLinkModal(true);
+        }}
+      />
 
-        {/* Right Action Icons: Share GrooveCard, Bookmark / Follow */}
-        <View style={styles.headerRightActions}>
-          <TouchableOpacity
-            style={styles.circleBtn}
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-              setModalItemTarget(null);
-              setShowGrooveCardModal(true);
-            }}
-            hitSlop={10}
-          >
-            <Ionicons name="share-social-outline" size={18} color="#8992A5" />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.circleBtn, saved && styles.circleBtnActive]}
-            onPress={handleToggleSave}
-            hitSlop={10}
-          >
-            <Ionicons
-              name={saved ? 'bookmark' : 'bookmark-outline'}
-              size={18}
-              color={saved ? '#FFFFFF' : '#8992A5'}
-            />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingTop: insets.top + (Platform.OS === 'ios' ? 64 : 70) },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Hero Card Container (Matches web app Artist Card - Image 3) */}
         {/* Hero Card Container (Matches web app Artist Card - Image 3) */}
         <Animated.View entering={FadeInDown.duration(400)} style={styles.heroCard}>
           {/* Circular Artist Avatar */}

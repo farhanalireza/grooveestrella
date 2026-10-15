@@ -107,7 +107,9 @@ export default function GrooveLinkModal({
   }, [visible]);
 
   const links = generateStreamingLinks(title, artist);
-  const universalUrl = `https://grooveestrella.app/${type}/${encodeURIComponent(itemId || title)}`;
+  const universalUrl = itemId
+    ? `https://grooveestrella.com/s/musicbrainz/${type}/${itemId}`
+    : `https://grooveestrella.com/${type}/${encodeURIComponent(title)}`;
 
   const handleOpenUrl = async (platformId, url) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);

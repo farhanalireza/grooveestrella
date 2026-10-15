@@ -42,8 +42,14 @@ export default function ExploreScreen() {
   const fetchResults = useCallback(async (query, type) => {
     setLoading(true);
     try {
-      const data = await ApiService.searchCatalog(query || 'popular', type, 20);
-      setResults(data);
+      let searchQuery = query ? query.trim() : '';
+      if (!searchQuery) {
+        if (type === 'album') searchQuery = 'The Rise and Fall of Ziggy Stardust';
+        else if (type === 'artist') searchQuery = 'David Bowie';
+        else searchQuery = 'Ziggy Stardust';
+      }
+      const data = await ApiService.searchCatalog(searchQuery, type, 20);
+      setResults(data || []);
     } catch {
       setResults([]);
     } finally {
