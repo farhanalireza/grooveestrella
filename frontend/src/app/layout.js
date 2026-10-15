@@ -18,19 +18,8 @@ const inter = Inter({
 });
 
 export const metadata = {
-  title: "GrooveEstrella | Premium Music Discovery & Social Sharing",
-  description:
-    "Discover curated Spotify tracks, albums, artists, and playlists. Create custom GrooveCards, scan QR codes, and share your favorite tracks seamlessly.",
-  manifest: "/manifest.json",
-  themeColor: "#07090F",
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "black-translucent",
-    title: "GrooveEstrella",
-  },
-  formatDetection: {
-    telephone: false,
-  },
+  title: "GrooveEstrella | Open Music Discovery & Social Sharing",
+  description: "Discover curated tracks, albums, and artists powered by MusicBrainz & Cover Art Archive. Create custom GrooveCards, scan QR codes, and share music seamlessly across platforms.",
 };
 
 export default function RootLayout({ children }) {

@@ -3,7 +3,7 @@
 
 import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Loader } from "lucide-react";
+import GrooveLoader from "@/Components/GrooveLoader";
 
 function RedirectContent() {
   const router = useRouter();
@@ -58,10 +58,7 @@ function RedirectContent() {
 
   if (!redirectInfo) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-[#07090F] text-[#F4F7FF] px-6 text-center">
-        <Loader className="animate-spin w-8 h-8 text-[#60A5FA] mb-4" />
-        <span className="text-lg">Preparing redirect...</span>
-      </div>
+      <GrooveLoader fullScreen={true} text="Preparing redirect..." />
     );
   }
 
@@ -84,10 +81,7 @@ function RedirectContent() {
 export default function RedirectPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex flex-col items-center justify-center bg-[#07090F] text-[#F4F7FF] px-6 text-center">
-        <Loader className="animate-spin w-8 h-8 text-[#60A5FA] mb-4" />
-        <span className="text-lg">Loading...</span>
-      </div>
+      <GrooveLoader fullScreen={true} text="Loading..." />
     }>
       <RedirectContent />
     </Suspense>

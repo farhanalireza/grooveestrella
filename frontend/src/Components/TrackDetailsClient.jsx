@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from "react";
 import { 
   Share2, Copy, Check, ExternalLink, Music, 
-  Sparkles, Volume2, ChevronRight 
+  Sparkles, Volume2, ChevronRight, Globe 
 } from "lucide-react";
 import Link from "next/link";
 import GrooveCardComposer from "./GrooveCardComposer";
@@ -16,6 +16,12 @@ export default function TrackDetailsClient({ metadata, platformLinks, currentUrl
 
   // Platform styling metadata
   const platformMeta = {
+    musicbrainz: {
+      name: "MusicBrainz",
+      color: "hover:bg-amber-500/20 hover:border-amber-500 text-amber-400 border-amber-500/20",
+      btnBg: "bg-amber-500 text-black hover:bg-amber-400",
+      accent: "#BA478F"
+    },
     spotify: {
       name: "Spotify",
       color: "hover:bg-emerald-500/20 hover:border-emerald-500 text-emerald-400 border-emerald-500/20",
@@ -123,6 +129,9 @@ export default function TrackDetailsClient({ metadata, platformLinks, currentUrl
               alt={metadata.album} 
               className="w-full h-full object-cover"
               crossOrigin="anonymous"
+              onError={(e) => {
+                e.currentTarget.src = 'https://placehold.co/500x500/10141F/60A5FA?text=No+Cover';
+              }}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
               <span className="text-[10px] text-[#8992A5] font-medium tracking-widest uppercase">Album</span>
@@ -163,7 +172,7 @@ export default function TrackDetailsClient({ metadata, platformLinks, currentUrl
           <div className="px-4 md:px-0">
             <div className="flex items-center gap-2 text-[#8992A5] text-xs font-bold uppercase tracking-wider mb-2">
               <Sparkles className="w-3.5 h-3.5 animate-spin" />
-              <span>LISTEN LAYER</span>
+              <span>MUSIC LAYER</span>
             </div>
             <h1 className="text-3xl sm:text-4xl font-extrabold text-[#F4F7FF] tracking-tight mb-1 font-display">
               {metadata.title}
@@ -173,39 +182,23 @@ export default function TrackDetailsClient({ metadata, platformLinks, currentUrl
             </p>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-[#8992A5]/70 border-t border-[#2563EB]/10 pt-4">
               <span>Album: <strong className="text-[#8992A5]">{metadata.album}</strong></span>
-              {metadata.releaseYear && (
+              {(metadata.releaseDate || metadata.releaseYear) && (
                 <>
                   <span className="w-1 h-1 rounded-full bg-zinc-700"></span>
-                  <span>Year: <strong className="text-[#8992A5]">{metadata.releaseYear}</strong></span>
+                  <span>Release: <strong className="text-[#8992A5]">{metadata.releaseDate || metadata.releaseYear}</strong></span>
                 </>
               )}
             </div>
-            {metadata.originalPlatform === 'spotify' && (
-              <div className="mt-3 flex items-center gap-1.5 text-[11px] text-[#8992A5]/70">
-                <span>Data and artwork sourced from</span>
-                <a 
-                  href={platformLinks.spotify} 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
-                  className="text-[#60A5FA] hover:text-[#60A5FA]/80 font-semibold transition flex items-center gap-0.5"
-                >
-                  <span>Spotify</span>
-                  <ExternalLink className="w-2.5 h-2.5" />
-                </a>
-              </div>
-            )}
-            {metadata.originalPlatform === 'spotify' && (
-              <div className="mt-4 pt-4 border-t border-[#2563EB]/10">
-                <Link 
-                  href={`/${metadata.type}/${metadata.originalId}`}
-                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-[#2563EB]/20 bg-[#2563EB]/5 hover:bg-[#2563EB]/15 text-[#F4F7FF] text-xs font-bold uppercase tracking-wider transition-all duration-300"
-                >
-                  <img src="/in.svg" alt="GrooveEstrella" className="w-4 h-4 object-contain" />
-                  <span>Open in GrooveEstrella</span>
-                  <ChevronRight className="w-3 h-3 text-[#60A5FA]" />
-                </Link>
-              </div>
-            )}
+            <div className="mt-4 pt-4 border-t border-[#2563EB]/10 flex items-center justify-between flex-wrap gap-2">
+              <Link 
+                href={`/${metadata.type}/${metadata.originalId || metadata.id}`}
+                className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-[#2563EB]/20 bg-[#2563EB]/5 hover:bg-[#2563EB]/15 text-[#F4F7FF] text-xs font-bold uppercase tracking-wider transition-all duration-300"
+              >
+                <img src="/in.svg" alt="GrooveEstrella" className="w-4 h-4 object-contain" />
+                <span>Open in Groove</span>
+                <ChevronRight className="w-3 h-3 text-[#60A5FA]" />
+              </Link>
+            </div>
           </div>
 
           {/* Platform Grid */}
@@ -251,6 +244,51 @@ export default function TrackDetailsClient({ metadata, platformLinks, currentUrl
               })}
             </div>
           </div>
+
+          {/* Reference, Lyrics, Databases & Community Links */}
+          {(() => {
+            const knownStreaming = new Set(['spotify', 'apple_music', 'applemusic', 'youtube', 'youtube_music', 'deezer', 'tidal', 'soundcloud', 'musicbrainz']);
+            const extraLinks = (metadata?.externalLinks || []).filter(link => {
+              return !knownStreaming.has(link.platform?.toLowerCase());
+            });
+
+            if (extraLinks.length === 0) return null;
+
+            return (
+              <div className="flex flex-col gap-2.5 pt-4 border-t border-[#2563EB]/10">
+                <span className="text-xs font-bold text-[#8992A5] tracking-widest uppercase px-4 md:px-0 flex items-center gap-2">
+                  <Globe size={14} className="text-[#60A5FA]" />
+                  <span>Reference, Lyrics & Discography Data</span>
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {extraLinks.map((link, idx) => (
+                    <a
+                      key={idx}
+                      href={link.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-between p-3 rounded-xl border border-[#2563EB]/15 bg-[#07090F]/40 hover:bg-[#2563EB]/10 hover:border-[#60A5FA]/30 transition group"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-7 h-7 rounded-lg bg-[#2563EB]/15 flex items-center justify-center text-[#60A5FA] flex-shrink-0 group-hover:scale-105 transition">
+                          <Globe size={13} />
+                        </div>
+                        <div className="flex flex-col min-w-0">
+                          <span className="text-xs font-bold text-[#F4F7FF] group-hover:text-[#60A5FA] truncate transition">
+                            {link.label}
+                          </span>
+                          <span className="text-[10px] text-[#8992A5] capitalize">
+                            {link.category || "Database"}
+                          </span>
+                        </div>
+                      </div>
+                      <ExternalLink size={12} className="text-[#8992A5] group-hover:text-white flex-shrink-0" />
+                    </a>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
         </div>
       </div>
 
@@ -261,6 +299,9 @@ export default function TrackDetailsClient({ metadata, platformLinks, currentUrl
         itemId={metadata.originalId || metadata.id}
         title={metadata.title}
         artist={metadata.artist}
+        album={metadata.album}
+        releaseDate={metadata.releaseDate || (metadata.releaseYear ? String(metadata.releaseYear) : null)}
+        releaseYear={metadata.releaseYear}
         imageUrl={metadata.coverArt}
         popularity={metadata.popularity}
         explicit={metadata.explicit}

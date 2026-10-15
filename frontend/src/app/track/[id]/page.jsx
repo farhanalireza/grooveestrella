@@ -1,11 +1,13 @@
 // src/app/track/[id]/page.jsx
-// Explorer Page Route: 'id' represents a Spotify track ID exclusively in v1.
-import { fetchSpotifyDataServer } from '@/lib/spotifyServer';
+import { fetchMusicBrainzTrackServer, searchMusicBrainzTrackServer } from '@/lib/musicbrainzServer';
 import TrackDetailClient from './TrackDetailClient';
 
 export async function generateMetadata({ params }) {
   const { id } = await params;
-  const track = await fetchSpotifyDataServer('track', id);
+  let track = await fetchMusicBrainzTrackServer(id);
+  if (!track) {
+    track = await searchMusicBrainzTrackServer(decodeURIComponent(id));
+  }
 
   if (!track) {
     return {
@@ -14,22 +16,24 @@ export async function generateMetadata({ params }) {
     };
   }
 
-  const artistsName = track.artists.map(a => a.name).join(', ');
-  const coverUrl = track.album?.images?.[0]?.url || 'https://placehold.co/600x600?text=No+Cover';
+  const artistsName = Array.isArray(track.artists)
+    ? track.artists.map(a => a.name).join(', ')
+    : (track.artist || 'Unknown Artist');
+  const coverUrl = track.album?.images?.[0]?.url || track.coverArt || 'https://placehold.co/600x600/10141F/60A5FA?text=No+Cover';
 
   return {
-    title: `${track.name} by ${artistsName} | GrooveEstrella`,
-    description: `Discover "${track.name}" by ${artistsName} on GrooveEstrella. Scan QR, customize GrooveCards, and stream on Spotify, Apple Music, and YouTube.`,
+    title: `${track.title || track.name} by ${artistsName} | GrooveEstrella`,
+    description: `Discover "${track.title || track.name}" by ${artistsName} on GrooveEstrella. Explore MusicBrainz metadata, create GrooveCards, and stream across platforms.`,
     openGraph: {
-      title: track.name,
-      description: `Artist: ${artistsName} | Album: ${track.album?.name}`,
+      title: track.title || track.name,
+      description: `Artist: ${artistsName} | Album: ${track.album?.name || track.album}`,
       images: [{ url: coverUrl, width: 640, height: 640 }],
       type: 'music.song',
     },
     twitter: {
       card: 'summary_large_image',
-      title: track.name,
-      description: `Discover ${track.name} by ${artistsName}`,
+      title: track.title || track.name,
+      description: `Discover ${track.title || track.name} by ${artistsName}`,
       images: [coverUrl],
     }
   };
@@ -37,7 +41,10 @@ export async function generateMetadata({ params }) {
 
 export default async function Page({ params }) {
   const { id } = await params;
-  const initialData = await fetchSpotifyDataServer('track', id);
+  let initialData = await fetchMusicBrainzTrackServer(id);
+  if (!initialData) {
+    initialData = await searchMusicBrainzTrackServer(decodeURIComponent(id));
+  }
 
   return <TrackDetailClient id={id} initialData={initialData} />;
 }

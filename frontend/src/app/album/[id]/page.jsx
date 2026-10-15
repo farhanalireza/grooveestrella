@@ -1,28 +1,17 @@
 // src/app/album/[id]/page.jsx
-// Explorer Page Route: 'id' represents a Spotify album ID exclusively in v1.
-import { fetchSpotifyDataServer } from '@/lib/spotifyServer';
+import { fetchMusicBrainzAlbumServer, searchMusicBrainzAlbumsServer } from '@/lib/musicbrainzServer';
 import AlbumDetailClient from './AlbumDetailClient';
-import axios from 'axios';
-import { getSpotifyToken } from '@/lib/spotifyServer';
-
-// Album tracks are fetched via album/tracks endpoint, so let's write a helper
-async function fetchAlbumTracks(id) {
-  const token = await getSpotifyToken();
-  if (!token) return [];
-  try {
-    const res = await axios.get(`https://api.spotify.com/v1/albums/${id}/tracks`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    return res.data.items;
-  } catch (err) {
-    console.error('Failed to fetch album tracks on server:', err.message);
-    return [];
-  }
-}
 
 export async function generateMetadata({ params }) {
   const { id } = await params;
-  const album = await fetchSpotifyDataServer('album', id);
+  let { album } = await fetchMusicBrainzAlbumServer(id);
+  if (!album) {
+    const searchRes = await searchMusicBrainzAlbumsServer(decodeURIComponent(id), 1);
+    if (searchRes.length > 0) {
+      const found = await fetchMusicBrainzAlbumServer(searchRes[0].id);
+      album = found.album;
+    }
+  }
 
   if (!album) {
     return {
@@ -31,22 +20,24 @@ export async function generateMetadata({ params }) {
     };
   }
 
-  const artistsName = album.artists.map(a => a.name).join(', ');
-  const coverUrl = album.images?.[0]?.url || 'https://placehold.co/600x600?text=No+Cover';
+  const artistsName = Array.isArray(album.artists)
+    ? album.artists.map(a => a.name).join(', ')
+    : (album.artist || 'Various Artists');
+  const coverUrl = album.images?.[0]?.url || album.coverArt || 'https://placehold.co/600x600/10141F/60A5FA?text=No+Cover';
 
   return {
-    title: `${album.name} by ${artistsName} | GrooveEstrella`,
-    description: `Discover the album "${album.name}" by ${artistsName} on GrooveEstrella. Explore tracks, customize GrooveCards, and stream on top services.`,
+    title: `${album.name || album.title} by ${artistsName} | GrooveEstrella`,
+    description: `Discover the album "${album.name || album.title}" by ${artistsName} on GrooveEstrella. Explore tracks and stream across platforms.`,
     openGraph: {
-      title: album.name,
-      description: `Artist: ${artistsName} • ${album.total_tracks} tracks`,
+      title: album.name || album.title,
+      description: `Artist: ${artistsName} • ${album.total_tracks || 0} tracks`,
       images: [{ url: coverUrl, width: 640, height: 640 }],
       type: 'music.album',
     },
     twitter: {
       card: 'summary_large_image',
-      title: album.name,
-      description: `Album: ${album.name} by ${artistsName}`,
+      title: album.name || album.title,
+      description: `Album: ${album.name || album.title} by ${artistsName}`,
       images: [coverUrl],
     }
   };
@@ -54,8 +45,15 @@ export async function generateMetadata({ params }) {
 
 export default async function Page({ params }) {
   const { id } = await params;
-  const initialAlbum = await fetchSpotifyDataServer('album', id);
-  const initialTracks = await fetchAlbumTracks(id);
+  let { album, tracks } = await fetchMusicBrainzAlbumServer(id);
+  if (!album) {
+    const searchRes = await searchMusicBrainzAlbumsServer(decodeURIComponent(id), 1);
+    if (searchRes.length > 0) {
+      const found = await fetchMusicBrainzAlbumServer(searchRes[0].id);
+      album = found.album;
+      tracks = found.tracks;
+    }
+  }
 
-  return <AlbumDetailClient id={id} initialAlbum={initialAlbum} initialTracks={initialTracks} />;
+  return <AlbumDetailClient id={id} initialAlbum={album} initialTracks={tracks} />;
 }

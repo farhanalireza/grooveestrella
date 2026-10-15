@@ -12,6 +12,10 @@ export const ShareTrackComponent = ({
     popularity,
     explicit,
     type = "track", // track, album, playlist
+    releaseDate,
+    releaseYear,
+    album,
+    genres = [],
 }) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -43,6 +47,10 @@ export const ShareTrackComponent = ({
                 popularity={popularity}
                 explicit={explicit}
                 type={type}
+                releaseDate={releaseDate}
+                releaseYear={releaseYear}
+                album={album}
+                genres={genres}
             />
         </div>
     );

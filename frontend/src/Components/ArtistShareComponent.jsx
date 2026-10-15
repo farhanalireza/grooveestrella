@@ -7,12 +7,14 @@ import GrooveCardComposer from './GrooveCardComposer';
 export const ShareArtistComponent = ({
     artistId,
     name,
+    artistName,
     imageUrl,
     followers,
     popularity,
     genres = []
 }) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const finalName = name || artistName || 'Artist';
 
     // Prevent propagation so card clicks aren't triggered
     const handleButtonClick = (e) => {
@@ -22,7 +24,7 @@ export const ShareArtistComponent = ({
 
     // Subtitle displays followers or top genres
     const genreSubtitle = genres.length > 0 
-        ? genres.slice(0, 2).join(', ') 
+        ? genres.slice(0, 3).join(', ') 
         : `${followers?.toLocaleString() || 0} Followers`;
 
     return (
@@ -41,12 +43,13 @@ export const ShareArtistComponent = ({
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
                 itemId={artistId}
-                title={name}
+                title={finalName}
                 artist={genreSubtitle}
                 imageUrl={imageUrl}
                 popularity={popularity}
                 explicit={false}
                 type="artist"
+                genres={genres}
             />
         </div>
     );
