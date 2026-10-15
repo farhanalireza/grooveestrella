@@ -19,7 +19,6 @@ import Toast from 'react-native-toast-message';
 import * as Clipboard from 'expo-clipboard';
 import {
   downloadCardImage,
-  shareToInstagramStories,
   shareCard,
 } from '../utils/cardExport';
 import { COLORS } from '../constants/theme';
@@ -90,18 +89,6 @@ export default function GrooveCardModal({
     : `https://grooveestrella.com/${type}/${encodeURIComponent(title)}`;
 
   const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(universalUrl)}&color=${selectedQrColor}&bgcolor=ffffff&ecc=H&format=png`;
-
-  // Apple Music-style Instagram Stories sharing
-  const handleShareInstagramStories = async () => {
-    if (isExporting) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setIsExporting(true);
-    try {
-      await shareToInstagramStories(cardRef, universalUrl, title, artist);
-    } finally {
-      setIsExporting(false);
-    }
-  };
 
   // Download Card as high-res PNG into user camera roll
   const handleDownloadCard = async () => {
@@ -214,30 +201,6 @@ export default function GrooveCardModal({
                 </LinearGradient>
               </View>
             </View>
-
-            {/* Featured Action: Instagram Stories (Apple Music style) */}
-            <TouchableOpacity
-              style={styles.instagramStoryBtn}
-              onPress={handleShareInstagramStories}
-              disabled={isExporting}
-              activeOpacity={0.85}
-            >
-              <LinearGradient
-                colors={['#833ab4', '#fd1d1d', '#fcb045']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.instagramGradient}
-              >
-                {isExporting ? (
-                  <ActivityIndicator color="#FFFFFF" size="small" />
-                ) : (
-                  <>
-                    <Ionicons name="logo-instagram" size={20} color="#FFFFFF" />
-                    <Text style={styles.instagramBtnText}>Share to Instagram Stories</Text>
-                  </>
-                )}
-              </LinearGradient>
-            </TouchableOpacity>
 
             {/* Customizer: Theme Selection */}
             <View style={styles.customSection}>
@@ -564,32 +527,7 @@ const styles = StyleSheet.create({
     width: 14,
     height: 14,
   },
-  instagramStoryBtn: {
-    width: '100%',
-    borderRadius: 18,
-    overflow: 'hidden',
-    marginTop: 4,
-    marginBottom: 16,
-    shadowColor: '#fd1d1d',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    elevation: 6,
-  },
-  instagramGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    gap: 10,
-  },
-  instagramBtnText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '800',
-    letterSpacing: 0.3,
-  },
+
   customSection: {
     marginBottom: 16,
   },

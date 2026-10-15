@@ -1,6 +1,6 @@
 // app/(tabs)/_layout.js
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Platform, Dimensions } from 'react-native';
 import { Tabs } from 'expo-router';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -22,7 +22,7 @@ const TAB_CONFIG = {
   settings: { label: 'Settings', icon: 'settings-sharp' },
 };
 
-function TabButton({ route, isFocused, onPress, onLayout }) {
+function TabButton({ route, isFocused, onPress }) {
   const scale = useSharedValue(1);
   const config = TAB_CONFIG[route.name] || { label: route.name, icon: 'musical-notes' };
 
@@ -40,7 +40,7 @@ function TabButton({ route, isFocused, onPress, onLayout }) {
 
   const iconAnimStyle = useAnimatedStyle(() => ({
     transform: [
-      { scale: withSpring(isFocused ? 1.12 : 1, { damping: 12 }) },
+      { scale: withSpring(isFocused ? 1.15 : 1, { damping: 12 }) },
       { translateY: withSpring(isFocused ? -1 : 0, { damping: 12 }) },
     ],
   }));
@@ -48,7 +48,6 @@ function TabButton({ route, isFocused, onPress, onLayout }) {
   return (
     <Animated.View style={[styles.tabButtonWrapper, buttonAnimStyle]}>
       <Pressable
-        onLayout={onLayout}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         onPress={onPress}
@@ -77,34 +76,39 @@ function TabButton({ route, isFocused, onPress, onLayout }) {
 
 function CustomTabBar({ state, descriptors, navigation }) {
   const insets = useSafeAreaInsets();
-  const [tabLayouts, setTabLayouts] = useState({});
-  const activeX = useSharedValue(0);
-  const activeWidth = useSharedValue(0);
+  const screenWidth = Dimensions.get('window').width;
+  const initialRowWidth = screenWidth - 32;
+  const [rowWidth, setRowWidth] = useState(initialRowWidth);
+  const numTabs = state.routes.length || 5;
+  const paddingH = 6;
 
-  const handleTabLayout = (index, layout) => {
-    setTabLayouts((prev) => {
-      const next = { ...prev, [index]: layout };
-      if (index === state.index) {
-        activeX.value = withSpring(layout.x, { damping: 18, stiffness: 220 });
-        activeWidth.value = withSpring(layout.width, { damping: 18, stiffness: 220 });
-      }
-      return next;
-    });
-  };
+  const currentTabWidth = Math.max((initialRowWidth - paddingH * 2) / numTabs, 30);
+  const initialTargetX = paddingH + state.index * currentTabWidth;
 
-  // When active index changes, animate sliding pill
+  const activeX = useSharedValue(initialTargetX);
+  const activeWidth = useSharedValue(currentTabWidth);
+
+  // Fluid physics spring animation: precisely tracks active tab index
   React.useEffect(() => {
-    const layout = tabLayouts[state.index];
-    if (layout) {
-      activeX.value = withSpring(layout.x, { damping: 18, stiffness: 220 });
-      activeWidth.value = withSpring(layout.width, { damping: 18, stiffness: 220 });
+    if (rowWidth > 0 && numTabs > 0) {
+      const tabWidth = (rowWidth - paddingH * 2) / numTabs;
+      const targetX = paddingH + state.index * tabWidth;
+      activeX.value = withSpring(targetX, {
+        damping: 18,
+        stiffness: 240,
+        mass: 0.8,
+      });
+      activeWidth.value = withSpring(tabWidth, {
+        damping: 18,
+        stiffness: 240,
+        mass: 0.8,
+      });
     }
-  }, [state.index, tabLayouts, activeX, activeWidth]);
+  }, [state.index, rowWidth, numTabs, activeX, activeWidth]);
 
   const pillAnimStyle = useAnimatedStyle(() => {
-    if (activeWidth.value === 0) return { opacity: 0 };
     return {
-      opacity: 1,
+      opacity: activeWidth.value > 0 ? 1 : 0,
       transform: [{ translateX: activeX.value }],
       width: activeWidth.value,
     };
@@ -118,19 +122,19 @@ function CustomTabBar({ state, descriptors, navigation }) {
       ]}
     >
       <View style={styles.floatingBar}>
-        {/* Blur effect */}
+        {/* Frosted Glass Backdrop */}
         {Platform.OS === 'ios' ? (
-          <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
+          <BlurView intensity={45} tint="dark" style={StyleSheet.absoluteFill} />
         ) : (
           <View
             style={[
               StyleSheet.absoluteFill,
-              { backgroundColor: COLORS.surface, opacity: 0.92 },
+              { backgroundColor: COLORS.surface, opacity: 0.94 },
             ]}
           />
         )}
 
-        {/* Top Highlight line */}
+        {/* Top Highlight Specular Line */}
         <LinearGradient
           colors={['rgba(255,255,255,0.3)', 'rgba(255,255,255,0.05)', 'transparent']}
           start={{ x: 0, y: 0 }}
@@ -138,23 +142,33 @@ function CustomTabBar({ state, descriptors, navigation }) {
           style={styles.topHighlight}
         />
 
-        {/* Sliding Active Pill Background */}
+        {/* Sliding Liquid Active Pill Background */}
         <Animated.View style={[styles.slidingPill, pillAnimStyle]}>
           <LinearGradient
-            colors={['rgba(135,0,135,0.5)', 'rgba(192,38,211,0.2)']}
+            colors={['rgba(135,0,135,0.65)', 'rgba(192,38,211,0.25)']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.pillGradient}
           />
         </Animated.View>
 
-        {/* Tab Items */}
-        <View style={styles.tabsRow}>
+        {/* Tab Items Row */}
+        <View
+          style={styles.tabsRow}
+          onLayout={(e) => {
+            const w = e.nativeEvent.layout.width;
+            if (w > 0 && Math.abs(w - rowWidth) > 1) {
+              setRowWidth(w);
+            }
+          }}
+        >
           {state.routes.map((route, index) => {
             const isFocused = state.index === index;
 
             const onPress = () => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              try {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              } catch (_) {}
               const event = navigation.emit({
                 type: 'tabPress',
                 target: route.key,
@@ -172,7 +186,6 @@ function CustomTabBar({ state, descriptors, navigation }) {
                 route={route}
                 isFocused={isFocused}
                 onPress={onPress}
-                onLayout={(e) => handleTabLayout(index, e.nativeEvent.layout)}
               />
             );
           })}
@@ -216,7 +229,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.12)',
     overflow: 'hidden',
     position: 'relative',
-    backgroundColor: 'rgba(13, 18, 31, 0.8)',
+    backgroundColor: 'rgba(13, 18, 31, 0.85)',
     ...Platform.select({
       ios: {
         shadowColor: '#000',
@@ -225,7 +238,7 @@ const styles = StyleSheet.create({
         shadowRadius: 40,
       },
       android: {
-        elevation: 16,
+        elevation: 20,
       },
     }),
   },
@@ -242,17 +255,17 @@ const styles = StyleSheet.create({
     bottom: 6,
     borderRadius: 9999,
     borderWidth: 1,
-    borderColor: 'rgba(232, 121, 249, 0.4)',
+    borderColor: 'rgba(232, 121, 249, 0.45)',
     overflow: 'hidden',
     ...Platform.select({
       ios: {
         shadowColor: '#870087',
         shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.45,
+        shadowOpacity: 0.55,
         shadowRadius: 16,
       },
       android: {
-        elevation: 6,
+        elevation: 8,
       },
     }),
   },
@@ -278,23 +291,23 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   tabLabel: {
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 1.2,
     marginTop: 3,
+    letterSpacing: 0.2,
   },
   tabLabelActive: {
     color: '#FFFFFF',
     fontWeight: '800',
   },
   tabLabelInactive: {
-    color: 'rgba(137, 146, 165, 0.7)',
+    color: '#8992A5',
+    opacity: 0.8,
   },
   activeIconGlow: {
     ...Platform.select({
       ios: {
-        shadowColor: COLORS.purpleLightest,
+        shadowColor: '#E879F9',
         shadowOffset: { width: 0, height: 0 },
         shadowOpacity: 0.8,
         shadowRadius: 6,

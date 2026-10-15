@@ -32,29 +32,6 @@ export async function downloadCardImage(cardRef, fallbackImageUrl, title = 'groo
   }
 }
 
-export async function shareToInstagramStories(cardRef, universalUrl, title, artist) {
-  try {
-    await Clipboard.setStringAsync(universalUrl);
-    Toast.show({
-      type: 'success',
-      text1: 'Link Copied for Instagram! 📸',
-      text2: 'GrooveLink copied to clipboard — paste it as a Link Sticker on your Story!',
-      visibilityTime: 4000,
-    });
-    if (typeof navigator !== 'undefined' && navigator.share) {
-      await navigator.share({
-        title: `GrooveCard: ${title}`,
-        text: `🎵 Open "${title}" by ${artist} on Groove!\n${universalUrl}`,
-        url: universalUrl,
-      });
-    }
-    return true;
-  } catch (err) {
-    console.warn('Web Instagram share:', err);
-    return false;
-  }
-}
-
 export async function shareCard(cardRef, universalUrl, title, artist) {
   try {
     if (typeof navigator !== 'undefined' && navigator.share) {
@@ -75,3 +52,5 @@ export async function shareCard(cardRef, universalUrl, title, artist) {
     console.warn('Web share error:', err);
   }
 }
+
+export const shareToInstagramStories = shareCard;

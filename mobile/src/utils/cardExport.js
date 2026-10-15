@@ -92,71 +92,13 @@ export async function downloadCardImage(cardRef, fallbackImageUrl, title = 'groo
   }
 }
 
-export async function shareToInstagramStories(cardRef, universalUrl, title, artist) {
+export async function shareCard(cardRef, universalUrl, title, artist) {
   try {
-    // 1. Copy link to clipboard for Instagram Link Sticker
+    // Copy link to clipboard first
     if (universalUrl) {
       await Clipboard.setStringAsync(universalUrl);
     }
 
-    // 2. Capture high-res card image if possible
-    let uri = null;
-    const viewShot = getViewShot();
-    const captureRef = viewShot?.captureRef;
-
-    if (captureRef && cardRef?.current) {
-      try {
-        uri = await captureRef(cardRef, {
-          format: 'png',
-          quality: 1.0,
-          result: 'tmpfile',
-        });
-      } catch (e) {
-        console.warn('captureRef failed for Instagram Story:', e);
-      }
-    }
-
-    // 3. Share to Instagram Stories / System Sheet
-    if (uri && (await Sharing.isAvailableAsync())) {
-      Toast.show({
-        type: 'success',
-        text1: 'Opening Stories... 📸',
-        text2: 'GrooveLink copied to clipboard! Paste it as a link sticker.',
-        visibilityTime: 4000,
-      });
-      await Sharing.shareAsync(uri, {
-        dialogTitle: 'Share to Instagram Stories',
-        mimeType: 'image/png',
-        UTI: 'public.png',
-      });
-      return true;
-    } else {
-      Toast.show({
-        type: 'info',
-        text1: 'GrooveLink Copied! 📋',
-        text2: 'Paste on your Instagram Story',
-      });
-      if (universalUrl) {
-        await Share.share({
-          message: `🎵 Listen to "${title}" by ${artist} on Groove!\n${universalUrl}`,
-          url: universalUrl,
-        });
-      }
-      return true;
-    }
-  } catch (err) {
-    console.warn('Instagram Stories share error:', err);
-    Toast.show({
-      type: 'error',
-      text1: 'Share Failed',
-      text2: 'Could not export card image',
-    });
-    return false;
-  }
-}
-
-export async function shareCard(cardRef, universalUrl, title, artist) {
-  try {
     let uri = null;
     const viewShot = getViewShot();
     const captureRef = viewShot?.captureRef;
@@ -188,3 +130,5 @@ export async function shareCard(cardRef, universalUrl, title, artist) {
     console.warn('Share error:', err);
   }
 }
+
+export const shareToInstagramStories = shareCard;
