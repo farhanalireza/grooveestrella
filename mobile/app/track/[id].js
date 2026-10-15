@@ -6,33 +6,44 @@ import {
   Image,
   StyleSheet,
   ScrollView,
+  TouchableOpacity,
   Pressable,
-  Share,
-  Linking,
   Platform,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Toast from 'react-native-toast-message';
-import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withTiming,
+  Easing,
+  FadeInDown,
+} from 'react-native-reanimated';
 import { COLORS } from '../../src/constants/theme';
 import { ApiService } from '../../src/services/api';
 import { StorageService } from '../../src/services/storage';
-import GlassCard from '../../src/components/GlassCard';
-import GrooveLoader from '../../src/components/GrooveLoader';
+import {
+  RatingPieChart,
+  GrooveLinkModal,
+  GrooveCardModal,
+  MusicLoreAndReviews,
+  GrooveLoader,
+} from '../../src/components';
 
-const STREAMING_PLATFORMS = [
-  { id: 'spotify', name: 'Spotify', icon: 'musical-notes', color: '#1DB954', getUrl: (title, artist) => `https://open.spotify.com/search/${encodeURIComponent(title + ' ' + artist)}` },
-  { id: 'apple_music', name: 'Apple Music', icon: 'logo-apple', color: '#FA243C', getUrl: (title, artist) => `https://music.apple.com/search?term=${encodeURIComponent(title + ' ' + artist)}` },
-  { id: 'youtube_music', name: 'YouTube Music', icon: 'play-circle', color: '#FF0000', getUrl: (title, artist) => `https://music.youtube.com/search?q=${encodeURIComponent(title + ' ' + artist)}` },
-  { id: 'youtube', name: 'YouTube', icon: 'logo-youtube', color: '#FF0000', getUrl: (title, artist) => `https://www.youtube.com/results?search_query=${encodeURIComponent(title + ' ' + artist)}` },
-  { id: 'deezer', name: 'Deezer', icon: 'disc', color: '#A238FF', getUrl: (title, artist) => `https://www.deezer.com/search/${encodeURIComponent(title + ' ' + artist)}` },
-  { id: 'tidal', name: 'TIDAL', icon: 'diamond-outline', color: '#00FFFF', getUrl: (title, artist) => `https://listen.tidal.com/search?q=${encodeURIComponent(title + ' ' + artist)}` },
-  { id: 'soundcloud', name: 'SoundCloud', icon: 'cloud-outline', color: '#FF5500', getUrl: (title, artist) => `https://soundcloud.com/search?q=${encodeURIComponent(title + ' ' + artist)}` },
-];
+function msToMmSs(ms) {
+  if (!ms) return '00:00';
+  const totalSeconds = Math.floor(ms / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  const paddedMinutes = String(minutes).padStart(2, '0');
+  const paddedSeconds = String(seconds).padStart(2, '0');
+  return `${paddedMinutes}:${paddedSeconds}`;
+}
 
 export default function TrackDetailScreen() {
   const { id } = useLocalSearchParams();
@@ -41,28 +52,48 @@ export default function TrackDetailScreen() {
   const [track, setTrack] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState(false);
-  const [preferredPlatform, setPreferredPlatform] = useState('none');
+  const [expandedHeroDesc, setExpandedHeroDesc] = useState(false);
+  const [showQR, setShowQR] = useState(false);
+  const [qrFullScreen, setQrFullScreen] = useState(false);
+  const [showGrooveLinkModal, setShowGrooveLinkModal] = useState(false);
   const [showGrooveCardModal, setShowGrooveCardModal] = useState(false);
+
+  // Spinning Vinyl Animation
+  const rotation = useSharedValue(0);
+
+  useEffect(() => {
+    rotation.value = withRepeat(
+      withTiming(360, {
+        duration: 15000,
+        easing: Easing.linear,
+      }),
+      -1,
+      false
+    );
+  }, [rotation]);
+
+  const spinStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ rotate: `${rotation.value}deg` }],
+    };
+  });
 
   useEffect(() => {
     let mounted = true;
-
     async function loadData() {
       if (!id) return;
       setLoading(true);
       try {
-        const [trackData, isSaved, pref] = await Promise.all([
+        const [trackData, isSaved] = await Promise.all([
           ApiService.fetchTrack(String(id)),
           StorageService.isSongSaved(String(id)),
-          StorageService.getPreferredPlatform(),
         ]);
         if (mounted) {
           setTrack(trackData);
           setSaved(isSaved);
-          setPreferredPlatform(pref);
         }
-      } catch {
-        // Handled
+      } catch (err) {
+        console.warn('Track loading error:', err);
       } finally {
         if (mounted) setLoading(false);
       }
@@ -78,240 +109,338 @@ export default function TrackDetailScreen() {
     if (!track) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-    const actualId = String(id);
+    const actualId = String(track.id || id);
+    const trackName = track.title || track.name || 'Track';
+
     if (saved) {
       await StorageService.removeSavedSong(actualId);
       setSaved(false);
       Toast.show({
         type: 'info',
         text1: 'Removed from Library',
-        text2: `"${track.title}" has been unbookmarked`,
+        text2: `"${trackName}" removed from your bookmarks`,
       });
     } else {
       await StorageService.saveSong({
         id: actualId,
         trackId: actualId,
-        title: track.title,
+        title: trackName,
+        name: trackName,
         artist: track.artist,
         album: track.album,
-        image: track.image,
+        image: track.coverArt || track.image,
         type: 'track',
       });
       setSaved(true);
       Toast.show({
         type: 'success',
         text1: 'Saved to Library 🎶',
-        text2: `"${track.title}" is in your saved songs`,
+        text2: `"${trackName}" bookmarked in your collection`,
       });
-    }
-  };
-
-  const handleOpenPlatform = async (platformItem) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const url = platformItem.getUrl(track?.title || '', track?.artist || '');
-    try {
-      const supported = await Linking.canOpenURL(url);
-      if (supported) {
-        await Linking.openURL(url);
-      } else {
-        await Linking.openURL(url);
-      }
-    } catch {
-      Toast.show({
-        type: 'error',
-        text1: 'Could Not Open Link',
-        text2: `Check your internet connection or app support for ${platformItem.name}`,
-      });
-    }
-  };
-
-  const handleCopyLink = async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    const shareUrl = `https://grooveestrella.app/track/${encodeURIComponent(String(id))}`;
-    try {
-      await Share.share({
-        message: `Listen to "${track?.title}" by ${track?.artist} on GrooveEstrella: ${shareUrl}`,
-        url: shareUrl,
-        title: track?.title,
-      });
-      Toast.show({
-        type: 'success',
-        text1: 'Link Shared',
-        text2: 'Universal routing URL ready to send',
-      });
-    } catch {
-      // Ignored
     }
   };
 
   if (loading) {
     return (
       <SafeAreaView style={styles.safeArea}>
-        <GrooveLoader fullScreen text="Resolving universal track metadata..." />
+        <GrooveLoader fullScreen text="Loading Track Details..." />
       </SafeAreaView>
     );
   }
 
-  const title = track?.title || 'Unknown Track';
-  const artist = track?.artist || 'Unknown Artist';
-  const album = track?.album || 'Single';
-  const releaseDate = track?.releaseDate || '2024';
-  const imageUrl = track?.image || 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=600&auto=format&fit=crop&q=80';
+  const trackTitle = track?.title || track?.name || 'Unknown Track';
+  const trackArtist = track?.artist || 'Unknown Artist';
+  const trackAlbum = track?.album || '';
+  const coverUrl = track?.coverArt || track?.image || 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=600&auto=format&fit=crop&q=80';
+  const durationText = msToMmSs(track?.duration_ms || track?.duration);
+  const popularityScore = track?.popularity || 85;
+  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&color=60A5FA&bgcolor=10141F&ecc=H&data=${encodeURIComponent(`https://grooveestrella.app/track/${encodeURIComponent(track?.id || id)}`)}`;
 
-  const preferredPlatObj = STREAMING_PLATFORMS.find((p) => p.id === preferredPlatform);
+  const artistsList = Array.isArray(track?.artists)
+    ? track.artists
+    : [{ name: trackArtist }];
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      {/* Top Header Bar */}
+      {/* Dynamic Ambient Track Backdrop Glow */}
+      <View style={styles.backdropContainer}>
+        <Image source={{ uri: coverUrl }} style={styles.backdropImage} blurRadius={Platform.OS === 'ios' ? 70 : 25} />
+        <View style={styles.backdropOverlay} />
+      </View>
+
+      {/* Top Action Header */}
       <View style={styles.header}>
-        <Pressable
+        {/* Back Button */}
+        <TouchableOpacity
+          style={styles.circleBtn}
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
             router.back();
           }}
-          style={styles.headerBtn}
           hitSlop={10}
         >
-          <Ionicons name="chevron-down" size={24} color={COLORS.text} />
-        </Pressable>
+          <Ionicons name="arrow-back" size={20} color="#8992A5" />
+        </TouchableOpacity>
 
-        <Text style={styles.headerTitle} numberOfLines={1}>
-          Universal Groove
-        </Text>
+        {/* Right Action Icons: QR, Share GrooveCard, Bookmark */}
+        <View style={styles.headerRightActions}>
+          {/* QR Code toggle */}
+          <TouchableOpacity
+            style={[styles.circleBtn, showQR && styles.circleBtnActive]}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              setShowQR(!showQR);
+            }}
+            hitSlop={10}
+          >
+            <Ionicons name="qr-code-outline" size={18} color={showQR ? '#FFFFFF' : '#8992A5'} />
+          </TouchableOpacity>
 
-        <Pressable onPress={handleToggleSave} style={styles.headerBtn} hitSlop={10}>
-          <Ionicons
-            name={saved ? 'bookmark' : 'bookmark-outline'}
-            size={22}
-            color={saved ? COLORS.purpleLighter : COLORS.text}
-          />
-        </Pressable>
-      </View>
-
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Auto-redirect preference Banner */}
-        {preferredPlatObj && (
-          <Animated.View entering={FadeInDown.duration(400)} style={styles.autoRedirectBanner}>
-            <View style={styles.autoRedirectLeft}>
-              <Ionicons name={preferredPlatObj.icon} size={18} color={preferredPlatObj.color} />
-              <Text style={styles.autoRedirectText}>
-                Preferred platform: <Text style={{ fontWeight: '800', color: '#FFFFFF' }}>{preferredPlatObj.name}</Text>
-              </Text>
-            </View>
-            <Pressable
-              onPress={() => handleOpenPlatform(preferredPlatObj)}
-              style={styles.autoRedirectLaunch}
-            >
-              <Text style={styles.autoRedirectLaunchText}>Launch</Text>
-              <Ionicons name="arrow-forward" size={12} color="#FFFFFF" style={{ marginLeft: 3 }} />
-            </Pressable>
-          </Animated.View>
-        )}
-
-        {/* Center Artwork */}
-        <Animated.View entering={FadeInDown.duration(500).delay(100)} style={styles.artworkContainer}>
-          <View style={styles.artworkCard}>
-            <Image source={{ uri: imageUrl }} style={styles.artworkImage} resizeMode="cover" />
-          </View>
-        </Animated.View>
-
-        {/* Track Title and Artist Details */}
-        <Animated.View entering={FadeInDown.duration(500).delay(200)} style={styles.metaContainer}>
-          <Text style={styles.trackTitle}>{title}</Text>
-          <Text style={styles.artistName}>{artist}</Text>
-
-          <View style={styles.albumMetaBadge}>
-            <Ionicons name="disc-outline" size={13} color={COLORS.textSecondary} style={{ marginRight: 5 }} />
-            <Text style={styles.albumMetaText}>
-              {album} {releaseDate ? `• ${releaseDate.slice(0, 4)}` : ''}
-            </Text>
-          </View>
-        </Animated.View>
-
-        {/* Sharing & Badge Action Buttons */}
-        <Animated.View entering={FadeInDown.duration(500).delay(300)} style={styles.actionButtons}>
-          <Pressable onPress={handleCopyLink} style={styles.actionBtn}>
-            <LinearGradient
-              colors={['#2563EB', '#1D4ED8']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.actionBtnGradient}
-            >
-              <Ionicons name="share-social-outline" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
-              <Text style={styles.actionBtnText}>Copy Universal Link</Text>
-            </LinearGradient>
-          </Pressable>
-
-          <Pressable
+          {/* Share / GrooveCard */}
+          <TouchableOpacity
+            style={styles.circleBtn}
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-              setShowGrooveCardModal(!showGrooveCardModal);
+              setShowGrooveCardModal(true);
             }}
-            style={styles.grooveCardToggleBtn}
+            hitSlop={10}
           >
-            <Ionicons name="card-outline" size={16} color={COLORS.purpleLightest} style={{ marginRight: 6 }} />
-            <Text style={styles.grooveCardToggleText}>
-              {showGrooveCardModal ? 'Hide GrooveCard' : 'Create GrooveCard'}
+            <Ionicons name="share-social-outline" size={18} color="#8992A5" />
+          </TouchableOpacity>
+
+          {/* Bookmark */}
+          <TouchableOpacity
+            style={[styles.circleBtn, saved && styles.circleBtnActive]}
+            onPress={handleToggleSave}
+            hitSlop={10}
+          >
+            <Ionicons
+              name={saved ? 'bookmark' : 'bookmark-outline'}
+              size={18}
+              color={saved ? '#FFFFFF' : '#8992A5'}
+            />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* Hero Card Container (matches web app Track Card) */}
+        <Animated.View entering={FadeInDown.duration(400)} style={styles.heroCard}>
+          {/* Spinning Vinyl Record Hero Component */}
+          <View style={styles.vinylContainer}>
+            {/* Spinning Vinyl Grooved Disc */}
+            <Animated.View style={[styles.vinylDisc, spinStyle]}>
+              <View style={styles.vinylGroove1}>
+                <View style={styles.vinylGroove2}>
+                  <View style={styles.vinylGroove3} />
+                </View>
+              </View>
+            </Animated.View>
+
+            {/* Spinning Center Artwork Cover Label */}
+            <Animated.View style={[styles.artworkLabelWrapper, spinStyle]}>
+              <Image source={{ uri: coverUrl }} style={styles.artworkLabelImage} resizeMode="cover" />
+            </Animated.View>
+          </View>
+
+          {/* Track Metadata */}
+          <View style={styles.metaContent}>
+            {/* Category Label */}
+            <View style={styles.categoryBadgeRow}>
+              <Ionicons name="musical-notes" size={14} color="#60A5FA" />
+              <Text style={styles.categoryBadgeText}>TRACK DETAILS</Text>
+            </View>
+
+            {/* Track Title */}
+            <Text style={styles.trackTitleText}>{trackTitle}</Text>
+
+            {/* Artist and Album Subtitle */}
+            <Text style={styles.subtitleText}>
+              {artistsList.map((a, i) => (
+                <Text
+                  key={i}
+                  style={styles.clickableLink}
+                  onPress={() => {
+                    if (a.id) {
+                      router.push(`/artist/${a.id}`);
+                    } else {
+                      router.push(`/artist/${encodeURIComponent(a.name)}`);
+                    }
+                  }}
+                >
+                  {a.name}
+                  {i < artistsList.length - 1 ? ', ' : ''}
+                </Text>
+              ))}
+              {trackAlbum ? (
+                <>
+                  <Text style={styles.subtitleBullet}> • </Text>
+                  <Text
+                    style={styles.clickableAlbum}
+                    onPress={() => {
+                      if (track.albumId) {
+                        router.push(`/album/${track.albumId}`);
+                      } else {
+                        router.push(`/album/${encodeURIComponent(trackAlbum)}`);
+                      }
+                    }}
+                  >
+                    {trackAlbum}
+                  </Text>
+                </>
+              ) : null}
             </Text>
-          </Pressable>
+
+            {/* Meta Row: Duration + Score */}
+            <View style={styles.metaRow}>
+              <View style={styles.metaItem}>
+                <Ionicons name="time-outline" size={14} color="#8992A5" />
+                <Text style={styles.metaItemText}>{durationText}</Text>
+              </View>
+              <Text style={styles.metaDot}>•</Text>
+              <View style={styles.metaItem}>
+                <Ionicons name="trophy-outline" size={14} color="#8992A5" />
+                <Text style={styles.metaItemText}>Score: {popularityScore}</Text>
+              </View>
+            </View>
+
+            {/* Circular Groove Score RatingPieChart */}
+            <View style={styles.ratingRow}>
+              <RatingPieChart rating={track?.rating || { value: popularityScore / 20 }} />
+            </View>
+
+            {/* Collapsible Lore Overview */}
+            {track?.description ? (
+              <View style={styles.overviewSection}>
+                <Text
+                  style={[
+                    styles.overviewText,
+                    !expandedHeroDesc && styles.overviewTextClamped,
+                  ]}
+                >
+                  {track.description}
+                </Text>
+                {track.description.length > 100 && (
+                  <TouchableOpacity
+                    onPress={() => setExpandedHeroDesc(!expandedHeroDesc)}
+                    style={styles.readMoreBtn}
+                  >
+                    <Text style={styles.readMoreText}>
+                      {expandedHeroDesc ? 'Show less' : 'Read full overview'}
+                    </Text>
+                    <Ionicons
+                      name={expandedHeroDesc ? 'chevron-up' : 'chevron-down'}
+                      size={12}
+                      color="#60A5FA"
+                    />
+                  </TouchableOpacity>
+                )}
+              </View>
+            ) : null}
+
+            {/* "Open in GrooveLink" Pill Button */}
+            <View style={styles.grooveLinkSection}>
+              <TouchableOpacity
+                style={styles.grooveLinkBtn}
+                activeOpacity={0.8}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setShowGrooveLinkModal(true);
+                }}
+              >
+                <Ionicons name="link" size={15} color="#F4F7FF" style={{ marginRight: 6 }} />
+                <Text style={styles.grooveLinkBtnText}>Open in GrooveLink</Text>
+                <Ionicons name="chevron-forward" size={14} color="#60A5FA" style={{ marginLeft: 4 }} />
+              </TouchableOpacity>
+            </View>
+          </View>
         </Animated.View>
 
-        {/* GrooveCard Preview Section if toggled */}
-        {showGrooveCardModal && (
-          <Animated.View entering={FadeInDown.duration(400)} style={styles.grooveCardWrapper}>
-            <GlassCard elevated style={styles.grooveCard}>
-              <View style={styles.grooveCardHeader}>
-                <View style={styles.grooveCardBrand}>
-                  <Ionicons name="sparkles" size={12} color={COLORS.purpleLighter} style={{ marginRight: 5 }} />
-                  <Text style={styles.grooveCardBrandText}>GROOVECARD BADGE</Text>
-                </View>
-                <Ionicons name="qr-code" size={18} color={COLORS.textSecondary} />
+        {/* QR Code Sharing Banner (if toggled) */}
+        {showQR && (
+          <Animated.View entering={FadeInDown.duration(300)} style={styles.qrCard}>
+            <Text style={styles.qrTitle}>SCAN TO SHARE TRACK</Text>
+            <TouchableOpacity
+              activeOpacity={0.9}
+              style={styles.qrImageWrapper}
+              onPress={() => setQrFullScreen(true)}
+            >
+              <Image source={{ uri: qrCodeUrl }} style={styles.qrImage} />
+              <View style={styles.qrLogoBadge}>
+                <Ionicons name="musical-note" size={18} color="#2563EB" />
               </View>
-
-              <View style={styles.grooveCardBody}>
-                <Image source={{ uri: imageUrl }} style={styles.grooveCardThumb} />
-                <View style={{ flex: 1, marginLeft: 12 }}>
-                  <Text style={styles.grooveCardTitle} numberOfLines={1}>{title}</Text>
-                  <Text style={styles.grooveCardArtist} numberOfLines={1}>{artist}</Text>
-                  <Text style={styles.grooveCardUrl}>grooveestrella.app/track/{id}</Text>
-                </View>
-              </View>
-
-              <Text style={styles.grooveCardTip}>Scan or share this card to stream seamlessly on any provider.</Text>
-            </GlassCard>
+            </TouchableOpacity>
+            <Text style={styles.qrDescription}>
+              Scan this QR code with any camera to open this track card instantly. Tap code to view full-screen.
+            </Text>
           </Animated.View>
         )}
 
-        {/* Platform Links List */}
-        <Animated.View entering={FadeInUp.duration(500).delay(400)} style={styles.platformsSection}>
-          <Text style={styles.sectionHeaderTitle}>STREAM & OPEN ON</Text>
-
-          {STREAMING_PLATFORMS.map((platform) => (
-            <GlassCard key={platform.id} style={styles.platformRow}>
-              <View style={styles.platformLeft}>
-                <View style={[styles.platformIconWrapper, { backgroundColor: `${platform.color}22` }]}>
-                  <Ionicons name={platform.icon} size={20} color={platform.color} />
+        {/* Fullscreen QR Modal */}
+        {qrFullScreen && (
+          <Modal transparent animationType="fade" visible={qrFullScreen} onRequestClose={() => setQrFullScreen(false)}>
+            <Pressable style={styles.modalBackdrop} onPress={() => setQrFullScreen(false)}>
+              <View style={styles.modalContent} onStartShouldSetResponder={() => true}>
+                <Text style={styles.modalTitle}>SCAN QR CODE</Text>
+                <View style={styles.modalQrWrapper}>
+                  <Image source={{ uri: qrCodeUrl }} style={styles.modalQrImage} />
+                  <View style={styles.modalQrLogo}>
+                    <Ionicons name="musical-notes" size={24} color="#2563EB" />
+                  </View>
                 </View>
-                <View>
-                  <Text style={styles.platformRowName}>{platform.name}</Text>
-                  <Text style={styles.platformRowSub}>Open track stream</Text>
-                </View>
+                <Text style={styles.modalSub}>Scan with your phone's camera to instantly view and share this track card.</Text>
+                <TouchableOpacity
+                  style={styles.modalCloseBtn}
+                  onPress={() => setQrFullScreen(false)}
+                >
+                  <Text style={styles.modalCloseText}>CLOSE</Text>
+                </TouchableOpacity>
               </View>
+            </Pressable>
+          </Modal>
+        )}
 
-              <Pressable
-                onPress={() => handleOpenPlatform(platform)}
-                style={styles.playButton}
-              >
-                <Text style={styles.playButtonText}>Play</Text>
-                <Ionicons name="open-outline" size={13} color="#FFFFFF" style={{ marginLeft: 4 }} />
-              </Pressable>
-            </GlassCard>
-          ))}
-        </Animated.View>
+        {/* Reviews, Descriptions, Lore, Community Tags (Matches web app) */}
+        <MusicLoreAndReviews
+          id={track?.id || id}
+          type="track"
+          title={trackTitle}
+          artist={trackArtist}
+          description={track?.description}
+          tags={track?.tags || []}
+          rating={track?.rating}
+          totalDurationMs={track?.duration_ms || track?.duration}
+        />
       </ScrollView>
+
+      {/* In-Place Liquid Glass GrooveLink Routing Modal */}
+      <GrooveLinkModal
+        visible={showGrooveLinkModal}
+        onClose={() => setShowGrooveLinkModal(false)}
+        title={trackTitle}
+        artist={trackArtist}
+        album={trackAlbum}
+        imageUrl={coverUrl}
+        type="track"
+        itemId={track?.id || id}
+        onOpenGrooveCard={() => {
+          setShowGrooveLinkModal(false);
+          setTimeout(() => setShowGrooveCardModal(true), 250);
+        }}
+      />
+
+      {/* Apple Music Inspired GrooveCard Composer Modal */}
+      <GrooveCardModal
+        visible={showGrooveCardModal}
+        onClose={() => setShowGrooveCardModal(false)}
+        title={trackTitle}
+        artist={trackArtist}
+        album={trackAlbum}
+        imageUrl={coverUrl}
+        releaseDate={track?.releaseDate || track?.releaseYear}
+        type="track"
+        itemId={track?.id || id}
+      />
     </SafeAreaView>
   );
 }
@@ -319,268 +448,386 @@ export default function TrackDetailScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: COLORS.bg,
+    backgroundColor: '#07090F',
+  },
+  backdropContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 380,
+    overflow: 'hidden',
+    zIndex: 0,
+  },
+  backdropImage: {
+    width: '100%',
+    height: '100%',
+    opacity: 0.18,
+  },
+  backdropOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#07090F',
+    opacity: 0.7,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.06)',
+    paddingVertical: 12,
+    zIndex: 20,
   },
-  headerBtn: {
-    padding: 8,
+  headerRightActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
-  headerTitle: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: COLORS.text,
-    letterSpacing: 0.5,
+  circleBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(16, 20, 31, 0.7)',
+    borderWidth: 1,
+    borderColor: 'rgba(37, 99, 235, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  circleBtnActive: {
+    backgroundColor: '#2563EB',
+    borderColor: '#60A5FA',
   },
   scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
+    paddingHorizontal: 16,
+    paddingTop: 10,
     paddingBottom: 40,
+    zIndex: 10,
   },
-  autoRedirectBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: 'rgba(37, 99, 235, 0.15)',
-    borderColor: 'rgba(37, 99, 235, 0.3)',
+  heroCard: {
+    backgroundColor: 'rgba(16, 20, 31, 0.65)',
     borderWidth: 1,
-    borderRadius: 14,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    marginBottom: 20,
-  },
-  autoRedirectLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  autoRedirectText: {
-    marginLeft: 8,
-    color: COLORS.textSecondary,
-    fontSize: 12,
-  },
-  autoRedirectLaunch: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.accent,
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-    borderRadius: 8,
-  },
-  autoRedirectLaunchText: {
-    color: '#FFFFFF',
-    fontSize: 11,
-    fontWeight: '800',
-  },
-  artworkContainer: {
+    borderColor: 'rgba(37, 99, 235, 0.15)',
+    borderRadius: 28,
+    padding: 20,
     alignItems: 'center',
     marginBottom: 20,
-  },
-  artworkCard: {
-    width: 240,
-    height: 240,
-    borderRadius: 24,
-    overflow: 'hidden',
-    backgroundColor: COLORS.surfaceElevated,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
     ...Platform.select({
       ios: {
-        shadowColor: '#870087',
-        shadowOffset: { width: 0, height: 12 },
-        shadowOpacity: 0.35,
-        shadowRadius: 24,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.4,
+        shadowRadius: 20,
       },
       android: {
-        elevation: 12,
+        elevation: 6,
       },
     }),
   },
-  artworkImage: {
+  vinylContainer: {
+    width: 220,
+    height: 220,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+    position: 'relative',
+  },
+  vinylDisc: {
+    position: 'absolute',
+    width: 210,
+    height: 210,
+    borderRadius: 105,
+    backgroundColor: '#07090F',
+    borderWidth: 4,
+    borderColor: '#10141F',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.6,
+    shadowRadius: 15,
+    elevation: 8,
+  },
+  vinylGroove1: {
+    width: '90%',
+    height: '90%',
+    borderRadius: 100,
+    borderWidth: 1,
+    borderColor: 'rgba(37, 99, 235, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  vinylGroove2: {
+    width: '80%',
+    height: '80%',
+    borderRadius: 90,
+    borderWidth: 1,
+    borderColor: 'rgba(37, 99, 235, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  vinylGroove3: {
+    width: '70%',
+    height: '70%',
+    borderRadius: 80,
+    borderWidth: 1,
+    borderColor: 'rgba(37, 99, 235, 0.12)',
+  },
+  artworkLabelWrapper: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    overflow: 'hidden',
+    borderWidth: 3,
+    borderColor: '#10141F',
+    backgroundColor: '#10141F',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  artworkLabelImage: {
     width: '100%',
     height: '100%',
   },
-  metaContainer: {
+  metaContent: {
+    width: '100%',
     alignItems: 'center',
-    marginBottom: 22,
   },
-  trackTitle: {
-    fontSize: 22,
+  categoryBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 8,
+  },
+  categoryBadgeText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#60A5FA',
+    letterSpacing: 1.5,
+  },
+  trackTitleText: {
+    fontSize: 24,
     fontWeight: '900',
     color: '#FFFFFF',
     textAlign: 'center',
-    marginBottom: 4,
+    marginBottom: 6,
+    letterSpacing: -0.5,
   },
-  artistName: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: COLORS.textSecondary,
+  subtitleText: {
+    fontSize: 14,
+    color: 'rgba(244, 247, 255, 0.8)',
     textAlign: 'center',
     marginBottom: 10,
   },
-  albumMetaBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
-    paddingVertical: 4,
-    paddingHorizontal: 10,
-    borderRadius: 10,
-  },
-  albumMetaText: {
-    color: COLORS.textSecondary,
-    fontSize: 12,
+  clickableLink: {
+    color: '#FFFFFF',
     fontWeight: '600',
   },
-  actionButtons: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 22,
+  subtitleBullet: {
+    color: '#8992A5',
   },
-  actionBtn: {
-    flex: 1,
-    borderRadius: 14,
+  clickableAlbum: {
+    color: '#8992A5',
+    fontWeight: '500',
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 14,
+  },
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  metaItemText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#8992A5',
+    textTransform: 'uppercase',
+  },
+  metaDot: {
+    color: '#8992A5',
+    fontSize: 12,
+  },
+  ratingRow: {
+    marginBottom: 14,
+    width: '100%',
+    alignItems: 'center',
+  },
+  overviewSection: {
+    width: '100%',
+    marginVertical: 10,
+    paddingHorizontal: 8,
+  },
+  overviewText: {
+    fontSize: 12,
+    color: '#8992A5',
+    lineHeight: 18,
+    textAlign: 'left',
+  },
+  overviewTextClamped: {
+    maxHeight: 36,
     overflow: 'hidden',
   },
-  actionBtnGradient: {
+  readMoreBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
+    gap: 4,
+    marginTop: 4,
   },
-  actionBtnText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '800',
+  readMoreText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#60A5FA',
   },
-  grooveCardToggleBtn: {
-    flex: 1,
+  grooveLinkSection: {
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(37, 99, 235, 0.15)',
+    paddingTop: 14,
+    width: '100%',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  grooveLinkBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(135, 0, 135, 0.15)',
-    borderColor: 'rgba(232, 121, 249, 0.35)',
-    borderWidth: 1,
-    borderRadius: 14,
-    paddingVertical: 12,
-  },
-  grooveCardToggleText: {
-    color: COLORS.purpleLightest,
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  grooveCardWrapper: {
-    marginBottom: 22,
-  },
-  grooveCard: {
-    padding: 16,
+    paddingVertical: 9,
+    paddingHorizontal: 16,
     borderRadius: 20,
-    borderColor: 'rgba(232, 121, 249, 0.35)',
+    backgroundColor: 'rgba(37, 99, 235, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(37, 99, 235, 0.3)',
   },
-  grooveCardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  grooveCardBrand: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  grooveCardBrandText: {
-    color: COLORS.purpleLightest,
-    fontSize: 10,
+  grooveLinkBtnText: {
+    fontSize: 11,
     fontWeight: '800',
-    letterSpacing: 1.5,
+    color: '#F4F7FF',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
   },
-  grooveCardBody: {
-    flexDirection: 'row',
+  qrCard: {
+    backgroundColor: 'rgba(16, 20, 31, 0.7)',
+    borderWidth: 1,
+    borderColor: 'rgba(37, 99, 235, 0.15)',
+    borderRadius: 24,
+    padding: 20,
     alignItems: 'center',
-    marginBottom: 10,
-  },
-  grooveCardThumb: {
-    width: 50,
-    height: 50,
-    borderRadius: 10,
-  },
-  grooveCardTitle: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: COLORS.text,
-  },
-  grooveCardArtist: {
-    fontSize: 12,
-    color: COLORS.textSecondary,
-    marginBottom: 2,
-  },
-  grooveCardUrl: {
-    fontSize: 10,
-    color: COLORS.accentLight,
-    fontWeight: '600',
-  },
-  grooveCardTip: {
-    fontSize: 10,
-    color: 'rgba(137, 146, 165, 0.65)',
-    fontStyle: 'italic',
-  },
-  platformsSection: {
     marginBottom: 20,
   },
-  sectionHeaderTitle: {
-    fontSize: 11,
+  qrTitle: {
+    fontSize: 12,
     fontWeight: '800',
-    color: COLORS.textSecondary,
-    letterSpacing: 1.5,
-    marginBottom: 12,
+    color: '#FFFFFF',
+    letterSpacing: 1.2,
+    marginBottom: 14,
   },
-  platformRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 12,
+  qrImageWrapper: {
+    width: 160,
+    height: 160,
     borderRadius: 16,
-    marginBottom: 8,
-  },
-  platformLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  platformIconWrapper: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
+    backgroundColor: '#10141F',
+    borderWidth: 1,
+    borderColor: 'rgba(37, 99, 235, 0.25)',
+    padding: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    position: 'relative',
+    marginBottom: 12,
   },
-  platformRowName: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: COLORS.text,
-    marginBottom: 2,
-  },
-  platformRowSub: {
-    fontSize: 11,
-    color: COLORS.textSecondary,
-  },
-  playButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderColor: 'rgba(255, 255, 255, 0.16)',
-    borderWidth: 1,
-    paddingVertical: 7,
-    paddingHorizontal: 14,
+  qrImage: {
+    width: '100%',
+    height: '100%',
     borderRadius: 10,
   },
-  playButtonText: {
+  qrLogoBadge: {
+    position: 'absolute',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#10141F',
+    borderWidth: 1,
+    borderColor: 'rgba(37, 99, 235, 0.4)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  qrDescription: {
+    fontSize: 11,
+    color: '#8992A5',
+    textAlign: 'center',
+    lineHeight: 16,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.88)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    width: '100%',
+    maxWidth: 320,
+    backgroundColor: '#0D121F',
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(37, 99, 235, 0.3)',
+    padding: 24,
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: 14,
+    fontWeight: '900',
     color: '#FFFFFF',
+    letterSpacing: 1.5,
+    marginBottom: 16,
+  },
+  modalQrWrapper: {
+    width: 200,
+    height: 200,
+    borderRadius: 20,
+    backgroundColor: '#10141F',
+    borderWidth: 1,
+    borderColor: 'rgba(37, 99, 235, 0.3)',
+    padding: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+    marginBottom: 16,
+  },
+  modalQrImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 12,
+  },
+  modalQrLogo: {
+    position: 'absolute',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#10141F',
+    borderWidth: 1,
+    borderColor: 'rgba(37, 99, 235, 0.4)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalSub: {
     fontSize: 12,
-    fontWeight: '700',
+    color: '#8992A5',
+    textAlign: 'center',
+    lineHeight: 18,
+    marginBottom: 18,
+  },
+  modalCloseBtn: {
+    backgroundColor: '#2563EB',
+    paddingVertical: 10,
+    paddingHorizontal: 24,
+    borderRadius: 14,
+  },
+  modalCloseText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: 1,
   },
 });

@@ -6,8 +6,8 @@ import {
   Image,
   StyleSheet,
   ScrollView,
+  TouchableOpacity,
   Pressable,
-  Share,
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -15,26 +15,52 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Toast from 'react-native-toast-message';
-import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { COLORS } from '../../src/constants/theme';
 import { ApiService } from '../../src/services/api';
 import { StorageService } from '../../src/services/storage';
-import GrooveLoader from '../../src/components/GrooveLoader';
-import TrackCard from '../../src/components/TrackCard';
-import AlbumCard from '../../src/components/AlbumCard';
+import {
+  RatingPieChart,
+  GrooveLinkModal,
+  GrooveCardModal,
+  MusicLoreAndReviews,
+  GrooveLoader,
+} from '../../src/components';
+
+function formatFollowers(num) {
+  if (!num) return '1M';
+  if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
+  if (num >= 1000) return `${Math.floor(num / 1000)}K`;
+  return String(num);
+}
+
+function formatDuration(ms) {
+  if (!ms) return '03:30';
+  const totalSeconds = Math.floor(ms / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+}
 
 export default function ArtistDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
 
   const [artist, setArtist] = useState(null);
+  const [topTracks, setTopTracks] = useState([]);
+  const [albums, setAlbums] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState(false);
+  const [expandedHeroDesc, setExpandedHeroDesc] = useState(false);
+
+  // Modals state
+  const [showGrooveLinkModal, setShowGrooveLinkModal] = useState(false);
+  const [showGrooveCardModal, setShowGrooveCardModal] = useState(false);
+  const [modalItemTarget, setModalItemTarget] = useState(null);
 
   useEffect(() => {
     let mounted = true;
-
-    async function loadArtist() {
+    async function loadArtistData() {
       if (!id) return;
       setLoading(true);
       try {
@@ -44,27 +70,29 @@ export default function ArtistDetailScreen() {
         ]);
         if (mounted) {
           setArtist(artistData);
+          setTopTracks(artistData?.topTracks || []);
+          setAlbums(artistData?.albums || []);
           setSaved(isSaved);
         }
-      } catch {
-        // Handled
+      } catch (err) {
+        console.warn('Artist loading error:', err);
       } finally {
         if (mounted) setLoading(false);
       }
     }
 
-    loadArtist();
+    loadArtistData();
     return () => {
       mounted = false;
     };
   }, [id]);
 
-  const handleToggleFollow = async () => {
+  const handleToggleSave = async () => {
     if (!artist) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-    const actualId = String(id);
-    const name = artist.name || artist.title || 'Artist';
+    const actualId = String(artist.id || id);
+    const artistName = artist.name || artist.title || 'Artist';
 
     if (saved) {
       await StorageService.removeSavedArtist(actualId);
@@ -72,14 +100,14 @@ export default function ArtistDetailScreen() {
       Toast.show({
         type: 'info',
         text1: 'Unfollowed Artist',
-        text2: `You unfollowed ${name}`,
+        text2: `You unfollowed ${artistName}`,
       });
     } else {
       await StorageService.saveArtist({
         id: actualId,
-        name,
-        title: name,
-        image: artist.image,
+        name: artistName,
+        title: artistName,
+        image: artist.coverArt || artist.image,
         followers: artist.followers,
         type: 'artist',
       });
@@ -87,128 +115,306 @@ export default function ArtistDetailScreen() {
       Toast.show({
         type: 'success',
         text1: 'Following Artist 🎙️',
-        text2: `${name} added to your followed artists`,
+        text2: `${artistName} added to your followed artists`,
       });
     }
   };
 
-  const handleShare = async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    const name = artist?.name || artist?.title || 'Artist';
-    const shareUrl = `https://grooveestrella.app/artist/${encodeURIComponent(String(id))}`;
-    try {
-      await Share.share({
-        message: `Check out ${name} on GrooveEstrella: ${shareUrl}`,
-        url: shareUrl,
-        title: name,
-      });
-    } catch {
-      // Ignored
-    }
+  const openItemInGrooveLink = (item, type = 'track') => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setModalItemTarget({ ...item, type });
+    setShowGrooveLinkModal(true);
   };
 
   if (loading) {
     return (
       <SafeAreaView style={styles.safeArea}>
-        <GrooveLoader fullScreen text="Loading artist discography..." />
+        <GrooveLoader fullScreen text="Loading Artist Profile..." />
       </SafeAreaView>
     );
   }
 
-  const name = artist?.name || artist?.title || 'Unknown Artist';
-  const imageUrl = artist?.image || 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=600&auto=format&fit=crop&q=80';
-  const topTracks = artist?.topTracks || [];
-  const albums = artist?.albums || [];
+  const artistName = artist?.name || artist?.title || 'Unknown Artist';
+  const avatarUrl = artist?.coverArt || artist?.image || 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=800&auto=format&fit=crop&q=80';
+  const genres = artist?.genres || ['Rock', 'Classic Rock'];
+  const followersCount = formatFollowers(artist?.followers || 15000000);
+  const popularityScore = artist?.popularity || 90;
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      {/* Top Header Bar */}
+      {/* Ambient Backdrop Glow */}
+      <View style={styles.backdropContainer}>
+        <Image source={{ uri: avatarUrl }} style={styles.backdropImage} blurRadius={Platform.OS === 'ios' ? 70 : 25} />
+        <View style={styles.backdropOverlay} />
+      </View>
+
+      {/* Top Action Header */}
       <View style={styles.header}>
-        <Pressable
+        {/* Back Button */}
+        <TouchableOpacity
+          style={styles.circleBtn}
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
             router.back();
           }}
-          style={styles.headerBtn}
           hitSlop={10}
         >
-          <Ionicons name="chevron-down" size={24} color={COLORS.text} />
-        </Pressable>
+          <Ionicons name="arrow-back" size={20} color="#8992A5" />
+        </TouchableOpacity>
 
-        <Text style={styles.headerTitle} numberOfLines={1}>
-          Artist Profile
-        </Text>
+        {/* Right Action Icons: Share GrooveCard, Bookmark / Follow */}
+        <View style={styles.headerRightActions}>
+          <TouchableOpacity
+            style={styles.circleBtn}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              setModalItemTarget(null);
+              setShowGrooveCardModal(true);
+            }}
+            hitSlop={10}
+          >
+            <Ionicons name="share-social-outline" size={18} color="#8992A5" />
+          </TouchableOpacity>
 
-        <Pressable onPress={handleShare} style={styles.headerBtn} hitSlop={10}>
-          <Ionicons name="share-social-outline" size={20} color={COLORS.text} />
-        </Pressable>
-      </View>
-
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Large Circular Artist Image */}
-        <Animated.View entering={FadeInDown.duration(450)} style={styles.avatarWrapper}>
-          <View style={styles.avatarCircle}>
-            <Image source={{ uri: imageUrl }} style={styles.avatarImage} resizeMode="cover" />
-          </View>
-        </Animated.View>
-
-        {/* Artist Name & Badge */}
-        <Animated.View entering={FadeInDown.duration(500).delay(100)} style={styles.metaContainer}>
-          <Text style={styles.artistName}>{name}</Text>
-          <View style={styles.verifiedBadge}>
-            <Ionicons name="checkmark-circle" size={14} color={COLORS.accentLight} style={{ marginRight: 4 }} />
-            <Text style={styles.verifiedText}>VERIFIED ARTIST CATALOG</Text>
-          </View>
-        </Animated.View>
-
-        {/* Follow / Save Button */}
-        <Animated.View entering={FadeInDown.duration(500).delay(200)} style={styles.actionsRow}>
-          <Pressable
-            onPress={handleToggleFollow}
-            style={[styles.followBtn, saved && styles.followBtnActive]}
+          <TouchableOpacity
+            style={[styles.circleBtn, saved && styles.circleBtnActive]}
+            onPress={handleToggleSave}
+            hitSlop={10}
           >
             <Ionicons
-              name={saved ? 'checkmark' : 'add'}
+              name={saved ? 'bookmark' : 'bookmark-outline'}
               size={18}
-              color={saved ? COLORS.purpleLightest : '#FFFFFF'}
-              style={{ marginRight: 6 }}
+              color={saved ? '#FFFFFF' : '#8992A5'}
             />
-            <Text style={[styles.followBtnText, saved && styles.followBtnTextActive]}>
-              {saved ? 'Following' : 'Follow Artist'}
-            </Text>
-          </Pressable>
+          </TouchableOpacity>
+        </View>
+      </View>
 
-          <Pressable onPress={handleShare} style={styles.secondaryActionBtn}>
-            <Ionicons name="share-outline" size={18} color={COLORS.text} style={{ marginRight: 6 }} />
-            <Text style={styles.secondaryActionText}>Share</Text>
-          </Pressable>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* Hero Card Container (Matches web app Artist Card - Image 3) */}
+        <Animated.View entering={FadeInDown.duration(400)} style={styles.heroCard}>
+          {/* Circular Artist Avatar */}
+          <View style={styles.avatarWrapper}>
+            <Image source={{ uri: avatarUrl }} style={styles.avatarImage} resizeMode="cover" />
+          </View>
+
+          {/* Artist Metadata */}
+          <View style={styles.metaContent}>
+            {/* Category Label */}
+            <View style={styles.categoryBadgeRow}>
+              <Ionicons name="people" size={14} color="#60A5FA" />
+              <Text style={styles.categoryBadgeText}>ARTIST PROFILE</Text>
+            </View>
+
+            {/* Artist Name */}
+            <Text style={styles.artistNameText}>{artistName}</Text>
+
+            {/* Genre Pills */}
+            {genres.length > 0 && (
+              <View style={styles.genresRow}>
+                {genres.map((g, idx) => (
+                  <View key={idx} style={styles.genrePill}>
+                    <Text style={styles.genrePillText}>{g}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            {/* Meta Row: Followers + Score */}
+            <View style={styles.metaRow}>
+              <View style={styles.metaItem}>
+                <Ionicons name="people-outline" size={14} color="#8992A5" />
+                <Text style={styles.metaItemText}>{followersCount} followers</Text>
+              </View>
+              <Text style={styles.metaDot}>•</Text>
+              <View style={styles.metaItem}>
+                <Ionicons name="trophy-outline" size={14} color="#8992A5" />
+                <Text style={styles.metaItemText}>Score: {popularityScore}</Text>
+              </View>
+            </View>
+
+            {/* Circular Groove Score RatingPieChart */}
+            <View style={styles.ratingRow}>
+              <RatingPieChart rating={artist?.rating || { value: popularityScore / 20 }} />
+            </View>
+
+            {/* Collapsible Lore Overview */}
+            {artist?.description ? (
+              <View style={styles.overviewSection}>
+                <Text
+                  style={[
+                    styles.overviewText,
+                    !expandedHeroDesc && styles.overviewTextClamped,
+                  ]}
+                >
+                  {artist.description}
+                </Text>
+                {artist.description.length > 100 && (
+                  <TouchableOpacity
+                    onPress={() => setExpandedHeroDesc(!expandedHeroDesc)}
+                    style={styles.readMoreBtn}
+                  >
+                    <Text style={styles.readMoreText}>
+                      {expandedHeroDesc ? 'Show less' : 'Read full overview'}
+                    </Text>
+                    <Ionicons
+                      name={expandedHeroDesc ? 'chevron-up' : 'chevron-down'}
+                      size={12}
+                      color="#60A5FA"
+                    />
+                  </TouchableOpacity>
+                )}
+              </View>
+            ) : null}
+
+            {/* "Open in GrooveLink" Pill Button */}
+            <View style={styles.grooveLinkSection}>
+              <TouchableOpacity
+                style={styles.grooveLinkBtn}
+                activeOpacity={0.8}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setModalItemTarget(null);
+                  setShowGrooveLinkModal(true);
+                }}
+              >
+                <Ionicons name="link" size={15} color="#F4F7FF" style={{ marginRight: 6 }} />
+                <Text style={styles.grooveLinkBtnText}>Open in GrooveLink</Text>
+                <Ionicons name="chevron-forward" size={14} color="#60A5FA" style={{ marginLeft: 4 }} />
+              </TouchableOpacity>
+            </View>
+          </View>
         </Animated.View>
 
-        {/* Top Tracks Section */}
+        {/* Popular Tracks Section */}
         {topTracks.length > 0 && (
-          <Animated.View entering={FadeInUp.duration(500).delay(300)} style={styles.section}>
-            <Text style={styles.sectionTitle}>POPULAR RELEASES</Text>
-            {topTracks.map((track) => (
-              <TrackCard key={track.id} track={track} layout="list" />
-            ))}
-          </Animated.View>
+          <View style={styles.sectionCard}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="musical-notes-outline" size={16} color="#60A5FA" style={{ marginRight: 6 }} />
+              <Text style={styles.sectionTitle}>Popular Tracks</Text>
+            </View>
+
+            {topTracks.slice(0, 5).map((track, idx) => {
+              const trackTitle = track.title || track.name;
+              const trackDur = formatDuration(track.duration || track.duration_ms);
+              const trackCover = track.coverArt || track.image || avatarUrl;
+
+              return (
+                <TouchableOpacity
+                  key={track.id || idx}
+                  style={styles.popularTrackRow}
+                  activeOpacity={0.7}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    router.push(`/track/${track.id || encodeURIComponent(trackTitle)}`);
+                  }}
+                >
+                  <Text style={styles.popularTrackIndex}>{idx + 1}</Text>
+                  <Image source={{ uri: trackCover }} style={styles.popularTrackThumb} />
+                  <View style={styles.popularTrackInfo}>
+                    <Text style={styles.popularTrackTitle} numberOfLines={1}>
+                      {trackTitle}
+                    </Text>
+                    <Text style={styles.popularTrackAlbum} numberOfLines={1}>
+                      {track.album || artistName}
+                    </Text>
+                  </View>
+                  <Text style={styles.popularTrackDur}>{trackDur}</Text>
+                  <TouchableOpacity
+                    style={styles.popularTrackLinkBtn}
+                    hitSlop={8}
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      openItemInGrooveLink(track, 'track');
+                    }}
+                  >
+                    <Ionicons name="link-outline" size={15} color="#60A5FA" />
+                  </TouchableOpacity>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
         )}
 
-        {/* Albums Grid Section */}
+        {/* Discography Section (Albums) */}
         {albums.length > 0 && (
-          <Animated.View entering={FadeInUp.duration(500).delay(400)} style={styles.section}>
-            <Text style={styles.sectionTitle}>DISCOGRAPHY & ALBUMS</Text>
-            <View style={styles.albumsGrid}>
-              {albums.map((album) => (
-                <AlbumCard key={album.id} album={album} layout="grid" />
-              ))}
+          <View style={styles.discographySection}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="disc-outline" size={16} color="#E879F9" style={{ marginRight: 6 }} />
+              <Text style={styles.sectionTitle}>Discography & Releases</Text>
             </View>
-          </Animated.View>
+
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.albumsScroll}>
+              {albums.map((album, idx) => {
+                const albTitle = album.title || album.name;
+                const albCover = album.coverArt || album.image || avatarUrl;
+                const albYear = album.releaseYear || 'Album';
+
+                return (
+                  <TouchableOpacity
+                    key={album.id || idx}
+                    style={styles.albumGridCard}
+                    activeOpacity={0.8}
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      router.push(`/album/${album.id || encodeURIComponent(albTitle)}`);
+                    }}
+                  >
+                    <Image source={{ uri: albCover }} style={styles.albumGridCover} />
+                    <Text style={styles.albumGridTitle} numberOfLines={1}>
+                      {albTitle}
+                    </Text>
+                    <Text style={styles.albumGridYear}>{albYear}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
         )}
+
+        {/* Reviews, Descriptions, Lore, Community Tags (Matches web app) */}
+        <MusicLoreAndReviews
+          id={artist?.id || id}
+          type="artist"
+          title={artistName}
+          artist={artistName}
+          description={artist?.description}
+          tags={artist?.tags || []}
+          rating={artist?.rating}
+        />
       </ScrollView>
+
+      {/* In-Place Liquid Glass GrooveLink Routing Modal */}
+      <GrooveLinkModal
+        visible={showGrooveLinkModal}
+        onClose={() => {
+          setShowGrooveLinkModal(false);
+          setModalItemTarget(null);
+        }}
+        title={modalItemTarget ? (modalItemTarget.title || modalItemTarget.name) : artistName}
+        artist={artistName}
+        album={modalItemTarget?.album || ''}
+        imageUrl={modalItemTarget ? (modalItemTarget.coverArt || modalItemTarget.image) : avatarUrl}
+        type={modalItemTarget ? modalItemTarget.type : 'artist'}
+        itemId={modalItemTarget ? (modalItemTarget.id || modalItemTarget.name) : (artist?.id || id)}
+        onOpenGrooveCard={() => {
+          setShowGrooveLinkModal(false);
+          setTimeout(() => setShowGrooveCardModal(true), 250);
+        }}
+      />
+
+      {/* Apple Music Inspired GrooveCard Composer Modal */}
+      <GrooveCardModal
+        visible={showGrooveCardModal}
+        onClose={() => setShowGrooveCardModal(false)}
+        title={modalItemTarget ? (modalItemTarget.title || modalItemTarget.name) : artistName}
+        artist={artistName}
+        album={modalItemTarget?.album || ''}
+        imageUrl={modalItemTarget ? (modalItemTarget.coverArt || modalItemTarget.image) : avatarUrl}
+        releaseDate=""
+        type={modalItemTarget ? modalItemTarget.type : 'artist'}
+        itemId={modalItemTarget ? (modalItemTarget.id || modalItemTarget.name) : (artist?.id || id)}
+      />
     </SafeAreaView>
   );
 }
@@ -216,144 +422,317 @@ export default function ArtistDetailScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: COLORS.bg,
+    backgroundColor: '#07090F',
+  },
+  backdropContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 380,
+    overflow: 'hidden',
+    zIndex: 0,
+  },
+  backdropImage: {
+    width: '100%',
+    height: '100%',
+    opacity: 0.18,
+  },
+  backdropOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#07090F',
+    opacity: 0.7,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.06)',
+    paddingVertical: 12,
+    zIndex: 20,
   },
-  headerBtn: {
-    padding: 8,
+  headerRightActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
-  headerTitle: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: COLORS.text,
-    letterSpacing: 0.5,
+  circleBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(16, 20, 31, 0.7)',
+    borderWidth: 1,
+    borderColor: 'rgba(37, 99, 235, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  circleBtnActive: {
+    backgroundColor: '#2563EB',
+    borderColor: '#60A5FA',
   },
   scrollContent: {
     paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingTop: 10,
     paddingBottom: 40,
+    zIndex: 10,
   },
-  avatarWrapper: {
+  heroCard: {
+    backgroundColor: 'rgba(16, 20, 31, 0.65)',
+    borderWidth: 1,
+    borderColor: 'rgba(37, 99, 235, 0.15)',
+    borderRadius: 28,
+    padding: 20,
     alignItems: 'center',
-    marginBottom: 16,
-  },
-  avatarCircle: {
-    width: 150,
-    height: 150,
-    borderRadius: 75,
-    overflow: 'hidden',
-    backgroundColor: COLORS.surfaceElevated,
-    borderWidth: 3,
-    borderColor: 'rgba(96, 165, 250, 0.35)',
+    marginBottom: 20,
     ...Platform.select({
       ios: {
-        shadowColor: '#2563EB',
+        shadowColor: '#000',
         shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.45,
+        shadowOpacity: 0.4,
         shadowRadius: 20,
       },
       android: {
-        elevation: 10,
+        elevation: 6,
       },
     }),
+  },
+  avatarWrapper: {
+    width: 170,
+    height: 170,
+    borderRadius: 85,
+    overflow: 'hidden',
+    borderWidth: 3,
+    borderColor: 'rgba(37, 99, 235, 0.35)',
+    backgroundColor: '#10141F',
+    marginBottom: 16,
+    shadowColor: '#2563EB',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 15,
+    elevation: 8,
   },
   avatarImage: {
     width: '100%',
     height: '100%',
   },
-  metaContainer: {
+  metaContent: {
+    width: '100%',
     alignItems: 'center',
-    marginBottom: 18,
   },
-  artistName: {
+  categoryBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 8,
+  },
+  categoryBadgeText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#60A5FA',
+    letterSpacing: 1.5,
+  },
+  artistNameText: {
     fontSize: 26,
     fontWeight: '900',
     color: '#FFFFFF',
     textAlign: 'center',
-    marginBottom: 6,
+    marginBottom: 10,
+    letterSpacing: -0.5,
   },
-  verifiedBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(37, 99, 235, 0.12)',
-    borderColor: 'rgba(37, 99, 235, 0.25)',
-    borderWidth: 1,
-    paddingVertical: 3,
-    paddingHorizontal: 10,
-    borderRadius: 9999,
-  },
-  verifiedText: {
-    color: COLORS.accentLight,
-    fontSize: 9,
-    fontWeight: '800',
-    letterSpacing: 1.2,
-  },
-  actionsRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 26,
-    width: '100%',
-    maxWidth: 320,
-    alignSelf: 'center',
-  },
-  followBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.accent,
-    paddingVertical: 11,
-    borderRadius: 14,
-  },
-  followBtnActive: {
-    backgroundColor: 'rgba(135, 0, 135, 0.3)',
-    borderColor: 'rgba(232, 121, 249, 0.5)',
-    borderWidth: 1,
-  },
-  followBtnText: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '800',
-  },
-  followBtnTextActive: {
-    color: COLORS.purpleLightest,
-  },
-  secondaryActionBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    borderColor: 'rgba(255, 255, 255, 0.14)',
-    borderWidth: 1,
-    paddingVertical: 11,
-    borderRadius: 14,
-  },
-  secondaryActionText: {
-    color: COLORS.text,
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  section: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: COLORS.textSecondary,
-    letterSpacing: 1.5,
-    marginBottom: 12,
-  },
-  albumsGrid: {
+  genresRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 6,
+    marginBottom: 12,
+  },
+  genrePill: {
+    backgroundColor: 'rgba(37, 99, 235, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(37, 99, 235, 0.25)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  genrePillText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#60A5FA',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 14,
+  },
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  metaItemText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#8992A5',
+    textTransform: 'uppercase',
+  },
+  metaDot: {
+    color: '#8992A5',
+    fontSize: 12,
+  },
+  ratingRow: {
+    marginBottom: 14,
+    width: '100%',
+    alignItems: 'center',
+  },
+  overviewSection: {
+    width: '100%',
+    marginVertical: 10,
+    paddingHorizontal: 8,
+  },
+  overviewText: {
+    fontSize: 12,
+    color: '#8992A5',
+    lineHeight: 18,
+    textAlign: 'left',
+  },
+  overviewTextClamped: {
+    maxHeight: 36,
+    overflow: 'hidden',
+  },
+  readMoreBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+  },
+  readMoreText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#60A5FA',
+  },
+  grooveLinkSection: {
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(37, 99, 235, 0.15)',
+    paddingTop: 14,
+    width: '100%',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  grooveLinkBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 9,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    backgroundColor: 'rgba(37, 99, 235, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(37, 99, 235, 0.3)',
+  },
+  grooveLinkBtnText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#F4F7FF',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+  },
+  sectionCard: {
+    backgroundColor: 'rgba(16, 20, 31, 0.5)',
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.06)',
+    padding: 16,
+    marginBottom: 20,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  popularTrackRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.04)',
+  },
+  popularTrackIndex: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#8992A5',
+    width: 22,
+  },
+  popularTrackThumb: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    marginRight: 10,
+  },
+  popularTrackInfo: {
+    flex: 1,
+    marginRight: 10,
+  },
+  popularTrackTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 2,
+  },
+  popularTrackAlbum: {
+    fontSize: 11,
+    color: '#8992A5',
+  },
+  popularTrackDur: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#8992A5',
+    marginRight: 10,
+  },
+  popularTrackLinkBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: 'rgba(37, 99, 235, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  discographySection: {
+    marginBottom: 20,
+  },
+  albumsScroll: {
+    gap: 12,
+    paddingRight: 16,
+  },
+  albumGridCard: {
+    width: 140,
+    backgroundColor: 'rgba(16, 20, 31, 0.6)',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    padding: 10,
+  },
+  albumGridCover: {
+    width: 120,
+    height: 120,
+    borderRadius: 12,
+    marginBottom: 8,
+  },
+  albumGridTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 2,
+  },
+  albumGridYear: {
+    fontSize: 10,
+    color: '#8992A5',
+    fontWeight: '500',
   },
 });
