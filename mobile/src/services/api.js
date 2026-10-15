@@ -128,7 +128,7 @@ export async function resolveOpenArtwork(title, artist = '', rgId = null, relId 
 }
 
 /**
- * Resolves authentic verified artist / band portraits from Wikimedia Commons / Wikipedia REST API
+ * Resolves authentic verified artist / band portraits from Deezer CDN (1000x1000) -> iTunes -> Wikipedia
  */
 export async function resolveArtistImage(artistName, mbid = null) {
   const cleanArtist = (artistName || '').trim();
@@ -138,32 +138,21 @@ export async function resolveArtistImage(artistName, mbid = null) {
   const cached = getCached(cacheKey);
   if (cached) return cached;
 
-  // 1. Direct Wikipedia summary (returns authentic high-res Wikimedia photo of the band/musician)
-  const candidates = [
-    cleanArtist,
-    `${cleanArtist} (band)`,
-    `${cleanArtist} (musician)`,
-    `${cleanArtist} (singer)`,
-  ];
+  // 1. Try Deezer artist search (returns authentic 1000x1000 artist photography with status 200)
+  try {
+    const deezerRes = await axios.get('https://api.deezer.com/search/artist', {
+      params: { q: cleanArtist, limit: 1 },
+      timeout: 3000,
+    });
+    const item = deezerRes.data?.data?.[0];
+    if (item && (item.picture_xl || item.picture_big || item.picture_medium)) {
+      const photo = item.picture_xl || item.picture_big || item.picture_medium;
+      setCached(cacheKey, photo);
+      return photo;
+    }
+  } catch (_) {}
 
-  for (const cand of candidates) {
-    try {
-      const wikiRes = await axios.get(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(cand)}`, {
-        headers: { 'User-Agent': USER_AGENT },
-        timeout: 3000,
-      });
-      const data = wikiRes.data;
-      if (data && data.type !== 'disambiguation') {
-        const photo = data.originalimage?.source || data.thumbnail?.source;
-        if (photo && !photo.includes('Disambig') && !photo.includes('question_mark')) {
-          setCached(cacheKey, photo);
-          return photo;
-        }
-      }
-    } catch (_) {}
-  }
-
-  // 2. iTunes artist artwork fallback
+  // 2. iTunes artist visual search
   try {
     const itRes = await axios.get(ITUNES_SEARCH_URL, {
       params: { term: cleanArtist, entity: 'album', limit: 2 },
@@ -178,6 +167,25 @@ export async function resolveArtistImage(artistName, mbid = null) {
       return highRes;
     }
   } catch (_) {}
+
+  // 3. Wikipedia summary candidate search
+  const candidates = [cleanArtist, `${cleanArtist} (band)`, `${cleanArtist} (musician)`];
+  for (const cand of candidates) {
+    try {
+      const wikiRes = await axios.get(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(cand)}`, {
+        headers: { 'User-Agent': USER_AGENT },
+        timeout: 2500,
+      });
+      const data = wikiRes.data;
+      if (data && data.type !== 'disambiguation') {
+        const photo = data.originalimage?.source || data.thumbnail?.source;
+        if (photo && !photo.includes('Disambig') && !photo.includes('question_mark')) {
+          setCached(cacheKey, photo);
+          return photo;
+        }
+      }
+    } catch (_) {}
+  }
 
   const fallback = 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=600&auto=format&fit=crop&q=80';
   setCached(cacheKey, fallback);
@@ -878,19 +886,20 @@ export const fetchArtist = async (id) => {
     // 1. Fetch complete discography & releases (up to 100 release groups)
     const releaseGroupsRes = await rateLimitedGet(`${MUSICBRAINZ_BASE}/release-group`, {
       artist: cleanId,
-      type: 'album|ep',
+      type: 'album|ep|single',
       limit: 100,
     });
 
     const rawRgs = releaseGroupsRes.data?.['release-groups'] || [];
-    const seenAlbumTitles = new Set();
-    const rawAlbums = [];
+    const seenTitles = new Set();
+    const studioAlbums = [];
+    const allReleases = [];
 
     for (const rg of rawRgs) {
       const cleanAlbTitle = (rg.title || '').trim();
-      const normKey = cleanAlbTitle.toLowerCase();
-      if (!seenAlbumTitles.has(normKey)) {
-        seenAlbumTitles.add(normKey);
+      const normKey = `${cleanAlbTitle.toLowerCase()}_${rg['primary-type'] || ''}`;
+      if (!seenTitles.has(normKey)) {
+        seenTitles.add(normKey);
         const albumCover = await resolveOpenArtwork(cleanAlbTitle, artistName, rg.id);
         const releaseDate = rg['first-release-date'] || null;
         let releaseYear = null;
@@ -899,7 +908,18 @@ export const fetchArtist = async (id) => {
           if (!isNaN(parsed)) releaseYear = parsed;
         }
 
-        rawAlbums.push({
+        const primaryType = rg['primary-type'] || 'Album';
+        const secondaryTypes = rg['secondary-types'] || [];
+        const isCompilation = secondaryTypes.some((s) => (s || '').toLowerCase().includes('compilation'));
+        const isLive = secondaryTypes.some((s) => (s || '').toLowerCase().includes('live'));
+
+        let typeCategory = 'album';
+        if (isCompilation) typeCategory = 'compilation';
+        else if (isLive) typeCategory = 'live';
+        else if (primaryType.toLowerCase() === 'single') typeCategory = 'single';
+        else if (primaryType.toLowerCase() === 'ep') typeCategory = 'ep';
+
+        const releaseObj = {
           id: rg.id,
           title: cleanAlbTitle,
           name: cleanAlbTitle,
@@ -909,18 +929,35 @@ export const fetchArtist = async (id) => {
           artist: artistName,
           releaseDate: releaseDate,
           releaseYear: releaseYear,
-          primaryType: rg['primary-type'] || 'Album',
+          primaryType: primaryType,
+          secondaryTypes: secondaryTypes,
+          typeCategory: typeCategory,
           type: 'album',
-        });
+        };
+
+        allReleases.push(releaseObj);
+
+        // Strict Studio Albums only: Primary type Album, excluding compilations and live recordings
+        if (primaryType.toLowerCase() === 'album' && !isCompilation && !isLive) {
+          studioAlbums.push(releaseObj);
+        }
       }
     }
 
-    // Sort discography strictly in chronological ascending order (e.g. 1967 -> 1973 -> 1979 ...)
-    rawAlbums.sort((a, b) => {
-      const ya = a.releaseYear || 9999;
-      const yb = b.releaseYear || 9999;
-      if (ya !== yb) return ya - yb;
-      return (a.releaseDate || '9999').localeCompare(b.releaseDate || '9999');
+    // Sort studio albums strictly in DESCENDING date order (latest releases first)
+    studioAlbums.sort((a, b) => {
+      const ya = a.releaseYear || 0;
+      const yb = b.releaseYear || 0;
+      if (ya !== yb) return yb - ya;
+      return (b.releaseDate || '').localeCompare(a.releaseDate || '');
+    });
+
+    // Sort all releases in DESCENDING date order
+    allReleases.sort((a, b) => {
+      const ya = a.releaseYear || 0;
+      const yb = b.releaseYear || 0;
+      if (ya !== yb) return yb - ya;
+      return (b.releaseDate || '').localeCompare(a.releaseDate || '');
     });
 
     // 2. Fetch top iconic hit songs (filtered for official studio recordings, sorted by acclaim)
@@ -1003,8 +1040,9 @@ export const fetchArtist = async (id) => {
       popularity: 94,
       rating: { value: ratingValue, votesCount: rawRating?.['votes-count'] || 50 },
       topTracks: topTracks,
-      albums: rawAlbums,
-      discography: rawAlbums,
+      albums: studioAlbums,
+      allReleases: allReleases,
+      discography: studioAlbums,
       type: 'artist',
     };
 

@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   Pressable,
   Platform,
+  Modal,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -43,6 +44,8 @@ function formatDuration(ms) {
   return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 }
 
+const PAGE_SIZE = 12;
+
 export default function ArtistDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
@@ -51,14 +54,34 @@ export default function ArtistDetailScreen() {
   const [artist, setArtist] = useState(null);
   const [topTracks, setTopTracks] = useState([]);
   const [albums, setAlbums] = useState([]);
+  const [allReleases, setAllReleases] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState(false);
   const [expandedHeroDesc, setExpandedHeroDesc] = useState(false);
+
+  // Full Discography Modal state
+  const [showFullDiscography, setShowFullDiscography] = useState(false);
+  const [discographyTab, setDiscographyTab] = useState('all');
+  const [discographyPage, setDiscographyPage] = useState(1);
 
   // Modals state
   const [showGrooveLinkModal, setShowGrooveLinkModal] = useState(false);
   const [showGrooveCardModal, setShowGrooveCardModal] = useState(false);
   const [modalItemTarget, setModalItemTarget] = useState(null);
+
+  const filteredReleases = React.useMemo(() => {
+    if (!allReleases) return [];
+    if (discographyTab === 'all') return allReleases;
+    if (discographyTab === 'album') return allReleases.filter((r) => r.typeCategory === 'album');
+    if (discographyTab === 'single_ep') return allReleases.filter((r) => r.typeCategory === 'single' || r.typeCategory === 'ep');
+    if (discographyTab === 'compilation') return allReleases.filter((r) => r.typeCategory === 'compilation');
+    if (discographyTab === 'live') return allReleases.filter((r) => r.typeCategory === 'live');
+    return allReleases;
+  }, [allReleases, discographyTab]);
+
+  const pagedReleases = React.useMemo(() => {
+    return filteredReleases.slice(0, discographyPage * PAGE_SIZE);
+  }, [filteredReleases, discographyPage]);
 
   useEffect(() => {
     let mounted = true;
@@ -74,6 +97,7 @@ export default function ArtistDetailScreen() {
           setArtist(artistData);
           setTopTracks(artistData?.topTracks || []);
           setAlbums(artistData?.albums || []);
+          setAllReleases(artistData?.allReleases || []);
           setSaved(isSaved);
         }
       } catch (err) {
@@ -273,13 +297,27 @@ export default function ArtistDetailScreen() {
           </View>
         </Animated.View>
 
-        {/* Discography Section (Albums in Chronological Order) */}
+        {/* Studio Albums Section (Strictly Studio Albums, Descending Date Format) */}
         {albums.length > 0 && (
           <View style={styles.discographySection}>
             <View style={styles.sectionHeader}>
-              <Ionicons name="disc-outline" size={16} color="#E879F9" style={{ marginRight: 6 }} />
-              <Text style={styles.sectionTitle}>Discography & Releases</Text>
-              <Text style={styles.sectionBadgeText}>{albums.length} Releases • Chronological</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Ionicons name="disc-outline" size={16} color="#E879F9" style={{ marginRight: 6 }} />
+                <Text style={styles.sectionTitle}>Studio Albums</Text>
+              </View>
+              {allReleases.length > 0 && (
+                <TouchableOpacity
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setShowFullDiscography(true);
+                  }}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  style={{ flexDirection: 'row', alignItems: 'center' }}
+                >
+                  <Text style={styles.seeAllText}>See All ({allReleases.length})</Text>
+                  <Ionicons name="chevron-forward" size={12} color="#60A5FA" style={{ marginLeft: 2 }} />
+                </TouchableOpacity>
+              )}
             </View>
 
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.albumsScroll}>
@@ -403,6 +441,110 @@ export default function ArtistDetailScreen() {
         type={modalItemTarget ? modalItemTarget.type : 'artist'}
         itemId={modalItemTarget ? (modalItemTarget.id || modalItemTarget.name) : (artist?.id || id)}
       />
+
+      {/* Full Discography Grouped & Paged Modal */}
+      <Modal
+        visible={showFullDiscography}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowFullDiscography(false)}
+      >
+        <SafeAreaView style={[styles.safeArea, { backgroundColor: '#07090F' }]}>
+          {/* Modal Header */}
+          <View style={styles.modalHeader}>
+            <TouchableOpacity
+              onPress={() => setShowFullDiscography(false)}
+              style={styles.modalCloseBtn}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            >
+              <Ionicons name="close" size={24} color="#F4F7FF" />
+            </TouchableOpacity>
+            <View style={{ flex: 1, alignItems: 'center' }}>
+              <Text style={styles.modalHeaderTitle} numberOfLines={1}>{artistName}</Text>
+              <Text style={styles.modalHeaderSubtitle}>All Discography Releases ({filteredReleases.length})</Text>
+            </View>
+            <View style={{ width: 40 }} />
+          </View>
+
+          {/* Group Filter Tabs */}
+          <View style={styles.filterTabsWrapper}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterTabsRow}>
+              {[
+                { id: 'all', label: `All (${allReleases.length})` },
+                { id: 'album', label: `Studio Albums (${albums.length})` },
+                { id: 'single_ep', label: 'Singles & EPs' },
+                { id: 'compilation', label: 'Compilations' },
+                { id: 'live', label: 'Live' },
+              ].map((tab) => (
+                <TouchableOpacity
+                  key={tab.id}
+                  style={[
+                    styles.filterTabPill,
+                    discographyTab === tab.id && styles.filterTabPillActive,
+                  ]}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setDiscographyTab(tab.id);
+                    setDiscographyPage(1);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.filterTabPillText,
+                      discographyTab === tab.id && styles.filterTabPillTextActive,
+                    ]}
+                  >
+                    {tab.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+
+          {/* Paginated Grid of Releases */}
+          <ScrollView contentContainerStyle={styles.pagedGridContent} showsVerticalScrollIndicator={false}>
+            <View style={styles.pagedGrid}>
+              {pagedReleases.map((item, idx) => (
+                <TouchableOpacity
+                  key={item.id || idx}
+                  style={styles.pagedGridItem}
+                  activeOpacity={0.8}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setShowFullDiscography(false);
+                    router.push(`/album/${item.id || encodeURIComponent(item.title)}`);
+                  }}
+                >
+                  <Image source={{ uri: item.coverArt || avatarUrl }} style={styles.pagedItemCover} />
+                  <Text style={styles.pagedItemTitle} numberOfLines={1}>{item.title}</Text>
+                  <View style={styles.pagedItemMetaRow}>
+                    <Text style={styles.pagedItemYear}>{item.releaseYear || item.releaseDate || 'Release'}</Text>
+                    <View style={styles.pagedItemTypeBadge}>
+                      <Text style={styles.pagedItemTypeBadgeText}>{item.primaryType || 'Album'}</Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Pagination Controls */}
+            {pagedReleases.length < filteredReleases.length && (
+              <TouchableOpacity
+                style={styles.loadMoreBtn}
+                activeOpacity={0.8}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setDiscographyPage((p) => p + 1);
+                }}
+              >
+                <Text style={styles.loadMoreBtnText}>
+                  Load More ({pagedReleases.length} of {filteredReleases.length})
+                </Text>
+              </TouchableOpacity>
+            )}
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -730,5 +872,136 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: '#8992A5',
     fontWeight: '500',
+  },
+  seeAllText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#60A5FA',
+    letterSpacing: 0.2,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  modalCloseBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalHeaderTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: -0.3,
+  },
+  modalHeaderSubtitle: {
+    fontSize: 11,
+    color: '#8992A5',
+    marginTop: 2,
+  },
+  filterTabsWrapper: {
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.06)',
+  },
+  filterTabsRow: {
+    paddingHorizontal: 16,
+    gap: 8,
+  },
+  filterTabPill: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  filterTabPillActive: {
+    backgroundColor: 'rgba(135, 0, 135, 0.35)',
+    borderColor: '#E879F9',
+  },
+  filterTabPillText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#8992A5',
+  },
+  filterTabPillTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '800',
+  },
+  pagedGridContent: {
+    padding: 16,
+    paddingBottom: 40,
+  },
+  pagedGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    justifyContent: 'space-between',
+  },
+  pagedGridItem: {
+    width: '48%',
+    backgroundColor: 'rgba(16, 20, 31, 0.6)',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    padding: 10,
+  },
+  pagedItemCover: {
+    width: '100%',
+    aspectRatio: 1,
+    borderRadius: 12,
+    marginBottom: 8,
+    backgroundColor: '#10141F',
+  },
+  pagedItemTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 4,
+  },
+  pagedItemMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  pagedItemYear: {
+    fontSize: 10,
+    color: '#8992A5',
+  },
+  pagedItemTypeBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  pagedItemTypeBadgeText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#E879F9',
+    textTransform: 'uppercase',
+  },
+  loadMoreBtn: {
+    marginTop: 20,
+    paddingVertical: 14,
+    borderRadius: 14,
+    backgroundColor: 'rgba(135, 0, 135, 0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(232, 121, 249, 0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadMoreBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#E879F9',
   },
 });
