@@ -271,15 +271,52 @@ export default function ArtistDetailScreen() {
           </View>
         </Animated.View>
 
-        {/* Popular Tracks Section */}
+        {/* Discography Section (Albums in Chronological Order) */}
+        {albums.length > 0 && (
+          <View style={styles.discographySection}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="disc-outline" size={16} color="#E879F9" style={{ marginRight: 6 }} />
+              <Text style={styles.sectionTitle}>Discography & Releases</Text>
+              <Text style={styles.sectionBadgeText}>{albums.length} Releases • Chronological</Text>
+            </View>
+
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.albumsScroll}>
+              {albums.map((album, idx) => {
+                const albTitle = album.title || album.name;
+                const albCover = album.coverArt || album.image || avatarUrl;
+                const albYear = album.releaseYear || 'Album';
+
+                return (
+                  <TouchableOpacity
+                    key={album.id || idx}
+                    style={styles.albumGridCard}
+                    activeOpacity={0.8}
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      router.push(`/album/${album.id || encodeURIComponent(albTitle)}`);
+                    }}
+                  >
+                    <Image source={{ uri: albCover }} style={styles.albumGridCover} />
+                    <Text style={styles.albumGridTitle} numberOfLines={1}>
+                      {albTitle}
+                    </Text>
+                    <Text style={styles.albumGridYear}>{albYear}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+        )}
+
+        {/* Popular Tracks Section (Top Hit Songs) */}
         {topTracks.length > 0 && (
           <View style={styles.sectionCard}>
             <View style={styles.sectionHeader}>
               <Ionicons name="musical-notes-outline" size={16} color="#60A5FA" style={{ marginRight: 6 }} />
-              <Text style={styles.sectionTitle}>Popular Tracks</Text>
+              <Text style={styles.sectionTitle}>Top Hit Songs</Text>
             </View>
 
-            {topTracks.slice(0, 5).map((track, idx) => {
+            {topTracks.slice(0, 8).map((track, idx) => {
               const trackTitle = track.title || track.name;
               const trackDur = formatDuration(track.duration || track.duration_ms);
               const trackCover = track.coverArt || track.image || avatarUrl;
@@ -318,42 +355,6 @@ export default function ArtistDetailScreen() {
                 </TouchableOpacity>
               );
             })}
-          </View>
-        )}
-
-        {/* Discography Section (Albums) */}
-        {albums.length > 0 && (
-          <View style={styles.discographySection}>
-            <View style={styles.sectionHeader}>
-              <Ionicons name="disc-outline" size={16} color="#E879F9" style={{ marginRight: 6 }} />
-              <Text style={styles.sectionTitle}>Discography & Releases</Text>
-            </View>
-
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.albumsScroll}>
-              {albums.map((album, idx) => {
-                const albTitle = album.title || album.name;
-                const albCover = album.coverArt || album.image || avatarUrl;
-                const albYear = album.releaseYear || 'Album';
-
-                return (
-                  <TouchableOpacity
-                    key={album.id || idx}
-                    style={styles.albumGridCard}
-                    activeOpacity={0.8}
-                    onPress={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                      router.push(`/album/${album.id || encodeURIComponent(albTitle)}`);
-                    }}
-                  >
-                    <Image source={{ uri: albCover }} style={styles.albumGridCover} />
-                    <Text style={styles.albumGridTitle} numberOfLines={1}>
-                      {albTitle}
-                    </Text>
-                    <Text style={styles.albumGridYear}>{albYear}</Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
           </View>
         )}
 
@@ -640,6 +641,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '800',
     color: '#FFFFFF',
+  },
+  sectionBadgeText: {
+    marginLeft: 'auto',
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#8992A5',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   popularTrackRow: {
     flexDirection: 'row',

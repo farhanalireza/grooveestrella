@@ -80,39 +80,7 @@ export async function resolveOpenArtwork(title, artist = '', rgId = null, relId 
   const cached = getCached(cacheKey);
   if (cached) return cached;
 
-  // 1. Try iTunes Store API (Ultra-fast Apple CDN, 600x600 crisp artwork)
-  try {
-    const itunesRes = await axios.get(ITUNES_SEARCH_URL, {
-      params: {
-        term: query || cleanTitle,
-        entity: rgId ? 'album' : 'song',
-        limit: 1,
-      },
-      timeout: 3500,
-    });
-    const item = itunesRes.data?.results?.[0];
-    if (item?.artworkUrl100) {
-      const highRes = item.artworkUrl100.replace('100x100bb.jpg', '600x600bb.jpg').replace('100x100bb', '600x600bb');
-      setCached(cacheKey, highRes);
-      return highRes;
-    }
-  } catch (_) {}
-
-  // 2. Try Deezer public API
-  try {
-    const deezerRes = await axios.get(`https://api.deezer.com/search/${rgId ? 'album' : 'track'}`, {
-      params: { q: query || cleanTitle, limit: 1 },
-      timeout: 3000,
-    });
-    const item = deezerRes.data?.data?.[0];
-    const deezerCover = item?.album?.cover_xl || item?.album?.cover_big || item?.cover_xl || item?.cover_big;
-    if (deezerCover) {
-      setCached(cacheKey, deezerCover);
-      return deezerCover;
-    }
-  } catch (_) {}
-
-  // 3. Cover Art Archive
+  // 1. If release-group ID or release ID is present, Cover Art Archive is the exact official artwork!
   if (rgId) {
     const caa = `https://coverartarchive.org/release-group/${rgId}/front-500`;
     setCached(cacheKey, caa);
@@ -124,8 +92,94 @@ export async function resolveOpenArtwork(title, artist = '', rgId = null, relId 
     return caa;
   }
 
-  // 4. Fallback high-res music visual
+  // 2. Try iTunes Store API (Ultra-fast Apple CDN, 600x600 crisp artwork) with STRICT artist validation
+  try {
+    const itunesRes = await axios.get(ITUNES_SEARCH_URL, {
+      params: {
+        term: query || cleanTitle,
+        entity: rgId ? 'album' : 'song',
+        limit: 5,
+      },
+      timeout: 3500,
+    });
+    const results = itunesRes.data?.results || [];
+    let matchedItem = null;
+    if (cleanArtist) {
+      matchedItem = results.find((r) => {
+        const itemArt = (r.artistName || '').toLowerCase();
+        const tgtArt = cleanArtist.toLowerCase();
+        return itemArt.includes(tgtArt) || tgtArt.includes(itemArt);
+      });
+    } else {
+      matchedItem = results[0];
+    }
+
+    if (matchedItem?.artworkUrl100) {
+      const highRes = matchedItem.artworkUrl100.replace('100x100bb.jpg', '600x600bb.jpg').replace('100x100bb', '600x600bb');
+      setCached(cacheKey, highRes);
+      return highRes;
+    }
+  } catch (_) {}
+
+  // 3. Fallback high-res music visual
   const fallback = 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600&auto=format&fit=crop&q=80';
+  setCached(cacheKey, fallback);
+  return fallback;
+}
+
+/**
+ * Resolves authentic verified artist / band portraits from Wikimedia Commons / Wikipedia REST API
+ */
+export async function resolveArtistImage(artistName, mbid = null) {
+  const cleanArtist = (artistName || '').trim();
+  if (!cleanArtist) return 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=600&auto=format&fit=crop&q=80';
+
+  const cacheKey = `artist_pic_${cleanArtist.toLowerCase()}`;
+  const cached = getCached(cacheKey);
+  if (cached) return cached;
+
+  // 1. Direct Wikipedia summary (returns authentic high-res Wikimedia photo of the band/musician)
+  const candidates = [
+    cleanArtist,
+    `${cleanArtist} (band)`,
+    `${cleanArtist} (musician)`,
+    `${cleanArtist} (singer)`,
+  ];
+
+  for (const cand of candidates) {
+    try {
+      const wikiRes = await axios.get(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(cand)}`, {
+        headers: { 'User-Agent': USER_AGENT },
+        timeout: 3000,
+      });
+      const data = wikiRes.data;
+      if (data && data.type !== 'disambiguation') {
+        const photo = data.originalimage?.source || data.thumbnail?.source;
+        if (photo && !photo.includes('Disambig') && !photo.includes('question_mark')) {
+          setCached(cacheKey, photo);
+          return photo;
+        }
+      }
+    } catch (_) {}
+  }
+
+  // 2. iTunes artist artwork fallback
+  try {
+    const itRes = await axios.get(ITUNES_SEARCH_URL, {
+      params: { term: cleanArtist, entity: 'album', limit: 2 },
+      timeout: 2500,
+    });
+    const match = itRes.data?.results?.find((r) =>
+      (r.artistName || '').toLowerCase().includes(cleanArtist.toLowerCase())
+    );
+    if (match?.artworkUrl100) {
+      const highRes = match.artworkUrl100.replace('100x100bb.jpg', '600x600bb.jpg').replace('100x100bb', '600x600bb');
+      setCached(cacheKey, highRes);
+      return highRes;
+    }
+  } catch (_) {}
+
+  const fallback = 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=600&auto=format&fit=crop&q=80';
   setCached(cacheKey, fallback);
   return fallback;
 }
@@ -340,7 +394,7 @@ export const searchCatalog = async (query = '', type = 'track', limit = 20) => {
         artists.slice(0, limit).map(async (art) => {
           const tags = art.tags?.map((t) => t.name) || [];
           const score = art.score || 80;
-          const coverUrl = await resolveOpenArtwork(art.name, art.name);
+          const coverUrl = await resolveArtistImage(art.name, art.id);
 
           return {
             id: art.id,
@@ -812,18 +866,8 @@ export const fetchArtist = async (id) => {
     const artistData = artistRes.data;
     if (!artistData || !artistData.name) throw new Error('Artist not found');
 
-    const releaseGroupsRes = await rateLimitedGet(`${MUSICBRAINZ_BASE}/release-group`, {
-      artist: cleanId,
-      type: 'album|single',
-      limit: 12,
-    });
-    const recordingsRes = await rateLimitedGet(`${MUSICBRAINZ_BASE}/recording`, {
-      artist: cleanId,
-      limit: 10,
-    });
-
     const artistName = artistData.name;
-    const coverUrl = await resolveOpenArtwork(artistName, artistName);
+    const coverUrl = await resolveArtistImage(artistName, cleanId);
     const tags = artistData.tags?.map((t) => t.name) || [];
 
     // Wiki description
@@ -831,14 +875,23 @@ export const fetchArtist = async (id) => {
     const description = wikiDesc || artistData.annotation ||
       `${artistName} is one of music history's celebrated and influential recording artists.`;
 
-    // Process top albums
+    // 1. Fetch complete discography & releases (up to 100 release groups)
+    const releaseGroupsRes = await rateLimitedGet(`${MUSICBRAINZ_BASE}/release-group`, {
+      artist: cleanId,
+      type: 'album|ep',
+      limit: 100,
+    });
+
     const rawRgs = releaseGroupsRes.data?.['release-groups'] || [];
-    const seenNames = new Set();
-    const albums = [];
+    const seenAlbumTitles = new Set();
+    const rawAlbums = [];
+
     for (const rg of rawRgs) {
-      if (!seenNames.has(rg.title)) {
-        seenNames.add(rg.title);
-        const albumCover = await resolveOpenArtwork(rg.title, artistName, rg.id);
+      const cleanAlbTitle = (rg.title || '').trim();
+      const normKey = cleanAlbTitle.toLowerCase();
+      if (!seenAlbumTitles.has(normKey)) {
+        seenAlbumTitles.add(normKey);
+        const albumCover = await resolveOpenArtwork(cleanAlbTitle, artistName, rg.id);
         const releaseDate = rg['first-release-date'] || null;
         let releaseYear = null;
         if (releaseDate) {
@@ -846,45 +899,86 @@ export const fetchArtist = async (id) => {
           if (!isNaN(parsed)) releaseYear = parsed;
         }
 
-        albums.push({
+        rawAlbums.push({
           id: rg.id,
-          title: rg.title,
-          name: rg.title,
+          title: cleanAlbTitle,
+          name: cleanAlbTitle,
           url: albumCover,
           image: albumCover,
           coverArt: albumCover,
           artist: artistName,
           releaseDate: releaseDate,
           releaseYear: releaseYear,
+          primaryType: rg['primary-type'] || 'Album',
           type: 'album',
         });
       }
     }
 
-    // Process top tracks
-    const rawRecs = recordingsRes.data?.recordings || [];
-    const topTracks = await Promise.all(
-      rawRecs.map(async (rec) => {
-        const primaryRel = rec.releases?.[0];
-        const trackCover = await resolveOpenArtwork(rec.title, artistName, primaryRel?.['release-group']?.id, primaryRel?.id);
+    // Sort discography strictly in chronological ascending order (e.g. 1967 -> 1973 -> 1979 ...)
+    rawAlbums.sort((a, b) => {
+      const ya = a.releaseYear || 9999;
+      const yb = b.releaseYear || 9999;
+      if (ya !== yb) return ya - yb;
+      return (a.releaseDate || '9999').localeCompare(b.releaseDate || '9999');
+    });
 
-        return {
-          id: rec.id,
-          trackId: rec.id,
-          title: rec.title,
-          name: rec.title,
-          url: trackCover,
-          image: trackCover,
-          coverArt: trackCover,
-          artist: artistName,
-          album: primaryRel?.title || '',
-          albumId: primaryRel?.id || '',
-          duration: rec.length || 210000,
-          duration_ms: rec.length || 210000,
-          type: 'track',
-        };
-      })
-    );
+    // 2. Fetch top iconic hit songs (filtered for official studio recordings, sorted by acclaim)
+    let topTracks = [];
+    try {
+      const recordingsRes = await rateLimitedGet(`${MUSICBRAINZ_BASE}/recording`, {
+        query: `arid:${cleanId} AND status:official AND primarytype:Album AND video:false`,
+        limit: 50,
+      });
+
+      const rawRecs = recordingsRes.data?.recordings || [];
+      const cleanTrackTitles = new Set();
+      const filteredRecs = rawRecs.filter((r) => {
+        const t = (r.title || '').toLowerCase();
+        if (t.includes('interview') || t.includes('ad #') || t.includes('goofy') || t.includes('demo') || t.includes('take ')) {
+          return false;
+        }
+        return (r.length || 0) > 90000;
+      });
+
+      // Sort by release distribution count (tracks on greatest hits/most releases rank first)
+      filteredRecs.sort((a, b) => (b.releases?.length || 0) - (a.releases?.length || 0));
+
+      for (const rec of filteredRecs) {
+        // Strip mix / remaster suffixes
+        const cleanTitle = rec.title
+          .replace(/\s*\((.*?mix|.*?remaster.*?|live.*?)\)/gi, '')
+          .replace(/\s*\[(.*?)\]/g, '')
+          .trim();
+
+        const normKey = cleanTitle.toLowerCase();
+        if (!cleanTrackTitles.has(normKey)) {
+          cleanTrackTitles.add(normKey);
+          const primaryRel = rec.releases?.[0];
+          const rgId = primaryRel?.['release-group']?.id;
+          const relId = primaryRel?.id;
+          const trackCover = await resolveOpenArtwork(cleanTitle, artistName, rgId, relId);
+
+          topTracks.push({
+            id: rec.id,
+            trackId: rec.id,
+            title: cleanTitle,
+            name: cleanTitle,
+            url: trackCover,
+            image: trackCover,
+            coverArt: trackCover,
+            artist: artistName,
+            album: primaryRel?.title || '',
+            albumId: rgId || relId || '',
+            duration: rec.length || 240000,
+            duration_ms: rec.length || 240000,
+            type: 'track',
+          });
+
+          if (topTracks.length >= 8) break;
+        }
+      }
+    } catch (_) {}
 
     const rawRating = artistData.rating;
     const ratingValue = (rawRating && rawRating.value !== undefined && rawRating.value !== null)
@@ -909,7 +1003,8 @@ export const fetchArtist = async (id) => {
       popularity: 94,
       rating: { value: ratingValue, votesCount: rawRating?.['votes-count'] || 50 },
       topTracks: topTracks,
-      albums: albums,
+      albums: rawAlbums,
+      discography: rawAlbums,
       type: 'artist',
     };
 

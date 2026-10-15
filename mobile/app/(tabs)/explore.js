@@ -40,15 +40,16 @@ export default function ExploreScreen() {
   const debounceTimer = useRef(null);
 
   const fetchResults = useCallback(async (query, type) => {
+    const cleanQuery = (query || '').trim();
+    if (!cleanQuery || cleanQuery.length < 2) {
+      setResults([]);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     try {
-      let searchQuery = query ? query.trim() : '';
-      if (!searchQuery) {
-        if (type === 'album') searchQuery = 'The Rise and Fall of Ziggy Stardust';
-        else if (type === 'artist') searchQuery = 'David Bowie';
-        else searchQuery = 'Ziggy Stardust';
-      }
-      const data = await ApiService.searchCatalog(searchQuery, type, 20);
+      const data = await ApiService.searchCatalog(cleanQuery, type, 20);
       setResults(data || []);
     } catch {
       setResults([]);
@@ -64,34 +65,46 @@ export default function ExploreScreen() {
       setSearchTerm(q);
       fetchResults(q, activeCategory);
     } else {
-      // Default initial recommendations
-      fetchResults('', activeCategory);
+      // Clean slate on initial load - do NOT auto-search
+      setResults([]);
+      setLoading(false);
     }
   }, [params.q, activeCategory, fetchResults]);
 
-  // Debounced search handler (300ms)
+  // Debounced search handler with 600ms latency so user has time to type
   const handleTextChange = (text) => {
     setSearchTerm(text);
     if (debounceTimer.current) {
       clearTimeout(debounceTimer.current);
     }
 
+    const clean = (text || '').trim();
+    if (clean.length < 2) {
+      setResults([]);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
     debounceTimer.current = setTimeout(() => {
-      fetchResults(text, activeCategory);
-    }, 300);
+      fetchResults(clean, activeCategory);
+    }, 600);
   };
 
   const handleCategoryPress = (catId) => {
     if (catId === activeCategory) return;
     setActiveCategory(catId);
     setResults([]);
-    fetchResults(searchTerm, catId);
+    if (searchTerm.trim().length >= 2) {
+      fetchResults(searchTerm, catId);
+    }
   };
 
   const handleClear = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setSearchTerm('');
-    fetchResults('', activeCategory);
+    setResults([]);
+    setLoading(false);
   };
 
   const renderItem = ({ item }) => {
@@ -166,15 +179,42 @@ export default function ExploreScreen() {
         </View>
       ) : results.length === 0 ? (
         <Animated.View entering={FadeIn.duration(400)} style={styles.emptyCenter}>
-          <Ionicons name="search-outline" size={48} color={COLORS.textSecondary} style={{ opacity: 0.4 }} />
+          <Ionicons
+            name={searchTerm ? 'search-outline' : 'compass-outline'}
+            size={48}
+            color={COLORS.textSecondary}
+            style={{ opacity: 0.4 }}
+          />
           <Text style={styles.emptyTitle}>
-            {searchTerm ? `No ${activeCategory}s found` : 'Start Exploring'}
+            {searchTerm ? `No ${activeCategory}s found` : 'Search Groove'}
           </Text>
           <Text style={styles.emptyDesc}>
             {searchTerm
               ? `We couldn't find any results matching "${searchTerm}". Try another query.`
               : 'Search songs, albums, and artists across the decentralized music index.'}
           </Text>
+
+          {!searchTerm && (
+            <View style={styles.suggestSection}>
+              <Text style={styles.suggestTitle}>POPULAR SEARCHES</Text>
+              <View style={styles.suggestRow}>
+                {['Pink Floyd', 'David Bowie', 'The Beatles', 'Queen', 'Michael Jackson', 'Led Zeppelin'].map((item) => (
+                  <Pressable
+                    key={item}
+                    style={styles.suggestChip}
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      setSearchTerm(item);
+                      fetchResults(item, activeCategory);
+                    }}
+                  >
+                    <Ionicons name="trending-up" size={13} color="#60A5FA" style={{ marginRight: 6 }} />
+                    <Text style={styles.suggestChipText}>{item}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+          )}
         </Animated.View>
       ) : (
         <FlatList
@@ -267,5 +307,38 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
+  },
+  suggestSection: {
+    marginTop: 28,
+    alignItems: 'center',
+    width: '100%',
+  },
+  suggestTitle: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#8992A5',
+    letterSpacing: 1.5,
+    marginBottom: 14,
+  },
+  suggestRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  suggestChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  suggestChipText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#F4F7FF',
   },
 });
