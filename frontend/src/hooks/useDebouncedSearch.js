@@ -1,44 +1,44 @@
-import { useEffect, useState, useMemo } from "react";
+// src/hooks/useDebouncedSearch.js
+import { useEffect, useMemo } from "react";
 import debounce from "lodash.debounce";
-import { fetchSpotifySearchResults, getSpotifyToken } from "./useSpotify";
+import { API_BASE_URL } from "../lib/apiClient";
 
 const useDebouncedSearch = (searchTerm, searchType, setLoading, setResults) => {
-    const [spotifyToken, setSpotifyToken] = useState(null);
+  const performSearch = async (query, type) => {
+    if (!query || !query.trim()) {
+      setResults([]);
+      setLoading(false);
+      return;
+    }
 
-    useEffect(() => {
-        const fetchToken = async () => {
-            const token = await getSpotifyToken();
-            setSpotifyToken(token);
-        };
-        fetchToken();
-    }, []);
+    try {
+      setLoading(true);
+      const res = await fetch(`${API_BASE_URL}/search?q=${encodeURIComponent(query.trim())}&type=${type || 'track'}&limit=20`);
+      if (!res.ok) throw new Error(`Search error ${res.status}`);
+      const data = await res.json();
+      setResults(data.results || []);
+    } catch (err) {
+      console.error("Search failed:", err);
+      setResults([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    // Perform immediate search on token load if query exists (e.g., from URL query parameters)
-    useEffect(() => {
-        if (spotifyToken && searchTerm && searchTerm.trim() !== "") {
-            fetchSpotifySearchResults(
-                searchTerm,
-                searchType,
-                setResults,
-                setLoading
-            );
-        }
-    }, [spotifyToken]);
+  // Immediate search on load if query exists (e.g. from URL query parameters)
+  useEffect(() => {
+    if (searchTerm && searchTerm.trim() !== "") {
+      performSearch(searchTerm, searchType);
+    }
+  }, []);
 
-    const debouncedSearch = useMemo(() => {
-        return debounce(async (query, type) => {
-            if (spotifyToken && query.trim() !== "") {
-                await fetchSpotifySearchResults(
-                    query,
-                    type,
-                    setResults,
-                    setLoading
-                );
-            }
-        }, 1000);
-    }, [spotifyToken]);
+  const debouncedSearch = useMemo(() => {
+    return debounce(async (query, type) => {
+      await performSearch(query, type);
+    }, 400); // Fast 400ms debounce
+  }, []);
 
-    return debouncedSearch;
+  return debouncedSearch;
 };
 
 export default useDebouncedSearch;

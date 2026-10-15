@@ -1,10 +1,17 @@
 // src/Components/CardComponents/AlbumsCard.jsx
-import { useEffect, useState } from "react";
+"use client";
+
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Bookmark, BookmarkCheck, Disc } from "lucide-react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { ShareTrackComponent } from "./ShareTrackComponent";
+import { MoreVertical, Bookmark, BookmarkCheck, Share2, Copy } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "../ui/dropdown-menu";
 import { toast } from "react-toastify";
 
 export const AlbumCard = ({
@@ -13,139 +20,164 @@ export const AlbumCard = ({
   title,
   artist,
   trackURI,
+  releaseDate,
+  releaseYear,
+  genres = [],
+  className = "",
 }) => {
   const router = useRouter();
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
+    if (!id) return;
     const savedAlbums = JSON.parse(localStorage.getItem("savedAlbums")) || [];
-    const isSaved = savedAlbums.some(album => album.id === id);
-    setSaved(isSaved);
+    setSaved(savedAlbums.some((a) => a.id === id));
   }, [id]);
 
-  const toggleSave = () => {
-    const savedAlbums = JSON.parse(localStorage.getItem("savedAlbums")) || [];
+  // Extract release year from releaseYear or releaseDate string
+  let formattedYear = releaseYear || null;
+  if (!formattedYear && releaseDate) {
+    const match = String(releaseDate).match(/\b(\d{4})\b/);
+    if (match) formattedYear = match[1];
+  }
 
+  // Extract artist name
+  const artistName = Array.isArray(artist)
+    ? artist.map((a) => (typeof a === "string" ? a : a.name)).filter(Boolean).join(", ")
+    : (typeof artist === "string" ? artist : "");
+
+  const subtitle = artistName && formattedYear
+    ? `${artistName} • ${formattedYear}`
+    : artistName || formattedYear || null;
+
+  const handleCardClick = () => {
+    if (id) router.push(`/album/${id}`);
+  };
+
+  const toggleSave = (e) => {
+    e?.stopPropagation();
+    const savedAlbums = JSON.parse(localStorage.getItem("savedAlbums")) || [];
     if (saved) {
-      const updated = savedAlbums.filter(album => album.id !== id);
+      const updated = savedAlbums.filter((a) => a.id !== id);
       localStorage.setItem("savedAlbums", JSON.stringify(updated));
       setSaved(false);
-      toast.info(`"${title}" removed from your library.`);
+      toast.info(`"${title}" removed from library.`);
     } else {
       const newAlbum = {
         id,
         title,
-        artist,
+        artist: artistName,
         image: url,
         type: "album",
-        trackURI,
+        releaseDate: releaseDate || formattedYear,
       };
       savedAlbums.push(newAlbum);
       localStorage.setItem("savedAlbums", JSON.stringify(savedAlbums));
       setSaved(true);
-      toast.success(`"${title}" saved to your library! 💿`);
+      toast.success(`"${title}" saved to library! 💿`);
     }
   };
 
-  const handleSave = (e) => {
-    e.stopPropagation();
-    toggleSave();
+  const handleCopyLink = (e) => {
+    e?.stopPropagation();
+    if (typeof window !== "undefined") {
+      const shareUrl = `${window.location.origin}/album/${id}`;
+      navigator.clipboard.writeText(shareUrl);
+      toast.success("Album link copied to clipboard!");
+    }
   };
 
-  const handleCardClick = (e) => {
-    if (e.target.closest(".noskip")) return;
-    router.push(`/album/${id}`);
+  const handleShare = (e) => {
+    e?.stopPropagation();
+    if (typeof window !== "undefined") {
+      const shareUrl = `${window.location.origin}/s/musicbrainz/album/${id}`;
+      navigator.clipboard.writeText(shareUrl);
+      toast.success("GrooveLink copied to clipboard!");
+    }
   };
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 15 }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-50px" }}
-      whileHover={{ y: -6 }}
+      viewport={{ once: true, margin: "-30px" }}
+      whileHover={{ y: -4 }}
+      whileTap={{ scale: 0.98 }}
       onClick={handleCardClick}
-      className="group relative w-full sm:w-64 mx-auto bg-[#10141F]/60 backdrop-blur-xl border border-[#2563EB]/10 hover:border-[#60A5FA]/30 rounded-3xl overflow-hidden shadow-2xl transition-all duration-500 cursor-pointer flex flex-col justify-between"
+      className={`group relative w-full bg-[#10141F]/60 backdrop-blur-xl border border-white/5 hover:border-[#E879F9]/40 rounded-2xl sm:rounded-3xl p-3 sm:p-3.5 transition-all duration-300 cursor-pointer flex flex-col gap-2.5 shadow-lg hover:shadow-2xl hover:shadow-[#870087]/20 select-none ${className}`}
     >
-      {/* Vinyl Disc Hover Interaction */}
-      <div className="relative aspect-square w-full p-4 overflow-hidden flex items-center justify-center">
-        {/* Vinyl Disc Peek */}
-        <motion.div 
-          className="absolute w-[80%] aspect-square rounded-full bg-[#07090F] border border-[#10141F] shadow-xl flex items-center justify-center z-0 transition-transform duration-500 group-hover:translate-x-12 group-hover:rotate-45"
-        >
-          <div className="w-[30%] aspect-square rounded-full border border-[#10141F] bg-[#10141F] flex items-center justify-center">
-            <div className="w-[20%] aspect-square rounded-full bg-[#07090F]" />
-          </div>
-        </motion.div>
-
-        {/* Cover Image */}
-        <div className="relative z-10 w-full h-full rounded-2xl overflow-hidden shadow-lg bg-[#10141F]">
-          <img
-            src={url || "https://placehold.co/300x300?text=No+Cover"}
-            alt={title}
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#07090F] via-[#07090F]/20 to-transparent opacity-60" />
-        </div>
-
-        {/* Save & Share controls over image */}
-        <div className="absolute top-6 right-6 z-20 flex items-center gap-1.5 noskip">
-          <ShareTrackComponent
-            trackId={id}
-            title={title}
-            artist={artist}
-            url={url}
-            type="album"
-          />
-          <button
-            onClick={handleSave}
-            className={`p-2 rounded-full backdrop-blur-md transition-all duration-300 shadow-md ${
-              saved 
-                ? "bg-[#2563EB] text-[#F4F7FF] scale-110" 
-                : "bg-[#07090F]/70 text-[#F4F7FF]/80 hover:bg-[#07090F] hover:text-[#F4F7FF]"
-            }`}
-          >
-            {saved ? <BookmarkCheck size={14} /> : <Bookmark size={14} />}
-          </button>
-        </div>
+      {/* 100% Clear & Unobstructed Cover Art */}
+      <div className="relative aspect-square w-full rounded-xl sm:rounded-2xl overflow-hidden bg-[#07090F] ring-1 ring-white/10 shadow-md">
+        <img
+          src={url || "https://placehold.co/400x400/10141F/C026D3?text=Album"}
+          alt={title || "Album"}
+          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+          onError={(e) => {
+            e.currentTarget.src = "https://placehold.co/400x400/10141F/C026D3?text=Album";
+          }}
+        />
       </div>
 
-      {/* Content Section */}
-      <div className="p-4 pt-1 flex flex-col justify-between flex-grow gap-2">
-        <div className="space-y-1">
-          <h3 
-            className="text-sm sm:text-base font-bold text-white truncate hover:text-[#60A5FA] transition-colors"
+      {/* Details Row: Title, Artist • Year, and Three Dots Action */}
+      <div className="flex items-start justify-between gap-1.5 min-w-0 px-0.5 pt-0.5">
+        <div className="flex flex-col min-w-0 flex-1">
+          <h3
+            className="text-xs sm:text-sm font-bold text-[#F4F7FF] truncate group-hover:text-[#F0ABFC] transition-colors leading-tight"
             title={title}
           >
-            {title}
+            {title || "Untitled Album"}
           </h3>
-          <div className="text-xs text-[#8992A5] truncate">
-            {Array.isArray(artist) ? (
-              artist.map((a, i) => (
-                a.id ? (
-                  <Link
-                    key={a.id}
-                    href={`/artist/${a.id}`}
-                    onClick={(e) => e.stopPropagation()}
-                    className="hover:underline hover:text-white noskip cursor-pointer"
-                    title={a.name}
-                  >
-                    {a.name}{i < artist.length - 1 && ', '}
-                  </Link>
-                ) : (
-                  <span key={i} title={a.name}>
-                    {a.name}{i < artist.length - 1 && ', '}
-                  </span>
-                )
-              ))
-            ) : (
-              <span>Various Artists</span>
-            )}
-          </div>
+          {subtitle && (
+            <p className="text-[11px] sm:text-xs text-[#8992A5] font-medium tracking-wide mt-1 truncate" title={subtitle}>
+              {subtitle}
+            </p>
+          )}
         </div>
 
-        <div className="flex items-center gap-1.5 text-[10px] text-[#8992A5]/70 font-semibold uppercase tracking-wider">
-          <Disc size={12} className="text-[#2563EB]" />
-          <span>Album</span>
+        {/* Three Dots Menu Button - Cleanly positioned beside the metadata */}
+        <div 
+          className="shrink-0 -mr-1 -mt-0.5"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className="p-1 rounded-lg hover:bg-white/10 text-zinc-400 hover:text-white transition-colors cursor-pointer active:scale-95"
+                title="Album Actions"
+              >
+                <MoreVertical size={15} />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="end"
+              className="bg-[#0D121F]/95 backdrop-blur-2xl border border-white/15 text-white min-w-[170px] rounded-2xl p-1.5 shadow-2xl z-[9999]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <DropdownMenuItem
+                onClick={toggleSave}
+                className="cursor-pointer px-3 py-2 text-xs font-semibold rounded-xl hover:bg-[#870087]/30 hover:text-[#F0ABFC] transition flex items-center gap-2"
+              >
+                {saved ? <BookmarkCheck size={14} className="text-[#E879F9]" /> : <Bookmark size={14} />}
+                <span>{saved ? "Remove Bookmark" : "Save to Library"}</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={handleShare}
+                className="cursor-pointer px-3 py-2 text-xs font-semibold rounded-xl hover:bg-[#870087]/30 hover:text-[#F0ABFC] transition flex items-center gap-2"
+              >
+                <Share2 size={14} />
+                <span>Share GrooveLink</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator className="bg-white/10 my-1" />
+              <DropdownMenuItem
+                onClick={handleCopyLink}
+                className="cursor-pointer px-3 py-2 text-xs font-semibold rounded-xl hover:bg-[#870087]/30 hover:text-[#F0ABFC] transition flex items-center gap-2 text-zinc-300"
+              >
+                <Copy size={14} />
+                <span>Copy Page Link</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
     </motion.div>

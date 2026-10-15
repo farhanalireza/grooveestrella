@@ -4,9 +4,11 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Bookmark, BookmarkCheck, Loader, Music, Award, Clock, Share2, QrCode, ChevronRight } from "lucide-react";
-import { SpotifyButton, YouTubeButton, AppleMusicButton, SoundCloudButton, TidalButton } from "@/Components/MusicButtons";
+import { ArrowLeft, Bookmark, BookmarkCheck, Music, Award, Clock, Share2, QrCode, ChevronRight } from "lucide-react";
 import { ShareTrackComponent } from "@/Components/CardComponents/ShareTrackComponent";
+import MusicLoreAndReviews from "@/Components/MusicLoreAndReviews";
+import RatingPieChart from "@/Components/RatingPieChart";
+import GrooveLoader from "@/Components/GrooveLoader";
 import { toast } from "react-toastify";
 
 export default function TrackDetailClient({ id, initialData }) {
@@ -17,6 +19,7 @@ export default function TrackDetailClient({ id, initialData }) {
     const [showQR, setShowQR] = useState(false);
     const [qrFullScreen, setQrFullScreen] = useState(false);
     const [currentUrl, setCurrentUrl] = useState("");
+    const [expandedHeroDesc, setExpandedHeroDesc] = useState(false);
 
     useEffect(() => {
         if (typeof window !== "undefined") {
@@ -37,7 +40,9 @@ export default function TrackDetailClient({ id, initialData }) {
     useEffect(() => {
         if (!id) return;
         const savedSongs = JSON.parse(localStorage.getItem("savedSongs")) || [];
-        const isSaved = savedSongs.some(song => song.trackURI === `spotify:track:${id}`);
+        const isSaved = savedSongs.some(
+            song => song.trackId === id || song.trackURI === `musicbrainz:track:${id}` || song.trackURI === `spotify:track:${id}` || song.trackURI === id
+        );
         setSaved(isSaved);
     }, [id]);
 
@@ -45,45 +50,48 @@ export default function TrackDetailClient({ id, initialData }) {
         const savedSongs = JSON.parse(localStorage.getItem("savedSongs")) || [];
 
         if (saved) {
-            const updated = savedSongs.filter(song => song.trackURI !== `spotify:track:${id}`);
+            const updated = savedSongs.filter(
+                song => song.trackId !== id && song.trackURI !== `musicbrainz:track:${id}` && song.trackURI !== `spotify:track:${id}` && song.trackURI !== id
+            );
             localStorage.setItem("savedSongs", JSON.stringify(updated));
             setSaved(false);
-            toast.info(`"${track.name}" removed from library.`);
+            toast.info(`"${track.name || track.title}" removed from library.`);
         } else if (track) {
+            const trackArtists = Array.isArray(track.artists) ? track.artists : [{ name: track.artist || 'Unknown' }];
+            const artistsStr = trackArtists.map(a => a.name).join(' ');
+            const trackName = track.name || track.title;
+            const coverImage = track.album?.images?.[0]?.url || track.coverArt || track.url;
+            const trackUri = track.uri || track.trackURI || `musicbrainz:track:${id}`;
+
             const newTrack = {
-                title: track.name,
-                artist: track.artists,
-                image: track.album?.images?.[0]?.url,
-                spoURL: track.external_urls.spotify,
-                YTURL: `https://www.youtube.com/results?search_query=${encodeURIComponent(track.name + ' ' + track.artists.map(a => a.name).join(' '))}`,
-                popularity: track.popularity,
-                explicit: track.explicit,
-                trackURI: track.uri,
-                albumID: track.album?.id,
-                trackId: track.id
+                title: trackName,
+                name: trackName,
+                artist: trackArtists,
+                image: coverImage,
+                spoURL: track.external_urls?.spotify || `https://open.spotify.com/search/${encodeURIComponent(trackName + ' ' + artistsStr)}`,
+                YTURL: `https://www.youtube.com/results?search_query=${encodeURIComponent(trackName + ' ' + artistsStr)}`,
+                popularity: track.popularity || 80,
+                explicit: track.explicit || false,
+                trackURI: trackUri,
+                albumID: track.album?.id || '',
+                trackId: track.id || id
             };
             savedSongs.push(newTrack);
             localStorage.setItem("savedSongs", JSON.stringify(savedSongs));
             setSaved(true);
-            toast.success(`"${track.name}" saved to library! 🎶`);
+            toast.success(`"${trackName}" saved to library! 🎶`);
         }
     };
 
-    // Client-side fallback fetch
+    // Client-side fallback fetch via our backend MusicBrainz endpoint
     useEffect(() => {
         if (track) return;
 
         async function fetchTrackData() {
             try {
                 setError(null);
-                const response = await fetch(`/api/token`);
-                const tokenData = await response.json();
-                if (!tokenData.access_token) throw new Error("Failed to retrieve token");
-
-                const res = await fetch(`https://api.spotify.com/v1/tracks/${id}`, {
-                    headers: { Authorization: `Bearer ${tokenData.access_token}` },
-                });
-                if (!res.ok) throw new Error("Failed to fetch track details");
+                const res = await fetch(`/api/track/${encodeURIComponent(id)}`);
+                if (!res.ok) throw new Error("Failed to fetch track details from catalog");
                 const data = await res.json();
                 setTrack(data);
             } catch (err) {
@@ -99,7 +107,7 @@ export default function TrackDetailClient({ id, initialData }) {
             <div className="flex flex-col items-center justify-center min-h-screen bg-[#07090F] text-[#F4F7FF] p-6">
                 <h2 className="text-2xl font-bold text-red-500 mb-2">Failed to Load Content</h2>
                 <p className="text-[#8992A5] mb-6 text-center max-w-md">
-                    We couldn't connect to the server. Please check your internet connection or try again later.
+                    We couldn't connect to the catalog. Please check your internet connection or try again later.
                 </p>
                 <button
                     onClick={() => window.location.reload()}
@@ -113,15 +121,12 @@ export default function TrackDetailClient({ id, initialData }) {
 
     if (!track) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-screen bg-[#07090F] text-[#F4F7FF]">
-                <Loader className="animate-spin w-8 h-8 mb-4 text-[#60A5FA]" />
-                <span className="text-lg font-medium">Loading Track...</span>
-            </div>
+            <GrooveLoader fullScreen={true} text="Loading Track..." />
         );
     }
 
-    const artistsName = track.artists.map(a => a.name).join(', ');
-    const coverUrl = track.album?.images?.[0]?.url || 'https://placehold.co/600x600?text=No+Cover';
+    const artistsList = Array.isArray(track.artists) ? track.artists : [{ name: track.artist || 'Unknown Artist' }];
+    const coverUrl = track.album?.images?.[0]?.url || track.coverArt || track.url || 'https://placehold.co/600x600/10141F/60A5FA?text=No+Cover';
     const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&color=60A5FA&bgcolor=10141F&ecc=H&data=${encodeURIComponent(currentUrl)}`;
 
     return (
@@ -156,11 +161,16 @@ export default function TrackDetailClient({ id, initialData }) {
                 </button>
                 <ShareTrackComponent 
                     trackId={track.id} 
-                    artist={track.artists} 
+                    artist={artistsList} 
                     explicit={track.explicit} 
-                    title={track.name} 
-                    popularity={track.popularity} 
-                    url={coverUrl} 
+                    title={track.name || track.title} 
+                    popularity={track.popularity || 80} 
+                    url={coverUrl}
+                    releaseDate={track.releaseDate || track.album?.release_date || (track.releaseYear ? String(track.releaseYear) : null)}
+                    releaseYear={track.releaseYear}
+                    album={track.album?.name || track.album}
+                    genres={track.genres || []}
+                    type="track"
                 />
                 <button 
                     onClick={toggleSave} 
@@ -190,7 +200,12 @@ export default function TrackDetailClient({ id, initialData }) {
 
                     {/* Artwork Cover Label */}
                     <div className="relative z-10 w-[55%] h-[55%] rounded-full overflow-hidden shadow-inner ring-4 ring-[#10141F] bg-[#10141F] animate-[spin_15s_linear_infinite]">
-                        <img src={coverUrl} alt={track.name} className="w-full h-full object-cover" />
+                        <img 
+                            src={coverUrl} 
+                            alt={track.name || track.title} 
+                            className="w-full h-full object-cover" 
+                            onError={(e) => { e.currentTarget.src = 'https://placehold.co/400x400/10141F/60A5FA?text=Track'; }}
+                        />
                     </div>
                 </div>
 
@@ -201,55 +216,70 @@ export default function TrackDetailClient({ id, initialData }) {
                             <Music size={14} />
                             <span>Track Details</span>
                         </div>
-                        <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold mb-3 leading-tight tracking-tight text-white">{track.name}</h1>
+                        <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold mb-3 leading-tight tracking-tight text-white">{track.name || track.title}</h1>
                         <p className="text-base sm:text-lg text-[#F4F7FF]/80 mb-2">
-                            {track.artists.map((a, i) => (
+                            {artistsList.map((a, i) => (
                                 <span
                                     key={a.id || i}
                                     className="cursor-pointer hover:text-white hover:underline transition"
                                     onClick={() => a.id && router.push(`/artist/${a.id}`)}
                                 >
-                                    {a.name}{i < track.artists.length - 1 && ', '}
+                                    {a.name}{i < artistsList.length - 1 && ', '}
                                 </span>
-                            ))} • <span 
-                                className="cursor-pointer hover:underline text-[#8992A5] text-sm"
-                                onClick={() => track.album?.id && router.push(`/album/${track.album.id}`)}
-                            >
-                                {track.album?.name}
-                            </span>
+                            ))}
+                            {(track.album?.name || track.album) && (
+                                <> • <span 
+                                    className="cursor-pointer hover:text-white hover:underline text-[#8992A5] text-sm"
+                                    onClick={() => track.album?.id && router.push(`/album/${track.album.id}`)}
+                                >
+                                    {track.album?.name || track.album}
+                                </span></>
+                            )}
                         </p>
-                        <div className="flex justify-center md:justify-start items-center gap-4 text-xs font-medium text-[#8992A5]/70 mb-6 uppercase tracking-wider">
+                        <div className="flex justify-center md:justify-start items-center gap-4 text-xs font-medium text-[#8992A5]/70 mb-4 uppercase tracking-wider flex-wrap">
                             <div className="flex items-center gap-1">
                                 <Clock size={14} />
-                                <span>{msToMmSs(track.duration_ms)}</span>
+                                <span>{msToMmSs(track.duration_ms || track.durationMs)}</span>
                             </div>
                             <span>•</span>
                             <div className="flex items-center gap-1">
                                 <Award size={14} />
-                                <span>Popularity: {track.popularity}</span>
+                                <span>Score: {track.popularity || 85}</span>
                             </div>
+                        </div>
+
+                        {/* Rating Pie Chart (1-5*2, Green: 8-10, Yellow: 5-8, Red: 1-5) */}
+                        <div className="flex items-center justify-center md:justify-start mb-3">
+                            <RatingPieChart rating={track.rating || { value: (track.popularity ? (track.popularity / 20) : 4.5) }} />
                         </div>
                     </div>
                     
-                    {/* GrooveLink & History Actions */}
-                    <div className="border-t border-[#2563EB]/10 pt-6 w-full flex flex-col sm:flex-row items-center justify-center md:justify-start gap-3">
+                    {/* Minimized Description before GrooveLink button */}
+                    {track.description && (
+                        <div className="my-3 text-left">
+                            <p className={`text-xs sm:text-sm text-[#8992A5] leading-relaxed font-body ${!expandedHeroDesc ? "line-clamp-2" : ""}`}>
+                                {track.description}
+                            </p>
+                            {track.description.length > 120 && (
+                                <button
+                                    onClick={() => setExpandedHeroDesc(!expandedHeroDesc)}
+                                    className="mt-1 text-[11px] font-bold text-[#60A5FA] hover:text-[#F4F7FF] transition inline-flex items-center gap-1 cursor-pointer"
+                                >
+                                    <span>{expandedHeroDesc ? "Show less" : "Read full overview"}</span>
+                                </button>
+                            )}
+                        </div>
+                    )}
+
+                    {/* GrooveLink & Sharing Actions */}
+                    <div className="border-t border-[#2563EB]/10 pt-4 w-full flex flex-col sm:flex-row items-center justify-center md:justify-start gap-3">
                         <Link 
-                            href={`/s/spotify/track/${track.id}`}
-                            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-[#2563EB]/20 bg-[#2563EB]/5 hover:bg-[#2563EB]/15 text-[#F4F7FF] text-xs font-bold uppercase tracking-wider transition-all duration-300"
+                            href={`/s/musicbrainz/track/${track.id || id}`}
+                            className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-[#2563EB]/20 bg-[#2563EB]/10 hover:bg-[#2563EB]/20 text-[#F4F7FF] text-xs font-bold uppercase tracking-wider transition-all duration-300"
                         >
                             <img src="/in.svg" alt="GrooveLink" className="w-4 h-4 object-contain" />
-                            <span>Listen on GrooveLink</span>
+                            <span>Open in GrooveLink</span>
                             <ChevronRight className="w-3 h-3 text-[#60A5FA]" />
-                        </Link>
-                        
-                        <Link 
-                            href={`https://history.grooveestrella.com/track/${track.id}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-2.5 px-4 py-2.5 rounded-full border border-[#60A5FA]/20 bg-[#10141F] hover:bg-[#60A5FA]/10 text-[#F4F7FF] text-xs font-bold uppercase tracking-wider transition-all duration-300 shadow-lg shadow-[#2563EB]/5"
-                        >
-                            <span>Explore its history, legacy and cultural impact →</span>
-                            <span className="text-[10px] text-[#8992A5] font-normal border-l border-[#8992A5]/30 pl-2">Read on NEW PROJECT</span>
                         </Link>
                     </div>
                 </div>
@@ -265,7 +295,6 @@ export default function TrackDetailClient({ id, initialData }) {
                         title="Click to full screen QR"
                     >
                         <img src={qrCodeUrl} alt="QR Code" className="w-full h-full object-contain rounded-lg" />
-                        {/* Centered Logo Overlay */}
                         <div className="absolute w-10 h-10 bg-[#10141F] border border-[#2563EB]/25 rounded-full flex items-center justify-center shadow-lg p-1.5 transition duration-300 group-hover/qr:scale-110">
                             <img src="/in.svg" alt="Groove Logo" className="w-full h-full object-contain" />
                         </div>
@@ -286,7 +315,6 @@ export default function TrackDetailClient({ id, initialData }) {
                         <h3 className="text-lg font-bold text-white uppercase tracking-widest font-display">Scan QR Code</h3>
                         <div className="relative w-72 h-72 sm:w-80 sm:h-80 p-4 bg-[#10141F] border border-[#2563EB]/20 rounded-3xl flex items-center justify-center shadow-2xl">
                             <img src={qrCodeUrl} alt="QR Code" className="w-full h-full object-contain rounded-xl" />
-                            {/* Centered Logo Overlay */}
                             <div className="absolute w-16 h-16 bg-[#10141F] border border-[#2563EB]/20 rounded-full flex items-center justify-center shadow-xl p-2.5">
                                 <img src="/in.svg" alt="Groove Logo" className="w-full h-full object-contain" />
                             </div>
@@ -303,6 +331,20 @@ export default function TrackDetailClient({ id, initialData }) {
                     </div>
                 </div>
             )}
+
+            {/* Reviews, Descriptions, Lore, All Tags & External Links */}
+            <MusicLoreAndReviews
+                id={track.id || id}
+                type="track"
+                title={track.name || track.title}
+                artist={artistsList.map(a => a.name).join(', ')}
+                description={track.description}
+                tags={track.tags || track.genres || []}
+                allTags={track.allTags || []}
+                rating={track.rating}
+                externalLinks={track.externalLinks || []}
+                totalDurationMs={track.duration_ms || track.durationMs}
+            />
         </div>
     );
 }

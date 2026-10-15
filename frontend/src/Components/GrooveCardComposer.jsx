@@ -21,7 +21,12 @@ export default function GrooveCardComposer({
     imageUrl,
     popularity,
     explicit,
-    type = "track" // track, album, artist, playlist
+    type = "track", // track, album, artist, playlist
+    platform = "musicbrainz",
+    releaseDate, // accurate date string e.g. "1975-10-31" or "1975"
+    releaseYear: propReleaseYear,
+    album,
+    genres = [],
 }) {
     const cardRef = useRef(null);
     const [copied, setCopied] = useState(false);
@@ -34,20 +39,33 @@ export default function GrooveCardComposer({
     const [qrFullScreen, setQrFullScreen] = useState(false);
     const [showYear, setShowYear] = useState(true);
 
-    // Extract release year from popularity or other fields if available
-    const [releaseYear, setReleaseYear] = useState("2026");
-
-    useEffect(() => {
-        // Fallback release year based on current dates or mock data
-        if (typeof window !== "undefined") {
-            const currentYear = new Date().getFullYear().toString();
-            setReleaseYear(currentYear);
+    // Compute accurate release date / year
+    const displayReleaseDate = React.useMemo(() => {
+        if (releaseDate) {
+            const raw = String(releaseDate).trim();
+            if (/^\d{4}$/.test(raw)) return raw;
+            const parsed = new Date(raw);
+            if (!isNaN(parsed.getTime())) {
+                try {
+                    return parsed.toLocaleDateString("en-US", {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                        timeZone: "UTC"
+                    });
+                } catch (_) {
+                    return raw;
+                }
+            }
+            return raw;
         }
-    }, []);
+        if (propReleaseYear) return String(propReleaseYear);
+        return null;
+    }, [releaseDate, propReleaseYear]);
 
     // Generate clean share url based on current site host
     const shareUrl = typeof window !== "undefined" 
-        ? `${window.location.origin}/s/spotify/${type}/${itemId}`
+        ? `${window.location.origin}/s/${platform || 'musicbrainz'}/${type}/${itemId}`
         : '';
 
     const themes = {
@@ -163,8 +181,8 @@ export default function GrooveCardComposer({
         if (navigator.share) {
             try {
                 await navigator.share({
-                    title: `${title} - GrooveLink`,
-                    text: `Listen to "${title}" on GrooveLink!`,
+                    title: `${title} - Groove`,
+                    text: `Open "${title}" in Groove!`,
                     url: shareUrl
                 });
             } catch (err) {
@@ -175,12 +193,12 @@ export default function GrooveCardComposer({
 
     // Social shares
     const handleShareTwitter = () => {
-        const text = `🎵 Check out "${title}" on GrooveLink!`;
+        const text = `🎵 Open "${title}" in Groove!`;
         window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(shareUrl)}`, '_blank');
     };
 
     const handleShareWhatsApp = () => {
-        const text = `🎵 Check out "${title}" on GrooveLink!\n${shareUrl}`;
+        const text = `🎵 Open "${title}" in Groove!\n${shareUrl}`;
         window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
     };
 
@@ -248,42 +266,44 @@ export default function GrooveCardComposer({
                                     <span className="text-[10px] tracking-[0.2em] font-extrabold uppercase text-[#8992A5]">GrooveCard</span>
                                 </div>
                                 <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-white/5 border border-white/10 text-white/90">
-                                    LISTEN LAYER
+                                    MUSIC LAYER
                                 </span>
                             </div>
 
                             {/* Cover Art Image */}
-                            <div className="relative w-full aspect-square rounded-2xl overflow-hidden shadow-xl mb-4 border border-white/5">
+                            <div className="relative w-full aspect-square rounded-2xl overflow-hidden shadow-xl mb-4 border border-white/5 bg-[#10141F]">
                                 <img
                                     src={imageUrl || "/placeholder.jpg"}
                                     alt={title}
                                     className="w-full h-full object-cover"
                                     crossOrigin="anonymous"
+                                    onError={(e) => {
+                                        e.currentTarget.src = 'https://placehold.co/400x400/10141F/60A5FA?text=Music';
+                                    }}
                                 />
                             </div>
 
-                            {/* Music Details */}
-                            <div className="flex justify-between items-end gap-3 text-left">
-                                <div className="flex-1 min-w-0">
-                                    <h4 className="text-base font-bold truncate leading-snug font-display text-white" title={title}>
+                            {/* Music Details - Full titles & artist names, NO truncation */}
+                            <div className="flex justify-between items-start gap-3 text-left">
+                                <div className="flex-1 min-w-0 pr-1">
+                                    <h4 className="text-sm sm:text-base font-bold leading-snug font-display text-white break-words" title={title}>
                                         {title}
                                     </h4>
-                                    <p className="text-xs text-[#8992A5] font-medium truncate font-body mb-1" title={artistLabel}>
+                                    <p className="text-xs text-[#8992A5] font-medium font-body mt-1 break-words" title={artistLabel}>
                                         {artistLabel}
                                     </p>
-                                    
-                                    {/* Year Badge */}
-                                    {showYear && (
-                                        <span className="text-[9px] text-[#8992A5] px-1.5 py-0.5 rounded bg-white/5 border border-white/10">
-                                            {releaseYear}
-                                        </span>
+                                    {album && type === 'track' && album !== title && (
+                                        <p className="text-[11px] text-[#8992A5]/70 font-normal italic mt-0.5 break-words">
+                                            Album: {album}
+                                        </p>
                                     )}
-
-                                    {/* Small Spotify attribution */}
-                                    <div className="text-[8px] text-[#8992A5] mt-2 flex items-center gap-0.5">
-                                        <span>Data from</span>
-                                        <span className="font-bold text-[#1DB954]">Spotify</span>
-                                    </div>
+                                    
+                                    {/* Accurate Release Date Badge */}
+                                    {showYear && displayReleaseDate && (
+                                        <div className="inline-flex items-center gap-1 text-[9px] text-[#8992A5] px-2 py-0.5 rounded bg-white/5 border border-white/10 mt-2">
+                                            <span>{displayReleaseDate}</span>
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* QR Code Container */}
@@ -314,7 +334,7 @@ export default function GrooveCardComposer({
                         <div className="space-y-6">
                             <div>
                                 <h2 className="text-2xl font-black text-[#F4F7FF] mb-1 font-display">GrooveCard Composer</h2>
-                                <p className="text-sm text-[#8992A5]">Personalize and export your listening card.</p>
+                                <p className="text-sm text-[#8992A5]">Personalize and export your music card.</p>
                             </div>
 
                             {/* Customizer: Themes */}
@@ -356,7 +376,7 @@ export default function GrooveCardComposer({
                                             />
                                         </label>
                                         <label className="flex items-center justify-between p-2.5 rounded-lg bg-white/[0.02] border border-[#2563EB]/10 cursor-pointer">
-                                            <span className="text-xs text-[#F4F7FF]/80 font-semibold">Render Release Year</span>
+                                            <span className="text-xs text-[#F4F7FF]/80 font-semibold">Render Release Date</span>
                                             <input 
                                                 type="checkbox" 
                                                 checked={showYear}
@@ -420,7 +440,7 @@ export default function GrooveCardComposer({
                                     ) : (
                                         <>
                                             <Copy size={16} />
-                                            <span>Copy GrooveLink</span>
+                                            <span>Copy Open in Groove link</span>
                                         </>
                                     )}
                                 </button>
@@ -476,7 +496,7 @@ export default function GrooveCardComposer({
                             </div>
                         </div>
                         <p className="text-sm text-zinc-400 text-center max-w-[280px]">
-                            Scan with your phone's camera to instantly open the GrooveLink.
+                            Scan with your phone's camera to instantly open in Groove.
                         </p>
                         <button
                             onClick={() => setQrFullScreen(false)}

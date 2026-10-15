@@ -1,43 +1,28 @@
-// // useTrackLoader.js
-// import { fetchSpotifyData } from './useSpotify';
-
-// const loadTracks = async (tracks, token, setTrackData, setLoading) => {
-//     try {
-//         const trackPromises = tracks.map((title) =>
-//             fetchSpotifyData(title, token)
-//         );
-//         const results = await Promise.all(trackPromises);
-//         setTrackData(results);
-//     } catch (error) {
-//         console.log(error);
-//     } finally {
-//         setLoading(false);
-//     }
-// };
-
-// export default loadTracks;
-
 // src/hooks/useTrackLoader.js
 import { fetchSpotifyData } from './useSpotify';
 
-const loadTracks = async (tracks, token, setTrackData = null, setLoading = null) => {
+const loadTracks = async (tracks, token = null, setTrackData = null, setLoading = null) => {
   try {
-    const trackPromises = tracks.map((title) =>
-      fetchSpotifyData(title, token)
-    );
-    const results = await Promise.all(trackPromises);
-    // console.log(results);
+    if (!Array.isArray(tracks) || tracks.length === 0) {
+      if (typeof setTrackData === 'function') setTrackData([]);
+      return [];
+    }
 
-    // If setTrackData is provided, set it
+    const trackPromises = tracks.map((item) => {
+      const title = typeof item === 'string' ? item : (item?.title || item?.name || '');
+      return fetchSpotifyData(title, token);
+    });
+
+    const results = await Promise.all(trackPromises);
+
     if (typeof setTrackData === 'function') {
       setTrackData(results);
     }
 
-    // Return results for manual usage
     return results;
-
   } catch (error) {
-    console.log(error);
+    console.error("loadTracks error:", error);
+    if (typeof setTrackData === 'function') setTrackData([]);
     return [];
   } finally {
     if (typeof setLoading === 'function') {

@@ -1,7 +1,7 @@
 // src/app/api/convert/route.js
 import { NextResponse } from 'next/server';
 import { parseMusicUrl } from '@/lib/musicProviders';
-import { searchSpotifyTrackServer } from '@/lib/spotifyServer';
+import { searchMusicBrainzTrackServer } from '@/lib/musicbrainzServer';
 import axios from 'axios';
 
 export async function POST(request) {
@@ -14,17 +14,17 @@ export async function POST(request) {
     const parsed = parseMusicUrl(url);
     if (!parsed) {
       // If we couldn't parse it as a standard track URL, let's treat the text as a raw query
-      // and search Spotify for it.
+      // and search MusicBrainz for it.
       const cleanedUrl = url.trim();
       if (cleanedUrl.length > 0) {
-        const trackMatch = await searchSpotifyTrackServer(cleanedUrl);
+        const trackMatch = await searchMusicBrainzTrackServer(cleanedUrl);
         if (trackMatch) {
           return NextResponse.json({
             success: true,
-            platform: 'spotify',
+            platform: 'musicbrainz',
             type: 'track',
             id: trackMatch.id,
-            redirectUrl: `/s/spotify/track/${trackMatch.id}`
+            redirectUrl: `/s/musicbrainz/track/${trackMatch.id}`
           });
         }
       }
@@ -32,6 +32,16 @@ export async function POST(request) {
     }
 
     const { platform, type, id } = parsed;
+
+    if (platform === 'musicbrainz') {
+      return NextResponse.json({
+        success: true,
+        platform: 'musicbrainz',
+        type: type,
+        id: id,
+        redirectUrl: `/s/musicbrainz/${type}/${id}`
+      });
+    }
 
     if (platform === 'spotify') {
       return NextResponse.json({
@@ -51,30 +61,30 @@ export async function POST(request) {
         const title = oembedResponse.data?.title;
         
         if (title) {
-          // Search Spotify using the video title to see if we can find the canonical track
+          // Search MusicBrainz using the video title to see if we can find the canonical track
           const cleanTitle = title
             .replace(/\((?:official|music|lyric)?\s*video\)/gi, '')
             .replace(/\[(?:official|music|lyric)?\s*video\]/gi, '')
             .replace(/\((?:audio|lyrics|offizielle|clip)\)/gi, '')
             .trim();
             
-          const trackMatch = await searchSpotifyTrackServer(cleanTitle);
+          const trackMatch = await searchMusicBrainzTrackServer(cleanTitle);
           if (trackMatch) {
             return NextResponse.json({
               success: true,
-              platform: 'spotify',
+              platform: 'musicbrainz',
               type: 'track',
               id: trackMatch.id,
-              redirectUrl: `/s/spotify/track/${trackMatch.id}`,
-              note: 'Matched to Spotify canonical track'
+              redirectUrl: `/s/musicbrainz/track/${trackMatch.id}`,
+              note: 'Matched to MusicBrainz canonical track'
             });
           }
         }
       } catch (err) {
-        console.warn('Failed to fetch YouTube OEmbed or search Spotify:', err.message);
+        console.warn('Failed to fetch YouTube OEmbed or search MusicBrainz:', err.message);
       }
 
-      // If Spotify search fails, route to YouTube specific landing page
+      // If MusicBrainz search fails, route to YouTube specific landing page
       return NextResponse.json({
         success: true,
         platform: 'youtube',

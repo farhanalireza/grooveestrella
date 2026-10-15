@@ -2,249 +2,770 @@
 "use client";
 
 import React, { useEffect, useState, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { API_BASE_URL } from '@/lib/apiClient';
-import { Loader, Music, Heart, Disc, Users, User, Share2, Globe, Crown, LogOut } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { 
+  Music, Heart, Disc, Users, User, Share2, 
+  Sparkles, Settings, ArrowRight, Dice5, Edit3, Check, 
+  X, Trash2, Download, MessageSquare, Plus, ExternalLink,
+  ChevronRight, Bookmark
+} from 'lucide-react';
+import GrooveLoader from '@/Components/GrooveLoader';
+import Link from 'next/link';
+import { toast } from 'react-toastify';
+import { generateRandomName, getOrSetUserName } from '@/lib/nameGenerator';
 
-const SpotifyIcon = ({ className }) => (
-  <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
-    <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
-  </svg>
-);
+const AVAILABLE_GENRES = [
+  "Rock", "Pop", "Indie", "Electronic", "Hip Hop", 
+  "Jazz", "Classical", "Alternative", "Metal", "R&B", 
+  "Blues", "Folk", "Punk", "Ambient", "Soul", "Disco"
+];
 
 function UserDashboardContent() {
-  const [userData, setUserData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const searchParams = useSearchParams();
   const router = useRouter();
-  
-  const hasKey = searchParams.get('key');
+  const [userName, setUserName] = useState('');
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [tempName, setTempName] = useState('');
+  const [activeTab, setActiveTab] = useState('tracks'); // tracks | albums | artists | playlists | reviews | genres
 
-  const fetchUserProfile = async () => {
+  const [favoriteGenres, setFavoriteGenres] = useState([]);
+  const [savedSongs, setSavedSongs] = useState([]);
+  const [savedAlbums, setSavedAlbums] = useState([]);
+  const [savedArtists, setSavedArtists] = useState([]);
+  const [savedPlaylists, setSavedPlaylists] = useState([]);
+  const [userReviews, setUserReviews] = useState([]);
+
+  // Load all user data from localStorage
+  const loadData = () => {
+    if (typeof window === 'undefined') return;
+    const currentName = getOrSetUserName();
+    setUserName(currentName);
+    setTempName(currentName);
+
     try {
-      await fetch(`${API_BASE_URL}/refresh_access_token`);
-      const response = await fetch(`${API_BASE_URL}/me`);
+      setFavoriteGenres(JSON.parse(localStorage.getItem('favoriteGenres') || '[]'));
+    } catch (_) {
+      setFavoriteGenres([]);
+    }
 
-      if (response.status === 401) {
-        setUserData(null);
-        setLoading(false);
-        return;
+    try {
+      setSavedSongs(JSON.parse(localStorage.getItem('savedSongs') || '[]'));
+    } catch (_) {
+      setSavedSongs([]);
+    }
+
+    try {
+      setSavedAlbums(JSON.parse(localStorage.getItem('savedAlbums') || '[]'));
+    } catch (_) {
+      setSavedAlbums([]);
+    }
+
+    try {
+      setSavedArtists(JSON.parse(localStorage.getItem('savedArtists') || '[]'));
+    } catch (_) {
+      setSavedArtists([]);
+    }
+
+    try {
+      setSavedPlaylists(JSON.parse(localStorage.getItem('savedPlaylists') || '[]'));
+    } catch (_) {
+      setSavedPlaylists([]);
+    }
+
+    // Collect all user reviews from localStorage
+    try {
+      const reviewsList = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('groove_reviews_')) {
+          const raw = localStorage.getItem(key);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) {
+              parsed.forEach(rev => {
+                // Include user-created reviews
+                if (rev.id && rev.id.startsWith('usr-')) {
+                  reviewsList.push({
+                    ...rev,
+                    itemId: key.replace('groove_reviews_', ''),
+                  });
+                }
+              });
+            }
+          }
+        }
       }
-
-      if (!response.ok) throw new Error('Failed to fetch user profile');
-
-      const data = await response.json();
-      setUserData(data.profile);
-      setLoading(false);
-    } catch (err) {
-      console.error('[ERROR] Failed to fetch profile:', err);
-      setUserData(null);
-      setLoading(false);
+      setUserReviews(reviewsList);
+    } catch (_) {
+      setUserReviews([]);
     }
   };
 
   useEffect(() => {
-    if (hasKey) {
-      fetchUserProfile();
-      const interval = setInterval(fetchUserProfile, 1000 * 60 * 10);
-      return () => clearInterval(interval);
-    } else {
-      setLoading(false);
-    }
-  }, [hasKey]);
+    loadData();
+  }, []);
 
-  const handleLogout = async () => {
-    try {
-      await fetch(`${API_BASE_URL}/logout`);
-      window.location.reload();
-    } catch (err) {
-      console.error('[ERROR] Logout failed:', err);
-    }
+  // Roll a new random Adj + Noun combo
+  const handleRollRandomName = () => {
+    const newName = generateRandomName();
+    setUserName(newName);
+    setTempName(newName);
+    localStorage.setItem('userName', newName);
+    toast.success(`Generated aesthetic name: ${newName}! 🎲`);
   };
 
-  // Local Storage Dashboard Component
-  const LocalDashboard = () => {
-    const [userName, setUserName] = useState('Music Lover');
-    const [savedSongs, setSavedSongs] = useState([]);
-    const [savedAlbums, setSavedAlbums] = useState([]);
-    const [savedArtists, setSavedArtists] = useState([]);
-    const [savedPlaylists, setSavedPlaylists] = useState([]);
+  // Save edited name
+  const handleSaveName = () => {
+    const finalName = tempName.trim() || generateRandomName();
+    setUserName(finalName);
+    localStorage.setItem('userName', finalName);
+    setIsEditingName(false);
+    toast.success(`Profile name updated to: ${finalName}! ✨`);
+  };
 
-    useEffect(() => {
-      setUserName(localStorage.getItem('userName') || 'Music Lover');
-      setSavedSongs(JSON.parse(localStorage.getItem('savedSongs') || '[]'));
-      setSavedAlbums(JSON.parse(localStorage.getItem('savedAlbums') || '[]'));
-      setSavedArtists(JSON.parse(localStorage.getItem('savedArtists') || '[]'));
-      setSavedPlaylists(JSON.parse(localStorage.getItem('savedPlaylists') || '[]'));
-    }, []);
+  // Cancel edit name
+  const handleCancelEdit = () => {
+    setTempName(userName);
+    setIsEditingName(false);
+  };
 
-    const firstLetter = userName.charAt(0).toUpperCase();
+  // Toggle favorite genre
+  const handleToggleGenre = (genre) => {
+    let updated;
+    if (favoriteGenres.includes(genre)) {
+      updated = favoriteGenres.filter(g => g !== genre);
+    } else {
+      updated = [...favoriteGenres, genre];
+    }
+    setFavoriteGenres(updated);
+    localStorage.setItem('favoriteGenres', JSON.stringify(updated));
+    toast.info(`Updated favorite genres.`);
+  };
 
-    const stats = [
-      { icon: Music, label: 'Saved Songs', count: savedSongs.length, color: 'text-[#60A5FA]' },
-      { icon: Disc, label: 'Saved Albums', count: savedAlbums.length, color: 'text-[#60A5FA]' },
-      { icon: Users, label: 'Saved Artists', count: savedArtists.length, color: 'text-[#60A5FA]' },
-      { icon: Heart, label: 'Saved Playlists', count: savedPlaylists.length, color: 'text-[#60A5FA]' }
-    ];
+  // Remove saved song
+  const handleRemoveSong = (trackUri, trackId, title) => {
+    const updated = savedSongs.filter(s => s.trackURI !== trackUri && s.trackId !== trackId);
+    setSavedSongs(updated);
+    localStorage.setItem('savedSongs', JSON.stringify(updated));
+    toast.info(`Removed "${title}" from saved tracks.`);
+  };
 
-    return (
-      <div className='min-h-screen flex items-center justify-center bg-[#07090F] text-[#F4F7FF] relative overflow-hidden px-6 pt-12 pb-24'>
-        {/* Blurry Backdrop Glow */}
-        <div className="absolute top-0 left-0 right-0 h-[40vh] bg-[#2563EB]/5 rounded-full filter blur-[120px] pointer-events-none z-0" />
+  // Remove saved album
+  const handleRemoveAlbum = (albumId, title) => {
+    const updated = savedAlbums.filter(a => a.id !== albumId);
+    setSavedAlbums(updated);
+    localStorage.setItem('savedAlbums', JSON.stringify(updated));
+    toast.info(`Removed "${title}" from saved albums.`);
+  };
+
+  // Remove saved artist
+  const handleRemoveArtist = (artistId, name) => {
+    const updated = savedArtists.filter(a => a.id !== artistId);
+    setSavedArtists(updated);
+    localStorage.setItem('savedArtists', JSON.stringify(updated));
+    toast.info(`Removed "${name}" from saved artists.`);
+  };
+
+  // Delete custom playlist
+  const handleDeletePlaylist = (playlistId, name) => {
+    const updated = savedPlaylists.filter(p => p.id !== playlistId);
+    setSavedPlaylists(updated);
+    localStorage.setItem('savedPlaylists', JSON.stringify(updated));
+    toast.info(`Deleted playlist "${name}".`);
+  };
+
+  // Export full user data as JSON
+  const handleExportData = () => {
+    const dataBackup = {
+      user: {
+        name: userName,
+        favoriteGenres: favoriteGenres,
+        exportedAt: new Date().toISOString()
+      },
+      library: {
+        savedSongs,
+        savedAlbums,
+        savedArtists,
+        savedPlaylists,
+        userReviews
+      }
+    };
+
+    const blob = new Blob([JSON.stringify(dataBackup, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `groove_data_${userName.toLowerCase().replace(/\s+/g, '_')}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast.success('Your library data was exported successfully! 📁');
+  };
+
+  const firstLetter = (userName || 'G').charAt(0).toUpperCase();
+  const totalItems = savedSongs.length + savedAlbums.length + savedArtists.length + savedPlaylists.length;
+
+  return (
+    <div className='min-h-screen bg-[#07090F] text-[#F4F7FF] relative overflow-hidden px-4 sm:px-6 md:px-12 lg:px-24 pt-10 pb-32'>
+      {/* Blurry Backdrop Glow */}
+      <div className="absolute top-0 left-0 right-0 h-[45vh] bg-[#2563EB]/10 rounded-full filter blur-[140px] pointer-events-none z-0" />
+      
+      <div className='relative z-10 w-full max-w-5xl mx-auto space-y-8'>
         
-        <div className='relative z-10 w-full max-w-2xl'>
-          <div className='bg-[#10141F]/40 border border-[#2563EB]/10 backdrop-blur-xl rounded-3xl p-8 mb-6 shadow-2xl'>
-            <div className='flex flex-col items-center space-y-6'>
-              <div className='relative'>
-                <div className='w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-gradient-to-br from-[#2563EB] to-[#60A5FA] flex items-center justify-center text-4xl font-extrabold text-black shadow-2xl border-4 border-[#60A5FA]/20'>
-                  {firstLetter}
-                </div>
-                <div className='absolute -bottom-1 -right-1 bg-[#2563EB] p-2 rounded-full shadow-md text-black'>
-                  <User className='w-4 h-4' />
-                </div>
+        {/* Profile Card with Adj+Noun Generator and Live Edit */}
+        <div className='bg-[#10141F]/60 border border-[#2563EB]/15 backdrop-blur-xl rounded-3xl p-6 sm:p-8 shadow-2xl'>
+          <div className='flex flex-col sm:flex-row items-center sm:items-start gap-6'>
+            {/* User Avatar */}
+            <div className='relative flex-shrink-0'>
+              <div className='w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-gradient-to-tr from-[#2563EB] to-[#60A5FA] flex items-center justify-center text-4xl font-black text-black shadow-2xl border-2 border-[#60A5FA]/30'>
+                {firstLetter}
               </div>
-
-              <div className='text-center space-y-2'>
-                <h1 className='text-3xl font-extrabold text-[#F4F7FF] tracking-tight'>{userName}</h1>
-                <p className='text-[#60A5FA] text-xs font-bold uppercase tracking-wider'>Music Explorer</p>
-                <button 
-                  onClick={() => router.push("/account?key=spotify-login")}
-                  className='text-[#60A5FA] text-xs font-bold hover:text-[#60A5FA] hover:underline active:underline bg-transparent border-none cursor-pointer mt-3 transition'
-                >
-                  Connect Spotify Account
-                </button>
+              <div className='absolute -bottom-1 -right-1 bg-[#2563EB] p-2 rounded-full shadow-lg text-black'>
+                <User className='w-4 h-4' />
               </div>
             </div>
-          </div>
 
-          <div className='grid grid-cols-2 gap-4'>
-            {stats.map((stat, index) => {
-              const IconComponent = stat.icon;
-              return (
-                <div key={index} className='bg-[#10141F]/40 border border-[#2563EB]/10 backdrop-blur-xl rounded-2xl p-5 hover:border-[#60A5FA]/20 hover:bg-[#2563EB]/10 transition-all duration-300 shadow-md'>
-                  <div className='flex items-center space-x-4'>
-                    <div className={`p-2.5 rounded-xl bg-white/[0.03] ${stat.color}`}>
-                      <IconComponent className='w-5 h-5' />
-                    </div>
-                    <div>
-                      <p className='text-xl font-extrabold text-[#F4F7FF] leading-tight'>{stat.count}</p>
-                      <p className='text-xs text-[#8992A5] mt-0.5'>{stat.label}</p>
+            {/* Profile Info & Edit Controls */}
+            <div className='flex-1 min-w-0 text-center sm:text-left flex flex-col justify-between'>
+              <div>
+                <div className="flex items-center justify-center sm:justify-start gap-2 mb-2">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-[#2563EB]/25 bg-[#2563EB]/10 text-[#60A5FA] text-[10px] font-bold tracking-widest uppercase">
+                    <Sparkles className="w-3 h-3 text-[#60A5FA]" />
+                    <span>Music Layer • Citizen</span>
+                  </span>
+                </div>
+
+                {/* Name Row: Editable or Display with Shuffle Button */}
+                {isEditingName ? (
+                  <div className="flex items-center justify-center sm:justify-start gap-2 mb-2">
+                    <input
+                      type="text"
+                      value={tempName}
+                      onChange={(e) => setTempName(e.target.value)}
+                      placeholder="Enter username"
+                      className="px-4 py-2 bg-white/5 border border-[#2563EB]/40 rounded-xl text-lg sm:text-xl font-bold text-white outline-none focus:ring-1 focus:ring-[#60A5FA]"
+                      autoFocus
+                    />
+                    <button
+                      onClick={handleSaveName}
+                      className="p-2.5 rounded-xl bg-[#2563EB] hover:bg-[#60A5FA] text-black font-bold transition cursor-pointer"
+                      title="Save Name"
+                    >
+                      <Check size={18} />
+                    </button>
+                    <button
+                      onClick={handleCancelEdit}
+                      className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-[#8992A5] transition cursor-pointer"
+                      title="Cancel"
+                    >
+                      <X size={18} />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center sm:justify-start gap-3 mb-2 flex-wrap">
+                    <h1 className='text-2xl sm:text-4xl font-extrabold text-[#F4F7FF] tracking-tight'>
+                      {userName}
+                    </h1>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => setIsEditingName(true)}
+                        className="p-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.1] text-[#8992A5] hover:text-[#60A5FA] border border-white/5 transition cursor-pointer"
+                        title="Edit Username"
+                      >
+                        <Edit3 size={15} />
+                      </button>
+                      <button
+                        onClick={handleRollRandomName}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#2563EB]/10 hover:bg-[#2563EB]/20 text-[#60A5FA] border border-[#2563EB]/20 text-xs font-semibold transition cursor-pointer"
+                        title="Generate a random Adjective + Noun name"
+                      >
+                        <Dice5 size={14} />
+                        <span className="hidden sm:inline">Roll Name</span>
+                      </button>
                     </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                )}
 
-          <div className='mt-6 bg-gradient-to-r from-[#2563EB]/10 to-[#60A5FA]/10 border border-[#2563EB]/20 rounded-2xl p-6 shadow-md'>
-            <div className='text-center'>
-              <p className='text-sm text-[#8992A5] mb-1 font-semibold uppercase tracking-wider'>Total Library Collection</p>
-              <p className='text-4xl font-black text-[#F4F7FF]'>
-                {savedSongs.length + savedAlbums.length + savedArtists.length + savedPlaylists.length}
-              </p>
-              <p className='text-xs font-bold text-[#60A5FA] mt-2 uppercase tracking-wide'>Items bookmarked</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
+                <p className='text-xs sm:text-sm text-[#8992A5] mb-4'>
+                  Custom Adjective + Noun identity. All your bookmarks, saved tracks, albums, artists, and reviews are stored securely on your device.
+                </p>
 
-  // Original Spotify Dashboard
-  const SpotifyDashboard = () => {
-    useEffect(() => {
-      if (userData) {
-        localStorage.setItem('userName', userData.display_name);
-      }
-    }, [userData]);
-
-    return (
-      <div className='min-h-screen flex items-center justify-center bg-[#07090F] text-[#F4F7FF] relative overflow-hidden px-6 pt-12 pb-24'>
-        {/* Blurry Backdrop Glow */}
-        <div className="absolute top-0 left-0 right-0 h-[40vh] bg-[#2563EB]/5 rounded-full filter blur-[120px] pointer-events-none z-0" />
-        
-        <div className='relative z-10 w-full max-w-lg bg-[#10141F]/40 border border-[#2563EB]/10 backdrop-blur-xl shadow-2xl rounded-3xl p-8 space-y-6'>
-          {loading ? (
-            <div className="flex items-center justify-center text-[#F4F7FF] py-12">
-              <Loader className="animate-spin w-8 h-8 mr-3 text-[#2563EB]" />
-              <span className="text-lg font-semibold">Loading Spotify Account...</span>
-            </div>
-          ) : userData ? (
-            <>
-              <div className='flex flex-col items-center space-y-4'>
-                <div className='relative'>
-                  <img src={userData.image || 'https://placehold.co/150x150?text=Spotify'} alt='Avatar' className='w-28 h-28 sm:w-32 sm:h-32 rounded-full border-4 border-[#2563EB]/20 shadow-2xl object-cover' />
-                  {userData.product === 'premium' && (
-                    <div className='absolute -bottom-1 -right-1 bg-yellow-400 text-black p-2 rounded-full shadow-md'>
-                      <Crown className='w-4 h-4' />
-                    </div>
+                {/* Favorite Genres Pills */}
+                <div className="flex flex-wrap justify-center sm:justify-start gap-1.5">
+                  {favoriteGenres.length > 0 ? (
+                    favoriteGenres.map((g, idx) => (
+                      <span key={idx} className="px-2.5 py-0.5 rounded-full bg-[#2563EB]/10 border border-[#2563EB]/20 text-[#60A5FA] text-[11px] font-semibold">
+                        #{g}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-xs text-[#8992A5]/60 italic">No favorite genres selected yet.</span>
                   )}
                 </div>
-                <h2 className='text-2xl sm:text-3xl font-extrabold tracking-tight text-[#F4F7FF]'>{userData.display_name}</h2>
-                <div className='flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-[#60A5FA] bg-[#2563EB]/10 border border-[#2563EB]/20 px-3 py-1 rounded-full shadow-sm'>
-                  <SpotifyIcon className="w-3.5 h-3.5" />
-                  <span>{userData.product}</span>
-                </div>
               </div>
+            </div>
 
-              <div className='grid gap-3.5 border-t border-[#2563EB]/10 pt-6'>
-                <div className='flex items-center gap-3 text-[#F4F7FF]/80 text-sm font-semibold'>
-                  <Globe className='w-5 h-5 text-[#60A5FA]' />
-                  <span>Region: {userData.country}</span>
-                </div>
-                <div className='flex items-center gap-3 text-[#F4F7FF]/80 text-sm font-semibold'>
-                  <User className='w-5 h-5 text-[#60A5FA]' />
-                  <span>Spotify ID: {userData.id}</span>
-                </div>
-              </div>
-
-              {userData.product !== 'premium' && (
-                <div className='mt-4 text-center bg-yellow-500/10 border border-yellow-500/20 p-4 rounded-2xl'>
-                  <p className='text-yellow-300 font-medium italic text-xs leading-relaxed'>Upgrade to Premium for uninterrupted playback 🎧</p>
-                  <button
-                    onClick={() => window.open('https://www.spotify.com/premium/', '_blank')}
-                    className='mt-3 px-5 py-2.5 rounded-full bg-gradient-to-r from-yellow-500 to-amber-500 text-black text-xs font-bold shadow hover:scale-105 transition duration-200 cursor-pointer'
-                  >
-                    Upgrade to Premium
-                  </button>
-                </div>
-              )}
-
+            {/* Quick Data Export button */}
+            <div className="flex sm:flex-col items-center gap-2 flex-shrink-0">
               <button
-                onClick={handleLogout}
-                className='w-full py-3 mt-6 rounded-2xl bg-red-600/10 hover:bg-red-600/20 border border-red-500/20 transition-all text-red-400 font-bold shadow flex items-center justify-center gap-2 cursor-pointer'
+                onClick={handleExportData}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white/[0.03] hover:bg-[#2563EB]/15 border border-[#2563EB]/15 hover:border-[#60A5FA]/30 text-xs font-bold uppercase tracking-wider text-[#F4F7FF] transition cursor-pointer shadow-md"
+                title="Download complete library backup as JSON"
               >
-                <LogOut size={16} />
-                Logout Account
-              </button>
-            </>
-          ) : (
-            <div className='text-center space-y-5 py-8'>
-              <p className='text-lg font-bold text-[#F4F7FF]/80'>You're not logged in with Spotify.</p>
-              <button
-                onClick={() => window.open(`${API_BASE_URL}/login`, '_self')}
-                className='inline-flex items-center px-6 py-3 bg-[#2563EB] hover:bg-[#60A5FA] text-black gap-3 hover:scale-105 active:scale-95 transition-all duration-200 rounded-2xl shadow-lg shadow-[#2563EB]/10 font-extrabold cursor-pointer'
-              >
-                <SpotifyIcon className="w-5 h-5" />
-                Login with Spotify
+                <Download size={14} className="text-[#60A5FA]" />
+                <span>Export Data</span>
               </button>
             </div>
-          )}
+          </div>
         </div>
-      </div>
-    );
-  };
 
-  return hasKey ? <SpotifyDashboard /> : <LocalDashboard />;
+        {/* Stats Row */}
+        <div className='grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4'>
+          <div 
+            onClick={() => setActiveTab('tracks')}
+            className={`p-4 rounded-2xl border transition-all cursor-pointer ${
+              activeTab === 'tracks'
+                ? 'bg-[#2563EB]/15 border-[#60A5FA]/40 shadow-lg' 
+                : 'bg-[#10141F]/40 border-[#2563EB]/10 hover:border-[#2563EB]/25'
+            }`}
+          >
+            <div className="flex items-center gap-2 text-xs font-semibold text-[#8992A5] mb-1">
+              <Music size={14} className="text-[#60A5FA]" />
+              <span>Saved Tracks</span>
+            </div>
+            <div className="text-2xl font-black text-[#F4F7FF]">{savedSongs.length}</div>
+          </div>
+
+          <div 
+            onClick={() => setActiveTab('albums')}
+            className={`p-4 rounded-2xl border transition-all cursor-pointer ${
+              activeTab === 'albums' 
+                ? 'bg-[#2563EB]/15 border-[#60A5FA]/40 shadow-lg' 
+                : 'bg-[#10141F]/40 border-[#2563EB]/10 hover:border-[#2563EB]/25'
+            }`}
+          >
+            <div className="flex items-center gap-2 text-xs font-semibold text-[#8992A5] mb-1">
+              <Disc size={14} className="text-[#60A5FA]" />
+              <span>Saved Albums</span>
+            </div>
+            <div className="text-2xl font-black text-[#F4F7FF]">{savedAlbums.length}</div>
+          </div>
+
+          <div 
+            onClick={() => setActiveTab('artists')}
+            className={`p-4 rounded-2xl border transition-all cursor-pointer ${
+              activeTab === 'artists' 
+                ? 'bg-[#2563EB]/15 border-[#60A5FA]/40 shadow-lg' 
+                : 'bg-[#10141F]/40 border-[#2563EB]/10 hover:border-[#2563EB]/25'
+            }`}
+          >
+            <div className="flex items-center gap-2 text-xs font-semibold text-[#8992A5] mb-1">
+              <Users size={14} className="text-[#60A5FA]" />
+              <span>Saved Artists</span>
+            </div>
+            <div className="text-2xl font-black text-[#F4F7FF]">{savedArtists.length}</div>
+          </div>
+
+          <div 
+            onClick={() => setActiveTab('reviews')}
+            className={`p-4 rounded-2xl border transition-all cursor-pointer ${
+              activeTab === 'reviews' 
+                ? 'bg-[#2563EB]/15 border-[#60A5FA]/40 shadow-lg' 
+                : 'bg-[#10141F]/40 border-[#2563EB]/10 hover:border-[#2563EB]/25'
+            }`}
+          >
+            <div className="flex items-center gap-2 text-xs font-semibold text-[#8992A5] mb-1">
+              <MessageSquare size={14} className="text-[#60A5FA]" />
+              <span>My Reviews</span>
+            </div>
+            <div className="text-2xl font-black text-[#F4F7FF]">{userReviews.length}</div>
+          </div>
+        </div>
+
+        {/* Tab Selector Navigation */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-[#2563EB]/10 scrollbar-none">
+          {[
+            { id: 'tracks', label: `Saved Tracks (${savedSongs.length})` },
+            { id: 'albums', label: `Saved Albums (${savedAlbums.length})` },
+            { id: 'artists', label: `Saved Artists (${savedArtists.length})` },
+            { id: 'playlists', label: `Playlists (${savedPlaylists.length})` },
+            { id: 'reviews', label: `My Reviews (${userReviews.length})` },
+            { id: 'genres', label: `Music Taste` },
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap ${
+                activeTab === tab.id
+                  ? 'bg-[#2563EB] text-white shadow-md'
+                  : 'bg-white/[0.02] text-[#8992A5] hover:text-[#F4F7FF] hover:bg-white/5 border border-white/5'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Tab 1: Saved Tracks */}
+        {activeTab === 'tracks' && (
+          <div className="space-y-3">
+            {savedSongs.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {savedSongs.map((song, idx) => {
+                  const songId = song.trackId || (song.trackURI ? song.trackURI.split(':').pop() : null);
+                  const artists = Array.isArray(song.artist) 
+                    ? song.artist.map(a => a.name).join(', ') 
+                    : song.artist || 'Unknown';
+                  return (
+                    <div 
+                      key={song.trackURI || idx}
+                      className="p-3.5 rounded-2xl bg-[#10141F]/40 border border-[#2563EB]/10 flex items-center justify-between gap-3 hover:border-[#60A5FA]/30 transition group"
+                    >
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <img 
+                          src={song.image || 'https://placehold.co/100x100/10141F/60A5FA?text=Track'} 
+                          alt={song.title}
+                          className="w-12 h-12 rounded-xl object-cover flex-shrink-0 bg-[#07090F]"
+                          onError={(e) => { e.currentTarget.src = 'https://placehold.co/100x100/10141F/60A5FA?text=Track'; }}
+                        />
+                        <div className="min-w-0 flex-1">
+                          {songId ? (
+                            <Link 
+                              href={`/track/${songId}`}
+                              className="text-sm font-bold text-white hover:text-[#60A5FA] truncate block transition"
+                            >
+                              {song.title}
+                            </Link>
+                          ) : (
+                            <span className="text-sm font-bold text-white truncate block">{song.title}</span>
+                          )}
+                          <p className="text-xs text-[#8992A5] truncate">{artists}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        {songId && (
+                          <Link 
+                            href={`/track/${songId}`}
+                            className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-[#8992A5] hover:text-white transition"
+                            title="View Track"
+                          >
+                            <ExternalLink size={14} />
+                          </Link>
+                        )}
+                        <button
+                          onClick={() => handleRemoveSong(song.trackURI, song.trackId, song.title)}
+                          className="p-2 rounded-xl bg-white/5 hover:bg-red-500/20 text-[#8992A5] hover:text-red-400 transition cursor-pointer"
+                          title="Remove from Saved"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-center p-12 rounded-3xl bg-[#10141F]/20 border border-[#2563EB]/10">
+                <Music size={32} className="mx-auto text-[#8992A5]/50 mb-3" />
+                <h3 className="text-base font-bold text-white mb-1">No Saved Tracks</h3>
+                <p className="text-xs text-[#8992A5] mb-4">You haven't bookmarked any tracks yet.</p>
+                <Link 
+                  href="/search"
+                  className="px-4 py-2 rounded-xl bg-[#2563EB] hover:bg-[#60A5FA] text-white text-xs font-bold uppercase tracking-wider inline-flex items-center gap-2 transition"
+                >
+                  Explore Catalog
+                </Link>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Tab 2: Saved Albums */}
+        {activeTab === 'albums' && (
+          <div className="space-y-3">
+            {savedAlbums.length > 0 ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                {savedAlbums.map((album, idx) => {
+                  const albumId = album.id;
+                  const artists = Array.isArray(album.artist) 
+                    ? album.artist.map(a => a.name).join(', ') 
+                    : Array.isArray(album.artists) 
+                    ? album.artists.map(a => a.name).join(', ')
+                    : album.artist || 'Various Artists';
+                  return (
+                    <div 
+                      key={album.id || idx}
+                      className="p-3 rounded-2xl bg-[#10141F]/40 border border-[#2563EB]/10 flex flex-col justify-between hover:border-[#60A5FA]/30 transition group"
+                    >
+                      <div className="relative aspect-square w-full rounded-xl overflow-hidden mb-3 bg-[#07090F]">
+                        <img 
+                          src={album.image || 'https://placehold.co/300x300/10141F/60A5FA?text=Album'} 
+                          alt={album.title || album.name}
+                          className="w-full h-full object-cover transition duration-300 group-hover:scale-105"
+                          onError={(e) => { e.currentTarget.src = 'https://placehold.co/300x300/10141F/60A5FA?text=Album'; }}
+                        />
+                      </div>
+                      <div className="mb-2">
+                        {albumId ? (
+                          <Link 
+                            href={`/album/${albumId}`}
+                            className="text-xs sm:text-sm font-bold text-white hover:text-[#60A5FA] truncate block transition"
+                          >
+                            {album.title || album.name}
+                          </Link>
+                        ) : (
+                          <span className="text-xs sm:text-sm font-bold text-white truncate block">{album.title || album.name}</span>
+                        )}
+                        <p className="text-[11px] text-[#8992A5] truncate">{artists}</p>
+                      </div>
+                      <div className="flex items-center justify-between pt-2 border-t border-white/5">
+                        {albumId && (
+                          <Link 
+                            href={`/album/${albumId}`}
+                            className="text-[10px] text-[#60A5FA] font-bold uppercase tracking-wider hover:underline"
+                          >
+                            Open Album
+                          </Link>
+                        )}
+                        <button
+                          onClick={() => handleRemoveAlbum(album.id, album.title || album.name)}
+                          className="p-1 text-[#8992A5] hover:text-red-400 transition cursor-pointer"
+                          title="Remove Album"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-center p-12 rounded-3xl bg-[#10141F]/20 border border-[#2563EB]/10">
+                <Disc size={32} className="mx-auto text-[#8992A5]/50 mb-3" />
+                <h3 className="text-base font-bold text-white mb-1">No Saved Albums</h3>
+                <p className="text-xs text-[#8992A5] mb-4">You haven't bookmarked any albums yet.</p>
+                <Link 
+                  href="/search"
+                  className="px-4 py-2 rounded-xl bg-[#2563EB] hover:bg-[#60A5FA] text-white text-xs font-bold uppercase tracking-wider inline-flex items-center gap-2 transition"
+                >
+                  Find Albums
+                </Link>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Tab 3: Saved Artists */}
+        {activeTab === 'artists' && (
+          <div className="space-y-3">
+            {savedArtists.length > 0 ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                {savedArtists.map((art, idx) => {
+                  const artistId = art.id;
+                  const name = art.name || art.title;
+                  return (
+                    <div 
+                      key={art.id || idx}
+                      className="p-4 rounded-2xl bg-[#10141F]/40 border border-[#2563EB]/10 flex flex-col items-center text-center hover:border-[#60A5FA]/30 transition group"
+                    >
+                      <div className="w-24 h-24 rounded-full overflow-hidden mb-3 border-2 border-[#2563EB]/20 bg-[#07090F]">
+                        <img 
+                          src={art.image || 'https://placehold.co/200x200/10141F/60A5FA?text=Artist'} 
+                          alt={name}
+                          className="w-full h-full object-cover transition duration-300 group-hover:scale-105"
+                          onError={(e) => { e.currentTarget.src = 'https://placehold.co/200x200/10141F/60A5FA?text=Artist'; }}
+                        />
+                      </div>
+                      {artistId ? (
+                        <Link 
+                          href={`/artist/${artistId}`}
+                          className="text-xs sm:text-sm font-bold text-white hover:text-[#60A5FA] truncate w-full block transition mb-1"
+                        >
+                          {name}
+                        </Link>
+                      ) : (
+                        <span className="text-xs sm:text-sm font-bold text-white truncate w-full block mb-1">{name}</span>
+                      )}
+                      <p className="text-[10px] text-[#8992A5] mb-3">Artist Profile</p>
+                      
+                      <button
+                        onClick={() => handleRemoveArtist(art.id, name)}
+                        className="px-3 py-1 rounded-full bg-white/5 hover:bg-red-500/20 text-[#8992A5] hover:text-red-400 text-[10px] font-semibold transition cursor-pointer"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-center p-12 rounded-3xl bg-[#10141F]/20 border border-[#2563EB]/10">
+                <Users size={32} className="mx-auto text-[#8992A5]/50 mb-3" />
+                <h3 className="text-base font-bold text-white mb-1">No Saved Artists</h3>
+                <p className="text-xs text-[#8992A5] mb-4">Follow artists to stay updated on their discography.</p>
+                <Link 
+                  href="/search"
+                  className="px-4 py-2 rounded-xl bg-[#2563EB] hover:bg-[#60A5FA] text-white text-xs font-bold uppercase tracking-wider inline-flex items-center gap-2 transition"
+                >
+                  Discover Artists
+                </Link>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Tab 4: Custom Playlists */}
+        {activeTab === 'playlists' && (
+          <div className="space-y-3">
+            {savedPlaylists.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                {savedPlaylists.map((pl, idx) => (
+                  <div 
+                    key={pl.id || idx}
+                    className="p-4 rounded-2xl bg-[#10141F]/40 border border-[#2563EB]/10 flex flex-col justify-between hover:border-[#60A5FA]/30 transition group"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[10px] uppercase tracking-wider font-bold text-[#60A5FA]">Custom Playlist</span>
+                        <span className="text-xs text-[#8992A5]">{pl.tracks?.items?.length || 0} tracks</span>
+                      </div>
+                      <Link 
+                        href={`/playlist/${pl.id}`}
+                        className="text-base font-bold text-white hover:text-[#60A5FA] block transition mb-1"
+                      >
+                        {pl.name || 'My Playlist'}
+                      </Link>
+                      {pl.description && (
+                        <p className="text-xs text-[#8992A5] line-clamp-2 mb-3">{pl.description}</p>
+                      )}
+                    </div>
+
+                    <div className="flex items-center justify-between pt-3 border-t border-white/5">
+                      <Link 
+                        href={`/playlist/${pl.id}`}
+                        className="text-xs text-[#60A5FA] font-bold uppercase tracking-wider hover:underline"
+                      >
+                        Open Playlist
+                      </Link>
+                      <button
+                        onClick={() => handleDeletePlaylist(pl.id, pl.name)}
+                        className="p-1.5 text-[#8992A5] hover:text-red-400 transition cursor-pointer"
+                        title="Delete Playlist"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center p-12 rounded-3xl bg-[#10141F]/20 border border-[#2563EB]/10">
+                <Heart size={32} className="mx-auto text-[#8992A5]/50 mb-3" />
+                <h3 className="text-base font-bold text-white mb-1">No Custom Playlists</h3>
+                <p className="text-xs text-[#8992A5] mb-4">Create your first custom playlist from any track's options menu.</p>
+                <Link 
+                  href="/library"
+                  className="px-4 py-2 rounded-xl bg-[#2563EB] hover:bg-[#60A5FA] text-white text-xs font-bold uppercase tracking-wider inline-flex items-center gap-2 transition"
+                >
+                  Go to Library
+                </Link>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Tab 5: My Reviews */}
+        {activeTab === 'reviews' && (
+          <div className="space-y-3">
+            {userReviews.length > 0 ? (
+              <div className="space-y-3">
+                {userReviews.map((rev) => (
+                  <div 
+                    key={rev.id}
+                    className="p-4 rounded-2xl bg-[#10141F]/40 border border-[#2563EB]/10 flex flex-col gap-2"
+                  >
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-[#60A5FA] uppercase tracking-wider">
+                          Review for Catalog ID: {rev.itemId.slice(0, 16)}...
+                        </span>
+                        <span className="text-amber-400 text-xs font-bold">{rev.score} / 5 ★</span>
+                      </div>
+                      <span className="text-[11px] text-[#8992A5]">{rev.date}</span>
+                    </div>
+                    <p className="text-sm text-[#8992A5] italic">"{rev.text}"</p>
+                    {rev.itemId && (
+                      <div className="pt-2 flex justify-end">
+                        <Link 
+                          href={`/track/${rev.itemId}`}
+                          className="inline-flex items-center gap-1.5 text-xs text-[#60A5FA] hover:underline font-semibold"
+                        >
+                          <span>View Music Item</span>
+                          <ChevronRight size={13} />
+                        </Link>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center p-12 rounded-3xl bg-[#10141F]/20 border border-[#2563EB]/10">
+                <MessageSquare size={32} className="mx-auto text-[#8992A5]/50 mb-3" />
+                <h3 className="text-base font-bold text-white mb-1">No Reviews Written Yet</h3>
+                <p className="text-xs text-[#8992A5] mb-4">Share your ratings and comments on any track, album, or artist page.</p>
+                <Link 
+                  href="/"
+                  className="px-4 py-2 rounded-xl bg-[#2563EB] hover:bg-[#60A5FA] text-white text-xs font-bold uppercase tracking-wider inline-flex items-center gap-2 transition"
+                >
+                  Explore Trending Music
+                </Link>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Tab 6: Music Taste & Genres */}
+        {activeTab === 'genres' && (
+          <div className="bg-[#10141F]/60 border border-[#2563EB]/15 rounded-3xl p-6 sm:p-8 space-y-6">
+            <div>
+              <h3 className="text-lg font-bold text-white mb-1">Customize Your Music Taste</h3>
+              <p className="text-xs text-[#8992A5]">
+                Select the genres that define your sound. We use these tags to tailor recommendations on your home dashboard.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-2.5">
+              {AVAILABLE_GENRES.map((genre) => {
+                const isSelected = favoriteGenres.includes(genre);
+                return (
+                  <button
+                    key={genre}
+                    onClick={() => handleToggleGenre(genre)}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+                      isSelected
+                        ? 'bg-[#2563EB] text-white shadow-lg shadow-[#2563EB]/20 border border-[#60A5FA]'
+                        : 'bg-white/[0.03] text-[#8992A5] hover:text-white hover:bg-white/5 border border-white/5'
+                    }`}
+                  >
+                    <span>#{genre}</span>
+                    {isSelected ? <Check size={13} /> : <Plus size={13} />}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+      </div>
+    </div>
+  );
 }
 
 export default function UserDashboard() {
   return (
     <Suspense fallback={
-      <div className="flex items-center justify-center min-h-screen bg-[#07090F] text-[#F4F7FF]">
-        <Loader className="animate-spin w-8 h-8 mr-3 text-[#2563EB]" />
-        <span className="text-lg font-semibold">Loading Dashboard...</span>
-      </div>
+      <GrooveLoader fullScreen={true} text="Loading Dashboard..." />
     }>
       <UserDashboardContent />
     </Suspense>

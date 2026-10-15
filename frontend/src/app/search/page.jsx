@@ -8,7 +8,7 @@ import { ArtistCard } from '@/Components/CardComponents/ArtistsCard';
 import { TrackCard } from '@/Components/CardComponents/TracksCard';
 import { AlbumCard } from '@/Components/CardComponents/AlbumsCard';
 import { PlaylistCard } from '@/Components/CardComponents/PlaylistsCard';
-import { Loader } from 'lucide-react';
+import GrooveLoader from '@/Components/GrooveLoader';
 
 export default function SearchPage() {
     const [searchResults, setSearchResults] = useState([]);
@@ -58,15 +58,18 @@ export default function SearchPage() {
             <div className="flex justify-center p-4">
                 {loading ? (
                     <div className="flex flex-col items-center justify-center py-20">
-                        <Loader className="animate-spin w-8 h-8 text-[#60A5FA] mb-3" />
-                        <span className="text-[#8992A5] text-sm font-semibold">Searching catalog...</span>
+                        <GrooveLoader size={44} text="Searching catalog..." />
                     </div>
                 ) : searchResults.length === 0 && searchTerm ? (
                     <div className="text-center py-20">
                         <span className="text-[#8992A5]/60 text-sm font-medium">No results found for your search query.</span>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 justify-items-center w-full max-w-7xl">
+                    <div className={
+                        searchType === "album" || searchType === "playlist"
+                            ? "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3.5 sm:gap-6 justify-items-center w-full max-w-7xl"
+                            : "flex flex-col gap-2.5 w-full max-w-2xl md:max-w-7xl md:grid md:grid-cols-3 lg:grid-cols-4 md:gap-6"
+                    }>
                         {searchResults.map((track, index) => {
                             const artistsList = track.artists?.map((art) => ({ name: art.name, id: art.id })) || [];
                             const artistsQuery = track.artists?.map(a => a.name).join(' ') || '';
@@ -74,14 +77,10 @@ export default function SearchPage() {
                                 <React.Fragment key={`${track.id}-${index}`}>
                                     {track.type === "artist" && (
                                         <ArtistCard
-                                            followers={track.followers}
                                             url={track.url}
-                                            artist={track.title}
-                                            YTURL={track.YTURL}
-                                            spoURL={track.spoURL}
+                                            artist={track.title || track.name}
+                                            title={track.title}
                                             id={track.id}
-                                            URI={track.trackURI}
-                                            popularity={track.popularity}
                                         />
                                     )}
 
@@ -92,22 +91,19 @@ export default function SearchPage() {
                                             title={track.title}
                                             artist={artistsList}
                                             trackURI={track.trackURI}
+                                            releaseDate={track.releaseDate || track.release_date}
+                                            releaseYear={track.releaseYear}
                                         />
                                     )}
 
                                     {track.type === "track" && (
                                         <TrackCard
-                                            followers={track.followers}
                                             url={track.url}
                                             title={track.title}
                                             artist={artistsList}
-                                            spoURL={track.spoURL}
-                                            YTURL={`https://www.youtube.com/results?search_query=${encodeURIComponent(track.title + ' ' + artistsQuery)}`}
-                                            popularity={track.popularity}
-                                            explicit={track.explicit}
-                                            trackURI={track.trackURI}
+                                            album={track.album || track.albumTitle || ''}
                                             albumID={track.albumID}
-                                            trackId={track.trackId}
+                                            trackId={track.trackId || track.id}
                                         />
                                     )}
 

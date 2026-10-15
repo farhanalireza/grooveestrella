@@ -5,6 +5,7 @@ import { AlbumCard } from './CardComponents/AlbumsCard';
 import { PlaylistCard } from './CardComponents/PlaylistsCard';
 import { ArtistCard } from './CardComponents/ArtistsCard';
 import { Music, Album, ListMusic, Users, Search, Filter, AlertCircle, RefreshCw } from 'lucide-react';
+import GrooveLoader from './GrooveLoader';
 
 const LocallySavedSongs = ({ initialSection = "songs" }) => {
     const [section, setSection] = useState(initialSection);
@@ -205,11 +206,8 @@ const LocallySavedSongs = ({ initialSection = "songs" }) => {
 
         if (loading) {
             return (
-                <div className="flex items-center justify-center py-16">
-                    <div className="text-center">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500 mx-auto mb-4"></div>
-                        <p className="text-gray-400">Loading saved content...</p>
-                    </div>
+                <div className="flex items-center justify-center py-20">
+                    <GrooveLoader size={36} text="Loading saved content..." />
                 </div>
             );
         }
@@ -289,6 +287,8 @@ const LocallySavedSongs = ({ initialSection = "songs" }) => {
                         spoURL={album.spoURL}
                         YTURL={album.YTURL}
                         released_date={album.released_date}
+                        releaseDate={album.release_date || album.released_date || album.releaseDate}
+                        releaseYear={album.releaseYear}
                         description={album.description}
                         trackURI={album.trackURI}
                     />

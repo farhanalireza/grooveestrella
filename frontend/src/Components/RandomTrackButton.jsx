@@ -2,7 +2,6 @@
 import { useState, useEffect } from 'react';
 import ModalWrapper from './ModalWrapper';
 import { TrackCard } from './CardComponents/TracksCard';
-import { getSpotifyToken } from '../hooks/useSpotify';
 import loadTracks from '../hooks/useTrackLoader';
 import fetchYouTubeData from '../hooks/useYoutubeSearch';
 import { motion } from 'framer-motion';
@@ -11,18 +10,7 @@ import { RefreshCcw, Dice5, Dice1, Dice2, Dice3, Dice4, Dice6 } from 'lucide-rea
 export default function RandomTrackButton({ categoryBaseUrl }) {
   const [loading, setLoading] = useState(false);
   const [selectedTrack, setSelectedTrack] = useState(null);
-  const [spotifyToken, setSpotifyToken] = useState(null);
   const [spin, setSpin] = useState(false);
-
-  let randomNum = Math.floor((Math.random * 6) + 1)
-
-  useEffect(() => {
-    const fetchToken = async () => {
-      const token = await getSpotifyToken();
-      setSpotifyToken(token);
-    };
-    fetchToken();
-  }, []);
 
   const fetchRandomTrack = async () => {
     if (!categoryBaseUrl || categoryBaseUrl.endsWith('/songs/')) {
@@ -33,12 +21,14 @@ export default function RandomTrackButton({ categoryBaseUrl }) {
     const { fetchAllSongs, getRandomSongFromList } = await import('../modules/musicApi');
     const songsList = await fetchAllSongs(categoryBaseUrl);
     const randomSong = getRandomSongFromList(songsList);
-    const enrichedTracks = await loadTracks([randomSong], spotifyToken);
+    const enrichedTracks = await loadTracks([randomSong]);
+
+    if (!enrichedTracks || !enrichedTracks[0]) return null;
 
     return {
       ...enrichedTracks[0],
-      explicit: randomSong.explicit ?? enrichedTracks[0].explicit,
-      popularity: randomSong.popularity ?? enrichedTracks[0].popularity,
+      explicit: randomSong.explicit ?? enrichedTracks[0].explicit ?? false,
+      popularity: randomSong.popularity ?? enrichedTracks[0].popularity ?? 80,
       type: 'track',
     };
   };
@@ -79,18 +69,13 @@ export default function RandomTrackButton({ categoryBaseUrl }) {
       {/* 🎵 Modal with Random Track */}
       <ModalWrapper isOpen={!!selectedTrack} onClose={() => setSelectedTrack(null)}>
         {selectedTrack && (
-          <>
             <TrackCard
               title={selectedTrack.title}
               artist={selectedTrack.artists}
-              explicit={selectedTrack.explicit}
-              popularity={selectedTrack.popularity}
+              album={selectedTrack.album || ''}
+              trackId={selectedTrack.id || selectedTrack.trackId}
               url={selectedTrack.url}
-              spoURL={selectedTrack.spoURL}
-              YTURL={fetchYouTubeData(`${selectedTrack.title} ${selectedTrack.artists}`)}
-              type={selectedTrack.type}
-              trackURI={selectedTrack.trackURI}
-              handleSave={() => {}}
+              layout="grid"
             />
 
             {/* 🔁 Modal Refresh Button */}

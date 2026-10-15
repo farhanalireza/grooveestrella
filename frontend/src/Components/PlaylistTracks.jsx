@@ -11,11 +11,13 @@ const PlaylistTracks = ({ tracks }) => {
                     url={item.track.album.images[0]?.url}
                     title={item.track.name}
                     artist={item.track.artists.map(a => a.name).join(', ')}
+                    album={item.track.album?.name || ''}
+                    trackId={item.track.id}
                     popularity={item.track.popularity}
                     explicit={item.track.explicit}
                     trackURI={item.track.uri}
                     YTURL={`https://www.youtube.com/results?search_query=${item.track.name} ${item.track.artists.map(a => a.name).join(', ')}`}
-                    spoURL={item.track.external_urls.spotify}
+                    spoURL={item.track.external_urls?.spotify}
                 />
             ))}
         </div>

@@ -4,10 +4,11 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Bookmark, BookmarkCheck, Loader, ListMusic, User, Trash2, ChevronRight } from "lucide-react";
+import { ArrowLeft, Bookmark, BookmarkCheck, ListMusic, User, Trash2, ChevronRight } from "lucide-react";
 import { SpotifyButton, YouTubeButton } from "@/Components/MusicButtons";
 import { AlbumTrackCard } from "@/Components/CardComponents/SmallTracksCard";
 import { ShareTrackComponent } from "@/Components/CardComponents/ShareTrackComponent";
+import GrooveLoader from "@/Components/GrooveLoader";
 import { toast } from "react-toastify";
 
 export default function PlaylistDetailClient({ id, initialPlaylist }) {
@@ -147,10 +148,7 @@ export default function PlaylistDetailClient({ id, initialPlaylist }) {
 
     if (!playlist) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-screen bg-[#07090F] text-[#F4F7FF]">
-                <Loader className="animate-spin w-8 h-8 mb-4 text-[#60A5FA]" />
-                <span className="text-lg font-medium">Loading Playlist...</span>
-            </div>
+            <GrooveLoader fullScreen={true} text="Loading Playlist..." />
         );
     }
 
@@ -239,7 +237,7 @@ export default function PlaylistDetailClient({ id, initialPlaylist }) {
                             className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-[#2563EB]/20 bg-[#2563EB]/5 hover:bg-[#2563EB]/15 text-[#F4F7FF] text-xs font-bold uppercase tracking-wider transition-all duration-300"
                         >
                             <img src="/in.svg" alt="GrooveLink" className="w-4 h-4 object-contain" />
-                            <span>Listen on GrooveLink</span>
+                            <span>Open in GrooveLink</span>
                             <ChevronRight className="w-3 h-3 text-[#60A5FA]" />
                         </Link>
                         

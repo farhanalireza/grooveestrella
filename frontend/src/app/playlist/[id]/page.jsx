@@ -26,7 +26,7 @@ export async function generateMetadata({ params }) {
 
   return {
     title: `${playlist.name} by ${ownerName} | GrooveEstrella`,
-    description: `Listen to "${playlist.name}" on GrooveEstrella. Explore tracks, customize GrooveCards, and stream on top services.`,
+    description: `Open and explore "${playlist.name}" on GrooveEstrella. Discover tracks, customize GrooveCards, and stream on top services.`,
     openGraph: {
       title: playlist.name,
       description: `Created by: ${ownerName} • ${playlist.tracks?.total} tracks`,

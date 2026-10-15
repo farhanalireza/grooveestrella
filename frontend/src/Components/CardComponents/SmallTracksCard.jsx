@@ -81,16 +81,20 @@ export const AlbumTrackCard = ({
     const tidalURL = `https://listen.tidal.com/search?q=${encodeURIComponent(title + ' ' + artistsQuery)}`;
     const soundcloudURL = `https://soundcloud.com/search?q=${encodeURIComponent(title + ' ' + artistsQuery)}`;
 
+    const formattedDuration = typeof duration === 'number' && duration > 0
+        ? `${Math.floor(duration / 60000)}:${Math.floor((duration % 60000) / 1000).toString().padStart(2, '0')}`
+        : duration;
+
     return (
-        <div className="group flex items-center justify-between p-3.5 bg-zinc-900/20 backdrop-blur-md border border-white/5 hover:border-emerald-500/20 hover:bg-white/5 rounded-2xl transition-all duration-300 w-full min-w-0 relative">
+        <div className="group flex items-center justify-between p-3.5 bg-zinc-900/20 backdrop-blur-md border border-white/5 hover:border-[#E879F9]/30 hover:bg-white/5 rounded-2xl transition-all duration-300 w-full min-w-0 relative">
             <div className="flex items-center gap-4 min-w-0 flex-1">
                 <div className="flex-shrink-0 w-6 flex items-center justify-center">
-                    <span className="text-zinc-500 group-hover:text-emerald-400 font-bold text-sm transition-colors">{pos + 1}</span>
+                    <span className="text-zinc-500 group-hover:text-[#F0ABFC] font-bold text-sm transition-colors">{pos + 1}</span>
                 </div>
 
                 <div className="flex flex-col gap-0.5 min-w-0 flex-1">
                     <h3 
-                        className="text-sm font-bold text-white truncate cursor-pointer hover:text-emerald-400 transition-colors"
+                        className="text-sm font-bold text-white truncate cursor-pointer hover:text-[#F0ABFC] transition-colors"
                         title={title}
                         onClick={() => router.push(`/track/${trackID}`)}
                     >
@@ -111,12 +115,12 @@ export const AlbumTrackCard = ({
             </div>
 
             <div className="flex items-center gap-3 flex-shrink-0 ml-4">
-                {duration && <span className="text-xs text-zinc-500 font-medium">{duration}</span>}
+                {formattedDuration && <span className="text-xs text-zinc-400 font-mono font-medium">{formattedDuration}</span>}
                 
                 {/* Save button */}
                 <button 
                     onClick={toggleSave}
-                    className={`p-1.5 rounded-lg hover:bg-white/10 transition duration-200 ${saved ? "text-emerald-400" : "text-zinc-500 hover:text-white"}`}
+                    className={`p-1.5 rounded-lg hover:bg-white/10 transition duration-200 ${saved ? "text-[#E879F9]" : "text-zinc-500 hover:text-white"}`}
                 >
                     {saved ? <BookmarkCheck size={16} /> : <Bookmark size={16} />}
                 </button>
@@ -268,9 +272,12 @@ export const ArtistTrackCard = ({
 
                 <div className="flex-shrink-0 relative w-10 h-10 rounded-lg overflow-hidden bg-zinc-800 border border-white/5">
                     <img
-                        src={coverImage || "https://placehold.co/100x100?text=Cover"}
+                        src={coverImage || "https://placehold.co/200x200/10141F/60A5FA?text=Track"}
                         alt={title}
                         className="w-full h-full object-cover"
+                        onError={(e) => {
+                            e.currentTarget.src = 'https://placehold.co/200x200/10141F/60A5FA?text=Track';
+                        }}
                     />
                 </div>
 
@@ -446,9 +453,12 @@ export const PlaylistTrackCard = ({
 
                 <div className="flex-shrink-0 relative w-10 h-10 rounded-lg overflow-hidden bg-zinc-800 border border-white/5">
                     <img
-                        src={coverImage || "https://placehold.co/100x100?text=Cover"}
+                        src={coverImage || "https://placehold.co/200x200/10141F/60A5FA?text=Track"}
                         alt={title}
                         className="w-full h-full object-cover"
+                        onError={(e) => {
+                            e.currentTarget.src = 'https://placehold.co/200x200/10141F/60A5FA?text=Track';
+                        }}
                     />
                 </div>
 
@@ -634,9 +644,12 @@ export const SmallTrackCardWithCover = ({
 
                 <div className="flex-shrink-0 relative w-11 h-11 sm:w-12 sm:h-12 rounded-xl overflow-hidden bg-zinc-800 border border-white/5">
                     <img
-                        src={coverImage || "https://placehold.co/100x100?text=Cover"}
+                        src={coverImage || "https://placehold.co/200x200/10141F/60A5FA?text=Track"}
                         alt={title}
                         className="w-full h-full object-cover"
+                        onError={(e) => {
+                            e.currentTarget.src = 'https://placehold.co/200x200/10141F/60A5FA?text=Track';
+                        }}
                     />
                 </div>
 

@@ -10,12 +10,15 @@ import {
     Info, 
     Compass, 
     Share2, 
-    Bookmark 
+    Bookmark,
+    Dice5,
+    RefreshCw
 } from 'lucide-react';
+import { generateRandomName } from '@/lib/nameGenerator';
 
 const FirstTimeLogin = ({ onSubmit }) => {
     const [step, setStep] = useState(1);
-    const [name, setName] = useState('');
+    const [name, setName] = useState(() => generateRandomName());
     const [selectedGenres, setSelectedGenres] = useState([]);
     const [direction, setDirection] = useState(1);
 
@@ -44,7 +47,7 @@ const FirstTimeLogin = ({ onSubmit }) => {
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        const userName = name.trim() === "" ? "User" : name;
+        const userName = name.trim() === "" ? generateRandomName() : name.trim();
         
         // Save to localStorage
         localStorage.setItem('userName', userName);
@@ -126,9 +129,17 @@ const FirstTimeLogin = ({ onSubmit }) => {
                                             type="text"
                                             value={name}
                                             onChange={(e) => setName(e.target.value)}
-                                            placeholder="Enter your name (optional)"
-                                            className="w-full pl-12 pr-4 py-3 bg-white/5 border border-white/5 focus:border-emerald-500/30 rounded-2xl text-white outline-none focus:ring-1 focus:ring-emerald-500/30 transition font-medium placeholder-zinc-600"
+                                            placeholder="Enter your name"
+                                            className="w-full pl-12 pr-12 py-3 bg-white/5 border border-white/5 focus:border-emerald-500/30 rounded-2xl text-white outline-none focus:ring-1 focus:ring-emerald-500/30 transition font-medium placeholder-zinc-600"
                                         />
+                                        <button
+                                            type="button"
+                                            onClick={() => setName(generateRandomName())}
+                                            className="absolute right-3 p-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-emerald-400 transition cursor-pointer"
+                                            title="Generate random name (Adj + Noun)"
+                                        >
+                                            <Dice5 size={18} />
+                                        </button>
                                     </div>
                                 </div>
 

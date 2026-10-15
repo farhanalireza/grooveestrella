@@ -64,14 +64,17 @@ export default function Footer() {
                     </p>
                 </div>
 
-                {/* Spotify Attribution - minimal & compliant */}
-                <div className="flex justify-center items-center gap-2 pt-4 opacity-60">
-                    <span className="text-xs">Powered by</span>
-                    <img
-                        src="/2024-spotify-full-logo/Full_Logo_White_CMYK.svg"
-                        alt="Spotify"
-                        className="h-10 object-contain"
-                    />
+                {/* MusicBrainz Attribution */}
+                <div className="flex justify-center items-center gap-2 pt-4 opacity-75">
+                    <span className="text-xs text-gray-400">Metadata powered by</span>
+                    <a
+                        href="https://musicbrainz.org"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs font-bold text-[#60A5FA] hover:text-[#93c5fd] transition flex items-center gap-1.5"
+                    >
+                        <span>MusicBrainz & Cover Art Archive</span>
+                    </a>
                 </div>
             </div>
         </footer>

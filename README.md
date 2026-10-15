@@ -2,28 +2,29 @@
 
 ### **A Premium AI-Powered Music Discovery & Recommendation Platform**
 
-GrooveEstrella is a state-of-the-art music web application designed to deliver highly personalized music recommendations. Rebuilt from the ground up on Next.js, GrooveEstrella bridges multiple music platforms—including Spotify, YouTube, Apple Music, Tidal, and SoundCloud—into a unified, modern interface. Leveraging advanced client-side Natural Language Processing (NLP), GrooveEstrella understands your mood, activities, and content preferences to craft the perfect soundtrack for your day.
+GrooveEstrella is a state-of-the-art music web application designed to deliver highly personalized music recommendations. Rebuilt from the ground up on Next.js, GrooveEstrella connects an open music catalog powered by **MusicBrainz** and **Cover Art Archive** to multiple music platforms—including YouTube, Spotify, Apple Music, Tidal, and SoundCloud—into a unified, modern interface. Leveraging advanced client-side Natural Language Processing (NLP), GrooveEstrella understands your mood, activities, and content preferences to craft the perfect soundtrack for your day—without requiring any proprietary premium subscriptions.
 
 ---
 
 ## 🌟 **Key Features**
 
 - **🤖 Intelligent Client-Side NLP Chat**: A native Natural Language Processing engine that analyzes your messages to detect emotions (sadness, joy, romance, energy) and activity contexts (coding, studying, working out) to serve context-aware recommendations.
-- **🔌 Multi-Platform Integration**: Direct action support across **Spotify**, **YouTube**, **Apple Music**, **Tidal**, and **SoundCloud** on tracks, albums, artists, and playlists.
+- **🌐 Open Catalog (MusicBrainz & Cover Art Archive)**: Resolves recording metadata, album art, discography, and release groups openly without requiring Spotify Premium or OAuth tokens.
+- **🔌 Multi-Platform Integration**: Direct action support across **YouTube**, **Spotify**, **Apple Music**, **Tidal**, and **SoundCloud** on tracks, albums, and artists.
 - **📻 Dynamic Music Discovery Dashboard**: Interactive feed containing daily recommendations, category filtering via responsive chips, paginated lists, and live API status checks.
-- **🔗 Unified Sharing Suite**: A centralized, custom share modal supporting direct links, QR code preview generation, social share options, and native device sharing.
+- **🔗 Unified Sharing Suite**: A centralized, custom share modal supporting direct links, QR code preview generation, social share options, and native device sharing (`/s/musicbrainz/...`).
 - **🛡️ Smart Content Filter**: Active profanity, drugs, violence, and sexual content detection with customizable severity levels and content warnings.
-- **🛹 Premium Onboarding**: Step-by-step interactive onboarding for first-time users to configure credentials and tailor their initial experience.
+- **💳 GrooveCard Generator**: Create aesthetic social cards for any track or album with customizable themes, QR codes, and quick audio previews.
 
 ---
 
 ## 🛠️ **Tech Stack**
 
-- **Frontend Framework**: Next.js 14+ (App Router) & React
+- **Frontend Framework**: Next.js 16+ (App Router) & React 19
 - **Styling**: Tailwind CSS & Modern Glassmorphic CSS
-- **APIs & Data Source**: Spotify Web API & YouTube API
+- **APIs & Data Source**: MusicBrainz WS/2 API & Cover Art Archive
 - **NLP Engine**: Custom client-side MusicNLPProcessor
-- **Database Layer**: Seamless serverless endpoints and helper clients
+- **Database Layer**: Seamless serverless endpoints and local storage sync
 
 ---
 
@@ -34,9 +35,9 @@ graph TD
     A[User Input / Mood Prompt] --> B[Client-Side NLP Processor]
     B -->|Extract Mood & Context| C[Genre & Activity Mapping]
     B -->|Check Explicit Filter| D[Content Warning / Genre Adjustment]
-    C & D --> E[Track Fetcher Module]
-    E -->|Spotify API & Fallbacks| F[Interactive UI Dashboard]
-    F -->|Actions| G[Spotify, YouTube, Apple Music, Tidal, SoundCloud]
+    C & D --> E[MusicBrainz Catalog & CAA Archive]
+    E -->|Open Catalog Resolvers| F[Interactive UI Dashboard]
+    F -->|Platform Actions| G[YouTube, Spotify, Apple Music, Tidal, SoundCloud]
 ```
 
 1. **Vibe Input**: Enter how you feel or what you are doing (e.g., "coding in my room" or "feeling pumped at the gym").
@@ -57,7 +58,7 @@ cd grooveestrella
 ```
 
 ### 2. Configure Environment Variables
-Create a `.env` or `.env.local` file inside the `frontend` folder with your platform credentials (e.g., Spotify API Client ID & Client Secret).
+Optional: Create a `.env` or `.env.local` file inside the `frontend` folder if you wish to configure custom rate limits or logging. No Spotify credentials or premium accounts are required!
 
 ### 3. Install Dependencies
 Navigate to the frontend workspace and install the required npm packages:
