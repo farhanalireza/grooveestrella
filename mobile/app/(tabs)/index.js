@@ -19,6 +19,7 @@ import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { COLORS, GRADIENTS } from '../../src/constants/theme';
 import { ApiService, isUrl } from '../../src/services/api';
 import GlassCard from '../../src/components/GlassCard';
+import GrooveLogo from '../../src/components/GrooveLogo';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -81,7 +82,7 @@ export default function HomeScreen() {
             style={styles.missionTagWrapper}
           >
             <View style={styles.missionTag}>
-              <Ionicons name="sparkles" size={13} color={COLORS.accentLight} style={styles.sparkleIcon} />
+              <GrooveLogo size={18} style={{ marginRight: 8 }} />
               <Text style={styles.missionTagText}>MUSIC LAYER</Text>
             </View>
           </Animated.View>

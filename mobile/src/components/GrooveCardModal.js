@@ -21,6 +21,7 @@ import {
   downloadCardImage,
   shareCard,
 } from '../utils/cardExport';
+import GrooveLogo from './GrooveLogo';
 import { COLORS } from '../constants/theme';
 
 const THEMES = [
@@ -151,7 +152,7 @@ export default function GrooveCardModal({
                   {/* Header row */}
                   <View style={styles.cardHeaderRow}>
                     <View style={styles.cardLogoGroup}>
-                      <Ionicons name="musical-notes" size={13} color="#E879F9" />
+                      <GrooveLogo size={15} style={{ marginRight: 6 }} />
                       <Text style={styles.cardLogoText}>GROOVECARD</Text>
                     </View>
                     <View style={styles.musicLayerBadge}>
@@ -189,11 +190,7 @@ export default function GrooveCardModal({
                       >
                         <Image source={{ uri: qrApiUrl }} style={styles.qrImage} />
                         <View style={styles.qrLogoOverlay}>
-                          <Image
-                            source={require('../../assets/icon.png')}
-                            style={styles.qrAppLogo}
-                            resizeMode="contain"
-                          />
+                          <GrooveLogo size={18} />
                         </View>
                       </TouchableOpacity>
                     )}
@@ -322,7 +319,7 @@ export default function GrooveCardModal({
               <View style={styles.fullQrImageWrapper}>
                 <Image source={{ uri: qrApiUrl }} style={styles.fullQrImage} />
                 <View style={styles.fullQrLogoBadge}>
-                  <Image source={require('../../assets/icon.png')} style={styles.fullQrLogoIcon} resizeMode="contain" />
+                  <GrooveLogo size={24} />
                 </View>
               </View>
               <Text style={styles.fullQrSubtitle}>

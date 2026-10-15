@@ -12,3 +12,4 @@ export { default as GrooveLinkModal } from './GrooveLinkModal';
 export { default as GrooveCardModal } from './GrooveCardModal';
 export { default as MusicLoreAndReviews } from './MusicLoreAndReviews';
 export { default as GrooveAppBar } from './GrooveAppBar';
+export { default as GrooveLogo } from './GrooveLogo';
