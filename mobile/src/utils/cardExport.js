@@ -2,7 +2,6 @@
 import { Platform, Share } from 'react-native';
 import * as Sharing from 'expo-sharing';
 import * as Clipboard from 'expo-clipboard';
-import * as FileSystem from 'expo-file-system';
 import Toast from 'react-native-toast-message';
 
 function getViewShot() {
@@ -11,6 +10,18 @@ function getViewShot() {
   } catch (_) {
     return null;
   }
+}
+
+function getSAF() {
+  try {
+    const legacy = require('expo-file-system/legacy');
+    if (legacy?.StorageAccessFramework) return { saf: legacy.StorageAccessFramework, fs: legacy };
+  } catch (_) {}
+  try {
+    const main = require('expo-file-system');
+    if (main?.StorageAccessFramework) return { saf: main.StorageAccessFramework, fs: main };
+  } catch (_) {}
+  return null;
 }
 
 export async function downloadCardImage(cardRef, fallbackImageUrl, title = 'groovecard') {
@@ -47,29 +58,33 @@ export async function downloadCardImage(cardRef, fallbackImageUrl, title = 'groo
     // 1. Android: Direct save to Gallery/Storage via StorageAccessFramework
     if (Platform.OS === 'android') {
       try {
-        const permissions = await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
-        if (permissions.granted) {
-          const base64 = await FileSystem.readAsStringAsync(uri, {
-            encoding: FileSystem.EncodingType.Base64,
-          });
-          const safeTitle = (title || 'card').replace(/[^a-zA-Z0-9_-]/g, '_');
-          const fileUri = await FileSystem.StorageAccessFramework.createFileAsync(
-            permissions.directoryUri,
-            `groovecard_${safeTitle}_${Date.now()}.png`,
-            'image/png'
-          );
-          await FileSystem.writeAsStringAsync(fileUri, base64, {
-            encoding: FileSystem.EncodingType.Base64,
-          });
-          Toast.show({
-            type: 'success',
-            text1: 'Saved to Gallery! 📸',
-            text2: 'GrooveCard saved directly to your device',
-          });
-          return true;
+        const safHelper = getSAF();
+        if (safHelper?.saf && typeof safHelper.saf.requestDirectoryPermissionsAsync === 'function') {
+          const permissions = await safHelper.saf.requestDirectoryPermissionsAsync();
+          if (permissions?.granted && permissions?.directoryUri) {
+            const fsModule = safHelper.fs;
+            const base64 = await fsModule.readAsStringAsync(uri, {
+              encoding: fsModule.EncodingType?.Base64 || 'base64',
+            });
+            const safeTitle = (title || 'card').replace(/[^a-zA-Z0-9_-]/g, '_');
+            const fileUri = await safHelper.saf.createFileAsync(
+              permissions.directoryUri,
+              `groovecard_${safeTitle}_${Date.now()}.png`,
+              'image/png'
+            );
+            await fsModule.writeAsStringAsync(fileUri, base64, {
+              encoding: fsModule.EncodingType?.Base64 || 'base64',
+            });
+            Toast.show({
+              type: 'success',
+              text1: 'Saved to Gallery! 📸',
+              text2: 'GrooveCard saved directly to your device',
+            });
+            return true;
+          }
         }
       } catch (safErr) {
-        console.warn('StorageAccessFramework save error:', safErr);
+        console.warn('StorageAccessFramework save attempt:', safErr);
       }
     }
 

@@ -172,11 +172,13 @@ export default function GrooveAppBar({
 
   return (
     <View style={styles.blurWrapper}>
-      {Platform.OS === 'ios' ? (
-        <BlurView intensity={55} tint="dark" style={StyleSheet.absoluteFill} />
-      ) : (
-        <View style={styles.androidBackdrop} />
-      )}
+      <BlurView
+        intensity={90}
+        tint="dark"
+        experimentalBlurMethod="dimezisBlurView"
+        style={StyleSheet.absoluteFill}
+      />
+      <View style={styles.glassTintOverlay} />
       {content}
     </View>
   );
@@ -188,22 +190,23 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    zIndex: 999,
-    elevation: 25,
+    zIndex: 9999,
+    elevation: 30,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
+    borderBottomColor: 'rgba(255, 255, 255, 0.12)',
+    overflow: 'hidden',
   },
-  androidBackdrop: {
+  glassTintOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(7, 9, 15, 0.92)',
+    backgroundColor: 'rgba(7, 9, 15, 0.88)',
   },
   transparentWrapper: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
-    zIndex: 999,
-    elevation: 25,
+    zIndex: 9999,
+    elevation: 30,
   },
   innerContainer: {
     flexDirection: 'row',
