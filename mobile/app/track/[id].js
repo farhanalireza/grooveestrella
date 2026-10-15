@@ -165,7 +165,7 @@ export default function TrackDetailScreen() {
     : [{ name: trackArtist }];
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['left', 'right']}>
       {/* Dynamic Ambient Track Backdrop Glow */}
       <View style={styles.backdropContainer}>
         <Image source={{ uri: coverUrl }} style={styles.backdropImage} blurRadius={Platform.OS === 'ios' ? 70 : 25} />
@@ -178,6 +178,8 @@ export default function TrackDetailScreen() {
         subtitle={trackArtist}
         saved={saved}
         onToggleSave={handleToggleSave}
+        showQR={showQR}
+        onQRCode={() => setShowQR(!showQR)}
         onShare={() => {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
           setShowGrooveCardModal(true);
@@ -186,49 +188,15 @@ export default function TrackDetailScreen() {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
           setShowGrooveLinkModal(true);
         }}
-        rightActions={
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <TouchableOpacity
-              style={[styles.circleBtn, showQR && styles.circleBtnActive]}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                setShowQR(!showQR);
-              }}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <Ionicons name="qr-code-outline" size={17} color={showQR ? '#FFFFFF' : '#8992A5'} />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.circleBtn}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                setShowGrooveCardModal(true);
-              }}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <Ionicons name="share-social-outline" size={17} color="#8992A5" />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.circleBtn, saved && styles.circleBtnActive]}
-              onPress={handleToggleSave}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <Ionicons
-                name={saved ? 'bookmark' : 'bookmark-outline'}
-                size={17}
-                color={saved ? '#FFFFFF' : '#8992A5'}
-              />
-            </TouchableOpacity>
-          </View>
-        }
       />
 
       <ScrollView
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingTop: insets.top + (Platform.OS === 'ios' ? 64 : 70) },
+          {
+            paddingTop: (Platform.OS === 'ios' ? Math.max(insets.top, 44) : Math.max(insets.top, 24)) + 58,
+            paddingBottom: insets.bottom + 36,
+          },
         ]}
         showsVerticalScrollIndicator={false}
       >

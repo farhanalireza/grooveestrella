@@ -143,7 +143,7 @@ export default function ArtistDetailScreen() {
   const popularityScore = artist?.popularity || 90;
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['left', 'right']}>
       {/* Ambient Backdrop Glow */}
       <View style={styles.backdropContainer}>
         <Image source={{ uri: avatarUrl }} style={styles.backdropImage} blurRadius={Platform.OS === 'ios' ? 70 : 25} />
@@ -171,11 +171,13 @@ export default function ArtistDetailScreen() {
       <ScrollView
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingTop: insets.top + (Platform.OS === 'ios' ? 64 : 70) },
+          {
+            paddingTop: (Platform.OS === 'ios' ? Math.max(insets.top, 44) : Math.max(insets.top, 24)) + 58,
+            paddingBottom: insets.bottom + 36,
+          },
         ]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Hero Card Container (Matches web app Artist Card - Image 3) */}
         {/* Hero Card Container (Matches web app Artist Card - Image 3) */}
         <Animated.View entering={FadeInDown.duration(400)} style={styles.heroCard}>
           {/* Circular Artist Avatar */}
