@@ -16,10 +16,12 @@ import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Toast from 'react-native-toast-message';
-import { captureRef } from 'react-native-view-shot';
-import * as Sharing from 'expo-sharing';
-import * as MediaLibrary from 'expo-media-library';
 import * as Clipboard from 'expo-clipboard';
+import {
+  downloadCardImage,
+  shareToInstagramStories,
+  shareCard,
+} from '../utils/cardExport';
 import { COLORS } from '../constants/theme';
 
 const THEMES = [
@@ -91,49 +93,11 @@ export default function GrooveCardModal({
 
   // Apple Music-style Instagram Stories sharing
   const handleShareInstagramStories = async () => {
-    if (!cardRef.current || isExporting) return;
+    if (isExporting) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setIsExporting(true);
-
     try {
-      // 1. Copy link so user can paste it as an Instagram Link Sticker
-      await Clipboard.setStringAsync(universalUrl);
-
-      // 2. Capture high-res card image
-      const uri = await captureRef(cardRef, {
-        format: 'png',
-        quality: 1.0,
-        result: 'tmpfile',
-      });
-
-      // 3. Share image
-      const canShare = await Sharing.isAvailableAsync();
-      if (canShare) {
-        Toast.show({
-          type: 'success',
-          text1: 'Opening Stories... 📸',
-          text2: 'GrooveLink copied to clipboard! Paste it as a link sticker.',
-          visibilityTime: 4000,
-        });
-        await Sharing.shareAsync(uri, {
-          dialogTitle: 'Share to Instagram Stories',
-          mimeType: 'image/png',
-          UTI: 'public.png',
-        });
-      } else {
-        Toast.show({
-          type: 'info',
-          text1: 'GrooveLink Copied! 📋',
-          text2: 'Paste on your Instagram Story',
-        });
-      }
-    } catch (err) {
-      console.warn('Instagram Stories share error:', err);
-      Toast.show({
-        type: 'error',
-        text1: 'Share Failed',
-        text2: 'Could not export card image',
-      });
+      await shareToInstagramStories(cardRef, universalUrl, title, artist);
     } finally {
       setIsExporting(false);
     }
@@ -141,40 +105,11 @@ export default function GrooveCardModal({
 
   // Download Card as high-res PNG into user camera roll
   const handleDownloadCard = async () => {
-    if (!cardRef.current || isExporting) return;
+    if (isExporting) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setIsExporting(true);
-
     try {
-      const uri = await captureRef(cardRef, {
-        format: 'png',
-        quality: 1.0,
-        result: 'tmpfile',
-      });
-
-      const { status } = await MediaLibrary.requestPermissionsAsync();
-      if (status === 'granted') {
-        await MediaLibrary.saveToLibraryAsync(uri);
-        Toast.show({
-          type: 'success',
-          text1: 'Saved to Photos! 📸',
-          text2: 'GrooveCard saved in high resolution',
-        });
-      } else {
-        // Fallback to system share sheet so user can save directly
-        await Sharing.shareAsync(uri, {
-          dialogTitle: 'Save GrooveCard Image',
-          mimeType: 'image/png',
-          UTI: 'public.png',
-        });
-      }
-    } catch (err) {
-      console.warn('Download card error:', err);
-      Toast.show({
-        type: 'error',
-        text1: 'Download Failed',
-        text2: 'Could not save card to device',
-      });
+      await downloadCardImage(cardRef, imageUrl, title);
     } finally {
       setIsExporting(false);
     }
@@ -183,29 +118,7 @@ export default function GrooveCardModal({
   // Direct System Share
   const handleShare = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    if (!cardRef.current) return;
-    try {
-      const uri = await captureRef(cardRef, {
-        format: 'png',
-        quality: 1.0,
-        result: 'tmpfile',
-      });
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(uri, {
-          dialogTitle: `Share ${title}`,
-          mimeType: 'image/png',
-          UTI: 'public.png',
-        });
-      } else {
-        await Share.share({
-          title: `GrooveCard: ${title}`,
-          message: `🎵 Listen to "${title}" by ${artist} on Groove!\n${universalUrl}`,
-          url: universalUrl,
-        });
-      }
-    } catch (err) {
-      console.warn('Share error:', err);
-    }
+    await shareCard(cardRef, universalUrl, title, artist);
   };
 
   const handleCopyLink = async () => {
