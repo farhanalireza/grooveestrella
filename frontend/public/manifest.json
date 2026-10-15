@@ -1,0 +1,19 @@
+{
+  "name": "GrooveEstrella",
+  "short_name": "Groove",
+  "description": "Premium music discovery and social sharing PWA.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#07090F",
+  "theme_color": "#07090F",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/in.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
