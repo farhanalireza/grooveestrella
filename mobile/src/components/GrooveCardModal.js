@@ -22,6 +22,7 @@ import {
   shareCard,
 } from '../utils/cardExport';
 import GrooveLogo from './GrooveLogo';
+import { useTheme } from '../context/ThemeContext';
 import { COLORS } from '../constants/theme';
 
 const THEMES = [
@@ -51,6 +52,7 @@ export default function GrooveCardModal({
   type = 'track',
   itemId = '',
 }) {
+  const { colors, isDark } = useTheme();
   const cardRef = useRef(null);
   const [selectedTheme, setSelectedTheme] = useState('obsidian');
   const [selectedQrColor, setSelectedQrColor] = useState('000000');
@@ -124,18 +126,18 @@ export default function GrooveCardModal({
       <View style={styles.overlay}>
         <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={onClose} />
 
-        <View style={styles.sheetContainer}>
+        <View style={[styles.sheetContainer, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
           {/* Grab handle */}
           <View style={styles.grabHandle} />
 
           {/* Sheet Header */}
           <View style={styles.sheetHeader}>
             <View>
-              <Text style={styles.sheetTitle}>GrooveCard Composer</Text>
-              <Text style={styles.sheetSubtitle}>Personalize and export your music card</Text>
+              <Text style={[styles.sheetTitle, { color: colors.text }]}>GrooveCard Composer</Text>
+              <Text style={[styles.sheetSubtitle, { color: colors.textSecondary }]}>Personalize and export your music card</Text>
             </View>
             <TouchableOpacity style={styles.closeBtn} onPress={onClose} hitSlop={10}>
-              <Ionicons name="close" size={22} color="#8992A5" />
+              <Ionicons name="close" size={22} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
 
@@ -201,7 +203,7 @@ export default function GrooveCardModal({
 
             {/* Customizer: Theme Selection */}
             <View style={styles.customSection}>
-              <Text style={styles.customLabel}>CARD THEME</Text>
+              <Text style={[styles.customLabel, { color: colors.textSecondary }]}>CARD THEME</Text>
               <View style={styles.themeGrid}>
                 {THEMES.map((t) => {
                   const isSelected = selectedTheme === t.id;
@@ -210,7 +212,11 @@ export default function GrooveCardModal({
                       key={t.id}
                       style={[
                         styles.themeOptionBtn,
-                        isSelected && { borderColor: '#E879F9', backgroundColor: 'rgba(135, 0, 135, 0.25)' },
+                        { borderColor: colors.border },
+                        isSelected && {
+                          borderColor: colors.accent,
+                          backgroundColor: isDark ? 'rgba(71, 11, 36, 0.6)' : 'rgba(212, 163, 115, 0.25)',
+                        },
                       ]}
                       onPress={() => {
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -219,7 +225,13 @@ export default function GrooveCardModal({
                       activeOpacity={0.7}
                     >
                       <View style={[styles.themeSwatch, { backgroundColor: t.colors[1] }]} />
-                      <Text style={[styles.themeOptionText, isSelected && { color: '#F4F7FF', fontWeight: '700' }]}>
+                      <Text
+                        style={[
+                          styles.themeOptionText,
+                          { color: colors.textSecondary },
+                          isSelected && { color: colors.text, fontWeight: '700' },
+                        ]}
+                      >
                         {t.label}
                       </Text>
                     </TouchableOpacity>
@@ -231,7 +243,7 @@ export default function GrooveCardModal({
             {/* Customizer: QR Color chips */}
             {showQR && (
               <View style={styles.customSection}>
-                <Text style={styles.customLabel}>QR COLOR ACCENT</Text>
+                <Text style={[styles.customLabel, { color: colors.textSecondary }]}>QR COLOR ACCENT</Text>
                 <View style={styles.qrColorRow}>
                   {QR_COLORS.map((c) => {
                     const isSelected = selectedQrColor === c.id;
@@ -260,21 +272,55 @@ export default function GrooveCardModal({
             {/* Toggles */}
             <View style={styles.toggleRow}>
               <TouchableOpacity
-                style={[styles.toggleBtn, showQR && styles.toggleBtnActive]}
+                style={[
+                  styles.toggleBtn,
+                  { borderColor: colors.border },
+                  showQR && {
+                    backgroundColor: isDark ? 'rgba(71, 11, 36, 0.6)' : 'rgba(212, 163, 115, 0.25)',
+                    borderColor: colors.accent,
+                  },
+                ]}
                 onPress={() => setShowQR(!showQR)}
               >
-                <Ionicons name={showQR ? 'qr-code' : 'qr-code-outline'} size={15} color={showQR ? '#F0ABFC' : '#8992A5'} />
-                <Text style={[styles.toggleBtnText, showQR && { color: '#F4F7FF', fontWeight: '700' }]}>
+                <Ionicons
+                  name={showQR ? 'qr-code' : 'qr-code-outline'}
+                  size={15}
+                  color={showQR ? colors.accent : colors.textSecondary}
+                />
+                <Text
+                  style={[
+                    styles.toggleBtnText,
+                    { color: colors.textSecondary },
+                    showQR && { color: colors.text, fontWeight: '700' },
+                  ]}
+                >
                   {showQR ? 'QR Visible' : 'QR Hidden'}
                 </Text>
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.toggleBtn, showYear && styles.toggleBtnActive]}
+                style={[
+                  styles.toggleBtn,
+                  { borderColor: colors.border },
+                  showYear && {
+                    backgroundColor: isDark ? 'rgba(71, 11, 36, 0.6)' : 'rgba(212, 163, 115, 0.25)',
+                    borderColor: colors.accent,
+                  },
+                ]}
                 onPress={() => setShowYear(!showYear)}
               >
-                <Ionicons name="calendar-outline" size={15} color={showYear ? '#F0ABFC' : '#8992A5'} />
-                <Text style={[styles.toggleBtnText, showYear && { color: '#F4F7FF', fontWeight: '700' }]}>
+                <Ionicons
+                  name="calendar-outline"
+                  size={15}
+                  color={showYear ? colors.accent : colors.textSecondary}
+                />
+                <Text
+                  style={[
+                    styles.toggleBtnText,
+                    { color: colors.textSecondary },
+                    showYear && { color: colors.text, fontWeight: '700' },
+                  ]}
+                >
                   {showYear ? 'Date Shown' : 'Date Hidden'}
                 </Text>
               </TouchableOpacity>
@@ -282,28 +328,36 @@ export default function GrooveCardModal({
           </ScrollView>
 
           {/* Action buttons */}
-          <View style={styles.footerRow}>
+          <View style={[styles.footerRow, { borderTopColor: colors.border }]}>
             {/* Download card image */}
             <TouchableOpacity
-              style={styles.actionBtnSecondary}
+              style={[styles.actionBtnSecondary, { backgroundColor: colors.surface, borderColor: colors.border }]}
               onPress={handleDownloadCard}
               disabled={isExporting}
               activeOpacity={0.8}
             >
-              <Ionicons name="download-outline" size={16} color="#F4F7FF" />
-              <Text style={styles.actionBtnText}>Download</Text>
+              <Ionicons name="download-outline" size={16} color={colors.text} />
+              <Text style={[styles.actionBtnText, { color: colors.text }]}>Download</Text>
             </TouchableOpacity>
 
             {/* Copy universal link */}
-            <TouchableOpacity style={styles.actionBtnSecondary} onPress={handleCopyLink} activeOpacity={0.8}>
-              <Ionicons name="copy-outline" size={16} color="#F4F7FF" />
-              <Text style={styles.actionBtnText}>Copy Link</Text>
+            <TouchableOpacity
+              style={[styles.actionBtnSecondary, { backgroundColor: colors.surface, borderColor: colors.border }]}
+              onPress={handleCopyLink}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="copy-outline" size={16} color={colors.text} />
+              <Text style={[styles.actionBtnText, { color: colors.text }]}>Copy Link</Text>
             </TouchableOpacity>
 
             {/* System Share sheet */}
-            <TouchableOpacity style={styles.actionBtnPrimary} onPress={handleShare} activeOpacity={0.8}>
-              <Ionicons name="share-social" size={16} color="#000" />
-              <Text style={styles.actionBtnPrimaryText}>Share</Text>
+            <TouchableOpacity
+              style={[styles.actionBtnPrimary, { backgroundColor: colors.accent }]}
+              onPress={handleShare}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="share-social" size={16} color="#FFFFFF" />
+              <Text style={[styles.actionBtnPrimaryText, { color: '#FFFFFF' }]}>Share</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -314,18 +368,21 @@ export default function GrooveCardModal({
         <Modal visible={qrFullScreen} transparent animationType="fade" onRequestClose={() => setQrFullScreen(false)}>
           <View style={styles.fullQrOverlay}>
             <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={() => setQrFullScreen(false)} />
-            <View style={styles.fullQrBox}>
-              <Text style={styles.fullQrTitle}>Scan Groove QR</Text>
+            <View style={[styles.fullQrBox, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
+              <Text style={[styles.fullQrTitle, { color: colors.text }]}>Scan Groove QR</Text>
               <View style={styles.fullQrImageWrapper}>
                 <Image source={{ uri: qrApiUrl }} style={styles.fullQrImage} />
                 <View style={styles.fullQrLogoBadge}>
                   <GrooveLogo size={24} />
                 </View>
               </View>
-              <Text style={styles.fullQrSubtitle}>
+              <Text style={[styles.fullQrSubtitle, { color: colors.textSecondary }]}>
                 Scan with your phone's camera to instantly open in Groove
               </Text>
-              <TouchableOpacity style={styles.fullQrCloseBtn} onPress={() => setQrFullScreen(false)}>
+              <TouchableOpacity
+                style={[styles.fullQrCloseBtn, { backgroundColor: colors.accent }]}
+                onPress={() => setQrFullScreen(false)}
+              >
                 <Text style={styles.fullQrCloseText}>Close</Text>
               </TouchableOpacity>
             </View>
@@ -343,11 +400,9 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   sheetContainer: {
-    backgroundColor: '#0D121F',
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
     paddingTop: 12,
     paddingBottom: Platform.OS === 'ios' ? 34 : 20,
     maxHeight: '90%',
@@ -597,12 +652,11 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.08)',
   },
   toggleBtnActive: {
-    backgroundColor: 'rgba(135, 0, 135, 0.25)',
-    borderColor: 'rgba(232, 121, 249, 0.4)',
+    backgroundColor: 'rgba(71, 11, 36, 0.4)',
+    borderColor: '#D4A373',
   },
   toggleBtnText: {
     fontSize: 12,
-    color: '#8992A5',
     fontWeight: '600',
   },
   footerRow: {
@@ -610,7 +664,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 14,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.08)',
     gap: 10,
   },
   actionBtnSecondary: {
@@ -621,14 +674,11 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingVertical: 13,
     borderRadius: 14,
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
   },
   actionBtnText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#F4F7FF',
   },
   actionBtnPrimary: {
     flex: 1,
@@ -638,12 +688,12 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingVertical: 13,
     borderRadius: 14,
-    backgroundColor: '#F0ABFC',
+    backgroundColor: '#D4A373',
   },
   actionBtnPrimaryText: {
     fontSize: 13,
     fontWeight: '800',
-    color: '#000000',
+    color: '#FFFFFF',
   },
   fullQrOverlay: {
     flex: 1,
@@ -655,17 +705,14 @@ const styles = StyleSheet.create({
   fullQrBox: {
     width: '100%',
     maxWidth: 320,
-    backgroundColor: '#10141F',
     borderRadius: 28,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
     padding: 24,
     alignItems: 'center',
   },
   fullQrTitle: {
     fontSize: 16,
     fontWeight: '900',
-    color: '#FFFFFF',
     textTransform: 'uppercase',
     letterSpacing: 2,
     marginBottom: 16,
@@ -707,13 +754,12 @@ const styles = StyleSheet.create({
   },
   fullQrSubtitle: {
     fontSize: 12,
-    color: '#8992A5',
     textAlign: 'center',
     lineHeight: 18,
     marginBottom: 20,
   },
   fullQrCloseBtn: {
-    backgroundColor: '#870087',
+    backgroundColor: '#D4A373',
     paddingVertical: 10,
     paddingHorizontal: 28,
     borderRadius: 12,

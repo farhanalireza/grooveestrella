@@ -65,7 +65,7 @@ export default function GrooveCardComposer({
 
     // Generate clean share url based on current site host
     const shareUrl = typeof window !== "undefined" 
-        ? `${window.location.origin}/s/${platform || 'musicbrainz'}/${type}/${itemId}`
+        ? `${window.location.origin}/${type || 'track'}/${itemId}?groovelink=true`
         : '';
 
     const themes = {
@@ -227,7 +227,7 @@ export default function GrooveCardComposer({
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#07090F]/90 backdrop-blur-lg overflow-y-auto"
+                className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-lg overflow-y-auto"
             >
                 {/* Backdrop Click to Close */}
                 <div className="absolute inset-0 cursor-default" onClick={onClose} />
@@ -238,19 +238,19 @@ export default function GrooveCardComposer({
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.9, y: 30 }}
                     transition={{ type: 'spring', damping: 25, stiffness: 220 }}
-                    className="relative w-full max-w-4xl max-h-[90vh] md:max-h-none overflow-y-auto md:overflow-visible bg-[#10141F]/60 border border-[#2563EB]/10 backdrop-blur-xl rounded-3xl shadow-2xl z-10 grid grid-cols-1 md:grid-cols-2"
+                    className="relative w-full max-w-4xl max-h-[90vh] md:max-h-none overflow-y-auto md:overflow-visible bg-[var(--theme-card)] border border-[var(--theme-border)] text-[var(--theme-fg)] backdrop-blur-xl rounded-3xl shadow-2xl z-10 grid grid-cols-1 md:grid-cols-2"
                 >
                     {/* Close Button */}
                     <button 
                         onClick={onClose} 
-                        className="absolute top-4 right-4 p-2 rounded-full bg-white/[0.03] hover:bg-[#2563EB]/15 text-[#8992A5] hover:text-[#F4F7FF] transition-all z-20"
+                        className="absolute top-4 right-4 p-2 rounded-full bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] text-[var(--theme-muted)] hover:text-[var(--theme-fg)] border border-[var(--theme-border)] transition-all z-20 cursor-pointer"
                     >
                         <X size={20} />
                     </button>
 
                     {/* Column 1: Live GrooveCard Card Preview */}
-                    <div className="flex flex-col items-center justify-center p-6 border-b md:border-b-0 md:border-r border-[#2563EB]/15 bg-[#07090F]/40 rounded-t-3xl md:rounded-tr-none md:rounded-l-3xl">
-                        <div className="text-xs uppercase tracking-widest text-[#60A5FA] font-bold mb-4">
+                    <div className="flex flex-col items-center justify-center p-6 border-b md:border-b-0 md:border-r border-[var(--theme-border)] bg-[var(--theme-surface)]/40 rounded-t-3xl md:rounded-tr-none md:rounded-l-3xl">
+                        <div className="text-xs uppercase tracking-widest text-[var(--theme-accent)] font-bold mb-4">
                             GrooveCard Preview
                         </div>
 
@@ -271,14 +271,14 @@ export default function GrooveCardComposer({
                             </div>
 
                             {/* Cover Art Image */}
-                            <div className="relative w-full aspect-square rounded-2xl overflow-hidden shadow-xl mb-4 border border-white/5 bg-[#10141F]">
+                            <div className="relative w-full aspect-square rounded-2xl overflow-hidden shadow-xl mb-4 border border-white/5 bg-[var(--theme-surface)]">
                                 <img
                                     src={imageUrl || "/placeholder.jpg"}
                                     alt={title}
                                     className="w-full h-full object-cover"
                                     crossOrigin="anonymous"
                                     onError={(e) => {
-                                        e.currentTarget.src = 'https://placehold.co/400x400/10141F/60A5FA?text=Music';
+                                        e.currentTarget.src = 'https://placehold.co/400x400/17020B/E8A87C?text=Music';
                                     }}
                                 />
                             </div>
@@ -333,13 +333,13 @@ export default function GrooveCardComposer({
                     <div className="flex flex-col justify-between p-5 md:p-8 space-y-6 md:space-y-0">
                         <div className="space-y-6">
                             <div>
-                                <h2 className="text-2xl font-black text-[#F4F7FF] mb-1 font-display">GrooveCard Composer</h2>
-                                <p className="text-sm text-[#8992A5]">Personalize and export your music card.</p>
+                                <h2 className="text-2xl font-black text-[var(--theme-fg)] mb-1 font-display">GrooveCard Composer</h2>
+                                <p className="text-sm text-[var(--theme-muted)]">Personalize and export your music card.</p>
                             </div>
 
                             {/* Customizer: Themes */}
                             <div className="space-y-2">
-                                <label className="text-xs uppercase tracking-wider text-[#8992A5] font-bold">
+                                <label className="text-xs uppercase tracking-wider text-[var(--theme-muted)] font-bold">
                                     Customize Theme
                                 </label>
                                 <div className="grid grid-cols-2 gap-2">
@@ -347,10 +347,10 @@ export default function GrooveCardComposer({
                                         <button
                                             key={t}
                                             onClick={() => setCardTheme(t)}
-                                            className={`px-3 py-2 text-xs font-semibold rounded-lg capitalize border text-left transition-all ${
+                                            className={`px-3 py-2 text-xs font-semibold rounded-lg capitalize border text-left transition-all cursor-pointer ${
                                                 cardTheme === t 
-                                                    ? 'bg-[#2563EB] text-[#F4F7FF] border-[#2563EB]' 
-                                                    : 'bg-white/[0.03] text-[#F4F7FF]/80 border-[#2563EB]/15 hover:bg-[#2563EB]/10'
+                                                    ? 'bg-[var(--theme-accent)] text-[var(--theme-bg)] border-[var(--theme-accent)]' 
+                                                    : 'bg-[var(--theme-surface)] text-[var(--theme-fg)]/80 border-[var(--theme-border)] hover:bg-[var(--theme-card)]'
                                             }`}
                                         >
                                             {themes[t].label}
@@ -362,26 +362,26 @@ export default function GrooveCardComposer({
                             {/* Customizer: QR Options */}
                             <div className="space-y-4">
                                 <div className="flex flex-col gap-2">
-                                    <span className="text-xs uppercase tracking-wider text-[#8992A5] font-bold">
+                                    <span className="text-xs uppercase tracking-wider text-[var(--theme-muted)] font-bold">
                                         QR Settings
                                     </span>
                                     <div className="flex flex-col gap-2">
-                                        <label className="flex items-center justify-between p-2.5 rounded-lg bg-white/[0.02] border border-[#2563EB]/10 cursor-pointer">
-                                            <span className="text-xs text-[#F4F7FF]/80 font-semibold">Render QR Code</span>
+                                        <label className="flex items-center justify-between p-2.5 rounded-lg bg-[var(--theme-surface)] border border-[var(--theme-border)] cursor-pointer">
+                                            <span className="text-xs text-[var(--theme-fg)]/80 font-semibold">Render QR Code</span>
                                             <input 
                                                 type="checkbox" 
                                                 checked={showQR}
                                                 onChange={(e) => setShowQR(e.target.checked)}
-                                                className="accent-[#2563EB] cursor-pointer"
+                                                className="accent-[var(--theme-accent)] cursor-pointer"
                                             />
                                         </label>
-                                        <label className="flex items-center justify-between p-2.5 rounded-lg bg-white/[0.02] border border-[#2563EB]/10 cursor-pointer">
-                                            <span className="text-xs text-[#F4F7FF]/80 font-semibold">Render Release Date</span>
+                                        <label className="flex items-center justify-between p-2.5 rounded-lg bg-[var(--theme-surface)] border border-[var(--theme-border)] cursor-pointer">
+                                            <span className="text-xs text-[var(--theme-fg)]/80 font-semibold">Render Release Date</span>
                                             <input 
                                                 type="checkbox" 
                                                 checked={showYear}
                                                 onChange={(e) => setShowYear(e.target.checked)}
-                                                className="accent-[#2563EB] cursor-pointer"
+                                                className="accent-[var(--theme-accent)] cursor-pointer"
                                             />
                                         </label>
                                     </div>
@@ -389,7 +389,7 @@ export default function GrooveCardComposer({
 
                                 {showQR && (
                                     <div className="space-y-2">
-                                        <label className="text-xs uppercase tracking-wider text-[#8992A5] font-bold">
+                                        <label className="text-xs uppercase tracking-wider text-[var(--theme-muted)] font-bold">
                                             QR Forecolor
                                         </label>
                                         <div className="flex flex-wrap gap-2">
@@ -397,9 +397,9 @@ export default function GrooveCardComposer({
                                                 <button
                                                     key={color.hex}
                                                     onClick={() => setQrColor(color.hex)}
-                                                    className={`w-7 h-7 rounded-full border transition-all flex items-center justify-center ${color.class} ${
+                                                    className={`w-7 h-7 rounded-full border transition-all flex items-center justify-center cursor-pointer ${color.class} ${
                                                         qrColor === color.hex 
-                                                            ? 'border-white scale-110 shadow-lg ring-2 ring-[#2563EB]/40' 
+                                                            ? 'border-white scale-110 shadow-lg ring-2 ring-[var(--theme-accent)]/50' 
                                                             : 'scale-100 hover:scale-105'
                                                     }`}
                                                     title={color.label}
@@ -422,7 +422,7 @@ export default function GrooveCardComposer({
                                 <button
                                     onClick={handleDownloadCard}
                                     disabled={isGenerating}
-                                    className="flex items-center justify-center gap-2 py-3 px-4 bg-[#2563EB] hover:bg-[#2563EB]/80 active:scale-95 text-[#F4F7FF] font-bold rounded-2xl transition-all shadow-lg hover:shadow-[#2563EB]/20 disabled:opacity-50 text-sm cursor-pointer"
+                                    className="flex items-center justify-center gap-2 py-3 px-4 bg-[var(--theme-accent)] hover:opacity-90 active:scale-95 text-[var(--theme-bg)] font-bold rounded-2xl transition-all shadow-lg disabled:opacity-50 text-sm cursor-pointer"
                                 >
                                     <Download size={16} />
                                     {isGenerating ? 'Exporting...' : 'Download'}
@@ -430,7 +430,7 @@ export default function GrooveCardComposer({
 
                                 <button
                                     onClick={handleCopyLink}
-                                    className="flex items-center justify-center gap-2 py-3 px-4 bg-[#2563EB]/10 hover:bg-[#2563EB]/15 active:scale-95 text-[#F4F7FF] font-bold rounded-2xl transition-all border border-[#2563EB]/15 text-sm cursor-pointer"
+                                    className="flex items-center justify-center gap-2 py-3 px-4 bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] active:scale-95 text-[var(--theme-fg)] font-bold rounded-2xl transition-all border border-[var(--theme-border)] text-sm cursor-pointer"
                                 >
                                     {copied ? (
                                         <>
@@ -448,14 +448,14 @@ export default function GrooveCardComposer({
 
                             {/* Native / Social Share Grid */}
                             <div className="space-y-2">
-                                <div className="text-xs uppercase tracking-wider text-[#8992A5] font-bold">
+                                <div className="text-xs uppercase tracking-wider text-[var(--theme-muted)] font-bold">
                                     Direct Share
                                 </div>
                                 <div className="flex gap-2">
                                     {navigator.share && (
                                         <button
                                             onClick={handleNativeShare}
-                                            className="p-2.5 bg-[#2563EB] hover:bg-[#2563EB]/80 text-[#F4F7FF] rounded-xl transition-all flex-1 flex items-center justify-center gap-2 font-bold text-xs"
+                                            className="p-2.5 bg-[var(--theme-accent)] hover:opacity-90 text-[var(--theme-bg)] rounded-xl transition-all flex-1 flex items-center justify-center gap-2 font-bold text-xs cursor-pointer"
                                         >
                                             <Share2 size={14} />
                                             Share Sheet
@@ -463,13 +463,13 @@ export default function GrooveCardComposer({
                                     )}
                                     <button
                                         onClick={handleShareTwitter}
-                                        className="p-2.5 bg-white/[0.03] hover:bg-[#2563EB]/10 text-[#F4F7FF] rounded-xl transition-all flex items-center justify-center flex-1 font-bold text-xs border border-[#2563EB]/10"
+                                        className="p-2.5 bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] text-[var(--theme-fg)] rounded-xl transition-all flex items-center justify-center flex-1 font-bold text-xs border border-[var(--theme-border)] cursor-pointer"
                                     >
                                         Twitter
                                     </button>
                                     <button
                                         onClick={handleShareWhatsApp}
-                                        className="p-2.5 bg-green-600/20 hover:bg-green-600/30 text-green-400 rounded-xl transition-all flex items-center justify-center flex-1 font-bold text-xs border border-green-500/10"
+                                        className="p-2.5 bg-green-600/20 hover:bg-green-600/30 text-green-400 rounded-xl transition-all flex items-center justify-center flex-1 font-bold text-xs border border-green-500/10 cursor-pointer"
                                     >
                                         WhatsApp
                                     </button>
@@ -500,7 +500,7 @@ export default function GrooveCardComposer({
                         </p>
                         <button
                             onClick={() => setQrFullScreen(false)}
-                            className="px-6 py-2.5 bg-[#2563EB] hover:bg-[#60A5FA] text-white font-bold text-xs uppercase tracking-wider rounded-xl transition cursor-pointer"
+                            className="px-6 py-2.5 bg-[var(--theme-accent)] hover:opacity-90 text-[var(--theme-bg)] font-bold text-xs uppercase tracking-wider rounded-xl transition cursor-pointer"
                         >
                             Close
                         </button>

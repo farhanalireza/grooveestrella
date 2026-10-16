@@ -79,16 +79,16 @@ export function getPlaceholderCover(title = 'Music', artist = 'GrooveEstrella') 
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400">
     <defs>
       <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stop-color="#0b1120"/>
-        <stop offset="50%" stop-color="#1e1b4b"/>
-        <stop offset="100%" stop-color="#0f172a"/>
+        <stop offset="0%" stop-color="#17020B"/>
+        <stop offset="50%" stop-color="#300918"/>
+        <stop offset="100%" stop-color="#120208"/>
       </linearGradient>
     </defs>
     <rect width="400" height="400" fill="url(#g)" rx="24"/>
-    <circle cx="200" cy="170" r="64" fill="#2563eb" fill-opacity="0.2" stroke="#60a5fa" stroke-width="2"/>
-    <path d="M190 145v45a18 18 0 1 1-12-17v-36l36-8v28a18 18 0 1 1-12-17v-5" fill="#60a5fa"/>
+    <circle cx="200" cy="170" r="64" fill="#E8A87C" fill-opacity="0.2" stroke="#E8A87C" stroke-width="2"/>
+    <path d="M190 145v45a18 18 0 1 1-12-17v-36l36-8v28a18 18 0 1 1-12-17v-5" fill="#E8A87C"/>
     <text x="200" y="275" font-family="system-ui, -apple-system, sans-serif" font-size="18" font-weight="700" fill="#f8fafc" text-anchor="middle">${cleanTitle}</text>
-    <text x="200" y="305" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="500" fill="#94a3b8" text-anchor="middle">${cleanArtist}</text>
+    <text x="200" y="305" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="500" fill="#E8A87C" text-anchor="middle" fill-opacity="0.8">${cleanArtist}</text>
   </svg>`;
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }

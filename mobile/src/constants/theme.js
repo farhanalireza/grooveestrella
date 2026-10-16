@@ -1,57 +1,128 @@
 // src/constants/theme.js
 import { Platform } from 'react-native';
 
-export const COLORS = {
-  // Backgrounds
-  bg: '#07090F',
-  background: '#07090F',
-  surface: '#0D121F',
-  surface80: 'rgba(13, 18, 31, 0.8)',
-  surfaceElevated: '#10141F',
-  surfaceElevated60: 'rgba(16, 20, 31, 0.6)',
-  surfaceElevated80: 'rgba(16, 20, 31, 0.8)',
-  surfaceHighlight: 'rgba(255, 255, 255, 0.05)',
-  cardBg: 'rgba(13, 18, 31, 0.8)',
+export const THEME_PALETTE = {
+  // Canonical Palette
+  plum: '#470B24',
+  copper: '#D4A373',
+  peach: '#FFEDD5',
+  gradient: ['#470B24', '#D4A373', '#FFEDD5'],
+};
 
-  // Typography
-  text: '#F4F7FF',
-  textPrimary: '#F4F7FF',
-  textSecondary: '#8992A5',
-  textSecondary50: 'rgba(137, 146, 165, 0.5)',
-  textMuted: '#5E6678',
-  white: '#FFFFFF',
+export const DARK_COLORS = {
+  // Backgrounds: Deep Obsidian Wine BG for deeper dark mode
+  bg: '#17020B',
+  background: '#17020B',
+  surface: 'rgba(71, 11, 36, 0.5)',
+  surface80: 'rgba(71, 11, 36, 0.75)',
+  surfaceElevated: '#2D0516',
+  surfaceElevated60: 'rgba(45, 5, 22, 0.6)',
+  surfaceElevated80: 'rgba(45, 5, 22, 0.8)',
+  surfaceHighlight: 'rgba(255, 242, 223, 0.08)',
+  cardBg: 'rgba(71, 11, 36, 0.6)',
 
-  // Primary Accent (Blue)
-  accent: '#2563EB',
-  accentPrimary: '#2563EB',
-  accentLight: '#60A5FA',
-  accentMuted: 'rgba(37, 99, 235, 0.15)',
+  // Typography: Warm Soft Cream
+  text: '#FFF2DF',
+  textPrimary: '#FFF2DF',
+  textSecondary: 'rgba(255, 242, 223, 0.72)',
+  textSecondary50: 'rgba(255, 242, 223, 0.5)',
+  textMuted: 'rgba(255, 242, 223, 0.45)',
+  white: '#FFF2DF',
 
-  // Purple Accent & Gradient
-  purple: '#870087',
-  purpleMid: '#A21CAF',
-  purpleLight: '#C026D3',
-  purpleLighter: '#E879F9',
-  purpleLightest: '#F0ABFC',
-  purpleGradient: ['#870087', '#A21CAF', '#C026D3'],
-  purpleGradientStart: '#870087',
-  purpleGradientVia: '#A21CAF',
-  purpleGradientEnd: '#C026D3',
+  // Accent: Warm Peach-Copper
+  accent: '#E8A87C',
+  accentPrimary: '#E8A87C',
+  accentLight: '#F0C9A8',
+  accentMuted: 'rgba(232, 168, 124, 0.2)',
+
+  // Brand Gradients & Accents (copper family, no blue)
+  purple: '#E8A87C',
+  purpleMid: '#D4A373',
+  purpleLight: '#E8A87C',
+  purpleLighter: '#F0C9A8',
+  purpleLightest: '#FFEDD5',
+  purpleGradient: ['#470B24', '#D4A373', '#FFEDD5'],
+  purpleGradientStart: '#470B24',
+  purpleGradientVia: '#D4A373',
+  purpleGradientEnd: '#FFEDD5',
 
   // Borders
-  border: 'rgba(255, 255, 255, 0.12)',
-  glassBorder: 'rgba(255, 255, 255, 0.08)',
-  borderActive: 'rgba(232, 121, 249, 0.4)',
+  border: 'rgba(181, 150, 130, 0.18)',
+  glassBorder: 'rgba(181, 150, 130, 0.14)',
+  borderActive: '#E8A87C',
 
   // Status & Utility
   error: '#EF4444',
-  errorBg: 'rgba(239, 68, 68, 0.15)',
-  errorBorder: 'rgba(239, 68, 68, 0.3)',
+  errorBg: 'rgba(239, 68, 68, 0.18)',
+  errorBorder: 'rgba(239, 68, 68, 0.35)',
   success: '#10B981',
   warning: '#F59E0B',
-  overlay: 'rgba(7, 9, 15, 0.75)',
+  overlay: 'rgba(23, 2, 11, 0.85)',
   transparent: 'transparent',
 };
+
+export const LIGHT_COLORS = {
+  // Backgrounds: Clean Warm Peach Cream BG
+  bg: '#FAF4EB',
+  background: '#FAF4EB',
+  surface: 'rgba(255, 245, 235, 0.92)',
+  surface80: 'rgba(255, 245, 235, 0.8)',
+  surfaceElevated: '#FFFFFF',
+  surfaceElevated60: 'rgba(255, 255, 255, 0.6)',
+  surfaceElevated80: 'rgba(255, 255, 255, 0.8)',
+  surfaceHighlight: 'rgba(26, 10, 16, 0.05)',
+  cardBg: '#FFFFFF',
+
+  // Typography: Deep Crisp Wine-Black (dark for razor sharp readability)
+  text: '#1A0A10',
+  textPrimary: '#1A0A10',
+  textSecondary: '#6B3040',
+  textSecondary50: 'rgba(107, 48, 64, 0.65)',
+  textMuted: '#8A4458',
+  white: '#FFFFFF',
+
+  // Accent: Terracotta Copper — warm, high contrast, zero blue
+  accent: '#9A4A2F',
+  accentPrimary: '#9A4A2F',
+  accentLight: '#E8C4A0',
+  accentMuted: 'rgba(154, 74, 47, 0.2)',
+
+  // Brand Gradients & Accents (copper family, reversed for light)
+  purple: '#9A4A2F',
+  purpleMid: '#B87333',
+  purpleLight: '#D4A373',
+  purpleLighter: '#E8C4A0',
+  purpleLightest: '#1A0A10',
+  purpleGradient: ['#FAF4EB', '#D4A373', '#470B24'],
+  purpleGradientStart: '#FAF4EB',
+  purpleGradientVia: '#D4A373',
+  purpleGradientEnd: '#470B24',
+
+  // Borders
+  border: 'rgba(71, 11, 36, 0.12)',
+  glassBorder: 'rgba(71, 11, 36, 0.08)',
+  borderActive: '#9A4A2F',
+
+  // Status & Utility
+  error: '#DC2626',
+  errorBg: 'rgba(220, 38, 38, 0.15)',
+  errorBorder: 'rgba(220, 38, 38, 0.3)',
+  success: '#059669',
+  warning: '#D97706',
+  overlay: 'rgba(255, 237, 213, 0.85)',
+  transparent: 'transparent',
+};
+
+export const getThemeColors = (mode = 'dark') => {
+  return mode === 'light' ? LIGHT_COLORS : DARK_COLORS;
+};
+
+export const COLORS = { ...DARK_COLORS };
+
+export function updateGlobalColors(mode) {
+  const next = getThemeColors(mode);
+  Object.assign(COLORS, next);
+}
 
 // Lowercase alias
 export const colors = COLORS;
@@ -114,9 +185,11 @@ export const fontWeight = {
 };
 
 export const GRADIENTS = {
-  purple: ['#870087', '#A21CAF', '#C026D3'],
-  purpleLight: ['rgba(135, 0, 135, 0.5)', 'rgba(192, 38, 211, 0.2)'],
-  blue: ['#2563EB', '#60A5FA'],
+  theme: ['#470B24', '#D4A373', '#FFEDD5'],
+  purple: ['#470B24', '#D4A373', '#FFEDD5'],
+  purpleLight: ['rgba(71, 11, 36, 0.6)', 'rgba(212, 163, 115, 0.35)'],
+  blue: ['#470B24', '#D4A373'],
+  accent: ['#D4A373', '#FFEDD5'],
   glass: ['rgba(255, 255, 255, 0.28)', 'rgba(255, 255, 255, 0.05)', 'transparent'],
 };
 
@@ -212,7 +285,7 @@ export const shadows = {
   }),
   purpleGlow: Platform.select({
     ios: {
-      shadowColor: '#C026D3',
+      shadowColor: '#D4A373',
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.45,
       shadowRadius: 16,
@@ -224,7 +297,7 @@ export const shadows = {
   }),
   blueGlow: Platform.select({
     ios: {
-      shadowColor: '#2563EB',
+      shadowColor: '#E8A87C',
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.4,
       shadowRadius: 14,

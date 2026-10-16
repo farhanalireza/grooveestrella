@@ -16,14 +16,14 @@ export default function AppLayout({ children }) {
 
   if (!mounted) {
     return (
-      <div className="min-h-screen bg-[#07090F] flex items-center justify-center text-[#F4F7FF] font-sans">
+      <div className="min-h-screen bg-[var(--theme-bg)] flex items-center justify-center text-[var(--theme-fg)] font-sans">
         <GrooveLoader size={44} text="Loading Groove..." />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#07090F] text-[#F4F7FF] font-sans flex flex-col">
+    <div className="min-h-screen bg-[var(--theme-bg)] text-[var(--theme-fg)] font-sans flex flex-col transition-colors duration-300">
       <AppBar selectedSection={section} setSection={setSection} />
       {/* Content wrapper with responsive padding to prevent fixed bar overlap */}
       <div className="flex-1 w-full lg:pt-16 pb-28 lg:pb-0">

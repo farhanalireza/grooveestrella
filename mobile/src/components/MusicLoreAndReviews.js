@@ -13,6 +13,7 @@ import * as Haptics from 'expo-haptics';
 import Toast from 'react-native-toast-message';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { COLORS } from '../constants/theme';
+import { useTheme } from '../context/ThemeContext';
 
 export default function MusicLoreAndReviews({
   id = '',
@@ -23,6 +24,7 @@ export default function MusicLoreAndReviews({
   tags = [],
   rating = null,
 }) {
+  const { colors, isDark } = useTheme();
   const [expandedDesc, setExpandedDesc] = useState(false);
   const [reviews, setReviews] = useState([]);
   const [showReviewModal, setShowReviewModal] = useState(false);
@@ -130,13 +132,13 @@ export default function MusicLoreAndReviews({
   return (
     <View style={styles.container}>
       {/* 1. All Community Tags & Musical Styles */}
-      <View style={styles.card}>
+      <View style={[styles.card, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
         <View style={styles.sectionHeader}>
           <View style={styles.headerTitleRow}>
-            <Ionicons name="pricetag-outline" size={14} color="#60A5FA" />
-            <Text style={styles.sectionTitle}>ALL COMMUNITY TAGS & MUSICAL STYLES</Text>
+            <Ionicons name="pricetag-outline" size={14} color={colors.accent} />
+            <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>ALL COMMUNITY TAGS & MUSICAL STYLES</Text>
           </View>
-          <Text style={styles.tagCountHeader}>{displayTags.length} tags cataloged</Text>
+          <Text style={[styles.tagCountHeader, { color: colors.textSecondary }]}>{displayTags.length} tags cataloged</Text>
         </View>
 
         <View style={styles.tagChipsWrap}>
@@ -144,9 +146,18 @@ export default function MusicLoreAndReviews({
             const label = typeof item === 'string' ? item : item.label || item.name;
             const count = typeof item === 'object' ? item.count : null;
             return (
-              <View key={idx} style={styles.tagChip}>
-                <Text style={styles.tagChipText}>#{label}</Text>
-                {count ? <Text style={styles.tagChipCount}>{count}</Text> : null}
+              <View
+                key={idx}
+                style={[
+                  styles.tagChip,
+                  {
+                    backgroundColor: isDark ? 'rgba(232, 168, 124, 0.12)' : 'rgba(154, 74, 47, 0.1)',
+                    borderColor: isDark ? 'rgba(232, 168, 124, 0.3)' : 'rgba(154, 74, 47, 0.25)',
+                  },
+                ]}
+              >
+                <Text style={[styles.tagChipText, { color: colors.accent }]}>#{label}</Text>
+                {count ? <Text style={[styles.tagChipCount, { color: colors.textSecondary, backgroundColor: colors.border }]}>{count}</Text> : null}
               </View>
             );
           })}
@@ -154,19 +165,19 @@ export default function MusicLoreAndReviews({
       </View>
 
       {/* 2. Lore & Background Section */}
-      <View style={styles.card}>
+      <View style={[styles.card, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
         <View style={styles.sectionHeader}>
           <View style={styles.headerTitleRow}>
-            <Ionicons name="book-outline" size={14} color="#60A5FA" />
-            <Text style={styles.sectionTitle}>
+            <Ionicons name="book-outline" size={14} color={colors.accent} />
+            <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>
               {type.toUpperCase()} INFORMATION & LORE
             </Text>
           </View>
         </View>
 
-        <Text style={styles.loreTitle}>About {title}</Text>
+        <Text style={[styles.loreTitle, { color: colors.text }]}>About {title}</Text>
         <Text
-          style={[styles.loreBody, !expandedDesc && styles.loreBodyClamped]}
+          style={[styles.loreBody, !expandedDesc && styles.loreBodyClamped, { color: colors.textSecondary }]}
           numberOfLines={expandedDesc ? undefined : 3}
         >
           {defaultLore}
@@ -177,7 +188,7 @@ export default function MusicLoreAndReviews({
             style={styles.expandBtn}
             onPress={() => setExpandedDesc(!expandedDesc)}
           >
-            <Text style={styles.expandBtnText}>
+            <Text style={[styles.expandBtnText, { color: colors.accent }]}>
               {expandedDesc ? 'Show less' : 'Read full overview >'}
             </Text>
           </TouchableOpacity>
@@ -185,15 +196,15 @@ export default function MusicLoreAndReviews({
       </View>
 
       {/* 3. Reviews & Community Ratings */}
-      <View style={styles.card}>
+      <View style={[styles.card, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
         <View style={styles.sectionHeader}>
           <View style={styles.headerTitleRow}>
-            <Ionicons name="chatbubbles-outline" size={14} color="#60A5FA" />
-            <Text style={styles.sectionTitle}>REVIEWS & COMMUNITY RATINGS</Text>
+            <Ionicons name="chatbubbles-outline" size={14} color={colors.accent} />
+            <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>REVIEWS & COMMUNITY RATINGS</Text>
           </View>
 
           <TouchableOpacity
-            style={styles.writeReviewBtn}
+            style={[styles.writeReviewBtn, { backgroundColor: colors.accent }]}
             onPress={() => setShowReviewModal(true)}
             activeOpacity={0.8}
           >
@@ -203,11 +214,11 @@ export default function MusicLoreAndReviews({
         </View>
 
         {/* Rating Overview */}
-        <View style={styles.ratingOverviewBox}>
-          <Text style={styles.ratingSubLabel}>OVERALL COMMUNITY SCORE</Text>
+        <View style={[styles.ratingOverviewBox, { backgroundColor: isDark ? 'rgba(7, 9, 15, 0.5)' : colors.cardBg, borderColor: colors.border }]}>
+          <Text style={[styles.ratingSubLabel, { color: colors.textSecondary }]}>OVERALL COMMUNITY SCORE</Text>
           <View style={styles.scoreRow}>
-            <Text style={styles.largeScoreText}>{avgScore}</Text>
-            <Text style={styles.maxScoreText}>/ 5.0</Text>
+            <Text style={[styles.largeScoreText, { color: colors.text }]}>{avgScore}</Text>
+            <Text style={[styles.maxScoreText, { color: colors.textSecondary }]}>/ 5.0</Text>
           </View>
 
           {/* Stars */}
@@ -216,50 +227,50 @@ export default function MusicLoreAndReviews({
               <Ionicons key={s} name="star" size={18} color="#F59E0B" style={{ marginHorizontal: 1 }} />
             ))}
           </View>
-          <Text style={styles.voteCountText}>Based on {reviews.length * 4 + 1} community ratings</Text>
+          <Text style={[styles.voteCountText, { color: colors.textSecondary }]}>Based on {reviews.length * 4 + 1} community ratings</Text>
 
           {/* Rating Distribution Bar Chart */}
-          <View style={styles.distributionChart}>
-            <Text style={styles.distribTitle}>RATING DISTRIBUTION</Text>
+          <View style={[styles.distributionChart, { borderTopColor: colors.border }]}>
+            <Text style={[styles.distribTitle, { color: colors.textSecondary }]}>RATING DISTRIBUTION</Text>
 
             <View style={styles.distribBarRow}>
-              <Text style={styles.distribStarLabel}>5★</Text>
-              <View style={styles.distribTrack}>
+              <Text style={[styles.distribStarLabel, { color: colors.textSecondary }]}>5★</Text>
+              <View style={[styles.distribTrack, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)' }]}>
                 <View style={[styles.distribFill, { width: '70%', backgroundColor: '#F59E0B' }]} />
               </View>
-              <Text style={styles.distribPercentText}>70%</Text>
+              <Text style={[styles.distribPercentText, { color: colors.textSecondary }]}>70%</Text>
             </View>
 
             <View style={styles.distribBarRow}>
-              <Text style={styles.distribStarLabel}>4★</Text>
-              <View style={styles.distribTrack}>
+              <Text style={[styles.distribStarLabel, { color: colors.textSecondary }]}>4★</Text>
+              <View style={[styles.distribTrack, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)' }]}>
                 <View style={[styles.distribFill, { width: '21%', backgroundColor: '#F59E0B' }]} />
               </View>
-              <Text style={styles.distribPercentText}>21%</Text>
+              <Text style={[styles.distribPercentText, { color: colors.textSecondary }]}>21%</Text>
             </View>
 
             <View style={styles.distribBarRow}>
-              <Text style={styles.distribStarLabel}>3★</Text>
-              <View style={styles.distribTrack}>
+              <Text style={[styles.distribStarLabel, { color: colors.textSecondary }]}>3★</Text>
+              <View style={[styles.distribTrack, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)' }]}>
                 <View style={[styles.distribFill, { width: '6%', backgroundColor: '#F59E0B' }]} />
               </View>
-              <Text style={styles.distribPercentText}>6%</Text>
+              <Text style={[styles.distribPercentText, { color: colors.textSecondary }]}>6%</Text>
             </View>
 
             <View style={styles.distribBarRow}>
-              <Text style={styles.distribStarLabel}>2★</Text>
-              <View style={styles.distribTrack}>
+              <Text style={[styles.distribStarLabel, { color: colors.textSecondary }]}>2★</Text>
+              <View style={[styles.distribTrack, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)' }]}>
                 <View style={[styles.distribFill, { width: '2%', backgroundColor: '#F59E0B' }]} />
               </View>
-              <Text style={styles.distribPercentText}>2%</Text>
+              <Text style={[styles.distribPercentText, { color: colors.textSecondary }]}>2%</Text>
             </View>
 
             <View style={styles.distribBarRow}>
-              <Text style={styles.distribStarLabel}>1★</Text>
-              <View style={styles.distribTrack}>
+              <Text style={[styles.distribStarLabel, { color: colors.textSecondary }]}>1★</Text>
+              <View style={[styles.distribTrack, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)' }]}>
                 <View style={[styles.distribFill, { width: '1%', backgroundColor: '#F59E0B' }]} />
               </View>
-              <Text style={styles.distribPercentText}>1%</Text>
+              <Text style={[styles.distribPercentText, { color: colors.textSecondary }]}>1%</Text>
             </View>
           </View>
         </View>
@@ -267,14 +278,14 @@ export default function MusicLoreAndReviews({
         {/* Community Reviews List */}
         <View style={styles.reviewsList}>
           {reviews.map((rev) => (
-            <View key={rev.id} style={styles.reviewItem}>
+            <View key={rev.id} style={[styles.reviewItem, { backgroundColor: isDark ? 'rgba(16, 20, 31, 0.65)' : colors.cardBg, borderColor: colors.border }]}>
               <View style={styles.reviewHeaderRow}>
                 <View style={styles.reviewAuthorGroup}>
-                  <Text style={styles.reviewAuthor}>{rev.author}</Text>
+                  <Text style={[styles.reviewAuthor, { color: colors.text }]}>{rev.author}</Text>
                   {rev.badge ? (
-                    <View style={styles.curatorBadge}>
-                      <Ionicons name="checkmark-circle" size={11} color="#60A5FA" />
-                      <Text style={styles.curatorBadgeText}>{rev.badge}</Text>
+                    <View style={[styles.curatorBadge, { backgroundColor: isDark ? 'rgba(232, 168, 124, 0.15)' : 'rgba(154, 74, 47, 0.12)' }]}>
+                      <Ionicons name="checkmark-circle" size={11} color={colors.accent} />
+                      <Text style={[styles.curatorBadgeText, { color: colors.accent }]}>{rev.badge}</Text>
                     </View>
                   ) : null}
                 </View>
@@ -286,14 +297,14 @@ export default function MusicLoreAndReviews({
                       key={star}
                       name="star"
                       size={11}
-                      color={star <= rev.score ? '#F59E0B' : '#5E6678'}
+                      color={star <= rev.score ? '#F59E0B' : (isDark ? '#5E6678' : '#D1D5DB')}
                     />
                   ))}
-                  <Text style={styles.reviewDate}>• {rev.date}</Text>
+                  <Text style={[styles.reviewDate, { color: colors.textSecondary }]}>• {rev.date}</Text>
                 </View>
               </View>
 
-              <Text style={styles.reviewText}>"{rev.text}"</Text>
+              <Text style={[styles.reviewText, { color: colors.text }]}>"{rev.text}"</Text>
             </View>
           ))}
         </View>
@@ -307,15 +318,15 @@ export default function MusicLoreAndReviews({
         onRequestClose={() => setShowReviewModal(false)}
       >
         <View style={styles.reviewModalOverlay}>
-          <View style={styles.reviewModalCard}>
+          <View style={[styles.reviewModalCard, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Write a Review</Text>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>Write a Review</Text>
               <TouchableOpacity onPress={() => setShowReviewModal(false)}>
-                <Ionicons name="close" size={20} color="#8992A5" />
+                <Ionicons name="close" size={20} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>
 
-            <Text style={styles.modalItemTitle}>{title}</Text>
+            <Text style={[styles.modalItemTitle, { color: colors.textSecondary }]}>{title}</Text>
 
             {/* Star Selector */}
             <View style={styles.starPickerRow}>
@@ -328,31 +339,31 @@ export default function MusicLoreAndReviews({
                   <Ionicons
                     name="star"
                     size={32}
-                    color={num <= userRating ? '#F59E0B' : '#5E6678'}
+                    color={num <= userRating ? '#F59E0B' : (isDark ? '#5E6678' : '#D1D5DB')}
                   />
                 </TouchableOpacity>
               ))}
             </View>
 
             <TextInput
-              style={styles.nameInput}
+              style={[styles.nameInput, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : colors.surface, borderColor: colors.border, color: colors.text }]}
               placeholder="Your name or handle"
-              placeholderTextColor="#5E6678"
+              placeholderTextColor={colors.textSecondary}
               value={userNameInput}
               onChangeText={setUserNameInput}
             />
 
             <TextInput
-              style={styles.commentInput}
+              style={[styles.commentInput, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : colors.surface, borderColor: colors.border, color: colors.text }]}
               placeholder="What makes this music stand out to you?"
-              placeholderTextColor="#5E6678"
+              placeholderTextColor={colors.textSecondary}
               multiline
               numberOfLines={4}
               value={userCommentInput}
               onChangeText={setUserCommentInput}
             />
 
-            <TouchableOpacity style={styles.submitReviewBtn} onPress={handleSubmitReview}>
+            <TouchableOpacity style={[styles.submitReviewBtn, { backgroundColor: colors.accent }]} onPress={handleSubmitReview}>
               <Text style={styles.submitReviewBtnText}>Submit Review</Text>
             </TouchableOpacity>
           </View>
@@ -416,14 +427,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 14,
-    backgroundColor: 'rgba(37, 99, 235, 0.1)',
+    backgroundColor: 'rgba(232, 168, 124, 0.12)',
     borderWidth: 1,
-    borderColor: 'rgba(96, 165, 250, 0.25)',
+    borderColor: 'rgba(232, 168, 124, 0.3)',
   },
   tagChipText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#60A5FA',
+    color: '#D4A373',
   },
   tagChipCount: {
     fontSize: 9,
@@ -455,13 +466,13 @@ const styles = StyleSheet.create({
   expandBtnText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#E879F9',
+    color: '#D4A373',
   },
   writeReviewBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: '#2563EB',
+    backgroundColor: '#D4A373',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 12,
@@ -590,7 +601,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
-    backgroundColor: 'rgba(37, 99, 235, 0.15)',
+    backgroundColor: 'rgba(232, 168, 124, 0.15)',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 6,
@@ -598,7 +609,7 @@ const styles = StyleSheet.create({
   curatorBadgeText: {
     fontSize: 9,
     fontWeight: '700',
-    color: '#60A5FA',
+    color: '#D4A373',
   },
   miniStarsRow: {
     flexDirection: 'row',
@@ -626,7 +637,7 @@ const styles = StyleSheet.create({
   reviewModalCard: {
     width: '100%',
     maxWidth: 380,
-    backgroundColor: '#0D121F',
+    backgroundColor: '#10141F',
     borderRadius: 24,
     padding: 20,
     borderWidth: 1,
@@ -679,7 +690,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.08)',
   },
   submitReviewBtn: {
-    backgroundColor: '#2563EB',
+    backgroundColor: '#D4A373',
     paddingVertical: 12,
     borderRadius: 14,
     alignItems: 'center',

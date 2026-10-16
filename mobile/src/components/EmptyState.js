@@ -16,6 +16,7 @@ import Animated, {
 import * as Haptics from 'expo-haptics';
 import GlassCard from './GlassCard';
 import { COLORS, RADIUS, SPACING } from '../constants/theme';
+import { useTheme } from '../context/ThemeContext';
 
 const SPRING_CONFIG = {
   stiffness: 450,
@@ -51,6 +52,7 @@ const EmptyState = ({
   style,
   cardStyle,
 }) => {
+  const { colors, isDark } = useTheme();
   const btnScale = useSharedValue(1);
 
   const handleBtnPressIn = () => {
@@ -76,10 +78,10 @@ const EmptyState = ({
 
   const renderIcon = () => {
     if (!icon) {
-      return <Ionicons name="musical-notes-outline" size={44} color={COLORS.purpleLighter} />;
+      return <Ionicons name="musical-notes-outline" size={44} color={colors.accent} />;
     }
     if (typeof icon === 'function') {
-      return icon({ color: COLORS.purpleLighter, size: 44 });
+      return icon({ color: colors.accent, size: 44 });
     }
     return icon;
   };
@@ -88,26 +90,35 @@ const EmptyState = ({
     <Animated.View entering={FadeIn.duration(450)} style={[styles.outerWrapper, style]}>
       <GlassCard style={[styles.card, cardStyle]} contentStyle={styles.cardContent}>
         {/* Icon Badge */}
-        <View style={styles.iconCircle}>
+        <View
+          style={[
+            styles.iconCircle,
+            {
+              backgroundColor: isDark ? 'rgba(232, 168, 124, 0.12)' : 'rgba(154, 74, 47, 0.1)',
+              borderColor: isDark ? 'rgba(232, 168, 124, 0.3)' : 'rgba(154, 74, 47, 0.25)',
+              shadowColor: colors.accent,
+            },
+          ]}
+        >
           {renderIcon()}
         </View>
 
         {/* Title */}
-        <Text style={styles.title}>{title}</Text>
+        <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
 
         {/* Description */}
         {description ? (
-          <Text style={styles.description}>{description}</Text>
+          <Text style={[styles.description, { color: colors.textSecondary }]}>{description}</Text>
         ) : null}
 
         {/* Optional Accent CTA Button */}
         {buttonText ? (
-          <Animated.View style={[styles.buttonWrapper, btnAnimatedStyle]}>
+          <Animated.View style={[styles.buttonWrapper, { shadowColor: colors.accent }, btnAnimatedStyle]}>
             <Pressable
               onPressIn={handleBtnPressIn}
               onPressOut={handleBtnPressOut}
               onPress={handlePress}
-              style={styles.ctaButton}
+              style={[styles.ctaButton, { backgroundColor: colors.accent }]}
               android_ripple={{ color: 'rgba(255, 255, 255, 0.2)' }}
               accessibilityRole="button"
             >
@@ -143,13 +154,13 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: RADIUS.full,
-    backgroundColor: 'rgba(232, 121, 249, 0.1)',
+    backgroundColor: 'rgba(232, 168, 124, 0.12)',
     borderWidth: 1.5,
-    borderColor: 'rgba(232, 121, 249, 0.25)',
+    borderColor: 'rgba(232, 168, 124, 0.25)',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: SPACING.lg,
-    shadowColor: COLORS.purple,
+    shadowColor: '#D4A373',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.35,
     shadowRadius: 10,

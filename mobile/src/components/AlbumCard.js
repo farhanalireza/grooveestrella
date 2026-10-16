@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Toast from 'react-native-toast-message';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
+import { useTheme } from '../context/ThemeContext';
 import { COLORS } from '../constants/theme';
 import { StorageService } from '../services/storage';
 
@@ -18,6 +19,7 @@ export default function AlbumCard({
   layout = 'grid', // 'grid' | 'list'
 }) {
   const router = useRouter();
+  const { colors, isDark } = useTheme();
   const scale = useSharedValue(1);
   const [saved, setSaved] = useState(false);
 
@@ -99,15 +101,23 @@ export default function AlbumCard({
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         onPress={handleCardPress}
-        style={[styles.listContainer, animatedStyle]}
+        style={[
+          styles.listContainer,
+          { backgroundColor: colors.cardBg, borderColor: colors.border },
+          animatedStyle,
+        ]}
       >
-        <Image source={{ uri: imageUrl }} style={styles.listImage} resizeMode="cover" />
+        <Image
+          source={{ uri: imageUrl }}
+          style={[styles.listImage, { backgroundColor: colors.surfaceElevated }]}
+          resizeMode="cover"
+        />
 
         <View style={styles.textContainer}>
-          <Text style={styles.listTitle} numberOfLines={1}>
+          <Text style={[styles.listTitle, { color: colors.text }]} numberOfLines={1}>
             {title}
           </Text>
-          <Text style={styles.listArtist} numberOfLines={1}>
+          <Text style={[styles.listArtist, { color: colors.textSecondary }]} numberOfLines={1}>
             {artist} {year ? `• ${year}` : ''}
           </Text>
         </View>
@@ -122,18 +132,18 @@ export default function AlbumCard({
               style={styles.iconButton}
               hitSlop={8}
             >
-              <Ionicons name="trash-outline" size={19} color={COLORS.error} />
+              <Ionicons name="trash-outline" size={19} color={colors.error} />
             </Pressable>
           ) : (
             <Pressable onPress={toggleSave} style={styles.iconButton} hitSlop={8}>
               <Ionicons
                 name={saved ? 'bookmark' : 'bookmark-outline'}
                 size={19}
-                color={saved ? COLORS.purpleLighter : COLORS.textSecondary}
+                color={saved ? colors.accent : colors.textSecondary}
               />
             </Pressable>
           )}
-          <Ionicons name="chevron-forward" size={16} color={COLORS.textSecondary} style={{ opacity: 0.5 }} />
+          <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} style={{ opacity: 0.5 }} />
         </View>
       </AnimatedPressable>
     );
@@ -144,28 +154,52 @@ export default function AlbumCard({
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
       onPress={handleCardPress}
-      style={[styles.gridContainer, animatedStyle]}
+      style={[
+        styles.gridContainer,
+        { backgroundColor: colors.cardBg, borderColor: colors.border },
+        animatedStyle,
+      ]}
     >
-      <View style={styles.imageWrapper}>
+      <View style={[styles.imageWrapper, { backgroundColor: colors.surfaceElevated }]}>
         <Image source={{ uri: imageUrl }} style={styles.image} resizeMode="cover" />
-        <Pressable onPress={toggleSave} style={styles.floatingBookmark} hitSlop={10}>
+        <Pressable
+          onPress={toggleSave}
+          style={[
+            styles.floatingBookmark,
+            {
+              backgroundColor: isDark
+                ? 'rgba(23, 2, 11, 0.75)'
+                : 'rgba(250, 244, 235, 0.85)',
+            },
+          ]}
+          hitSlop={10}
+        >
           <Ionicons
             name={saved ? 'bookmark' : 'bookmark-outline'}
             size={16}
-            color={saved ? COLORS.purpleLighter : COLORS.textSecondary}
+            color={saved ? colors.accent : colors.textSecondary}
           />
         </Pressable>
         {year ? (
-          <View style={styles.yearBadge}>
-            <Text style={styles.yearText}>{year}</Text>
+          <View
+            style={[
+              styles.yearBadge,
+              {
+                backgroundColor: isDark
+                  ? 'rgba(23, 2, 11, 0.75)'
+                  : 'rgba(250, 244, 235, 0.85)',
+              },
+            ]}
+          >
+            <Text style={[styles.yearText, { color: colors.textSecondary }]}>{year}</Text>
           </View>
         ) : null}
       </View>
 
-      <Text style={styles.title} numberOfLines={1}>
+      <Text style={[styles.title, { color: colors.text }]} numberOfLines={1}>
         {title}
       </Text>
-      <Text style={styles.artist} numberOfLines={1}>
+      <Text style={[styles.artist, { color: colors.textSecondary }]} numberOfLines={1}>
         {artist}
       </Text>
     </AnimatedPressable>
@@ -178,9 +212,7 @@ const styles = StyleSheet.create({
     margin: 6,
     padding: 10,
     borderRadius: 18,
-    backgroundColor: 'rgba(13, 18, 31, 0.75)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
   },
   imageWrapper: {
     width: '100%',
@@ -188,7 +220,6 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     overflow: 'hidden',
     position: 'relative',
-    backgroundColor: COLORS.surfaceElevated,
     marginBottom: 8,
   },
   image: {
@@ -199,7 +230,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 6,
     right: 6,
-    backgroundColor: 'rgba(7, 9, 15, 0.75)',
     borderRadius: 16,
     padding: 6,
   },
@@ -207,25 +237,21 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 6,
     left: 6,
-    backgroundColor: 'rgba(7, 9, 15, 0.75)',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 6,
   },
   yearText: {
-    color: COLORS.textSecondary,
     fontSize: 10,
     fontWeight: '700',
   },
   title: {
     fontSize: 13,
     fontWeight: '700',
-    color: COLORS.text,
     marginBottom: 2,
   },
   artist: {
     fontSize: 11,
-    color: COLORS.textSecondary,
   },
   // List
   listContainer: {
@@ -233,16 +259,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 10,
     borderRadius: 16,
-    backgroundColor: 'rgba(13, 18, 31, 0.75)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
     marginBottom: 8,
   },
   listImage: {
     width: 52,
     height: 52,
     borderRadius: 12,
-    backgroundColor: COLORS.surfaceElevated,
   },
   textContainer: {
     flex: 1,
@@ -252,12 +275,10 @@ const styles = StyleSheet.create({
   listTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: COLORS.text,
     marginBottom: 3,
   },
   listArtist: {
     fontSize: 12,
-    color: COLORS.textSecondary,
   },
   actions: {
     flexDirection: 'row',

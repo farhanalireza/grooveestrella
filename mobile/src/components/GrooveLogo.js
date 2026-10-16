@@ -2,7 +2,7 @@
 import React from 'react';
 import Svg, { G, Path } from 'react-native-svg';
 
-export default function GrooveLogo({ size = 32, style }) {
+export default function GrooveLogo({ size = 32, style, color = '#D4A373' }) {
   const scale = size / 256;
 
   return (
@@ -14,11 +14,11 @@ export default function GrooveLogo({ size = 32, style }) {
     >
       <G>
         <Path
-          fill="#870087"
+          fill={color}
           d="M357.574,313.531l-134.606-4.647l-62.717-101.079l-148.975,9.436 C9.293,229.871,8.258,242.809,8.258,256C8.258,392.82,119.18,503.742,256,503.742c68.41,0,130.345-27.725,175.181-72.561 L357.574,313.531z"
         />
         <Path
-          fill="#870087"
+          fill={color}
           d="M256,8.258c-68.41,0-130.345,27.725-175.181,72.561l73.607,117.65l123.596,1.927l73.728,103.798 l148.975-9.435c1.982-12.629,3.017-25.567,3.017-38.758C503.742,119.18,392.82,8.258,256,8.258z"
         />
       </G>

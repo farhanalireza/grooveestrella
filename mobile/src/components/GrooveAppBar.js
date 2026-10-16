@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { BlurView } from 'expo-blur';
+import { useTheme } from '../context/ThemeContext';
 
 export default function GrooveAppBar({
   title = '',
@@ -30,6 +31,7 @@ export default function GrooveAppBar({
 }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { colors, isDark } = useTheme();
 
   const handleBack = () => {
     try {
@@ -53,18 +55,27 @@ export default function GrooveAppBar({
   const statusHeight = Platform.OS === 'android' ? (StatusBar.currentHeight || 24) : 44;
   const topInset = Math.max(insets.top || 0, statusHeight);
 
+  const dynamicBtnStyle = {
+    backgroundColor: colors.surfaceElevated,
+    borderColor: colors.border,
+  };
+  const dynamicActiveBtnStyle = {
+    backgroundColor: colors.accent,
+    borderColor: colors.text,
+  };
+
   const content = (
     <View style={[styles.innerContainer, { paddingTop: topInset + 4 }]}>
       {/* Left Slot: Back Button */}
       <View style={styles.leftSlot}>
         {showBack && (
           <TouchableOpacity
-            style={styles.circleBtn}
+            style={[styles.circleBtn, dynamicBtnStyle]}
             onPress={handleBack}
             activeOpacity={0.7}
             hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
           >
-            <Ionicons name="chevron-back" size={22} color="#F4F7FF" style={{ marginLeft: -1 }} />
+            <Ionicons name="chevron-back" size={22} color={colors.text} style={{ marginLeft: -1 }} />
           </TouchableOpacity>
         )}
       </View>
@@ -72,12 +83,12 @@ export default function GrooveAppBar({
       {/* Center Slot: Title and Subtitle */}
       <View style={styles.centerSlot}>
         {title ? (
-          <Text style={styles.appBarTitle} numberOfLines={1} ellipsizeMode="tail">
+          <Text style={[styles.appBarTitle, { color: colors.text }]} numberOfLines={1} ellipsizeMode="tail">
             {title}
           </Text>
         ) : null}
         {subtitle ? (
-          <Text style={styles.appBarSubtitle} numberOfLines={1} ellipsizeMode="tail">
+          <Text style={[styles.appBarSubtitle, { color: colors.textSecondary }]} numberOfLines={1} ellipsizeMode="tail">
             {subtitle}
           </Text>
         ) : null}
@@ -91,7 +102,7 @@ export default function GrooveAppBar({
           <View style={styles.defaultActionRow}>
             {onQRCode && (
               <TouchableOpacity
-                style={[styles.circleBtn, showQR && styles.circleBtnActive]}
+                style={[styles.circleBtn, dynamicBtnStyle, showQR && dynamicActiveBtnStyle]}
                 onPress={() => {
                   try {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -104,14 +115,14 @@ export default function GrooveAppBar({
                 <Ionicons
                   name="qr-code-outline"
                   size={18}
-                  color={showQR ? '#FFFFFF' : '#8992A5'}
+                  color={showQR ? colors.bg : colors.textSecondary}
                 />
               </TouchableOpacity>
             )}
 
             {onOpenLink && (
               <TouchableOpacity
-                style={styles.circleBtn}
+                style={[styles.circleBtn, dynamicBtnStyle]}
                 onPress={() => {
                   try {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -121,13 +132,13 @@ export default function GrooveAppBar({
                 activeOpacity={0.7}
                 hitSlop={{ top: 12, bottom: 12, left: 6, right: 6 }}
               >
-                <Ionicons name="link-outline" size={18} color="#8992A5" />
+                <Ionicons name="link-outline" size={18} color={colors.textSecondary} />
               </TouchableOpacity>
             )}
 
             {onShare && (
               <TouchableOpacity
-                style={styles.circleBtn}
+                style={[styles.circleBtn, dynamicBtnStyle]}
                 onPress={() => {
                   try {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -137,13 +148,13 @@ export default function GrooveAppBar({
                 activeOpacity={0.7}
                 hitSlop={{ top: 12, bottom: 12, left: 6, right: 6 }}
               >
-                <Ionicons name="share-social-outline" size={18} color="#8992A5" />
+                <Ionicons name="share-social-outline" size={18} color={colors.textSecondary} />
               </TouchableOpacity>
             )}
 
             {onToggleSave && (
               <TouchableOpacity
-                style={[styles.circleBtn, saved && styles.circleBtnActive]}
+                style={[styles.circleBtn, dynamicBtnStyle, saved && dynamicActiveBtnStyle]}
                 onPress={() => {
                   try {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -156,7 +167,7 @@ export default function GrooveAppBar({
                 <Ionicons
                   name={saved ? 'bookmark' : 'bookmark-outline'}
                   size={18}
-                  color={saved ? '#FFFFFF' : '#8992A5'}
+                  color={saved ? colors.bg : colors.textSecondary}
                 />
               </TouchableOpacity>
             )}
@@ -171,14 +182,14 @@ export default function GrooveAppBar({
   }
 
   return (
-    <View style={styles.blurWrapper}>
+    <View style={[styles.blurWrapper, { borderBottomColor: colors.border }]}>
       <BlurView
         intensity={90}
-        tint="dark"
+        tint={isDark ? 'dark' : 'light'}
         experimentalBlurMethod="dimezisBlurView"
         style={StyleSheet.absoluteFill}
       />
-      <View style={styles.glassTintOverlay} />
+      <View style={[styles.glassTintOverlay, { backgroundColor: isDark ? 'rgba(71, 11, 36, 0.88)' : 'rgba(255, 237, 213, 0.88)' }]} />
       {content}
     </View>
   );
@@ -241,9 +252,7 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: 'rgba(16, 20, 31, 0.85)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.14)',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
@@ -253,19 +262,17 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   circleBtnActive: {
-    backgroundColor: '#870087',
-    borderColor: '#E879F9',
+    backgroundColor: '#470B24',
+    borderColor: '#D4A373',
   },
   appBarTitle: {
     fontSize: 15,
     fontWeight: '800',
-    color: '#FFFFFF',
     letterSpacing: -0.3,
     textAlign: 'center',
   },
   appBarSubtitle: {
     fontSize: 11,
-    color: '#8992A5',
     fontWeight: '500',
     marginTop: 1,
     textAlign: 'center',

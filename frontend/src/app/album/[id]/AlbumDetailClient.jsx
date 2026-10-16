@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Bookmark, BookmarkCheck, Disc, ChevronRight, Clock, Layers } from "lucide-react";
 import { AlbumTrackCard } from "@/Components/CardComponents/SmallTracksCard";
 import { ShareTrackComponent } from "@/Components/CardComponents/ShareTrackComponent";
+import GrooveLinkModal from "@/Components/GrooveLinkModal";
 import MusicLoreAndReviews from "@/Components/MusicLoreAndReviews";
 import RatingPieChart from "@/Components/RatingPieChart";
 import GrooveLoader from "@/Components/GrooveLoader";
@@ -21,6 +22,22 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
     const [loadingTracks, setLoadingTracks] = useState(false);
     const [expandedHeroDesc, setExpandedHeroDesc] = useState(false);
     const [selectedReleaseId, setSelectedReleaseId] = useState(initialAlbum?.selectedReleaseId || null);
+    const [isGrooveLinkOpen, setIsGrooveLinkOpen] = useState(false);
+
+    useEffect(() => {
+        if (typeof window !== "undefined") {
+            const params = new URLSearchParams(window.location.search);
+            if (params.get("groovelink") === "true") {
+                setIsGrooveLinkOpen(true);
+            }
+        }
+    }, [id]);
+
+    useEffect(() => {
+        const handleOpen = () => setIsGrooveLinkOpen(true);
+        window.addEventListener("open-groovelink", handleOpen);
+        return () => window.removeEventListener("open-groovelink", handleOpen);
+    }, []);
 
     const handleSwitchEdition = async (relId) => {
         if (!relId || relId === selectedReleaseId || loadingTracks) return;
@@ -177,14 +194,14 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
 
     if (error) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-screen bg-[#07090F] text-[#F4F7FF] p-6">
+            <div className="flex flex-col items-center justify-center min-h-screen bg-[var(--theme-bg)] text-[var(--theme-fg)] p-6">
                 <h2 className="text-2xl font-bold text-red-500 mb-2">Failed to Load Content</h2>
-                <p className="text-[#8992A5] mb-6 text-center max-w-md">
+                <p className="text-[var(--theme-muted)] mb-6 text-center max-w-md">
                     We couldn't connect to the catalog. Please check your internet connection or try again later.
                 </p>
                 <button
                     onClick={() => window.location.reload()}
-                    className="bg-[#2563EB] hover:bg-[#60A5FA] text-[#F4F7FF] font-semibold py-2 px-6 rounded-full transition duration-300 cursor-pointer"
+                    className="bg-[var(--theme-accent)] hover:opacity-90 text-[var(--theme-bg)] font-semibold py-2 px-6 rounded-full transition duration-300 cursor-pointer"
                 >
                     Retry
                 </button>
@@ -199,7 +216,7 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
     }
 
     const artistsList = Array.isArray(album.artists) ? album.artists : [{ name: album.artist || 'Various Artists' }];
-    const coverUrl = album.images?.[0]?.url || album.coverArt || album.url || 'https://placehold.co/600x600/10141F/60A5FA?text=No+Cover';
+    const coverUrl = album.images?.[0]?.url || album.coverArt || album.url || 'https://placehold.co/600x600/17020B/E8A87C?text=No+Cover';
 
     const totalDurationMs = album.totalDurationMs || tracks.reduce((acc, t) => acc + (t.duration || t.duration_ms || 0), 0);
     function formatTotalDuration(ms) {
@@ -213,24 +230,38 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
     const formattedTotalTime = formatTotalDuration(totalDurationMs);
 
     return (
-        <div className="relative min-h-screen bg-[#07090F] text-[#F4F7FF] p-4 pb-32 sm:p-6 md:pl-20 md:pr-20 lg:pl-40 lg:pr-40 pt-12 overflow-hidden">
-            {/* Dynamic Ambient Album Backdrop Glow */}
-            <div 
-                className="absolute top-0 left-0 right-0 h-[65vh] opacity-35 blur-[140px] pointer-events-none z-0 bg-cover bg-center transition-all duration-700"
-                style={{ backgroundImage: `url(${coverUrl})` }}
-            />
+        <div className="relative min-h-screen bg-[var(--theme-bg)] text-[var(--theme-fg)] p-4 pb-32 sm:p-6 md:pl-20 md:pr-20 lg:pl-40 lg:pr-40 pt-12 overflow-hidden transition-colors duration-300">
+            {/* Full Screen Dynamic Ambient Art-Cover Gradient Backdrop */}
+            <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
+                <div 
+                    className="absolute inset-0 bg-cover bg-center scale-110 blur-2xl opacity-80 dark:opacity-65 saturate-150 contrast-110 transition-all duration-700"
+                    style={{ backgroundImage: `url(${coverUrl})` }}
+                />
+                <div className="absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-black/25 via-transparent to-transparent" />
+                <div 
+                    className="absolute inset-0 bg-gradient-to-b from-transparent via-[var(--theme-bg)]/50 to-[var(--theme-bg)]"
+                />
+            </div>
 
             {/* Back Button */}
             <button 
                 onClick={() => router.push("/")}
-                className="absolute top-8 left-6 lg:left-16 z-20 p-2.5 rounded-full bg-[#10141F]/70 backdrop-blur-md border border-white/10 text-[#8992A5] hover:text-[#F4F7FF] hover:border-[#E879F9]/40 transition shadow-lg cursor-pointer"
+                className="absolute top-6 left-5 sm:top-8 sm:left-6 lg:left-16 z-20 p-2.5 rounded-full bg-[var(--theme-card)]/90 backdrop-blur-md border border-[var(--theme-border)] text-[var(--theme-fg)] hover:border-[var(--theme-accent)] transition shadow-lg cursor-pointer"
                 title="Back to Home"
             >
                 <ArrowLeft size={18} />
             </button>
 
             {/* Actions overlay */}
-            <div className="absolute top-8 right-6 lg:right-16 z-20 flex items-center gap-2.5">
+            <div className="absolute top-6 right-5 sm:top-8 sm:right-6 lg:right-16 z-20 flex items-center gap-2.5">
+                <button
+                    onClick={() => setIsGrooveLinkOpen(true)}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-full bg-[var(--theme-card)]/90 backdrop-blur-md border border-[var(--theme-border)] text-[var(--theme-fg)] hover:border-[var(--theme-accent)] hover:text-[var(--theme-accent)] transition-all duration-300 shadow-md cursor-pointer hover:scale-105 active:scale-95 text-xs font-bold"
+                    title="Open GrooveLink"
+                >
+                    <img src="/in.svg" alt="GrooveLink" className="w-4 h-4 object-contain" />
+                    <span className="hidden sm:inline">GrooveLink</span>
+                </button>
                 <ShareTrackComponent 
                     trackId={album.id} 
                     artist={artistsList} 
@@ -248,8 +279,8 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
                     onClick={toggleSave} 
                     className={`p-2.5 rounded-full backdrop-blur-md transition-all duration-300 shadow-md cursor-pointer ${
                         saved 
-                            ? "bg-[#870087] text-[#F4F7FF] scale-105 shadow-[#870087]/40 shadow-lg" 
-                            : "bg-[#10141F]/60 border border-white/10 text-[#F4F7FF] hover:bg-[#870087]/20 hover:border-[#E879F9]/30"
+                            ? "bg-[var(--theme-accent)] text-[var(--theme-accent-fg)] scale-105 shadow-md" 
+                            : "bg-[var(--theme-card)]/90 border border-[var(--theme-border)] text-[var(--theme-fg)] hover:bg-[var(--theme-surface)] hover:border-[var(--theme-accent)]"
                     }`}
                     title={saved ? "Remove Bookmark" : "Bookmark Album"}
                 >
@@ -258,44 +289,44 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
             </div>
 
             {/* Album Card Details Container */}
-            <div className="relative z-10 mt-14 sm:mt-6 w-full bg-transparent sm:bg-[#10141F]/60 sm:backdrop-blur-xl border-0 sm:border border-transparent sm:border-white/10 rounded-none sm:rounded-3xl p-2 sm:p-8 flex flex-col md:flex-row items-center gap-8 sm:gap-12 sm:shadow-2xl mb-12">
+            <div className="relative z-10 mt-14 sm:mt-6 w-full bg-transparent sm:bg-[var(--theme-card)]/80 sm:backdrop-blur-xl border-0 sm:border border-transparent sm:border-[var(--theme-border)] rounded-none sm:rounded-3xl p-2 sm:p-8 flex flex-col md:flex-row items-center gap-8 sm:gap-12 sm:shadow-2xl mb-12">
                 {/* Album Cover Art */}
-                <div className="relative flex-shrink-0 w-48 h-48 sm:w-56 sm:h-56 md:w-64 md:h-64 rounded-2xl overflow-hidden shadow-2xl bg-[#10141F] ring-1 ring-white/10">
+                <div className="relative flex-shrink-0 w-48 h-48 sm:w-56 sm:h-56 md:w-64 md:h-64 rounded-2xl overflow-hidden shadow-2xl bg-[var(--theme-surface)] ring-1 ring-[var(--theme-border)]">
                     <img 
                         src={coverUrl} 
                         alt={album.name} 
                         className="w-full h-full object-cover transition-transform duration-500 hover:scale-105" 
-                        onError={(e) => { e.currentTarget.src = 'https://placehold.co/400x400/10141F/60A5FA?text=Album'; }}
+                        onError={(e) => { e.currentTarget.src = 'https://placehold.co/400x400/17020B/E8A87C?text=Album'; }}
                     />
                 </div>
 
                 {/* Meta details */}
                 <div className="flex-1 min-w-0 text-center md:text-left flex flex-col justify-between">
                     <div>
-                        <div className="flex items-center justify-center md:justify-start gap-2 mb-2 text-xs font-bold text-[#E879F9] uppercase tracking-widest">
-                            <Disc size={14} />
+                        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--theme-card)]/80 border border-[var(--theme-border)] text-xs font-bold text-[var(--theme-accent)] uppercase tracking-wider mb-2">
+                            <Disc size={13} />
                             <span>Album Release</span>
                         </div>
-                        <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold mb-3 leading-tight tracking-tight text-[#F4F7FF]">{album.name || album.title}</h1>
-                        <p className="text-base sm:text-lg text-[#F4F7FF]/80 mb-2">
+                        <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold mb-3 leading-tight tracking-tight text-[var(--theme-fg)]">{album.name || album.title}</h1>
+                        <p className="text-base sm:text-lg text-[var(--theme-fg)]/85 mb-2">
                             {artistsList.map((a, i) => (
                                 <span
-                                    key={a.id || i}
-                                    className="cursor-pointer hover:text-[#F0ABFC] hover:underline transition"
+                                    key={`${a.id || 'artist'}-${i}`}
+                                    className="cursor-pointer font-semibold hover:text-[var(--theme-accent)] hover:underline transition"
                                     onClick={() => a.id && router.push(`/artist/${a.id}`)}
                                 >
                                     {a.name}{i < artistsList.length - 1 && ', '}
                                 </span>
-                            ))} • <span className="text-[#8992A5] text-sm">{album.releaseDate || album.release_date || 'Release'}</span>
+                            ))} • <span className="text-[var(--theme-muted)] text-sm">{album.releaseDate || album.release_date || 'Release'}</span>
                         </p>
                         
-                        <div className="flex items-center justify-center md:justify-start gap-3 text-xs text-[#8992A5]/70 font-medium mb-4 uppercase tracking-wider flex-wrap">
+                        <div className="flex items-center justify-center md:justify-start gap-3 text-xs text-[var(--theme-muted)] font-medium mb-4 uppercase tracking-wider flex-wrap">
                             <span>{tracks.length || album.total_tracks || 0} tracks total</span>
                             {formattedTotalTime && (
                                 <>
                                     <span>•</span>
-                                    <span className="inline-flex items-center gap-1 text-[#F4F7FF]/90 font-bold">
-                                        <Clock size={13} className="text-[#E879F9]" />
+                                    <span className="inline-flex items-center gap-1 text-[var(--theme-fg)] font-bold">
+                                        <Clock size={13} className="text-[var(--theme-accent)]" />
                                         <span>{formattedTotalTime}</span>
                                     </span>
                                 </>
@@ -303,7 +334,7 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
                             {album.genres?.length > 0 && (
                                 <>
                                     <span>•</span>
-                                    <span className="text-[#E879F9] font-bold">{album.genres.slice(0, 3).join(', ')}</span>
+                                    <span className="px-2 py-0.5 rounded-md bg-[var(--theme-card)] border border-[var(--theme-border)] text-[var(--theme-accent)] font-bold">{album.genres.slice(0, 3).join(', ')}</span>
                                 </>
                             )}
                         </div>
@@ -317,13 +348,13 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
                     {/* Minimized Description before GrooveLink button */}
                     {album.description && (
                         <div className="my-3 text-left">
-                            <p className={`text-xs sm:text-sm text-[#8992A5] leading-relaxed font-body ${!expandedHeroDesc ? "line-clamp-2" : ""}`}>
+                            <p className={`text-xs sm:text-sm text-[var(--theme-muted)] leading-relaxed font-body ${!expandedHeroDesc ? "line-clamp-2" : ""}`}>
                                 {album.description}
                             </p>
                             {album.description.length > 120 && (
                                 <button
                                     onClick={() => setExpandedHeroDesc(!expandedHeroDesc)}
-                                    className="mt-1 text-[11px] font-bold text-[#E879F9] hover:text-[#F0ABFC] transition inline-flex items-center gap-1 cursor-pointer"
+                                    className="mt-1 text-[11px] font-bold text-[var(--theme-accent)] hover:underline transition inline-flex items-center gap-1 cursor-pointer"
                                 >
                                     <span>{expandedHeroDesc ? "Show less" : "Read full overview"}</span>
                                 </button>
@@ -332,29 +363,29 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
                     )}
 
                     {/* GrooveLink & History Actions */}
-                    <div className="border-t border-white/10 pt-4 w-full flex flex-col sm:flex-row items-center justify-center md:justify-start gap-3">
-                        <Link 
-                            href={`/s/musicbrainz/album/${album.id || id}`}
-                            className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-[#870087]/30 bg-[#870087]/15 hover:bg-[#870087]/25 text-[#F4F7FF] text-xs font-bold uppercase tracking-wider transition-all duration-300 shadow-md shadow-[#870087]/10"
+                    <div className="border-t border-[var(--theme-border)] pt-4 w-full flex flex-col sm:flex-row items-center justify-center md:justify-start gap-3">
+                        <button 
+                            onClick={() => setIsGrooveLinkOpen(true)}
+                            className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-[var(--theme-border)] bg-[var(--theme-surface)] hover:border-[var(--theme-accent)] text-[var(--theme-fg)] text-xs font-bold uppercase tracking-wider transition-all duration-300 shadow-md cursor-pointer"
                         >
                             <img src="/in.svg" alt="GrooveLink" className="w-4 h-4 object-contain" />
                             <span>Open in GrooveLink</span>
-                            <ChevronRight className="w-3 h-3 text-[#E879F9]" />
-                        </Link>
+                            <ChevronRight className="w-3 h-3 text-[var(--theme-accent)]" />
+                        </button>
                     </div>
                 </div>
             </div>
 
             {/* Tracks Section */}
-            <div className="relative z-10 border-t border-white/10 pt-8 mb-12">
+            <div className="relative z-10 border-t border-[var(--theme-border)] pt-8 mb-12">
                 <div className="flex items-center justify-between mb-6 flex-wrap gap-2">
                     <h2 className="text-xl sm:text-2xl font-extrabold flex items-center gap-2">
                         <span>Tracks List</span>
-                        <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-white/[0.03] text-[#8992A5] border border-white/10">{tracks.length}</span>
+                        <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-[var(--theme-surface)] text-[var(--theme-muted)] border border-[var(--theme-border)]">{tracks.length}</span>
                     </h2>
                     {formattedTotalTime && (
-                        <span className="text-xs text-[#8992A5] font-medium flex items-center gap-1.5 bg-[#870087]/10 px-3 py-1 rounded-full border border-[#870087]/20">
-                            <Clock size={13} className="text-[#E879F9]" />
+                        <span className="text-xs text-[var(--theme-muted)] font-medium flex items-center gap-1.5 bg-[var(--theme-surface)] px-3 py-1 rounded-full border border-[var(--theme-border)]">
+                            <Clock size={13} className="text-[var(--theme-accent)]" />
                             <span>Total Runtime: {formattedTotalTime}</span>
                         </span>
                     )}
@@ -362,33 +393,33 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
 
                 {/* Grouped Editions & Variations Switcher Bar */}
                 {groupedVariations.length > 0 && (
-                    <div className="mb-6 p-4 rounded-2xl bg-[#10141F]/80 border border-white/10 backdrop-blur-xl space-y-3">
+                    <div className="mb-6 p-4 rounded-2xl bg-[var(--theme-card)]/80 border border-[var(--theme-border)] backdrop-blur-xl space-y-3">
                         <div className="flex items-center justify-between flex-wrap gap-2">
-                            <div className="flex items-center gap-2 text-xs font-bold text-[#E879F9] uppercase tracking-wider">
+                            <div className="flex items-center gap-2 text-xs font-bold text-[var(--theme-accent)] uppercase tracking-wider">
                                 <Layers size={14} />
                                 <span>Editions & Variations ({album.variations?.length || 0} pressings across {groupedVariations.length} eras)</span>
                             </div>
-                            <span className="text-[11px] text-[#8992A5]">
+                            <span className="text-[11px] text-[var(--theme-muted)]">
                                 {loadingTracks ? (
-                                    <span className="text-[#E879F9] font-bold animate-pulse inline-flex items-center gap-1.5">
-                                        <span className="w-2 h-2 rounded-full bg-[#E879F9] animate-ping inline-block" />
+                                    <span className="text-[var(--theme-accent)] font-bold animate-pulse inline-flex items-center gap-1.5">
+                                        <span className="w-2 h-2 rounded-full bg-[var(--theme-accent)] animate-ping inline-block" />
                                         Switching edition...
                                     </span>
                                 ) : (
-                                    <>Active: <strong className="text-white">{album.releaseDate || 'Default'}</strong> • {tracks.length} tracks</>
+                                    <>Active: <strong className="text-[var(--theme-fg)]">{album.releaseDate || 'Default'}</strong> • {tracks.length} tracks</>
                                 )}
                             </span>
                         </div>
 
                         {/* Top Level: Group / Era Selector */}
-                        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin scrollbar-thumb-white/10">
-                            {groupedVariations.map((group) => {
+                        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin scrollbar-thumb-[var(--theme-border)]">
+                            {groupedVariations.map((group, groupIdx) => {
                                 const isGroupActive = group.items.some(
                                     item => (selectedReleaseId === item.id) || (!selectedReleaseId && item.isOriginal)
                                 );
                                 return (
                                     <button
-                                        key={group.key}
+                                        key={`${group.key}-${groupIdx}`}
                                         disabled={loadingTracks}
                                         onClick={() => {
                                             const firstItem = group.items[0];
@@ -396,13 +427,13 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
                                         }}
                                         className={`flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs transition cursor-pointer flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed ${
                                             isGroupActive
-                                                ? "bg-gradient-to-r from-[#870087] to-[#C026D3] text-white font-bold shadow-md shadow-[#870087]/30 ring-1 ring-[#E879F9]/50"
-                                                : "bg-white/[0.03] border border-white/5 text-[#8992A5] hover:text-white hover:border-[#870087]/40 hover:bg-white/5"
+                                                ? "bg-[var(--theme-accent)] text-[var(--theme-bg)] font-bold shadow-md ring-1 ring-[var(--theme-accent)]"
+                                                : "bg-[var(--theme-surface)] border border-[var(--theme-border)] text-[var(--theme-muted)] hover:text-[var(--theme-fg)] hover:border-[var(--theme-accent)]/50"
                                         }`}
                                     >
                                         <span>{group.name}</span>
                                         <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
-                                            isGroupActive ? "bg-white/20 text-white" : "bg-white/5 text-[#8992A5]"
+                                            isGroupActive ? "bg-[var(--theme-bg)]/20 text-[var(--theme-bg)]" : "bg-[var(--theme-card)] text-[var(--theme-muted)]"
                                         }`}>
                                             {group.items.length}
                                         </span>
@@ -420,21 +451,21 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
                             if (!activeGroup || activeGroup.items.length <= 1) return null;
 
                             return (
-                                <div className="pt-2.5 border-t border-white/5 flex items-center gap-2 overflow-x-auto text-xs pb-1 scrollbar-thin scrollbar-thumb-white/10">
-                                    <span className="text-[10px] uppercase font-bold text-[#8992A5] tracking-wider shrink-0">
+                                <div className="pt-2.5 border-t border-[var(--theme-border)] flex items-center gap-2 overflow-x-auto text-xs pb-1 scrollbar-thin scrollbar-thumb-[var(--theme-border)]">
+                                    <span className="text-[10px] uppercase font-bold text-[var(--theme-muted)] tracking-wider shrink-0">
                                         Regional Pressings:
                                     </span>
-                                    {activeGroup.items.map((item) => {
+                                    {activeGroup.items.map((item, itemIdx) => {
                                         const isSelected = (selectedReleaseId === item.id) || (!selectedReleaseId && item.isOriginal);
                                         return (
                                             <button
-                                                key={item.id}
+                                                key={`${item.id}-${itemIdx}`}
                                                 disabled={loadingTracks}
                                                 onClick={() => handleSwitchEdition(item.id)}
                                                 className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition cursor-pointer flex items-center gap-1 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed ${
                                                     isSelected
-                                                        ? "bg-[#870087]/30 text-[#F0ABFC] border border-[#E879F9]/40 font-bold"
-                                                        : "bg-white/[0.02] text-[#8992A5] hover:text-white border border-transparent hover:border-white/10"
+                                                        ? "bg-[var(--theme-accent)]/20 text-[var(--theme-accent)] border border-[var(--theme-accent)]/40 font-bold"
+                                                        : "bg-[var(--theme-surface)] text-[var(--theme-muted)] hover:text-[var(--theme-fg)] border border-transparent hover:border-[var(--theme-border)]"
                                                 }`}
                                             >
                                                 <span>{item.country || 'Global'}</span>
@@ -449,7 +480,7 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
                 )}
 
                 {tracks.length === 0 || loadingTracks ? (
-                    <div className="flex flex-col items-center justify-center p-12 rounded-2xl bg-white/[0.02] border border-white/5 text-center">
+                    <div className="flex flex-col items-center justify-center p-12 rounded-2xl bg-[var(--theme-card)]/50 border border-[var(--theme-border)] text-center">
                         <GrooveLoader size={36} text="Loading album tracks from catalog..." />
                     </div>
                 ) : (
@@ -460,7 +491,7 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
                         const artistsStr = trackArtists.map(a => a.name).join(' ');
                         return (
                             <AlbumTrackCard
-                                key={track.id || index}
+                                key={`${track.id || track.trackID || 'track'}-${index}`}
                                 title={trackTitle}
                                 artist={trackArtists}
                                 spoURL={track.spoURL || track.external_urls?.spotify}
@@ -489,6 +520,30 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
                 rating={album.rating}
                 externalLinks={album.externalLinks || []}
                 totalDurationMs={totalDurationMs}
+            />
+
+            {/* GrooveLink Modal */}
+            <GrooveLinkModal
+                isOpen={isGrooveLinkOpen}
+                onClose={() => setIsGrooveLinkOpen(false)}
+                item={{
+                    id: album.id || id,
+                    type: "album",
+                    name: album.name || album.title,
+                    title: album.name || album.title,
+                    artist: artistsList,
+                    album: album.name || album.title,
+                    imageUrl: coverUrl,
+                    coverArt: coverUrl,
+                    releaseDate: album.releaseDate || album.release_date || (album.releaseYear ? String(album.releaseYear) : null),
+                    releaseYear: album.releaseYear,
+                    popularity: album.popularity || 85,
+                    explicit: false,
+                    genres: album.genres || [],
+                    externalLinks: album.externalLinks || [],
+                    spotifyUrl: album.external_urls?.spotify || album.spoURL,
+                    youtubeUrl: album.YTURL
+                }}
             />
         </div>
     );

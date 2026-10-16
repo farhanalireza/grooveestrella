@@ -16,6 +16,8 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Toast from 'react-native-toast-message';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useTheme } from '../../src/context/ThemeContext';
 import { COLORS } from '../../src/constants/theme';
 import { ApiService } from '../../src/services/api';
 import { StorageService } from '../../src/services/storage';
@@ -51,6 +53,7 @@ export default function AlbumDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { colors, isDark } = useTheme();
 
   const [albumData, setAlbumData] = useState(null);
   const [tracks, setTracks] = useState([]);
@@ -190,11 +193,24 @@ export default function AlbumDetailScreen() {
     : [{ name: albumArtist }];
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['left', 'right']}>
-      {/* Ambient Album Backdrop Glow */}
-      <View style={styles.backdropContainer}>
-        <Image source={{ uri: coverUrl }} style={styles.backdropImage} blurRadius={Platform.OS === 'ios' ? 70 : 25} />
-        <View style={styles.backdropOverlay} />
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.bg }]} edges={['left', 'right']}>
+      {/* Dynamic Ambient Album Art-Cover Gradient Backdrop */}
+      <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
+        <Image
+          source={{ uri: coverUrl }}
+          style={[StyleSheet.absoluteFillObject, { opacity: isDark ? 0.72 : 0.88 }]}
+          blurRadius={Platform.OS === 'ios' ? 24 : 14}
+          resizeMode="cover"
+        />
+        <LinearGradient
+          colors={[
+            'rgba(0, 0, 0, 0.3)',
+            isDark ? 'rgba(23, 2, 11, 0.5)' : 'rgba(250, 244, 235, 0.5)',
+            colors.bg,
+          ]}
+          locations={[0, 0.45, 0.95]}
+          style={StyleSheet.absoluteFillObject}
+        />
       </View>
 
       {/* Top Apple Music Style Unified App Bar */}
@@ -224,29 +240,29 @@ export default function AlbumDetailScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Hero Card Container (Matches web app Album Card) */}
-        <Animated.View entering={FadeInDown.duration(400)} style={styles.heroCard}>
+        <Animated.View entering={FadeInDown.duration(400)} style={[styles.heroCard, { backgroundColor: colors.cardBg, borderColor: colors.border }]}>
           {/* Square Album Cover Artwork */}
-          <View style={styles.coverWrapper}>
+          <View style={[styles.coverWrapper, { borderColor: colors.border, backgroundColor: colors.surfaceElevated }]}>
             <Image source={{ uri: coverUrl }} style={styles.coverImage} resizeMode="cover" />
           </View>
 
           {/* Album Metadata */}
           <View style={styles.metaContent}>
             {/* Category Label */}
-            <View style={styles.categoryBadgeRow}>
-              <Ionicons name="disc" size={14} color="#E879F9" />
-              <Text style={styles.categoryBadgeText}>ALBUM RELEASE</Text>
+            <View style={[styles.categoryBadgeRow, { backgroundColor: isDark ? 'rgba(181, 190, 221, 0.15)' : 'rgba(71, 11, 36, 0.08)', borderColor: colors.border, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 }]}>
+              <Ionicons name="disc" size={13} color={colors.accent} />
+              <Text style={[styles.categoryBadgeText, { color: colors.accent }]}>ALBUM RELEASE</Text>
             </View>
 
             {/* Album Title */}
-            <Text style={styles.albumTitleText}>{albumTitle}</Text>
+            <Text style={[styles.albumTitleText, { color: colors.text }]}>{albumTitle}</Text>
 
             {/* Artist and Release Subtitle */}
-            <Text style={styles.subtitleText}>
+            <Text style={[styles.subtitleText, { color: colors.textSecondary }]}>
               {artistsList.map((a, i) => (
                 <Text
                   key={i}
-                  style={styles.clickableLink}
+                  style={[styles.clickableLink, { color: colors.accent, fontWeight: '700' }]}
                   onPress={() => {
                     if (a.id) {
                       router.push(`/artist/${a.id}`);
@@ -259,26 +275,26 @@ export default function AlbumDetailScreen() {
                   {i < artistsList.length - 1 ? ', ' : ''}
                 </Text>
               ))}
-              <Text style={styles.subtitleBullet}> • </Text>
-              <Text style={styles.releaseDateText}>{releaseDate}</Text>
+              <Text style={[styles.subtitleBullet, { color: colors.textSecondary }]}> • </Text>
+              <Text style={[styles.releaseDateText, { color: colors.textSecondary }]}>{releaseDate}</Text>
             </Text>
 
             {/* Meta Row: Track count + Runtime + Genres */}
             <View style={styles.metaRow}>
-              <Text style={styles.metaItemText}>{totalTracksCount} tracks total</Text>
+              <Text style={[styles.metaItemText, { color: colors.textSecondary }]}>{totalTracksCount} tracks total</Text>
               {formattedRuntime && (
                 <>
-                  <Text style={styles.metaDot}>•</Text>
+                  <Text style={[styles.metaDot, { color: colors.textSecondary }]}>•</Text>
                   <View style={styles.metaItem}>
-                    <Ionicons name="time-outline" size={13} color="#E879F9" />
-                    <Text style={styles.metaItemHighlight}>{formattedRuntime}</Text>
+                    <Ionicons name="time-outline" size={13} color={colors.accent} />
+                    <Text style={[styles.metaItemHighlight, { color: colors.text }]}>{formattedRuntime}</Text>
                   </View>
                 </>
               )}
               {albumData?.genres && albumData.genres.length > 0 && (
                 <>
-                  <Text style={styles.metaDot}>•</Text>
-                  <Text style={styles.metaItemGenre}>{albumData.genres.slice(0, 2).join(', ')}</Text>
+                  <Text style={[styles.metaDot, { color: colors.textSecondary }]}>•</Text>
+                  <Text style={[styles.metaItemGenre, { color: colors.accent, fontWeight: '800' }]}>{albumData.genres.slice(0, 2).join(', ')}</Text>
                 </>
               )}
             </View>
@@ -294,6 +310,7 @@ export default function AlbumDetailScreen() {
                 <Text
                   style={[
                     styles.overviewText,
+                    { color: colors.textSecondary },
                     !expandedHeroDesc && styles.overviewTextClamped,
                   ]}
                 >
@@ -304,13 +321,13 @@ export default function AlbumDetailScreen() {
                     onPress={() => setExpandedHeroDesc(!expandedHeroDesc)}
                     style={styles.readMoreBtn}
                   >
-                    <Text style={styles.readMoreText}>
+                    <Text style={[styles.readMoreText, { color: colors.accent }]}>
                       {expandedHeroDesc ? 'Show less' : 'Read full overview'}
                     </Text>
                     <Ionicons
                       name={expandedHeroDesc ? 'chevron-up' : 'chevron-down'}
                       size={12}
-                      color="#E879F9"
+                      color={colors.accent}
                     />
                   </TouchableOpacity>
                 )}
@@ -318,9 +335,15 @@ export default function AlbumDetailScreen() {
             ) : null}
 
             {/* "Open in GrooveLink" Pill Button */}
-            <View style={styles.grooveLinkSection}>
+            <View style={[styles.grooveLinkSection, { borderTopColor: colors.border }]}>
               <TouchableOpacity
-                style={styles.grooveLinkBtn}
+                style={[
+                  styles.grooveLinkBtn,
+                  {
+                    backgroundColor: isDark ? 'rgba(232, 168, 124, 0.15)' : 'rgba(154, 74, 47, 0.12)',
+                    borderColor: isDark ? 'rgba(232, 168, 124, 0.3)' : 'rgba(154, 74, 47, 0.25)',
+                  },
+                ]}
                 activeOpacity={0.8}
                 onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -328,9 +351,9 @@ export default function AlbumDetailScreen() {
                   setShowGrooveLinkModal(true);
                 }}
               >
-                <Ionicons name="link" size={15} color="#F4F7FF" style={{ marginRight: 6 }} />
-                <Text style={styles.grooveLinkBtnText}>Open in GrooveLink</Text>
-                <Ionicons name="chevron-forward" size={14} color="#E879F9" style={{ marginLeft: 4 }} />
+                <Ionicons name="link" size={15} color={colors.accent} style={{ marginRight: 6 }} />
+                <Text style={[styles.grooveLinkBtnText, { color: colors.accent }]}>Open in GrooveLink</Text>
+                <Ionicons name="chevron-forward" size={14} color={colors.accent} style={{ marginLeft: 4 }} />
               </TouchableOpacity>
             </View>
           </View>
@@ -339,7 +362,7 @@ export default function AlbumDetailScreen() {
         {/* Variations / Editions Eras Switcher */}
         {variations.length > 0 && (
           <View style={styles.variationsSection}>
-            <Text style={styles.sectionSubtitle}>EDITIONS & PRESSINGS</Text>
+            <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>EDITIONS & PRESSINGS</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.variationsScroll}>
               {variations.map((v) => {
                 const isActive = (selectedVariationId === v.id);
@@ -347,9 +370,22 @@ export default function AlbumDetailScreen() {
                   <TouchableOpacity
                     key={v.id}
                     onPress={() => handleSwitchVariation(v)}
-                    style={[styles.variationPill, isActive && styles.variationPillActive]}
+                    style={[
+                      styles.variationPill,
+                      {
+                        backgroundColor: isActive
+                          ? (isDark ? 'rgba(232, 168, 124, 0.25)' : 'rgba(154, 74, 47, 0.18)')
+                          : colors.surfaceElevated,
+                        borderColor: isActive ? colors.accent : colors.border,
+                      },
+                    ]}
                   >
-                    <Text style={[styles.variationPillText, isActive && styles.variationPillTextActive]}>
+                    <Text
+                      style={[
+                        styles.variationPillText,
+                        { color: isActive ? colors.accent : colors.textSecondary, fontWeight: isActive ? '800' : '600' },
+                      ]}
+                    >
                       {v.label}
                     </Text>
                   </TouchableOpacity>
@@ -360,18 +396,26 @@ export default function AlbumDetailScreen() {
         )}
 
         {/* Numbered Tracks Section (Matches web app Album Tracklist) */}
-        <View style={styles.tracksSection}>
+        <View style={[styles.tracksSection, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
           <View style={styles.tracksHeaderRow}>
             <View style={styles.tracksHeaderLeft}>
-              <Text style={styles.tracksHeaderTitle}>Tracks List</Text>
-              <View style={styles.tracksCountBadge}>
-                <Text style={styles.tracksCountBadgeText}>{tracks.length}</Text>
+              <Text style={[styles.tracksHeaderTitle, { color: colors.text }]}>Tracks List</Text>
+              <View style={[styles.tracksCountBadge, { backgroundColor: colors.border }]}>
+                <Text style={[styles.tracksCountBadgeText, { color: colors.textSecondary }]}>{tracks.length}</Text>
               </View>
             </View>
             {formattedRuntime && (
-              <View style={styles.runtimeBadge}>
-                <Ionicons name="time-outline" size={12} color="#E879F9" style={{ marginRight: 4 }} />
-                <Text style={styles.runtimeBadgeText}>{formattedRuntime}</Text>
+              <View
+                style={[
+                  styles.runtimeBadge,
+                  {
+                    backgroundColor: isDark ? 'rgba(232, 168, 124, 0.15)' : 'rgba(154, 74, 47, 0.12)',
+                    borderColor: isDark ? 'rgba(232, 168, 124, 0.3)' : 'rgba(154, 74, 47, 0.25)',
+                  },
+                ]}
+              >
+                <Ionicons name="time-outline" size={12} color={colors.accent} style={{ marginRight: 4 }} />
+                <Text style={[styles.runtimeBadgeText, { color: colors.accent }]}>{formattedRuntime}</Text>
               </View>
             )}
           </View>
@@ -386,7 +430,7 @@ export default function AlbumDetailScreen() {
             return (
               <TouchableOpacity
                 key={t.id || idx}
-                style={styles.trackRow}
+                style={[styles.trackRow, { borderBottomColor: colors.border }]}
                 activeOpacity={0.7}
                 onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -394,31 +438,34 @@ export default function AlbumDetailScreen() {
                 }}
               >
                 {/* Track Number */}
-                <Text style={styles.trackNumText}>{trackNum}</Text>
+                <Text style={[styles.trackNumText, { color: colors.textSecondary }]}>{trackNum}</Text>
 
                 {/* Track Info */}
                 <View style={styles.trackMainInfo}>
-                  <Text style={styles.trackRowTitle} numberOfLines={1}>
+                  <Text style={[styles.trackRowTitle, { color: colors.text }]} numberOfLines={1}>
                     {trackName}
                   </Text>
-                  <Text style={styles.trackRowArtist} numberOfLines={1}>
+                  <Text style={[styles.trackRowArtist, { color: colors.textSecondary }]} numberOfLines={1}>
                     {trackArt}
                   </Text>
                 </View>
 
                 {/* Duration */}
-                <Text style={styles.trackRowDuration}>{trackDur}</Text>
+                <Text style={[styles.trackRowDuration, { color: colors.textSecondary }]}>{trackDur}</Text>
 
                 {/* Quick GrooveLink Button */}
                 <TouchableOpacity
-                  style={styles.trackRowLinkBtn}
+                  style={[
+                    styles.trackRowLinkBtn,
+                    { backgroundColor: isDark ? 'rgba(232, 168, 124, 0.15)' : 'rgba(154, 74, 47, 0.12)' },
+                  ]}
                   hitSlop={8}
                   onPress={(e) => {
                     e.stopPropagation();
                     openTrackInGrooveLink(t);
                   }}
                 >
-                  <Ionicons name="link-outline" size={16} color="#E879F9" />
+                  <Ionicons name="link-outline" size={16} color={colors.accent} />
                 </TouchableOpacity>
               </TouchableOpacity>
             );
@@ -476,7 +523,7 @@ export default function AlbumDetailScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#07090F',
+    backgroundColor: '#10141F',
   },
   backdropContainer: {
     position: 'absolute',
@@ -494,7 +541,7 @@ const styles = StyleSheet.create({
   },
   backdropOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#07090F',
+    backgroundColor: '#10141F',
     opacity: 0.65,
   },
   header: {
@@ -516,13 +563,13 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: 'rgba(16, 20, 31, 0.7)',
     borderWidth: 1,
-    borderColor: 'rgba(135, 0, 135, 0.25)',
+    borderColor: 'rgba(232, 168, 124, 0.25)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   circleBtnActive: {
-    backgroundColor: '#870087',
-    borderColor: '#E879F9',
+    backgroundColor: '#D4A373',
+    borderColor: '#E8A87C',
   },
   scrollContent: {
     paddingHorizontal: 16,
@@ -688,14 +735,14 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
     paddingHorizontal: 16,
     borderRadius: 20,
-    backgroundColor: 'rgba(135, 0, 135, 0.2)',
+    backgroundColor: 'rgba(232, 168, 124, 0.15)',
     borderWidth: 1,
-    borderColor: 'rgba(232, 121, 249, 0.35)',
+    borderColor: 'rgba(232, 168, 124, 0.35)',
   },
   grooveLinkBtnText: {
     fontSize: 11,
     fontWeight: '800',
-    color: '#F4F7FF',
+    color: '#D4A373',
     letterSpacing: 0.8,
     textTransform: 'uppercase',
   },
@@ -772,9 +819,9 @@ const styles = StyleSheet.create({
   runtimeBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(135, 0, 135, 0.15)',
+    backgroundColor: 'rgba(232, 168, 124, 0.15)',
     borderWidth: 1,
-    borderColor: 'rgba(232, 121, 249, 0.25)',
+    borderColor: 'rgba(232, 168, 124, 0.25)',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
@@ -782,7 +829,7 @@ const styles = StyleSheet.create({
   runtimeBadgeText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#E879F9',
+    color: '#D4A373',
   },
   trackRow: {
     flexDirection: 'row',
@@ -821,7 +868,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: 'rgba(135, 0, 135, 0.15)',
+    backgroundColor: 'rgba(232, 168, 124, 0.15)',
     alignItems: 'center',
     justifyContent: 'center',
   },

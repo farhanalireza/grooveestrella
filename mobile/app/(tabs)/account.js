@@ -17,6 +17,7 @@ import * as Haptics from 'expo-haptics';
 import Toast from 'react-native-toast-message';
 import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
 import { COLORS, AVAILABLE_GENRES } from '../../src/constants/theme';
+import { useTheme } from '../../src/context/ThemeContext';
 import { StorageService, generateRandomName } from '../../src/services/storage';
 import GlassCard from '../../src/components/GlassCard';
 import LiquidPill from '../../src/components/LiquidPill';
@@ -35,6 +36,7 @@ const TABS = [
 ];
 
 export default function AccountScreen() {
+  const { colors, isDark } = useTheme();
   const [userName, setUserName] = useState('');
   const [isEditingName, setIsEditingName] = useState(false);
   const [tempName, setTempName] = useState('');
@@ -145,7 +147,7 @@ export default function AccountScreen() {
   const firstLetter = (userName || 'G').charAt(0).toUpperCase();
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.bg }]} edges={['top', 'left', 'right']}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -156,7 +158,7 @@ export default function AccountScreen() {
             <View style={styles.profileHeader}>
               {/* Large Avatar */}
               <LinearGradient
-                colors={['#2563EB', '#60A5FA']}
+                colors={['#470B24', '#D4A373']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={styles.avatarGradient}
@@ -166,15 +168,29 @@ export default function AccountScreen() {
 
               {/* User Identity info */}
               <View style={styles.profileInfo}>
-                <View style={styles.citizenBadge}>
-                  <Ionicons name="sparkles" size={11} color={COLORS.accentLight} style={{ marginRight: 4 }} />
-                  <Text style={styles.citizenBadgeText}>MUSIC LAYER • CITIZEN</Text>
+                <View
+                  style={[
+                    styles.citizenBadge,
+                    {
+                      backgroundColor: isDark ? 'rgba(232, 168, 124, 0.15)' : 'rgba(154, 74, 47, 0.12)',
+                      borderColor: isDark ? 'rgba(232, 168, 124, 0.3)' : 'rgba(154, 74, 47, 0.25)',
+                    },
+                  ]}
+                >
+                  <Ionicons name="sparkles" size={11} color={colors.accent} style={{ marginRight: 4 }} />
+                  <Text style={[styles.citizenBadgeText, { color: colors.accent }]}>MUSIC LAYER • CITIZEN</Text>
                 </View>
 
                 {isEditingName ? (
                   <View style={styles.nameEditRow}>
                     <TextInput
-                      style={styles.nameInput}
+                      style={[
+                        styles.nameInput,
+                        {
+                          backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : colors.surface,
+                          color: colors.text,
+                        },
+                      ]}
                       value={tempName}
                       onChangeText={setTempName}
                       autoFocus
@@ -195,7 +211,7 @@ export default function AccountScreen() {
                   </View>
                 ) : (
                   <View style={styles.nameRow}>
-                    <Text style={styles.userName} numberOfLines={1}>
+                    <Text style={[styles.userName, { color: colors.text }]} numberOfLines={1}>
                       {userName}
                     </Text>
                     <Pressable
@@ -206,7 +222,7 @@ export default function AccountScreen() {
                       style={styles.editBtn}
                       hitSlop={8}
                     >
-                      <Ionicons name="pencil" size={14} color={COLORS.textSecondary} />
+                      <Ionicons name="pencil" size={14} color={colors.textSecondary} />
                     </Pressable>
                   </View>
                 )}
@@ -215,28 +231,63 @@ export default function AccountScreen() {
 
             {/* Action Buttons Row */}
             <View style={styles.actionButtonsRow}>
-              <Pressable onPress={handleRollName} style={styles.secondaryBtn}>
-                <Ionicons name="dice-outline" size={16} color={COLORS.purpleLighter} style={{ marginRight: 6 }} />
-                <Text style={styles.secondaryBtnText}>Roll Name</Text>
+              <Pressable
+                onPress={handleRollName}
+                style={[
+                  styles.secondaryBtn,
+                  {
+                    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : colors.surface,
+                    borderColor: colors.border,
+                  },
+                ]}
+              >
+                <Ionicons name="dice-outline" size={16} color={colors.accent} style={{ marginRight: 6 }} />
+                <Text style={[styles.secondaryBtnText, { color: colors.text }]}>Roll Name</Text>
               </Pressable>
 
-              <Pressable onPress={handleExportData} style={styles.secondaryBtn}>
-                <Ionicons name="download-outline" size={16} color={COLORS.accentLight} style={{ marginRight: 6 }} />
-                <Text style={styles.secondaryBtnText}>Export Data</Text>
+              <Pressable
+                onPress={handleExportData}
+                style={[
+                  styles.secondaryBtn,
+                  {
+                    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : colors.surface,
+                    borderColor: colors.border,
+                  },
+                ]}
+              >
+                <Ionicons name="download-outline" size={16} color={colors.accent} style={{ marginRight: 6 }} />
+                <Text style={[styles.secondaryBtnText, { color: colors.text }]}>Export Data</Text>
               </Pressable>
             </View>
 
             {/* Favorite Genre pills overview */}
             {favoriteGenres.length > 0 && (
-              <View style={styles.profileGenresRow}>
+              <View style={[styles.profileGenresRow, { borderTopColor: colors.border }]}>
                 {favoriteGenres.slice(0, 4).map((g) => (
-                  <View key={g} style={styles.miniGenrePill}>
-                    <Text style={styles.miniGenreText}>{g}</Text>
+                  <View
+                    key={g}
+                    style={[
+                      styles.miniGenrePill,
+                      {
+                        backgroundColor: isDark ? 'rgba(232, 168, 124, 0.15)' : 'rgba(154, 74, 47, 0.12)',
+                        borderColor: isDark ? 'rgba(232, 168, 124, 0.3)' : 'rgba(154, 74, 47, 0.25)',
+                      },
+                    ]}
+                  >
+                    <Text style={[styles.miniGenreText, { color: colors.accent }]}>{g}</Text>
                   </View>
                 ))}
                 {favoriteGenres.length > 4 && (
-                  <View style={styles.miniGenrePill}>
-                    <Text style={styles.miniGenreText}>+{favoriteGenres.length - 4}</Text>
+                  <View
+                    style={[
+                      styles.miniGenrePill,
+                      {
+                        backgroundColor: isDark ? 'rgba(232, 168, 124, 0.15)' : 'rgba(154, 74, 47, 0.12)',
+                        borderColor: isDark ? 'rgba(232, 168, 124, 0.3)' : 'rgba(154, 74, 47, 0.25)',
+                      },
+                    ]}
+                  >
+                    <Text style={[styles.miniGenreText, { color: colors.accent }]}>+{favoriteGenres.length - 4}</Text>
                   </View>
                 )}
               </View>
@@ -248,34 +299,34 @@ export default function AccountScreen() {
         <Animated.View entering={FadeInDown.duration(500).delay(100)} style={styles.statsGrid}>
           <GlassCard style={styles.statCard}>
             <View style={styles.statTop}>
-              <Text style={styles.statLabel}>TRACKS</Text>
-              <Ionicons name="musical-notes" size={15} color={COLORS.accentLight} />
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>TRACKS</Text>
+              <Ionicons name="musical-notes" size={15} color={colors.accent} />
             </View>
-            <Text style={styles.statNumber}>{savedSongs.length}</Text>
+            <Text style={[styles.statNumber, { color: colors.text }]}>{savedSongs.length}</Text>
           </GlassCard>
 
           <GlassCard style={styles.statCard}>
             <View style={styles.statTop}>
-              <Text style={styles.statLabel}>ALBUMS</Text>
-              <Ionicons name="disc" size={15} color={COLORS.purpleLighter} />
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>ALBUMS</Text>
+              <Ionicons name="disc" size={15} color={colors.accent} />
             </View>
-            <Text style={styles.statNumber}>{savedAlbums.length}</Text>
+            <Text style={[styles.statNumber, { color: colors.text }]}>{savedAlbums.length}</Text>
           </GlassCard>
 
           <GlassCard style={styles.statCard}>
             <View style={styles.statTop}>
-              <Text style={styles.statLabel}>ARTISTS</Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>ARTISTS</Text>
               <Ionicons name="people" size={15} color="#34D399" />
             </View>
-            <Text style={styles.statNumber}>{savedArtists.length}</Text>
+            <Text style={[styles.statNumber, { color: colors.text }]}>{savedArtists.length}</Text>
           </GlassCard>
 
           <GlassCard style={styles.statCard}>
             <View style={styles.statTop}>
-              <Text style={styles.statLabel}>REVIEWS</Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>REVIEWS</Text>
               <Ionicons name="chatbubbles" size={15} color="#FBBF24" />
             </View>
-            <Text style={styles.statNumber}>{userReviews.length}</Text>
+            <Text style={[styles.statNumber, { color: colors.text }]}>{userReviews.length}</Text>
           </GlassCard>
         </Animated.View>
 
@@ -305,9 +356,9 @@ export default function AccountScreen() {
             <View>
               {savedSongs.length === 0 ? (
                 <View style={styles.emptyTab}>
-                  <Ionicons name="musical-notes-outline" size={40} color={COLORS.textSecondary} style={{ opacity: 0.4 }} />
-                  <Text style={styles.emptyTabText}>No saved songs yet</Text>
-                  <Text style={styles.emptyTabSub}>Bookmark tracks from the search or track page</Text>
+                  <Ionicons name="musical-notes-outline" size={40} color={colors.textSecondary} style={{ opacity: 0.4 }} />
+                  <Text style={[styles.emptyTabText, { color: colors.text }]}>No saved songs yet</Text>
+                  <Text style={[styles.emptyTabSub, { color: colors.textSecondary }]}>Bookmark tracks from the search or track page</Text>
                 </View>
               ) : (
                 savedSongs.map((track) => (
@@ -329,8 +380,8 @@ export default function AccountScreen() {
             <View>
               {savedAlbums.length === 0 ? (
                 <View style={styles.emptyTab}>
-                  <Ionicons name="disc-outline" size={40} color={COLORS.textSecondary} style={{ opacity: 0.4 }} />
-                  <Text style={styles.emptyTabText}>No saved albums yet</Text>
+                  <Ionicons name="disc-outline" size={40} color={colors.textSecondary} style={{ opacity: 0.4 }} />
+                  <Text style={[styles.emptyTabText, { color: colors.text }]}>No saved albums yet</Text>
                 </View>
               ) : (
                 <View style={styles.gridRow}>
@@ -355,8 +406,8 @@ export default function AccountScreen() {
             <View>
               {savedArtists.length === 0 ? (
                 <View style={styles.emptyTab}>
-                  <Ionicons name="people-outline" size={40} color={COLORS.textSecondary} style={{ opacity: 0.4 }} />
-                  <Text style={styles.emptyTabText}>No followed artists</Text>
+                  <Ionicons name="people-outline" size={40} color={colors.textSecondary} style={{ opacity: 0.4 }} />
+                  <Text style={[styles.emptyTabText, { color: colors.text }]}>No followed artists</Text>
                 </View>
               ) : (
                 <View style={styles.gridRow}>
@@ -381,9 +432,9 @@ export default function AccountScreen() {
             <View>
               {savedPlaylists.length === 0 ? (
                 <View style={styles.emptyTab}>
-                  <Ionicons name="list-outline" size={40} color={COLORS.textSecondary} style={{ opacity: 0.4 }} />
-                  <Text style={styles.emptyTabText}>No playlists found</Text>
-                  <Text style={styles.emptyTabSub}>Create custom playlists inside the Library tab</Text>
+                  <Ionicons name="list-outline" size={40} color={colors.textSecondary} style={{ opacity: 0.4 }} />
+                  <Text style={[styles.emptyTabText, { color: colors.text }]}>No playlists found</Text>
+                  <Text style={[styles.emptyTabSub, { color: colors.textSecondary }]}>Create custom playlists inside the Library tab</Text>
                 </View>
               ) : (
                 savedPlaylists.map((pl) => (
@@ -401,22 +452,22 @@ export default function AccountScreen() {
             <View>
               {userReviews.length === 0 ? (
                 <View style={styles.emptyTab}>
-                  <Ionicons name="chatbubbles-outline" size={40} color={COLORS.textSecondary} style={{ opacity: 0.4 }} />
-                  <Text style={styles.emptyTabText}>No reviews published</Text>
-                  <Text style={styles.emptyTabSub}>Leave track impressions and ratings to build your music review history</Text>
+                  <Ionicons name="chatbubbles-outline" size={40} color={colors.textSecondary} style={{ opacity: 0.4 }} />
+                  <Text style={[styles.emptyTabText, { color: colors.text }]}>No reviews published</Text>
+                  <Text style={[styles.emptyTabSub, { color: colors.textSecondary }]}>Leave track impressions and ratings to build your music review history</Text>
                 </View>
               ) : (
                 userReviews.map((rev) => (
                   <GlassCard key={rev.id} style={styles.reviewCard}>
                     <View style={styles.reviewHeader}>
-                      <Text style={styles.reviewTitle}>{rev.trackTitle || 'Track Review'}</Text>
+                      <Text style={[styles.reviewTitle, { color: colors.text }]}>{rev.trackTitle || 'Track Review'}</Text>
                       <View style={styles.ratingBadge}>
                         <Ionicons name="star" size={12} color="#FBBF24" />
                         <Text style={styles.ratingText}>{rev.rating || 5}/5</Text>
                       </View>
                     </View>
-                    <Text style={styles.reviewComment}>{rev.comment}</Text>
-                    <Text style={styles.reviewDate}>{new Date(rev.createdAt).toLocaleDateString()}</Text>
+                    <Text style={[styles.reviewComment, { color: colors.textSecondary }]}>{rev.comment}</Text>
+                    <Text style={[styles.reviewDate, { color: colors.textSecondary }]}>{new Date(rev.createdAt).toLocaleDateString()}</Text>
                   </GlassCard>
                 ))
               )}
@@ -425,7 +476,7 @@ export default function AccountScreen() {
 
           {activeTab === 'taste' && (
             <View style={styles.tasteContainer}>
-              <Text style={styles.tasteInstruction}>
+              <Text style={[styles.tasteInstruction, { color: colors.textSecondary }]}>
                 Select your favorite music genres to personalize discovery recommendations:
               </Text>
               <View style={styles.genresGrid}>
@@ -437,19 +488,24 @@ export default function AccountScreen() {
                       onPress={() => handleToggleGenre(genre)}
                       style={[
                         styles.genreToggleBtn,
-                        isSelected && styles.genreToggleBtnActive,
+                        {
+                          backgroundColor: isSelected
+                            ? (isDark ? 'rgba(232, 168, 124, 0.18)' : 'rgba(154, 74, 47, 0.12)')
+                            : colors.surfaceElevated,
+                          borderColor: isSelected ? colors.accent : colors.border,
+                        },
                       ]}
                     >
                       <Ionicons
                         name={isSelected ? 'checkmark-circle' : 'add-circle-outline'}
                         size={15}
-                        color={isSelected ? COLORS.purpleLightest : COLORS.textSecondary}
+                        color={isSelected ? colors.accent : colors.textSecondary}
                         style={{ marginRight: 6 }}
                       />
                       <Text
                         style={[
                           styles.genreToggleText,
-                          isSelected && styles.genreToggleTextActive,
+                          { color: isSelected ? colors.accent : colors.textSecondary },
                         ]}
                       >
                         {genre}
@@ -508,8 +564,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
-    backgroundColor: 'rgba(37, 99, 235, 0.12)',
-    borderColor: 'rgba(37, 99, 235, 0.3)',
+    backgroundColor: 'rgba(232, 168, 124, 0.15)',
+    borderColor: 'rgba(232, 168, 124, 0.3)',
     borderWidth: 1,
     paddingVertical: 3,
     paddingHorizontal: 8,
@@ -517,7 +573,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   citizenBadgeText: {
-    color: COLORS.accentLight,
+    color: '#D4A373',
     fontSize: 9,
     fontWeight: '800',
     letterSpacing: 1,
@@ -583,15 +639,15 @@ const styles = StyleSheet.create({
     paddingTop: 10,
   },
   miniGenrePill: {
-    backgroundColor: 'rgba(135, 0, 135, 0.2)',
-    borderColor: 'rgba(232, 121, 249, 0.25)',
+    backgroundColor: 'rgba(232, 168, 124, 0.15)',
+    borderColor: 'rgba(232, 168, 124, 0.3)',
     borderWidth: 1,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 8,
   },
   miniGenreText: {
-    color: COLORS.purpleLightest,
+    color: '#D4A373',
     fontSize: 10,
     fontWeight: '700',
   },
@@ -711,13 +767,13 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
     paddingHorizontal: 14,
     borderRadius: 14,
-    backgroundColor: 'rgba(13, 18, 31, 0.8)',
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'rgba(232, 168, 124, 0.08)',
+    borderColor: 'rgba(232, 168, 124, 0.2)',
     borderWidth: 1,
   },
   genreToggleBtnActive: {
-    backgroundColor: 'rgba(135, 0, 135, 0.25)',
-    borderColor: 'rgba(232, 121, 249, 0.5)',
+    backgroundColor: 'rgba(232, 168, 124, 0.25)',
+    borderColor: 'rgba(232, 168, 124, 0.5)',
   },
   genreToggleText: {
     color: COLORS.textSecondary,

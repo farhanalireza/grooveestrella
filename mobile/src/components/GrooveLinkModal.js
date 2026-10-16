@@ -15,6 +15,7 @@ import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Toast from 'react-native-toast-message';
+import { useTheme } from '../context/ThemeContext';
 import { COLORS } from '../constants/theme';
 import { StorageService } from '../services/storage';
 import { generateStreamingLinks } from '../services/api';
@@ -97,6 +98,7 @@ export default function GrooveLinkModal({
   itemId = '',
   onOpenGrooveCard = null,
 }) {
+  const { colors, isDark } = useTheme();
   const [preferredPlatform, setPreferredPlatform] = useState('none');
   const [copied, setCopied] = useState(false);
 
@@ -157,7 +159,7 @@ export default function GrooveLinkModal({
       <View style={styles.overlay}>
         <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={onClose} />
 
-        <View style={styles.modalCard}>
+        <View style={[styles.modalCard, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
           {/* Top ambient highlight gradient */}
           <LinearGradient
             colors={['rgba(255, 255, 255, 0.25)', 'rgba(255, 255, 255, 0.05)', 'transparent']}
@@ -167,29 +169,29 @@ export default function GrooveLinkModal({
           />
 
           {/* Modal Header */}
-          <View style={styles.header}>
+          <View style={[styles.header, { borderBottomColor: colors.border }]}>
             <View style={styles.headerInfo}>
               <Image
                 source={{ uri: imageUrl || 'https://placehold.co/100x100/10141F/60A5FA?text=Music' }}
-                style={styles.headerCover}
+                style={[styles.headerCover, { backgroundColor: colors.surface }]}
               />
               <View style={styles.headerTextCol}>
                 <View style={styles.badgeRow}>
-                  <Text style={styles.badgeText}>GROOVELINK ROUTER</Text>
+                  <Text style={[styles.badgeText, { color: colors.accent }]}>GROOVELINK ROUTER</Text>
                 </View>
-                <Text style={styles.headerTitle} numberOfLines={1}>{title || 'GrooveLink'}</Text>
-                <Text style={styles.headerArtist} numberOfLines={1}>{artist || 'Universal Music Link'}</Text>
+                <Text style={[styles.headerTitle, { color: colors.text }]} numberOfLines={1}>{title || 'GrooveLink'}</Text>
+                <Text style={[styles.headerArtist, { color: colors.textSecondary }]} numberOfLines={1}>{artist || 'Universal Music Link'}</Text>
               </View>
             </View>
 
-            <TouchableOpacity style={styles.closeBtn} onPress={onClose} activeOpacity={0.7}>
-              <Ionicons name="close" size={20} color="#8992A5" />
+            <TouchableOpacity style={[styles.closeBtn, { backgroundColor: colors.surfaceHighlight }]} onPress={onClose} activeOpacity={0.7}>
+              <Ionicons name="close" size={20} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
 
           {/* Subtitle guidance */}
-          <View style={styles.subBar}>
-            <Text style={styles.subText}>Select platform to open this {type}:</Text>
+          <View style={[styles.subBar, { backgroundColor: colors.surfaceHighlight }]}>
+            <Text style={[styles.subText, { color: colors.textSecondary }]}>Select platform to open this {type}:</Text>
           </View>
 
           {/* Scrollable Platform List */}
@@ -199,18 +201,27 @@ export default function GrooveLinkModal({
               const isDefault = preferredPlatform === plat.id;
 
               return (
-                <View key={plat.id} style={[styles.platformRow, { borderColor: isDefault ? plat.color : 'rgba(255, 255, 255, 0.08)' }]}>
+                <View
+                  key={plat.id}
+                  style={[
+                    styles.platformRow,
+                    {
+                      backgroundColor: colors.cardBg,
+                      borderColor: isDefault ? plat.color : colors.border,
+                    },
+                  ]}
+                >
                   <View style={styles.platLeft}>
                     <View style={[styles.iconBox, { backgroundColor: plat.bg }]}>
                       <Ionicons name={plat.icon} size={20} color={plat.color} />
                     </View>
                     <View style={styles.platInfo}>
-                      <Text style={styles.platName}>{plat.name}</Text>
+                      <Text style={[styles.platName, { color: colors.text }]}>{plat.name}</Text>
                       <TouchableOpacity
                         onPress={() => handleSetDefault(plat.id)}
                         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                       >
-                        <Text style={[styles.defaultBadge, isDefault && { color: plat.color, fontWeight: '700' }]}>
+                        <Text style={[styles.defaultBadge, { color: colors.textSecondary }, isDefault && { color: plat.color, fontWeight: '700' }]}>
                           {isDefault ? '★ Your default preference' : 'Set as default platform'}
                         </Text>
                       </TouchableOpacity>
@@ -231,25 +242,35 @@ export default function GrooveLinkModal({
           </ScrollView>
 
           {/* Bottom Actions */}
-          <View style={styles.footerActions}>
-            <TouchableOpacity style={styles.actionPill} onPress={handleCopy} activeOpacity={0.8}>
-              <Ionicons name={copied ? 'checkmark' : 'copy-outline'} size={15} color={copied ? '#10B981' : '#F4F7FF'} />
-              <Text style={[styles.actionPillText, copied && { color: '#10B981' }]}>
+          <View style={[styles.footerActions, { borderTopColor: colors.border, backgroundColor: colors.surface }]}>
+            <TouchableOpacity
+              style={[styles.actionPill, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}
+              onPress={handleCopy}
+              activeOpacity={0.8}
+            >
+              <Ionicons name={copied ? 'checkmark' : 'copy-outline'} size={15} color={copied ? '#10B981' : colors.text} />
+              <Text style={[styles.actionPillText, { color: colors.text }, copied && { color: '#10B981' }]}>
                 {copied ? 'Link Copied!' : 'Copy Link'}
               </Text>
             </TouchableOpacity>
 
             {onOpenGrooveCard && (
               <TouchableOpacity
-                style={[styles.actionPill, styles.grooveCardPill]}
+                style={[
+                  styles.actionPill,
+                  {
+                    backgroundColor: isDark ? 'rgba(71, 11, 36, 0.6)' : 'rgba(212, 163, 115, 0.25)',
+                    borderColor: colors.accent,
+                  },
+                ]}
                 onPress={() => {
                   onClose();
                   onOpenGrooveCard();
                 }}
                 activeOpacity={0.8}
               >
-                <Ionicons name="sparkles" size={14} color="#F0ABFC" />
-                <Text style={styles.grooveCardPillText}>GrooveCard</Text>
+                <Ionicons name="sparkles" size={14} color={colors.accent} />
+                <Text style={[styles.grooveCardPillText, { color: colors.accent }]}>GrooveCard</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -271,10 +292,8 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 420,
     maxHeight: '82%',
-    backgroundColor: '#0D121F',
     borderRadius: 28,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 16 },
@@ -294,7 +313,6 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
   },
   headerInfo: {
     flexDirection: 'row',
@@ -306,7 +324,6 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 10,
-    backgroundColor: '#10141F',
   },
   headerTextCol: {
     marginLeft: 12,
@@ -318,33 +335,27 @@ const styles = StyleSheet.create({
   badgeText: {
     fontSize: 9,
     fontWeight: '800',
-    color: '#60A5FA',
     letterSpacing: 1,
   },
   headerTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#F4F7FF',
   },
   headerArtist: {
     fontSize: 11,
-    color: '#8992A5',
     marginTop: 1,
   },
   closeBtn: {
     padding: 6,
     borderRadius: 14,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
   },
   subBar: {
     paddingHorizontal: 18,
     paddingVertical: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.02)',
   },
   subText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#8992A5',
     textTransform: 'uppercase',
     letterSpacing: 0.8,
   },
@@ -358,7 +369,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     padding: 12,
     borderRadius: 16,
-    backgroundColor: 'rgba(16, 20, 31, 0.7)',
     borderWidth: 1,
     marginBottom: 8,
   },
@@ -381,11 +391,9 @@ const styles = StyleSheet.create({
   platName: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#F4F7FF',
   },
   defaultBadge: {
     fontSize: 10,
-    color: 'rgba(137, 146, 165, 0.7)',
     marginTop: 2,
   },
   playBtn: {
@@ -410,8 +418,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.08)',
-    backgroundColor: 'rgba(7, 9, 15, 0.6)',
   },
   actionPill: {
     flex: 1,
@@ -421,22 +427,15 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingVertical: 10,
     borderRadius: 14,
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   actionPillText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#F4F7FF',
   },
-  grooveCardPill: {
-    backgroundColor: 'rgba(135, 0, 135, 0.25)',
-    borderColor: 'rgba(232, 121, 249, 0.4)',
-  },
+  grooveCardPill: {},
   grooveCardPillText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#F0ABFC',
   },
 });

@@ -15,6 +15,7 @@ import Animated, {
   interpolateColor,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
+import { useTheme } from '../context/ThemeContext';
 import { COLORS, RADIUS, SPACING } from '../constants/theme';
 
 /**
@@ -53,6 +54,7 @@ const GlassInput = ({
   onSubmitEditing,
   ...textInputProps
 }) => {
+  const { colors, isDark } = useTheme();
   const [isFocusedState, setIsFocusedState] = useState(false);
   const focusAnim = useSharedValue(0);
 
@@ -81,14 +83,14 @@ const GlassInput = ({
     const borderColor = interpolateColor(
       focusAnim.value,
       [0, 1],
-      [COLORS.border, COLORS.purpleLighter50]
+      [colors.border, colors.accent]
     );
 
     const shadowOpacity = focusAnim.value * 0.45;
 
     return {
       borderColor,
-      shadowColor: COLORS.purpleLighter,
+      shadowColor: colors.accent,
       shadowOpacity,
       shadowRadius: focusAnim.value * 10,
       shadowOffset: { width: 0, height: 0 },
@@ -97,10 +99,10 @@ const GlassInput = ({
   });
 
   return (
-    <Animated.View style={[styles.outerContainer, animatedBorderStyle, containerStyle]}>
+    <Animated.View style={[styles.outerContainer, { borderColor: colors.border }, animatedBorderStyle, containerStyle]}>
       {/* Liquid blur layer */}
-      <BlurView intensity={35} tint="dark" style={StyleSheet.absoluteFillObject} />
-      <View style={styles.surfaceOverlay} />
+      <BlurView intensity={35} tint={isDark ? 'dark' : 'light'} style={StyleSheet.absoluteFillObject} />
+      <View style={[styles.surfaceOverlay, { backgroundColor: colors.surfaceElevated60 }]} />
 
       <View style={styles.contentRow}>
         {/* Left Icon */}
@@ -109,7 +111,7 @@ const GlassInput = ({
             <Feather
               name={leftIconName}
               size={18}
-              color={isFocusedState ? COLORS.purpleLighter : COLORS.textSecondary}
+              color={isFocusedState ? colors.accent : colors.textSecondary}
             />
           </View>
         ) : null}
@@ -119,9 +121,9 @@ const GlassInput = ({
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}
-          placeholderTextColor={COLORS.textSecondary50}
-          selectionColor={COLORS.purpleLighter}
-          style={[styles.input, inputStyle]}
+          placeholderTextColor={colors.textSecondary50 || colors.textSecondary}
+          selectionColor={colors.accent}
+          style={[styles.input, { color: colors.text }, inputStyle]}
           onFocus={handleFocus}
           onBlur={handleBlur}
           onSubmitEditing={onSubmitEditing}
@@ -134,11 +136,11 @@ const GlassInput = ({
           <TouchableOpacity
             onPress={handleClear}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            style={styles.clearButton}
+            style={[styles.clearButton, { backgroundColor: colors.surfaceHighlight }]}
             accessibilityLabel="Clear text"
             accessibilityRole="button"
           >
-            <Feather name="x" size={16} color={COLORS.textSecondary} />
+            <Feather name="x" size={16} color={colors.textSecondary} />
           </TouchableOpacity>
         ) : null}
       </View>

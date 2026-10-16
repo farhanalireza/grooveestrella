@@ -31,7 +31,7 @@ export const ShareTrackComponent = ({
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
                 onClick={handleButtonClick}
-                className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-all duration-200 text-white flex items-center justify-center cursor-pointer shadow-md"
+                className="p-2 rounded-full bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] border border-[var(--theme-border)] text-[var(--theme-fg)] hover:text-[var(--theme-accent)] transition-all duration-200 flex items-center justify-center cursor-pointer shadow-md"
                 title="Create GrooveCard"
             >
                 <Share2 size={16} />

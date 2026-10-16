@@ -13,11 +13,14 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Toast from 'react-native-toast-message';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS, PLATFORMS } from '../../src/constants/theme';
 import { StorageService } from '../../src/services/storage';
+import { useTheme } from '../../src/context/ThemeContext';
 import GlassCard from '../../src/components/GlassCard';
 
 export default function SettingsScreen() {
+  const { theme, isDark, setTheme, colors } = useTheme();
   const [preferredPlatform, setPreferredPlatform] = useState('none');
   const [counts, setCounts] = useState({
     songs: 0,
@@ -25,6 +28,16 @@ export default function SettingsScreen() {
     artists: 0,
     playlists: 0,
   });
+
+  const handleSelectTheme = async (mode) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    await setTheme(mode);
+    Toast.show({
+      type: 'success',
+      text1: `${mode === 'dark' ? 'Dark' : 'Light'} Theme Activated`,
+      text2: mode === 'dark' ? 'Background: #470B24 • Foreground: #FFEDD5' : 'Background: #FFEDD5 • Foreground: #470B24',
+    });
+  };
 
   const loadSettingsData = useCallback(async () => {
     const [plat, countData] = await Promise.all([
@@ -156,20 +169,97 @@ export default function SettingsScreen() {
       >
         {/* Header */}
         <Animated.View entering={FadeInDown.duration(400)} style={styles.header}>
-          <Text style={styles.headerTitle}>App Settings</Text>
-          <Text style={styles.headerSubtitle}>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>App Settings</Text>
+          <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
             Configure GrooveLinks auto-routing and manage local offline collections.
           </Text>
         </Animated.View>
 
-        {/* Section 1: GrooveLinks Preferences */}
-        <Animated.View entering={FadeInDown.duration(450).delay(100)}>
+        {/* Section 0: Appearance & Theme */}
+        <Animated.View entering={FadeInDown.duration(450)}>
           <View style={styles.sectionHeader}>
-            <Ionicons name="link" size={16} color={COLORS.purpleLighter} style={{ marginRight: 8 }} />
-            <Text style={styles.sectionTitle}>GROOVELINKS PREFERENCES</Text>
+            <Ionicons name="color-palette-outline" size={16} color={colors.accent} style={{ marginRight: 8 }} />
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>APPEARANCE & THEME</Text>
           </View>
 
-          <Text style={styles.sectionDescription}>
+          <Text style={[styles.sectionDescription, { color: colors.textSecondary }]}>
+            Unified with Burgundy Wine (#470B24), Copper (#D4A373), and Warm Bisque (#FFEDD5).
+          </Text>
+
+          {/* Theme Mode Selector */}
+          <View style={styles.themeGrid}>
+            {/* Dark Theme Option */}
+            <Pressable
+              onPress={() => handleSelectTheme('dark')}
+              style={[
+                styles.themeCard,
+                { backgroundColor: isDark ? 'rgba(71, 11, 36, 0.95)' : colors.cardBg, borderColor: isDark ? colors.accent : colors.border },
+              ]}
+            >
+              <View style={styles.themeCardHeader}>
+                <View style={[styles.themeIconCircle, { backgroundColor: '#470B24', borderColor: colors.accent }]}>
+                  <Ionicons name="moon" size={16} color="#FFEDD5" />
+                </View>
+                {isDark && (
+                  <Ionicons name="checkmark-circle" size={18} color={colors.accent} />
+                )}
+              </View>
+              <Text style={[styles.themeCardTitle, { color: isDark ? '#FFEDD5' : colors.text }]}>
+                Dark Theme
+              </Text>
+              <Text style={[styles.themeCardDesc, { color: isDark ? 'rgba(255, 237, 213, 0.75)' : colors.textSecondary }]}>
+                BG: #470B24 • FG: #FFEDD5
+              </Text>
+            </Pressable>
+
+            {/* Light Theme Option */}
+            <Pressable
+              onPress={() => handleSelectTheme('light')}
+              style={[
+                styles.themeCard,
+                { backgroundColor: !isDark ? 'rgba(255, 237, 213, 0.95)' : colors.cardBg, borderColor: !isDark ? colors.accent : colors.border },
+              ]}
+            >
+              <View style={styles.themeCardHeader}>
+                <View style={[styles.themeIconCircle, { backgroundColor: '#FFEDD5', borderColor: '#470B24' }]}>
+                  <Ionicons name="sunny" size={16} color="#470B24" />
+                </View>
+                {!isDark && (
+                  <Ionicons name="checkmark-circle" size={18} color="#470B24" />
+                )}
+              </View>
+              <Text style={[styles.themeCardTitle, { color: !isDark ? '#470B24' : colors.text }]}>
+                Light Theme
+              </Text>
+              <Text style={[styles.themeCardDesc, { color: !isDark ? 'rgba(71, 11, 36, 0.75)' : colors.textSecondary }]}>
+                BG: #FFEDD5 • FG: #470B24
+              </Text>
+            </Pressable>
+          </View>
+
+          {/* Canonical Gradient Preview Bar */}
+          <View style={[styles.gradientPreviewCard, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
+            <View style={styles.gradientPreviewHeader}>
+              <Text style={[styles.gradientPreviewTitle, { color: colors.text }]}>Unified Theme Gradient</Text>
+              <Text style={[styles.gradientHexText, { color: colors.textSecondary }]}>#470B24 → #D4A373 → #FFEDD5</Text>
+            </View>
+            <LinearGradient
+              colors={['#470B24', '#D4A373', '#FFEDD5']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.gradientBar}
+            />
+          </View>
+        </Animated.View>
+
+        {/* Section 1: GrooveLinks Preferences */}
+        <Animated.View entering={FadeInDown.duration(450).delay(100)} style={styles.sectionSpacing}>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="link" size={16} color={colors.accent} style={{ marginRight: 8 }} />
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>GROOVELINKS PREFERENCES</Text>
+          </View>
+
+          <Text style={[styles.sectionDescription, { color: colors.textSecondary }]}>
             Choose which platform opens automatically when you click universal links.
           </Text>
 
@@ -183,29 +273,34 @@ export default function SettingsScreen() {
                   onPress={() => handleSelectPlatform(platform.id)}
                   style={[
                     styles.platformCard,
-                    isSelected && styles.platformCardSelected,
+                    {
+                      backgroundColor: isSelected
+                        ? (isDark ? 'rgba(232, 168, 124, 0.18)' : 'rgba(154, 74, 47, 0.12)')
+                        : colors.surfaceElevated,
+                      borderColor: isSelected ? colors.accent : colors.border,
+                    },
                   ]}
                 >
                   <View style={styles.platformCardTop}>
                     <Ionicons
                       name={platform.icon}
                       size={20}
-                      color={isSelected ? COLORS.purpleLightest : platform.color || COLORS.textSecondary}
+                      color={isSelected ? colors.accent : platform.color || colors.textSecondary}
                     />
                     {isSelected && (
-                      <Ionicons name="checkmark-circle" size={18} color={COLORS.purpleLightest} />
+                      <Ionicons name="checkmark-circle" size={18} color={colors.accent} />
                     )}
                   </View>
                   <Text
                     style={[
                       styles.platformName,
-                      isSelected && styles.platformNameSelected,
+                      { color: isSelected ? colors.accent : colors.text },
                     ]}
                     numberOfLines={1}
                   >
                     {platform.name}
                   </Text>
-                  <Text style={styles.platformDesc} numberOfLines={2}>
+                  <Text style={[styles.platformDesc, { color: colors.textSecondary }]} numberOfLines={2}>
                     {platform.desc}
                   </Text>
                 </Pressable>
@@ -215,30 +310,30 @@ export default function SettingsScreen() {
 
           {/* Reset Preferences Button */}
           <Pressable onPress={handleResetPreferences} style={styles.resetPrefBtn}>
-            <Ionicons name="refresh-outline" size={14} color={COLORS.textSecondary} style={{ marginRight: 6 }} />
-            <Text style={styles.resetPrefText}>Reset Routing Preferences</Text>
+            <Ionicons name="refresh-outline" size={14} color={colors.textSecondary} style={{ marginRight: 6 }} />
+            <Text style={[styles.resetPrefText, { color: colors.textSecondary }]}>Reset Routing Preferences</Text>
           </Pressable>
         </Animated.View>
 
         {/* Section 2: Library Data Manager */}
         <Animated.View entering={FadeInDown.duration(500).delay(200)} style={styles.sectionSpacing}>
           <View style={styles.sectionHeader}>
-            <Ionicons name="server-outline" size={16} color={COLORS.accentLight} style={{ marginRight: 8 }} />
-            <Text style={styles.sectionTitle}>LIBRARY DATA MANAGER</Text>
+            <Ionicons name="server-outline" size={16} color={colors.accent} style={{ marginRight: 8 }} />
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>LIBRARY DATA MANAGER</Text>
           </View>
 
-          <Text style={styles.sectionDescription}>
+          <Text style={[styles.sectionDescription, { color: colors.textSecondary }]}>
             Manage local offline cache and wipe individual library storage items.
           </Text>
 
           <GlassCard style={styles.managerCard}>
             {/* Row 1: Songs */}
-            <View style={styles.managerRow}>
+            <View style={[styles.managerRow, { borderBottomColor: colors.border }]}>
               <View style={styles.managerInfo}>
-                <Ionicons name="musical-notes" size={18} color={COLORS.accentLight} style={{ marginRight: 10 }} />
+                <Ionicons name="musical-notes" size={18} color={colors.accent} style={{ marginRight: 10 }} />
                 <View>
-                  <Text style={styles.managerName}>Saved Songs</Text>
-                  <Text style={styles.managerCount}>{counts.songs} items stored</Text>
+                  <Text style={[styles.managerName, { color: colors.text }]}>Saved Songs</Text>
+                  <Text style={[styles.managerCount, { color: colors.textSecondary }]}>{counts.songs} items stored</Text>
                 </View>
               </View>
               <Pressable
@@ -251,12 +346,12 @@ export default function SettingsScreen() {
             </View>
 
             {/* Row 2: Albums */}
-            <View style={styles.managerRow}>
+            <View style={[styles.managerRow, { borderBottomColor: colors.border }]}>
               <View style={styles.managerInfo}>
-                <Ionicons name="disc" size={18} color={COLORS.purpleLighter} style={{ marginRight: 10 }} />
+                <Ionicons name="disc" size={18} color={colors.accent} style={{ marginRight: 10 }} />
                 <View>
-                  <Text style={styles.managerName}>Saved Albums</Text>
-                  <Text style={styles.managerCount}>{counts.albums} items stored</Text>
+                  <Text style={[styles.managerName, { color: colors.text }]}>Saved Albums</Text>
+                  <Text style={[styles.managerCount, { color: colors.textSecondary }]}>{counts.albums} items stored</Text>
                 </View>
               </View>
               <Pressable
@@ -269,12 +364,12 @@ export default function SettingsScreen() {
             </View>
 
             {/* Row 3: Artists */}
-            <View style={styles.managerRow}>
+            <View style={[styles.managerRow, { borderBottomColor: colors.border }]}>
               <View style={styles.managerInfo}>
                 <Ionicons name="people" size={18} color="#34D399" style={{ marginRight: 10 }} />
                 <View>
-                  <Text style={styles.managerName}>Followed Artists</Text>
-                  <Text style={styles.managerCount}>{counts.artists} items stored</Text>
+                  <Text style={[styles.managerName, { color: colors.text }]}>Followed Artists</Text>
+                  <Text style={[styles.managerCount, { color: colors.textSecondary }]}>{counts.artists} items stored</Text>
                 </View>
               </View>
               <Pressable
@@ -291,8 +386,8 @@ export default function SettingsScreen() {
               <View style={styles.managerInfo}>
                 <Ionicons name="list" size={18} color="#FBBF24" style={{ marginRight: 10 }} />
                 <View>
-                  <Text style={styles.managerName}>Playlists</Text>
-                  <Text style={styles.managerCount}>{counts.playlists} items stored</Text>
+                  <Text style={[styles.managerName, { color: colors.text }]}>Playlists</Text>
+                  <Text style={[styles.managerCount, { color: colors.textSecondary }]}>{counts.playlists} items stored</Text>
                 </View>
               </View>
               <Pressable
@@ -320,10 +415,13 @@ export default function SettingsScreen() {
         </Animated.View>
 
         {/* Privacy Notice */}
-        <Animated.View entering={FadeInDown.duration(500).delay(300)} style={styles.privacyCard}>
-          <Ionicons name="shield-checkmark-outline" size={20} color={COLORS.accentLight} style={{ marginBottom: 8 }} />
-          <Text style={styles.privacyTitle}>Local-First & Privacy Conscious</Text>
-          <Text style={styles.privacyText}>
+        <Animated.View
+          entering={FadeInDown.duration(500).delay(300)}
+          style={[styles.privacyCard, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}
+        >
+          <Ionicons name="shield-checkmark-outline" size={20} color={colors.accent} style={{ marginBottom: 8 }} />
+          <Text style={[styles.privacyTitle, { color: colors.text }]}>Local-First & Privacy Conscious</Text>
+          <Text style={[styles.privacyText, { color: colors.textSecondary }]}>
             All preferences, library bookmarks, and playlist caches are stored strictly on your local device. GrooveEstrella does not require account logins or capture telemetry without permission.
           </Text>
         </Animated.View>
@@ -388,8 +486,8 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   platformCardSelected: {
-    backgroundColor: 'rgba(135, 0, 135, 0.25)',
-    borderColor: 'rgba(232, 121, 249, 0.55)',
+    backgroundColor: 'rgba(232, 168, 124, 0.18)',
+    borderColor: 'rgba(232, 168, 124, 0.45)',
   },
   platformCardTop: {
     flexDirection: 'row',
@@ -493,8 +591,8 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   privacyCard: {
-    backgroundColor: 'rgba(16, 20, 31, 0.6)',
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: 'rgba(232, 168, 124, 0.08)',
+    borderColor: 'rgba(232, 168, 124, 0.2)',
     borderWidth: 1,
     borderRadius: 18,
     padding: 16,
@@ -511,5 +609,66 @@ const styles = StyleSheet.create({
     color: 'rgba(137, 146, 165, 0.75)',
     textAlign: 'center',
     lineHeight: 16,
+  },
+  themeGrid: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 14,
+  },
+  themeCard: {
+    flex: 1,
+    borderRadius: 18,
+    borderWidth: 1.5,
+    padding: 14,
+  },
+  themeCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  themeIconCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  themeCardTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    marginBottom: 4,
+  },
+  themeCardDesc: {
+    fontSize: 10,
+    fontWeight: '600',
+    lineHeight: 14,
+  },
+  gradientPreviewCard: {
+    borderRadius: 18,
+    borderWidth: 1,
+    padding: 14,
+    marginBottom: 8,
+  },
+  gradientPreviewHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  gradientPreviewTitle: {
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  gradientHexText: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  gradientBar: {
+    height: 12,
+    borderRadius: 6,
+    width: '100%',
   },
 });

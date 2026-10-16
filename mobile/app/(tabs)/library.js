@@ -19,6 +19,7 @@ import * as Haptics from 'expo-haptics';
 import Toast from 'react-native-toast-message';
 import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
 import { COLORS } from '../../src/constants/theme';
+import { useTheme } from '../../src/context/ThemeContext';
 import { StorageService } from '../../src/services/storage';
 import GlassCard from '../../src/components/GlassCard';
 import LiquidPill from '../../src/components/LiquidPill';
@@ -35,6 +36,7 @@ const TABS = [
 ];
 
 export default function LibraryScreen() {
+  const { colors, isDark } = useTheme();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('songs');
   const [songs, setSongs] = useState([]);
@@ -109,44 +111,52 @@ export default function LibraryScreen() {
     <View>
       {/* Title */}
       <Animated.View entering={FadeInDown.duration(400)} style={styles.titleRow}>
-        <View style={styles.iconBadge}>
-          <Ionicons name="folder-open" size={20} color={COLORS.accentLight} />
+        <View
+          style={[
+            styles.iconBadge,
+            {
+              backgroundColor: isDark ? 'rgba(232, 168, 124, 0.15)' : 'rgba(154, 74, 47, 0.12)',
+              borderColor: isDark ? 'rgba(232, 168, 124, 0.3)' : 'rgba(154, 74, 47, 0.25)',
+            },
+          ]}
+        >
+          <Ionicons name="folder-open" size={20} color={colors.accent} />
         </View>
-        <Text style={styles.titleText}>Your Library Collection</Text>
+        <Text style={[styles.titleText, { color: colors.text }]}>Your Library Collection</Text>
       </Animated.View>
 
       {/* Stats Grid (4 Cards) */}
       <Animated.View entering={FadeInDown.duration(450).delay(100)} style={styles.statsGrid}>
         <GlassCard style={styles.statCard}>
           <View style={styles.statTop}>
-            <Text style={styles.statLabel}>TRACKS</Text>
-            <Ionicons name="musical-notes" size={14} color={COLORS.accentLight} />
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>TRACKS</Text>
+            <Ionicons name="musical-notes" size={14} color={colors.accent} />
           </View>
-          <Text style={styles.statNumber}>{songs.length}</Text>
+          <Text style={[styles.statNumber, { color: colors.text }]}>{songs.length}</Text>
         </GlassCard>
 
         <GlassCard style={styles.statCard}>
           <View style={styles.statTop}>
-            <Text style={styles.statLabel}>ALBUMS</Text>
-            <Ionicons name="disc" size={14} color={COLORS.purpleLighter} />
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>ALBUMS</Text>
+            <Ionicons name="disc" size={14} color={colors.accent} />
           </View>
-          <Text style={styles.statNumber}>{albums.length}</Text>
+          <Text style={[styles.statNumber, { color: colors.text }]}>{albums.length}</Text>
         </GlassCard>
 
         <GlassCard style={styles.statCard}>
           <View style={styles.statTop}>
-            <Text style={styles.statLabel}>ARTISTS</Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>ARTISTS</Text>
             <Ionicons name="people" size={14} color="#34D399" />
           </View>
-          <Text style={styles.statNumber}>{artists.length}</Text>
+          <Text style={[styles.statNumber, { color: colors.text }]}>{artists.length}</Text>
         </GlassCard>
 
         <GlassCard style={styles.statCard}>
           <View style={styles.statTop}>
-            <Text style={styles.statLabel}>PLAYLISTS</Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>PLAYLISTS</Text>
             <Ionicons name="list" size={14} color="#FBBF24" />
           </View>
-          <Text style={styles.statNumber}>{allPlaylists.length}</Text>
+          <Text style={[styles.statNumber, { color: colors.text }]}>{allPlaylists.length}</Text>
         </GlassCard>
       </Animated.View>
 
@@ -187,7 +197,7 @@ export default function LibraryScreen() {
             style={styles.createPlBtn}
           >
             <LinearGradient
-              colors={['#870087', '#A21CAF']}
+              colors={['#470B24', '#D4A373']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.createPlGradient}
@@ -203,14 +213,14 @@ export default function LibraryScreen() {
 
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
-      <Ionicons name="musical-notes-outline" size={48} color={COLORS.textSecondary} style={{ opacity: 0.35 }} />
-      <Text style={styles.emptyTitle}>Empty {activeTab}</Text>
-      <Text style={styles.emptyDesc}>
+      <Ionicons name="musical-notes-outline" size={48} color={colors.textSecondary} style={{ opacity: 0.35 }} />
+      <Text style={[styles.emptyTitle, { color: colors.text }]}>Empty {activeTab}</Text>
+      <Text style={[styles.emptyDesc, { color: colors.textSecondary }]}>
         You haven&apos;t saved any {activeTab} yet. Discover and bookmark tracks across GrooveEstrella.
       </Text>
       <Pressable
         onPress={() => router.push('/explore')}
-        style={styles.exploreBtn}
+        style={[styles.exploreBtn, { backgroundColor: colors.accent }]}
       >
         <Text style={styles.exploreBtnText}>Go to Explore</Text>
         <Ionicons name="arrow-forward" size={14} color="#FFFFFF" style={{ marginLeft: 6 }} />
@@ -221,7 +231,7 @@ export default function LibraryScreen() {
   const isGrid = activeTab === 'albums' || activeTab === 'artists';
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.bg }]} edges={['top', 'left', 'right']}>
       {activeTab === 'songs' && (
         <FlatList
           ListHeaderComponent={renderHeader}
@@ -333,27 +343,42 @@ export default function LibraryScreen() {
           <View style={styles.modalBackdrop}>
             <GlassCard elevated style={styles.modalCard}>
               <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Create New Playlist</Text>
+                <Text style={[styles.modalTitle, { color: colors.text }]}>Create New Playlist</Text>
                 <Pressable onPress={() => setIsModalOpen(false)} hitSlop={10}>
-                  <Ionicons name="close" size={20} color={COLORS.textSecondary} />
+                  <Ionicons name="close" size={20} color={colors.textSecondary} />
                 </Pressable>
               </View>
 
-              <Text style={styles.inputLabel}>PLAYLIST NAME</Text>
+              <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>PLAYLIST NAME</Text>
               <TextInput
-                style={styles.modalInput}
+                style={[
+                  styles.modalInput,
+                  {
+                    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : colors.surface,
+                    borderColor: colors.border,
+                    color: colors.text,
+                  },
+                ]}
                 placeholder="e.g. Midnight Chill, Synthwave Roads"
-                placeholderTextColor="rgba(137, 146, 165, 0.5)"
+                placeholderTextColor={colors.textSecondary}
                 value={newPlName}
                 onChangeText={setNewPlName}
                 autoFocus
               />
 
-              <Text style={styles.inputLabel}>DESCRIPTION (OPTIONAL)</Text>
+              <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>DESCRIPTION (OPTIONAL)</Text>
               <TextInput
-                style={[styles.modalInput, styles.modalInputArea]}
+                style={[
+                  styles.modalInput,
+                  styles.modalInputArea,
+                  {
+                    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : colors.surface,
+                    borderColor: colors.border,
+                    color: colors.text,
+                  },
+                ]}
                 placeholder="Short description of this mix..."
-                placeholderTextColor="rgba(137, 146, 165, 0.5)"
+                placeholderTextColor={colors.textSecondary}
                 value={newPlDesc}
                 onChangeText={setNewPlDesc}
                 multiline
@@ -365,7 +390,7 @@ export default function LibraryScreen() {
                   onPress={() => setIsModalOpen(false)}
                   style={styles.modalCancelBtn}
                 >
-                  <Text style={styles.modalCancelText}>Cancel</Text>
+                  <Text style={[styles.modalCancelText, { color: colors.textSecondary }]}>Cancel</Text>
                 </Pressable>
 
                 <Pressable
@@ -373,7 +398,7 @@ export default function LibraryScreen() {
                   style={styles.modalSaveBtn}
                 >
                   <LinearGradient
-                    colors={['#870087', '#C026D3']}
+                    colors={['#470B24', '#D4A373']}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 0 }}
                     style={styles.modalSaveGradient}
@@ -409,9 +434,9 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(37, 99, 235, 0.15)',
+    backgroundColor: 'rgba(232, 168, 124, 0.15)',
     borderWidth: 1,
-    borderColor: 'rgba(37, 99, 235, 0.3)',
+    borderColor: 'rgba(232, 168, 124, 0.3)',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,

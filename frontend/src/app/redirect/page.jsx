@@ -63,14 +63,14 @@ function RedirectContent() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-[#07090F] text-[#F4F7FF] px-6 text-center">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-[var(--theme-bg)] text-[var(--theme-fg)] px-6 text-center">
       <h1 className="text-2xl font-semibold mb-4">You're being redirected</h1>
-      <p className="text-[#F4F7FF]/80 mb-2">
-        We're taking you to: <span className="text-[#F4F7FF] font-bold underline my-6 tracking-wide">{redirectInfo.name}</span>
+      <p className="text-[var(--theme-muted)] mb-2">
+        We're taking you to: <span className="text-[var(--theme-fg)] font-bold underline my-6 tracking-wide">{redirectInfo.name}</span>
       </p>
-      <p className="text-xs text-[#8992A5]/70 mt-4">
+      <p className="text-xs text-[var(--theme-muted)] mt-4">
         If you're not redirected within a few seconds,{" "}
-        <a href={redirectInfo.url} target={redirectInfo.newTab ? "_blank" : "_self"} rel="noopener noreferrer" className="underline text-[#60A5FA]">
+        <a href={redirectInfo.url} target={redirectInfo.newTab ? "_blank" : "_self"} rel="noopener noreferrer" className="underline text-[var(--theme-accent)]">
           click here
         </a>.
       </p>

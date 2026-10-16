@@ -107,15 +107,15 @@ export default function MusicLoreAndReviews({
 
   return (
     <div className="relative z-10 w-full mt-12 space-y-10">
-      {/* 1. All Tags & Community Genres Section (Moved Above Description) */}
+      {/* 1. All Tags & Community Genres Section */}
       {displayTags.length > 0 && (
-        <section className="bg-[#10141F]/60 backdrop-blur-xl border border-[#2563EB]/15 rounded-3xl p-6 sm:p-8 shadow-xl">
+        <section className="bg-[var(--theme-card)]/75 backdrop-blur-xl border border-[var(--theme-border)] rounded-3xl p-6 sm:p-8 shadow-xl">
           <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-            <div className="flex items-center gap-2.5 text-xs font-bold text-[#60A5FA] uppercase tracking-widest">
+            <div className="flex items-center gap-2.5 text-xs font-bold text-[var(--theme-accent)] uppercase tracking-widest">
               <Tag size={16} />
               <span>All Community Tags & Musical Styles</span>
             </div>
-            <span className="text-xs text-[#8992A5]/70 font-semibold px-2.5 py-0.5 rounded-full bg-white/[0.03] border border-[#2563EB]/10">
+            <span className="text-xs text-[var(--theme-muted)] font-semibold px-2.5 py-0.5 rounded-full bg-[var(--theme-surface)] border border-[var(--theme-border)]">
               {displayTags.length} tags cataloged
             </span>
           </div>
@@ -127,11 +127,11 @@ export default function MusicLoreAndReviews({
               return (
                 <span
                   key={idx}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#2563EB]/10 border border-[#2563EB]/20 text-[#60A5FA] hover:bg-[#2563EB]/20 hover:text-white text-xs font-medium transition cursor-default group"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--theme-surface)] border border-[var(--theme-border)] text-[var(--theme-accent)] hover:border-[var(--theme-accent)] text-xs font-medium transition cursor-default group"
                 >
                   <span>#{name}</span>
                   {count > 1 && (
-                    <span className="text-[10px] text-[#8992A5] group-hover:text-white/80 bg-white/5 px-1.5 py-0.2 rounded-full">
+                    <span className="text-[10px] text-[var(--theme-muted)] bg-[var(--theme-card)] px-1.5 py-0.2 rounded-full">
                       {count}
                     </span>
                   )}
@@ -142,24 +142,24 @@ export default function MusicLoreAndReviews({
         </section>
       )}
 
-      {/* 2. Description & Lore Section (Moved Below Tags) */}
+      {/* 2. Description & Lore Section */}
       {description && (
-        <section className="bg-[#10141F]/60 backdrop-blur-xl border border-[#2563EB]/15 rounded-3xl p-6 sm:p-8 shadow-xl">
-          <div className="flex items-center gap-2.5 text-xs font-bold text-[#60A5FA] uppercase tracking-widest mb-3">
+        <section className="bg-[var(--theme-card)]/75 backdrop-blur-xl border border-[var(--theme-border)] rounded-3xl p-6 sm:p-8 shadow-xl">
+          <div className="flex items-center gap-2.5 text-xs font-bold text-[var(--theme-accent)] uppercase tracking-widest mb-3">
             <BookOpen size={16} />
             <span>{type === "artist" ? "Artist Biography & Lore" : type === "album" ? "Album Overview & Background" : "Track Information & Lore"}</span>
           </div>
-          <h2 className="text-xl sm:text-2xl font-extrabold text-[#F4F7FF] mb-4">
+          <h2 className="text-xl sm:text-2xl font-extrabold text-[var(--theme-fg)] mb-4">
             About {title || artist}
           </h2>
-          <div className="text-sm sm:text-base text-[#8992A5] leading-relaxed font-body">
+          <div className="text-sm sm:text-base text-[var(--theme-muted)] leading-relaxed font-body">
             <p className={!expandedDesc && description.length > 320 ? "line-clamp-4" : ""}>
               {description}
             </p>
             {description.length > 320 && (
               <button
                 onClick={() => setExpandedDesc(!expandedDesc)}
-                className="mt-3 inline-flex items-center gap-1.5 text-xs font-bold text-[#60A5FA] hover:text-[#F4F7FF] transition cursor-pointer"
+                className="mt-3 inline-flex items-center gap-1.5 text-xs font-bold text-[var(--theme-accent)] hover:opacity-80 transition cursor-pointer"
               >
                 <span>{expandedDesc ? "Show less" : "Read full overview"}</span>
                 {expandedDesc ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
@@ -170,15 +170,15 @@ export default function MusicLoreAndReviews({
       )}
 
       {/* 3. Reviews & Community Ratings Section with Small Bar-Chart */}
-      <section className="bg-[#10141F]/60 backdrop-blur-xl border border-[#2563EB]/15 rounded-3xl p-6 sm:p-8 shadow-xl">
+      <section className="bg-[var(--theme-card)]/75 backdrop-blur-xl border border-[var(--theme-border)] rounded-3xl p-6 sm:p-8 shadow-xl">
         <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
-          <div className="flex items-center gap-2.5 text-xs font-bold text-[#60A5FA] uppercase tracking-widest">
+          <div className="flex items-center gap-2.5 text-xs font-bold text-[var(--theme-accent)] uppercase tracking-widest">
             <MessageSquare size={16} />
             <span>Reviews & Community Ratings</span>
           </div>
           <button
             onClick={() => setShowForm(!showForm)}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#2563EB] hover:bg-[#60A5FA] text-white text-xs font-bold uppercase tracking-wider transition cursor-pointer shadow-md"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[var(--theme-accent)] hover:opacity-90 text-[var(--theme-bg)] text-xs font-bold uppercase tracking-wider transition cursor-pointer shadow-md"
           >
             <Star size={14} fill="currentColor" />
             <span>{showForm ? "Cancel Review" : "Write a Review"}</span>
@@ -186,13 +186,13 @@ export default function MusicLoreAndReviews({
         </div>
 
         {/* Rating Score & Mini Bar-Chart Card */}
-        <div className="p-6 rounded-2xl bg-[#07090F]/60 border border-[#2563EB]/10 mb-8 space-y-6">
+        <div className="p-6 rounded-2xl bg-[var(--theme-surface)] border border-[var(--theme-border)] mb-8 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
             {/* Left: Overall Score */}
             <div className="md:col-span-4 flex flex-col items-center md:items-start text-center md:text-left">
-              <span className="text-[10px] text-[#8992A5] uppercase font-bold tracking-wider mb-1">Overall Community Score</span>
-              <div className="text-4xl sm:text-5xl font-black text-white font-display mb-1">
-                {averageScore} <span className="text-sm font-normal text-[#8992A5]">/ 5.0</span>
+              <span className="text-[10px] text-[var(--theme-muted)] uppercase font-bold tracking-wider mb-1">Overall Community Score</span>
+              <div className="text-4xl sm:text-5xl font-black text-[var(--theme-fg)] font-display mb-1">
+                {averageScore} <span className="text-sm font-normal text-[var(--theme-muted)]">/ 5.0</span>
               </div>
               <div className="flex items-center gap-1 text-amber-400 mb-1.5">
                 {[1, 2, 3, 4, 5].map((star) => (
@@ -204,14 +204,14 @@ export default function MusicLoreAndReviews({
                   />
                 ))}
               </div>
-              <p className="text-xs text-[#8992A5]">
+              <p className="text-xs text-[var(--theme-muted)]">
                 Based on {votesCount.toLocaleString()} community ratings
               </p>
             </div>
 
             {/* Middle: Small Visual Column Bar-Chart */}
-            <div className="md:col-span-4 flex flex-col items-center justify-center p-3.5 rounded-xl bg-white/[0.02] border border-white/5">
-              <span className="text-[10px] text-[#8992A5] font-bold uppercase tracking-wider mb-2">Rating Distribution</span>
+            <div className="md:col-span-4 flex flex-col items-center justify-center p-3.5 rounded-xl bg-[var(--theme-card)]/50 border border-[var(--theme-border)]">
+              <span className="text-[10px] text-[var(--theme-muted)] font-bold uppercase tracking-wider mb-2">Rating Distribution</span>
               <div className="flex items-end justify-center gap-3 h-20 w-full px-2">
                 {[
                   { star: '1', pct: 1, label: '1★' },
@@ -221,15 +221,15 @@ export default function MusicLoreAndReviews({
                   { star: '5', pct: 70, label: '5★' },
                 ].map((col) => (
                   <div key={col.star} className="flex-1 flex flex-col items-center h-full justify-end gap-1 group">
-                    <span className="text-[9px] text-[#8992A5] font-bold opacity-80 group-hover:opacity-100">{col.pct}%</span>
-                    <div className="w-full bg-white/5 rounded-t-sm flex items-end h-12 overflow-hidden">
+                    <span className="text-[9px] text-[var(--theme-muted)] font-bold opacity-80 group-hover:opacity-100">{col.pct}%</span>
+                    <div className="w-full bg-[var(--theme-border)]/40 rounded-t-sm flex items-end h-12 overflow-hidden">
                       <div 
                         className="w-full bg-gradient-to-t from-amber-500 to-amber-300 rounded-t-sm transition-all duration-500 group-hover:brightness-110" 
                         style={{ height: `${Math.max(col.pct, 8)}%` }} 
                         title={`${col.star} Star: ${col.pct}%`}
                       />
                     </div>
-                    <span className="text-[10px] text-zinc-400 font-bold">{col.label}</span>
+                    <span className="text-[10px] text-[var(--theme-muted)] font-bold">{col.label}</span>
                   </div>
                 ))}
               </div>
@@ -244,9 +244,9 @@ export default function MusicLoreAndReviews({
                 { star: '2 ★', pct: 2, color: 'bg-amber-400/30' },
                 { star: '1 ★', pct: 1, color: 'bg-amber-400/10' },
               ].map(row => (
-                <div key={row.star} className="flex items-center gap-2.5 text-xs text-[#8992A5]">
+                <div key={row.star} className="flex items-center gap-2.5 text-xs text-[var(--theme-muted)]">
                   <span className="w-7 font-bold text-right text-[11px]">{row.star}</span>
-                  <div className="flex-1 h-1.5 rounded-full bg-white/5 overflow-hidden">
+                  <div className="flex-1 h-1.5 rounded-full bg-[var(--theme-border)]/50 overflow-hidden">
                     <div className={`h-full ${row.color} rounded-full`} style={{ width: `${row.pct}%` }} />
                   </div>
                   <span className="w-8 text-right text-[10px] font-mono">{row.pct}%</span>
@@ -258,10 +258,10 @@ export default function MusicLoreAndReviews({
 
         {/* Write Review Form */}
         {showForm && (
-          <form onSubmit={handleSubmitReview} className="p-6 rounded-2xl bg-[#07090F]/80 border border-[#2563EB]/20 mb-8 space-y-4 animate-fade-in">
-            <h4 className="text-sm font-bold text-white uppercase tracking-wider">Leave Your Review</h4>
+          <form onSubmit={handleSubmitReview} className="p-6 rounded-2xl bg-[var(--theme-surface)] border border-[var(--theme-border)] mb-8 space-y-4 animate-fade-in">
+            <h4 className="text-sm font-bold text-[var(--theme-fg)] uppercase tracking-wider">Leave Your Review</h4>
             <div className="flex items-center gap-2">
-              <span className="text-xs text-[#8992A5] font-semibold">Rating:</span>
+              <span className="text-xs text-[var(--theme-muted)] font-semibold">Rating:</span>
               <div className="flex items-center gap-1">
                 {[1, 2, 3, 4, 5].map((star) => (
                   <button
@@ -289,7 +289,7 @@ export default function MusicLoreAndReviews({
                 placeholder="Your Name (optional)"
                 value={reviewerName}
                 onChange={(e) => setReviewerName(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl bg-[#10141F] border border-[#2563EB]/20 text-[#F4F7FF] placeholder-[#8992A5]/60 text-xs focus:outline-none focus:border-[#60A5FA]"
+                className="w-full px-4 py-2.5 rounded-xl bg-[var(--theme-card)] border border-[var(--theme-border)] text-[var(--theme-fg)] placeholder-[var(--theme-muted)] text-xs focus:outline-none focus:border-[var(--theme-accent)]"
               />
             </div>
 
@@ -298,20 +298,20 @@ export default function MusicLoreAndReviews({
               value={reviewComment}
               onChange={(e) => setReviewComment(e.target.value)}
               rows={3}
-              className="w-full px-4 py-3 rounded-xl bg-[#10141F] border border-[#2563EB]/20 text-[#F4F7FF] placeholder-[#8992A5]/60 text-xs focus:outline-none focus:border-[#60A5FA] resize-none"
+              className="w-full px-4 py-3 rounded-xl bg-[var(--theme-card)] border border-[var(--theme-border)] text-[var(--theme-fg)] placeholder-[var(--theme-muted)] text-xs focus:outline-none focus:border-[var(--theme-accent)] resize-none"
             />
 
             <div className="flex justify-end gap-2 pt-2">
               <button
                 type="button"
                 onClick={() => setShowForm(false)}
-                className="px-4 py-2 rounded-full border border-white/10 text-xs font-semibold text-[#8992A5] hover:text-white transition cursor-pointer"
+                className="px-4 py-2 rounded-full border border-[var(--theme-border)] text-xs font-semibold text-[var(--theme-muted)] hover:text-[var(--theme-fg)] transition cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-[#2563EB] hover:bg-[#60A5FA] text-white text-xs font-bold uppercase tracking-wider transition cursor-pointer shadow-md"
+                className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-[var(--theme-accent)] hover:opacity-90 text-[var(--theme-bg)] text-xs font-bold uppercase tracking-wider transition cursor-pointer shadow-md"
               >
                 <Send size={13} />
                 <span>Submit Review</span>
@@ -323,18 +323,18 @@ export default function MusicLoreAndReviews({
         {/* User Reviews List */}
         <div className="space-y-3">
           {reviews.map((rev) => (
-            <div key={rev.id} className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 flex flex-col gap-2">
+            <div key={rev.id} className="p-4 rounded-2xl bg-[var(--theme-surface)]/70 border border-[var(--theme-border)] flex flex-col gap-2">
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-bold text-white">{rev.author}</span>
+                  <span className="text-sm font-bold text-[var(--theme-fg)]">{rev.author}</span>
                   {rev.verified && (
-                    <span className="inline-flex items-center gap-1 text-[10px] text-[#60A5FA] bg-[#2563EB]/10 px-2 py-0.5 rounded-full border border-[#2563EB]/20">
+                    <span className="inline-flex items-center gap-1 text-[10px] text-[var(--theme-accent)] bg-[var(--theme-accent)]/10 px-2 py-0.5 rounded-full border border-[var(--theme-accent)]/20">
                       <CheckCircle2 size={10} />
                       Verified Curator
                     </span>
                   )}
                 </div>
-                <div className="flex items-center gap-2 text-xs text-[#8992A5]">
+                <div className="flex items-center gap-2 text-xs text-[var(--theme-muted)]">
                   <div className="flex items-center gap-0.5 text-amber-400">
                     {[1, 2, 3, 4, 5].map((s) => (
                       <Star
@@ -349,7 +349,7 @@ export default function MusicLoreAndReviews({
                   <span>{rev.date}</span>
                 </div>
               </div>
-              <p className="text-xs sm:text-sm text-[#8992A5] font-body leading-relaxed">
+              <p className="text-xs sm:text-sm text-[var(--theme-muted)] font-body leading-relaxed">
                 "{rev.text}"
               </p>
             </div>

@@ -5,13 +5,16 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   Shield, Volume2, Check, Music, Trash2, 
-  ListMusic, Disc, Users, AlertTriangle, ArrowLeft
+  ListMusic, Disc, Users, AlertTriangle, ArrowLeft,
+  Sun, Moon, Palette
 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'react-toastify';
+import { useTheme } from '@/contexts/ThemeContext';
 
 export default function SettingsPage() {
   const router = useRouter();
+  const { theme, isDark, setTheme } = useTheme();
   const [preferredPlatform, setPreferredPlatform] = useState("none");
   const [counts, setCounts] = useState({
     songs: 0,
@@ -19,6 +22,11 @@ export default function SettingsPage() {
     artists: 0,
     playlists: 0,
   });
+
+  const handleSelectTheme = (mode) => {
+    setTheme(mode);
+    toast.success(`${mode === 'dark' ? 'Dark' : 'Light'} theme activated`);
+  };
 
   const platforms = [
     { id: "none", name: "Always Ask (Show GrooveCard)", desc: "Show options list instead of auto-redirecting" },
@@ -103,29 +111,106 @@ export default function SettingsPage() {
 
   return (
     <div className="flex-grow flex items-start justify-center py-6 sm:py-12 px-4 sm:px-6 relative z-10 w-full pb-32">
-      <div className="w-full max-w-2xl bg-transparent sm:bg-[#10141F]/40 sm:backdrop-blur-xl border-0 sm:border border-transparent sm:border-[#2563EB]/15 sm:rounded-3xl p-2 sm:p-8 sm:shadow-2xl space-y-8">
+      <div className="w-full max-w-2xl bg-transparent sm:bg-[var(--theme-surface)] sm:backdrop-blur-xl border-0 sm:border border-transparent sm:border-[var(--theme-border)] sm:rounded-3xl p-2 sm:p-8 sm:shadow-2xl space-y-8 transition-colors duration-300">
         
         {/* Settings Header */}
-        <div className="flex items-center gap-3 border-b border-[#2563EB]/10 pb-6">
+        <div className="flex items-center gap-3 border-b border-[var(--theme-border)] pb-6">
           <button 
             onClick={() => router.push("/")}
-            className="p-2 rounded-full bg-[#10141F] border border-[#2563EB]/10 text-[#8992A5] hover:text-[#F4F7FF] transition cursor-pointer"
+            className="p-2 rounded-full bg-[var(--theme-card)] border border-[var(--theme-border)] text-[var(--theme-muted)] hover:text-[var(--theme-fg)] transition cursor-pointer shadow-sm"
           >
             <ArrowLeft className="w-4 h-4" />
           </button>
           <div>
-            <h1 className="text-2xl font-extrabold tracking-tight text-[#F4F7FF]">Settings</h1>
-            <p className="text-xs text-[#8992A5]">Configure preferences and manage locally saved data.</p>
+            <h1 className="text-2xl font-extrabold tracking-tight text-[var(--theme-fg)]">Settings</h1>
+            <p className="text-xs text-[var(--theme-muted)]">Configure preferences and manage locally saved data.</p>
+          </div>
+        </div>
+
+        {/* SECTION 0: APPEARANCE & THEME */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <Palette className="w-5 h-5 text-[var(--theme-accent)]" />
+            <h2 className="text-lg font-bold text-[var(--theme-fg)]">Appearance & Theme</h2>
+          </div>
+          <p className="text-xs text-[var(--theme-muted)] max-w-lg">
+            Unified theme with Burgundy Wine, Warm Cream, Peach-Copper (Dark) and Terracotta-Copper (Light).
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+            {/* Dark Theme Card */}
+            <button
+              onClick={() => handleSelectTheme('dark')}
+              className={`flex items-start justify-between p-4 rounded-2xl border text-left transition-all duration-300 cursor-pointer ${
+                isDark
+                  ? "bg-[#17020B] border-[#E8A87C] text-[#FFF2DF] shadow-lg shadow-[#17020B]/40 ring-1 ring-[#E8A87C]/50"
+                  : "bg-[var(--theme-card)] border-[var(--theme-border)] text-[var(--theme-fg)] hover:border-[var(--theme-accent)]"
+              }`}
+            >
+              <div>
+                <div className="flex items-center gap-2 mb-1.5">
+                  <div className="w-6 h-6 rounded-full bg-[#17020B] border border-[#E8A87C] flex items-center justify-center">
+                    <Moon size={12} className="text-[#FFF2DF]" />
+                  </div>
+                  <h3 className="text-sm font-bold">Dark Theme</h3>
+                </div>
+                <p className="text-[11px] opacity-80">Background: #17020B • Foreground: #FFF2DF</p>
+                <p className="text-[10px] text-[#E8A87C] font-semibold mt-1">Accent: #E8A87C (Peach)</p>
+              </div>
+              {isDark && (
+                <div className="w-5 h-5 rounded-full bg-[#E8A87C] text-[#17020B] flex items-center justify-center shrink-0">
+                  <Check className="w-3.5 h-3.5" />
+                </div>
+              )}
+            </button>
+
+            {/* Light Theme Card */}
+            <button
+              onClick={() => handleSelectTheme('light')}
+              className={`flex items-start justify-between p-4 rounded-2xl border text-left transition-all duration-300 cursor-pointer ${
+                !isDark
+                  ? "bg-[#FAF4EB] border-[#9A4A2F] text-[#1A0A10] shadow-lg shadow-[#FAF4EB]/40 ring-1 ring-[#9A4A2F]/50"
+                  : "bg-[var(--theme-card)] border-[var(--theme-border)] text-[var(--theme-fg)] hover:border-[var(--theme-accent)]"
+              }`}
+            >
+              <div>
+                <div className="flex items-center gap-2 mb-1.5">
+                  <div className="w-6 h-6 rounded-full bg-[#FAF4EB] border border-[#9A4A2F] flex items-center justify-center">
+                    <Sun size={12} className="text-[#9A4A2F]" />
+                  </div>
+                  <h3 className="text-sm font-bold">Light Theme</h3>
+                </div>
+                <p className="text-[11px] opacity-80">Background: #FAF4EB • Foreground: #1A0A10</p>
+                <p className="text-[10px] text-[#9A4A2F] font-semibold mt-1">Accent: #9A4A2F (Terracotta)</p>
+              </div>
+              {!isDark && (
+                <div className="w-5 h-5 rounded-full bg-[#9A4A2F] text-[#FAF4EB] flex items-center justify-center shrink-0">
+                  <Check className="w-3.5 h-3.5" />
+                </div>
+              )}
+            </button>
+          </div>
+
+          {/* Theme Gradient Preview */}
+          <div className="p-3.5 rounded-2xl bg-[var(--theme-card)] border border-[var(--theme-border)] space-y-2 mt-2">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-bold text-[var(--theme-fg)]">Theme Gradient</span>
+              <span className="text-[11px] font-mono text-[var(--theme-muted)]">Active Theme Palette</span>
+            </div>
+            <div 
+              className="h-3 w-full rounded-full shadow-inner"
+              style={{ background: 'var(--theme-gradient)' }}
+            />
           </div>
         </div>
 
         {/* SECTION 1: GROOVELINKS PREFERENCES */}
-        <div className="space-y-4">
+        <div className="border-t border-[var(--theme-border)] pt-8 space-y-4">
           <div className="flex items-center gap-2">
-            <Volume2 className="w-5 h-5 text-[#60A5FA]" />
-            <h2 className="text-lg font-bold text-[#F4F7FF]">GrooveLinks Preferences</h2>
+            <Volume2 className="w-5 h-5 text-[var(--theme-accent)]" />
+            <h2 className="text-lg font-bold text-[var(--theme-fg)]">GrooveLinks Preferences</h2>
           </div>
-          <p className="text-xs text-[#8992A5] max-w-lg">
+          <p className="text-xs text-[var(--theme-muted)] max-w-lg">
             Choose your default streaming platform. When opening a GrooveLink sharing page, you will automatically bypass the landing screen and redirect straight to the selected service.
           </p>
 
@@ -137,19 +222,19 @@ export default function SettingsPage() {
                 <button
                   key={platform.id}
                   onClick={() => handleSelectPlatform(platform.id)}
-                  className={`flex items-center justify-between p-3.5 rounded-xl border text-left transition-all duration-300 ${
+                  className={`flex items-center justify-between p-3.5 rounded-xl border text-left transition-all duration-300 cursor-pointer ${
                     isSelected 
-                      ? "bg-[#2563EB]/15 border-[#60A5FA] text-[#F4F7FF]" 
-                      : "bg-[#07090F]/50 border-[#2563EB]/10 hover:border-[#60A5FA]/20 text-[#F4F7FF]/80 hover:text-[#F4F7FF]"
+                      ? "bg-[var(--theme-card)] border-[var(--theme-border-active)] text-[var(--theme-fg)] ring-1 ring-[var(--theme-border-active)]/50" 
+                      : "bg-[var(--theme-card)]/60 border-[var(--theme-border)] hover:border-[var(--theme-accent)]/50 text-[var(--theme-fg)]/80 hover:text-[var(--theme-fg)]"
                   }`}
                 >
                   <div className="pr-2">
                     <h3 className="text-xs font-bold uppercase tracking-wider">{platform.name}</h3>
-                    <p className="text-[10px] text-[#8992A5]/70 mt-0.5 line-clamp-1">{platform.desc}</p>
+                    <p className="text-[10px] text-[var(--theme-muted)] mt-0.5 line-clamp-1">{platform.desc}</p>
                   </div>
                   {isSelected && (
-                    <div className="w-4.5 h-4.5 rounded-full bg-[#2563EB] flex items-center justify-center shrink-0">
-                      <Check className="w-3 h-3 text-[#F4F7FF]" />
+                    <div className="w-4.5 h-4.5 rounded-full bg-[var(--theme-accent)] text-[var(--theme-bg)] flex items-center justify-center shrink-0">
+                      <Check className="w-3 h-3" />
                     </div>
                   )}
                 </button>
@@ -159,30 +244,30 @@ export default function SettingsPage() {
 
           <button
             onClick={handleResetGrooveLinks}
-            className="inline-flex items-center gap-1 text-xs text-zinc-400 hover:text-[#60A5FA] transition-colors cursor-pointer mt-1 font-semibold"
+            className="inline-flex items-center gap-1 text-xs text-[var(--theme-muted)] hover:text-[var(--theme-accent)] transition-colors cursor-pointer mt-1 font-semibold"
           >
             Reset routing preferences to default
           </button>
         </div>
 
         {/* SECTION 2: LIBRARY DATA MANAGER */}
-        <div className="border-t border-[#2563EB]/10 pt-8 space-y-4">
+        <div className="border-t border-[var(--theme-border)] pt-8 space-y-4">
           <div className="flex items-center gap-2">
-            <ListMusic className="w-5 h-5 text-[#60A5FA]" />
-            <h2 className="text-lg font-bold text-[#F4F7FF]">Library Data Manager</h2>
+            <ListMusic className="w-5 h-5 text-[var(--theme-accent)]" />
+            <h2 className="text-lg font-bold text-[var(--theme-fg)]">Library Data Manager</h2>
           </div>
-          <p className="text-xs text-[#8992A5] max-w-lg">
+          <p className="text-xs text-[var(--theme-muted)] max-w-lg">
             Your library contents are stored locally on this device. You can view the storage counts below and selectively clear data categories.
           </p>
 
-          <div className="space-y-2 mt-3 bg-[#07090F]/40 border border-[#2563EB]/10 rounded-2xl p-4">
+          <div className="space-y-2 mt-3 bg-[var(--theme-card)]/50 border border-[var(--theme-border)] rounded-2xl p-4">
             {/* Saved Songs */}
-            <div className="flex items-center justify-between py-2 border-b border-[#2563EB]/5 last:border-b-0">
+            <div className="flex items-center justify-between py-2 border-b border-[var(--theme-border)]/50 last:border-b-0">
               <div className="flex items-center gap-2.5">
-                <Music className="w-4 h-4 text-[#8992A5]" />
+                <Music className="w-4 h-4 text-[var(--theme-muted)]" />
                 <div>
-                  <span className="text-xs font-bold text-[#F4F7FF] uppercase tracking-wider">Saved Songs</span>
-                  <p className="text-[10px] text-[#8992A5]">{counts.songs} item{counts.songs !== 1 && 's'}</p>
+                  <span className="text-xs font-bold text-[var(--theme-fg)] uppercase tracking-wider">Saved Songs</span>
+                  <p className="text-[10px] text-[var(--theme-muted)]">{counts.songs} item{counts.songs !== 1 && 's'}</p>
                 </div>
               </div>
               <button
@@ -196,12 +281,12 @@ export default function SettingsPage() {
             </div>
 
             {/* Saved Albums */}
-            <div className="flex items-center justify-between py-2 border-b border-[#2563EB]/5 last:border-b-0">
+            <div className="flex items-center justify-between py-2 border-b border-[var(--theme-border)]/50 last:border-b-0">
               <div className="flex items-center gap-2.5">
-                <Disc className="w-4 h-4 text-[#8992A5]" />
+                <Disc className="w-4 h-4 text-[var(--theme-muted)]" />
                 <div>
-                  <span className="text-xs font-bold text-[#F4F7FF] uppercase tracking-wider">Saved Albums</span>
-                  <p className="text-[10px] text-[#8992A5]">{counts.albums} item{counts.albums !== 1 && 's'}</p>
+                  <span className="text-xs font-bold text-[var(--theme-fg)] uppercase tracking-wider">Saved Albums</span>
+                  <p className="text-[10px] text-[var(--theme-muted)]">{counts.albums} item{counts.albums !== 1 && 's'}</p>
                 </div>
               </div>
               <button
@@ -215,12 +300,12 @@ export default function SettingsPage() {
             </div>
 
             {/* Saved Artists */}
-            <div className="flex items-center justify-between py-2 border-b border-[#2563EB]/5 last:border-b-0">
+            <div className="flex items-center justify-between py-2 border-b border-[var(--theme-border)]/50 last:border-b-0">
               <div className="flex items-center gap-2.5">
-                <Users className="w-4 h-4 text-[#8992A5]" />
+                <Users className="w-4 h-4 text-[var(--theme-muted)]" />
                 <div>
-                  <span className="text-xs font-bold text-[#F4F7FF] uppercase tracking-wider">Saved Artists</span>
-                  <p className="text-[10px] text-[#8992A5]">{counts.artists} item{counts.artists !== 1 && 's'}</p>
+                  <span className="text-xs font-bold text-[var(--theme-fg)] uppercase tracking-wider">Saved Artists</span>
+                  <p className="text-[10px] text-[var(--theme-muted)]">{counts.artists} item{counts.artists !== 1 && 's'}</p>
                 </div>
               </div>
               <button
@@ -236,10 +321,10 @@ export default function SettingsPage() {
             {/* Saved/Custom Playlists */}
             <div className="flex items-center justify-between py-2 last:border-b-0">
               <div className="flex items-center gap-2.5">
-                <ListMusic className="w-4 h-4 text-[#8992A5]" />
+                <ListMusic className="w-4 h-4 text-[var(--theme-muted)]" />
                 <div>
-                  <span className="text-xs font-bold text-[#F4F7FF] uppercase tracking-wider">Playlists</span>
-                  <p className="text-[10px] text-[#8992A5]">{counts.playlists} item{counts.playlists !== 1 && 's'}</p>
+                  <span className="text-xs font-bold text-[var(--theme-fg)] uppercase tracking-wider">Playlists</span>
+                  <p className="text-[10px] text-[var(--theme-muted)]">{counts.playlists} item{counts.playlists !== 1 && 's'}</p>
                 </div>
               </div>
               <button
@@ -273,9 +358,9 @@ export default function SettingsPage() {
         </div>
 
         {/* Privacy Notice */}
-        <div className="border-t border-[#2563EB]/10 pt-6 space-y-4">
-          <div className="flex gap-3 text-xs text-[#8992A5]">
-            <Shield className="w-4 h-4 text-[#8992A5] shrink-0 mt-0.5" />
+        <div className="border-t border-[var(--theme-border)] pt-6 space-y-4">
+          <div className="flex gap-3 text-xs text-[var(--theme-muted)]">
+            <Shield className="w-4 h-4 text-[var(--theme-muted)] shrink-0 mt-0.5" />
             <p>
               <strong>Privacy First:</strong> Your choice is saved entirely inside your own browser. We never track your streaming preferences or upload data to remote servers.
             </p>

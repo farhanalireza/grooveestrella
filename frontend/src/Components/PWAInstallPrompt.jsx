@@ -33,7 +33,7 @@ const PWAInstallPrompt = () => {
         }
     };
     return (
-    <button onClick={handleInstallClick} className='p-5 m-3 rounded-2xl bg-black text-2xl font-black'>Install this App</button>
+    <button onClick={handleInstallClick} className='px-4 py-2 rounded-xl bg-[var(--theme-accent-bg)] text-[var(--theme-accent-fg)] text-sm font-bold shadow-md hover:opacity-90 transition cursor-pointer'>Install this App</button>
     )
 }
 

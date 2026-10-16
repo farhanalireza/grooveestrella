@@ -90,7 +90,7 @@ export const AlbumCard = ({
   const handleShare = (e) => {
     e?.stopPropagation();
     if (typeof window !== "undefined") {
-      const shareUrl = `${window.location.origin}/s/musicbrainz/album/${id}`;
+      const shareUrl = `${window.location.origin}/album/${id}?groovelink=true`;
       navigator.clipboard.writeText(shareUrl);
       toast.success("GrooveLink copied to clipboard!");
     }
@@ -104,16 +104,16 @@ export const AlbumCard = ({
       whileHover={{ y: -4 }}
       whileTap={{ scale: 0.98 }}
       onClick={handleCardClick}
-      className={`group relative w-full bg-[#10141F]/60 backdrop-blur-xl border border-white/5 hover:border-[#E879F9]/40 rounded-2xl sm:rounded-3xl p-3 sm:p-3.5 transition-all duration-300 cursor-pointer flex flex-col gap-2.5 shadow-lg hover:shadow-2xl hover:shadow-[#870087]/20 select-none ${className}`}
+      className={`group relative w-full bg-[var(--theme-card)]/80 backdrop-blur-xl border border-[var(--theme-border)] hover:border-[var(--theme-accent)]/40 rounded-2xl sm:rounded-3xl p-3 sm:p-3.5 transition-all duration-300 cursor-pointer flex flex-col gap-2.5 shadow-md hover:shadow-xl select-none ${className}`}
     >
       {/* 100% Clear & Unobstructed Cover Art */}
-      <div className="relative aspect-square w-full rounded-xl sm:rounded-2xl overflow-hidden bg-[#07090F] ring-1 ring-white/10 shadow-md">
+      <div className="relative aspect-square w-full rounded-xl sm:rounded-2xl overflow-hidden bg-[var(--theme-surface)] ring-1 ring-[var(--theme-border)] shadow-sm">
         <img
-          src={url || "https://placehold.co/400x400/10141F/C026D3?text=Album"}
+          src={url || "https://placehold.co/400x400/17020B/E8A87C?text=Album"}
           alt={title || "Album"}
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
           onError={(e) => {
-            e.currentTarget.src = "https://placehold.co/400x400/10141F/C026D3?text=Album";
+            e.currentTarget.src = "https://placehold.co/400x400/17020B/E8A87C?text=Album";
           }}
         />
       </div>
@@ -122,13 +122,13 @@ export const AlbumCard = ({
       <div className="flex items-start justify-between gap-1.5 min-w-0 px-0.5 pt-0.5">
         <div className="flex flex-col min-w-0 flex-1">
           <h3
-            className="text-xs sm:text-sm font-bold text-[#F4F7FF] truncate group-hover:text-[#F0ABFC] transition-colors leading-tight"
+            className="text-xs sm:text-sm font-bold text-[var(--theme-fg)] truncate group-hover:text-[var(--theme-accent)] transition-colors leading-tight"
             title={title}
           >
             {title || "Untitled Album"}
           </h3>
           {subtitle && (
-            <p className="text-[11px] sm:text-xs text-[#8992A5] font-medium tracking-wide mt-1 truncate" title={subtitle}>
+            <p className="text-[11px] sm:text-xs text-[var(--theme-muted)] font-medium tracking-wide mt-1 truncate" title={subtitle}>
               {subtitle}
             </p>
           )}
@@ -143,7 +143,7 @@ export const AlbumCard = ({
             <DropdownMenuTrigger asChild>
               <button
                 type="button"
-                className="p-1 rounded-lg hover:bg-white/10 text-zinc-400 hover:text-white transition-colors cursor-pointer active:scale-95"
+                className="p-1 rounded-lg hover:bg-[var(--theme-surface)] text-[var(--theme-muted)] hover:text-[var(--theme-fg)] transition-colors cursor-pointer active:scale-95"
                 title="Album Actions"
               >
                 <MoreVertical size={15} />
@@ -151,27 +151,27 @@ export const AlbumCard = ({
             </DropdownMenuTrigger>
             <DropdownMenuContent
               align="end"
-              className="bg-[#0D121F]/95 backdrop-blur-2xl border border-white/15 text-white min-w-[170px] rounded-2xl p-1.5 shadow-2xl z-[9999]"
+              className="bg-[var(--theme-card)] backdrop-blur-2xl border border-[var(--theme-border)] text-[var(--theme-fg)] min-w-[170px] rounded-2xl p-1.5 shadow-2xl z-[9999]"
               onClick={(e) => e.stopPropagation()}
             >
               <DropdownMenuItem
                 onClick={toggleSave}
-                className="cursor-pointer px-3 py-2 text-xs font-semibold rounded-xl hover:bg-[#870087]/30 hover:text-[#F0ABFC] transition flex items-center gap-2"
+                className="cursor-pointer px-3 py-2 text-xs font-semibold rounded-xl hover:bg-[var(--theme-surface)] hover:text-[var(--theme-accent)] transition flex items-center gap-2"
               >
-                {saved ? <BookmarkCheck size={14} className="text-[#E879F9]" /> : <Bookmark size={14} />}
+                {saved ? <BookmarkCheck size={14} className="text-[var(--theme-accent)]" /> : <Bookmark size={14} />}
                 <span>{saved ? "Remove Bookmark" : "Save to Library"}</span>
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={handleShare}
-                className="cursor-pointer px-3 py-2 text-xs font-semibold rounded-xl hover:bg-[#870087]/30 hover:text-[#F0ABFC] transition flex items-center gap-2"
+                className="cursor-pointer px-3 py-2 text-xs font-semibold rounded-xl hover:bg-[var(--theme-surface)] hover:text-[var(--theme-accent)] transition flex items-center gap-2"
               >
                 <Share2 size={14} />
                 <span>Share GrooveLink</span>
               </DropdownMenuItem>
-              <DropdownMenuSeparator className="bg-white/10 my-1" />
+              <DropdownMenuSeparator className="bg-[var(--theme-border)] my-1" />
               <DropdownMenuItem
                 onClick={handleCopyLink}
-                className="cursor-pointer px-3 py-2 text-xs font-semibold rounded-xl hover:bg-[#870087]/30 hover:text-[#F0ABFC] transition flex items-center gap-2 text-zinc-300"
+                className="cursor-pointer px-3 py-2 text-xs font-semibold rounded-xl hover:bg-[var(--theme-surface)] hover:text-[var(--theme-accent)] transition flex items-center gap-2 text-[var(--theme-muted)]"
               >
                 <Copy size={14} />
                 <span>Copy Page Link</span>

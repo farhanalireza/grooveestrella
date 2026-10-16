@@ -38,13 +38,13 @@ const SearchComp = ({ initialQuery = "", handleChange }) => {
     return (
         <div className="w-full max-w-3xl mx-auto space-y-4">
             {/* Liquid Glass Search Input Bar */}
-            <div className="relative flex items-center bg-[#0D121F]/80 backdrop-blur-2xl border border-white/[0.12] focus-within:border-[#E879F9]/50 focus-within:ring-2 focus-within:ring-[#870087]/30 rounded-4xl p-3 sm:p-4 shadow-[0_16px_40px_rgba(0,0,0,0.55),0_0_1px_1px_rgba(255,255,255,0.08)] transition-all duration-300 overflow-hidden">
+            <div className="relative flex items-center bg-[var(--theme-card)]/85 backdrop-blur-2xl border border-[var(--theme-border)] focus-within:border-[var(--theme-accent)] focus-within:ring-2 focus-within:ring-[var(--theme-accent)]/30 rounded-4xl p-3 sm:p-4 shadow-xl transition-all duration-300 overflow-hidden">
                 {/* Liquid Glass Top Ambient Reflection */}
-                <div className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent pointer-events-none" />
+                <div className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-[var(--theme-accent)]/20 to-transparent pointer-events-none" />
 
-                <Search size={20} className="text-[#8992A5] ml-2 flex-shrink-0" />
+                <Search size={20} className="text-[var(--theme-muted)] ml-2 flex-shrink-0" />
                 <input
-                    className="flex-1 min-w-0 bg-transparent px-3 text-[#F4F7FF] text-sm sm:text-base outline-none placeholder-[#8992A5]/50 font-medium"
+                    className="flex-1 min-w-0 bg-transparent px-3 text-[var(--theme-fg)] text-sm sm:text-base outline-none placeholder-[var(--theme-muted)] font-medium"
                     type="text"
                     placeholder="Search songs, artists, albums, or playlists..."
                     value={searchQuery}
@@ -55,7 +55,7 @@ const SearchComp = ({ initialQuery = "", handleChange }) => {
                 {searchQuery.trim().length > 0 && (
                     <button 
                         onClick={clearSearch}
-                        className="p-1.5 rounded-full hover:bg-white/10 text-[#8992A5] hover:text-[#F4F7FF] transition cursor-pointer mr-1"
+                        className="p-1.5 rounded-full hover:bg-[var(--theme-surface)] text-[var(--theme-muted)] hover:text-[var(--theme-fg)] transition cursor-pointer mr-1"
                     >
                         <X size={16} />
                     </button>
@@ -64,7 +64,7 @@ const SearchComp = ({ initialQuery = "", handleChange }) => {
 
             {/* Interactive Category Selector with Liquid Pill */}
             <div className="flex justify-center">
-                <div className="p-1.5 rounded-4xl bg-[#0D121F]/70 backdrop-blur-xl border border-white/[0.08] shadow-lg inline-flex gap-1 overflow-x-auto max-w-full scrollbar-none">
+                <div className="p-1.5 rounded-4xl bg-[var(--theme-card)]/80 backdrop-blur-xl border border-[var(--theme-border)] shadow-lg inline-flex gap-1 overflow-x-auto max-w-full scrollbar-none">
                     {categories.map((cat) => {
                         const Icon = cat.icon;
                         const isActive = searchType === cat.id;
@@ -79,11 +79,11 @@ const SearchComp = ({ initialQuery = "", handleChange }) => {
                                     <motion.div
                                         layoutId="searchCategoryActivePill"
                                         transition={{ type: "spring", stiffness: 450, damping: 32 }}
-                                        className="absolute inset-0 rounded-4xl bg-gradient-to-b from-[#870087]/50 to-[#C026D3]/20 border border-[#E879F9]/40 shadow-[0_0_16px_rgba(135,0,135,0.45)] -z-0"
+                                        className="absolute inset-0 rounded-4xl bg-[var(--theme-accent-bg)] border border-[var(--theme-border-active)] shadow-sm -z-0"
                                     />
                                 )}
-                                <Icon size={14} className={`relative z-10 transition-colors ${isActive ? "text-[#F0ABFC]" : "text-[#8992A5]"}`} />
-                                <span className={`relative z-10 transition-colors ${isActive ? "text-white font-extrabold" : "text-[#8992A5] hover:text-white"}`}>
+                                <Icon size={14} className={`relative z-10 transition-colors ${isActive ? "text-[var(--theme-accent-fg)]" : "text-[var(--theme-muted)]"}`} />
+                                <span className={`relative z-10 transition-colors ${isActive ? "text-[var(--theme-accent-fg)] font-extrabold" : "text-[var(--theme-muted)] hover:text-[var(--theme-fg)]"}`}>
                                     {cat.label}
                                 </span>
                             </motion.button>

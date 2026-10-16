@@ -10,33 +10,74 @@ export const STORAGE_KEYS = {
   USER_NAME: 'userName',
   FAVORITE_GENRES: 'favoriteGenres',
   USER_REVIEWS: 'userReviews',
+  APP_THEME: 'app_theme',
 };
 
 // ==========================================
 // Adjective + Noun Generator
 // ==========================================
 export const ADJECTIVES = [
-  'Cosmic', 'Funky', 'Velvet', 'Electric', 'Harmonic', 'Golden', 'Sonic',
-  'Melodic', 'Astral', 'Dreamy', 'Groovy', 'Vibrant', 'Mystic', 'Serene',
-  'Neon', 'Echoing', 'Radiant', 'Vintage', 'Lyrical', 'Breezy', 'Celestial',
-  'Rhythmic', 'Soulful', 'Chill', 'Stellar', 'Amber', 'Euphoric', 'Infinite',
-  'Retro', 'Gentle', 'Midnight', 'Sunny', 'Luminous', 'Smooth',
-  'Subtle', 'Velvety', 'Crimson', 'Sapphire', 'Dynamic', 'Acoustic',
-  'Silver', 'Dusk', 'Dawn', 'Echo', 'Prismatic', 'Hyper', 'Magnetic', 'Solar'
+  // Music people
+  'Vinyl', 'Fuzzy', 'Funky', 'Dusty', 'Lo-Fi', 'Indie', 'Jazzy',
+  'Tipsy', 'Groovy', 'Wonky', 'Feral', 'Sleepy', 'Moody', 'Cheeky',
+  'Salty', 'Rusty', 'Freaky', 'Wonky', 'Shaggy', 'Scruffy',
+
+  // Cool & characterful
+  'Velvet', 'Lucky', 'Shady', 'Sneaky', 'Lazy', 'Wild', 'Local',
+  'Weird', 'Happy', 'Grumpy', 'Lonely', 'Messy', 'Cosmic', 'Faded',
+  'Golden', 'Electric', 'Plastic', 'Analog', 'Retro', 'Rogue',
+
+  // Late-night music energy
+  'Midnight', 'Sleepy', 'Tipsy', 'Drowsy', 'Hazy', 'Dreamy', 'Dusky',
+  'Moonlit', 'Sunburnt', 'Restless', 'Wasted', 'Mellow', 'Bleary',
+  'Afterhours', 'Sunday', 'Heartbreak', 'Blue', 'Smoky', 'Lovesick',
+
+  // Music culture
+  'Basement', 'Garage', 'Bedroom', 'Backstage', 'Underground', 'Forgotten',
+  'Cult', 'Obscure', 'B-Side', 'Deepcut', 'Rare', 'Bootleg', 'Unplugged',
+  'Overplayed', 'Underrated', 'Unreleased', 'Offbeat', 'OuttaTune',
+
+  // Slightly ridiculous (in a good way)
+  'Greasy', 'Goofy', 'Dizzy', 'Chunky', 'Spicy', 'Wobbly', 'Nerdy',
+  'Dramatic', 'Chaotic', 'Unhinged', 'Grimy', 'Bizarre', 'Soggy',
+  'Caffeinated', 'Broke', 'Restless', 'Delulu', 'Certified', 'Suspicious'
 ];
 
 export const NOUNS = [
-  'Groover', 'Vinyl', 'Melody', 'Echo', 'Rhythm', 'Starlight', 'Beat',
-  'Aura', 'Harmony', 'Maestro', 'Vibe', 'Cadence', 'Explorer', 'Voyager',
-  'Chime', 'Rhapsody', 'Tempo', 'Treble', 'Reverb', 'Serenade', 'Bassline',
-  'Symphony', 'Nomad', 'Sonata', 'Pulse', 'Wanderer', 'Listener', 'Auditor',
-  'Frequency', 'Chord', 'Drifter', 'Synthesizer', 'Cassette', 'Soundwave'
+  // Music lovers
+  'Groover', 'Headbanger', 'RecordNerd', 'VinylGoblin', 'MusicRat',
+  'AlbumJunkie', 'TuneFiend', 'TrackHoarder', 'MusicGeek', 'Songbird',
+  'BeatFreak', 'CrateDigger', 'DiscJockey', 'Melomaniac', 'Audiophile',
+  'NoiseMaker', 'GigRat', 'JamBuddy', 'SoundAddict', 'TuneBandit',
+
+  // Actual music things
+  'B-Side', 'DeepCut', 'Mixtape', 'Cassette', 'Turntable', 'NeedleDrop',
+  'Sleeve', 'Record', 'Groovebox', 'DrumKit', 'Riff', 'Bassline',
+  'Feedback', 'Fuzzbox', 'Distortion', 'Backbeat', 'Soundcheck', 'Encore',
+  'Setlist', 'DemoTape', 'Bootleg', 'Reverb', 'AmpStack', 'WahWah',
+
+  // Characters
+  'Gremlin', 'Goblin', 'Menace', 'Bandit', 'Outlaw', 'Rascal', 'Creature',
+  'Bandito', 'Daydreamer', 'NightOwl', 'Wanderer', 'Drifter', 'Loner',
+  'Troublemaker', 'Hooligan', 'Oddball', 'Misfit', 'Maniac', 'Muppet',
+  'Nuisance', 'Legend', 'Dinosaur', 'Cryptid', 'Maverick', 'Rebel',
+
+  // Album-listening culture
+  'AlbumGoblin', 'SkipButton', 'TrackZero', 'HiddenTrack', 'BonusTrack',
+  'VinylDealer', 'SleeveCollector', 'PlaylistGremlin', 'AlbumSnob',
+  'TrackOne', 'LastTrack', 'SideA', 'SideB', 'RepeatButton',
+  'Gatekeeper', 'ChartHater', 'TasteMaker', 'HotTake', 'CultClassic',
+
+  // Atmospheric & aesthetic
+  'Moonchild', 'Daytripper', 'Stargazer', 'Dreamboat', 'Heartbreaker',
+  'Nightcrawler', 'Moonwalker', 'SpaceCadet', 'Sunflower', 'BlueNote',
+  'GhostNote', 'Firestarter', 'SlowDancer', 'Roadie', 'Showstopper'
 ];
 
 export function generateRandomName() {
   const adj = ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)];
   const noun = NOUNS[Math.floor(Math.random() * NOUNS.length)];
-  return `${adj}${noun}`;
+  return `${adj} ${noun}`;
 }
 
 // Generic JSON read helper
@@ -267,6 +308,25 @@ export const getPreferredPlatform = async () => {
   }
 };
 
+export const getTheme = async () => {
+  try {
+    const val = await AsyncStorage.getItem(STORAGE_KEYS.APP_THEME);
+    return val || 'dark';
+  } catch {
+    return 'dark';
+  }
+};
+
+export const setTheme = async (theme) => {
+  try {
+    await AsyncStorage.setItem(STORAGE_KEYS.APP_THEME, theme);
+    return true;
+  } catch (err) {
+    console.warn('Storage setTheme error:', err);
+    return false;
+  }
+};
+
 export const setPreferredPlatform = async (platform) => {
   try {
     if (!platform || platform === 'none') {
@@ -359,6 +419,8 @@ export const StorageService = {
   deletePlaylist,
   getPreferredPlatform,
   setPreferredPlatform,
+  getTheme,
+  setTheme,
   getUserReviews,
   getCounts,
   clearLibraryType,

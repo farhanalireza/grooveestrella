@@ -5,6 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
+import { useTheme } from '../context/ThemeContext';
 import { COLORS } from '../constants/theme';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -15,6 +16,7 @@ export default function PlaylistCard({
   onDelete,
   isCustom = false,
 }) {
+  const { colors, isDark } = useTheme();
   const scale = useSharedValue(1);
 
   const name = playlist?.name || playlist?.title || 'Groove Playlist';
@@ -33,6 +35,12 @@ export default function PlaylistCard({
     transform: [{ scale: scale.value }],
   }));
 
+  const gradientColors = isCustom
+    ? ['#470B24', '#D4A373']
+    : isDark
+    ? ['#2D0516', '#470B24']
+    : ['#E8C4A0', '#D4A373'];
+
   return (
     <AnimatedPressable
       onPressIn={handlePressIn}
@@ -41,10 +49,14 @@ export default function PlaylistCard({
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         onPress?.();
       }}
-      style={[styles.container, animatedStyle]}
+      style={[
+        styles.container,
+        { backgroundColor: colors.cardBg, borderColor: colors.border },
+        animatedStyle,
+      ]}
     >
       <LinearGradient
-        colors={isCustom ? ['#870087', '#2563EB'] : ['#1E1B4B', '#0D121F']}
+        colors={gradientColors}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.artwork}
@@ -54,17 +66,26 @@ export default function PlaylistCard({
           size={28}
           color="#FFFFFF"
         />
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>{count} tracks</Text>
+        <View
+          style={[
+            styles.badge,
+            {
+              backgroundColor: isDark
+                ? 'rgba(23, 2, 11, 0.75)'
+                : 'rgba(250, 244, 235, 0.85)',
+            },
+          ]}
+        >
+          <Text style={[styles.badgeText, { color: colors.text }]}>{count} tracks</Text>
         </View>
       </LinearGradient>
 
       <View style={styles.info}>
         <View style={{ flex: 1 }}>
-          <Text style={styles.name} numberOfLines={1}>
+          <Text style={[styles.name, { color: colors.text }]} numberOfLines={1}>
             {name}
           </Text>
-          <Text style={styles.desc} numberOfLines={1}>
+          <Text style={[styles.desc, { color: colors.textSecondary }]} numberOfLines={1}>
             {desc}
           </Text>
         </View>
@@ -79,7 +100,7 @@ export default function PlaylistCard({
             style={styles.deleteButton}
             hitSlop={8}
           >
-            <Ionicons name="trash-outline" size={18} color={COLORS.error} />
+            <Ionicons name="trash-outline" size={18} color={colors.error} />
           </Pressable>
         )}
       </View>
@@ -91,9 +112,7 @@ const styles = StyleSheet.create({
   container: {
     margin: 6,
     borderRadius: 18,
-    backgroundColor: 'rgba(13, 18, 31, 0.75)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
     overflow: 'hidden',
     padding: 10,
   },
@@ -109,13 +128,11 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 8,
     right: 8,
-    backgroundColor: 'rgba(7, 9, 15, 0.75)',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 10,
   },
   badgeText: {
-    color: COLORS.text,
     fontSize: 10,
     fontWeight: '700',
   },
@@ -128,12 +145,10 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 13,
     fontWeight: '700',
-    color: COLORS.text,
     marginBottom: 2,
   },
   desc: {
     fontSize: 11,
-    color: COLORS.textSecondary,
   },
   deleteButton: {
     padding: 6,

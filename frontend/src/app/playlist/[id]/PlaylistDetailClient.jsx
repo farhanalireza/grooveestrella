@@ -8,6 +8,7 @@ import { ArrowLeft, Bookmark, BookmarkCheck, ListMusic, User, Trash2, ChevronRig
 import { SpotifyButton, YouTubeButton } from "@/Components/MusicButtons";
 import { AlbumTrackCard } from "@/Components/CardComponents/SmallTracksCard";
 import { ShareTrackComponent } from "@/Components/CardComponents/ShareTrackComponent";
+import GrooveLinkModal from "@/Components/GrooveLinkModal";
 import GrooveLoader from "@/Components/GrooveLoader";
 import { toast } from "react-toastify";
 
@@ -17,6 +18,22 @@ export default function PlaylistDetailClient({ id, initialPlaylist }) {
     const [tracks, setTracks] = useState(initialPlaylist?.tracks?.items || []);
     const [saved, setSaved] = useState(false);
     const [error, setError] = useState(null);
+    const [isGrooveLinkOpen, setIsGrooveLinkOpen] = useState(false);
+
+    useEffect(() => {
+        if (typeof window !== "undefined") {
+            const params = new URLSearchParams(window.location.search);
+            if (params.get("groovelink") === "true") {
+                setIsGrooveLinkOpen(true);
+            }
+        }
+    }, [id]);
+
+    useEffect(() => {
+        const handleOpen = () => setIsGrooveLinkOpen(true);
+        window.addEventListener("open-groovelink", handleOpen);
+        return () => window.removeEventListener("open-groovelink", handleOpen);
+    }, []);
 
     useEffect(() => {
         if (!id) return;
@@ -131,14 +148,14 @@ export default function PlaylistDetailClient({ id, initialPlaylist }) {
 
     if (error) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-screen bg-[#07090F] text-[#F4F7FF] p-6">
+            <div className="flex flex-col items-center justify-center min-h-screen bg-[var(--theme-bg)] text-[var(--theme-fg)] p-6">
                 <h2 className="text-2xl font-bold text-red-500 mb-2">Failed to Load Content</h2>
-                <p className="text-[#8992A5] mb-6 text-center max-w-md">
+                <p className="text-[var(--theme-muted)] mb-6 text-center max-w-md">
                     We couldn't connect to the server. Please check your internet connection or try again later.
                 </p>
                 <button
                     onClick={() => window.location.reload()}
-                    className="bg-[#2563EB] hover:bg-[#60A5FA] text-[#F4F7FF] font-semibold py-2 px-6 rounded-full transition duration-300 cursor-pointer"
+                    className="bg-[var(--theme-accent-bg)] hover:opacity-90 text-[var(--theme-accent-fg)] font-bold py-2 px-6 rounded-full transition duration-300 cursor-pointer shadow-md"
                 >
                     Retry
                 </button>
@@ -156,17 +173,20 @@ export default function PlaylistDetailClient({ id, initialPlaylist }) {
     const ownerName = playlist.owner?.display_name || 'Spotify User';
 
     return (
-        <div className="relative min-h-screen bg-[#07090F] text-[#F4F7FF] p-4 pb-32 sm:p-6 md:pl-20 md:pr-20 lg:pl-40 lg:pr-40 pt-12 overflow-hidden">
-            {/* Blurry Backdrop Glow */}
-            <div 
-                className="absolute top-0 left-0 right-0 h-[50vh] opacity-15 blur-[120px] pointer-events-none z-0 bg-cover bg-center"
-                style={{ backgroundImage: `url(${coverUrl})` }}
-            />
+        <div className="relative min-h-screen bg-[var(--theme-bg)] text-[var(--theme-fg)] p-4 pb-32 sm:p-6 md:pl-20 md:pr-20 lg:pl-40 lg:pr-40 pt-12 overflow-hidden">
+            {/* Ambient Artwork Backdrop Layer */}
+            <div className="absolute top-0 left-0 right-0 h-[650px] overflow-hidden pointer-events-none z-0">
+                <div 
+                    className="w-full h-full bg-cover bg-center scale-110 blur-2xl opacity-80 dark:opacity-65 saturate-150 contrast-110 transform-gpu"
+                    style={{ backgroundImage: `url(${coverUrl})` }}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[var(--theme-bg)] via-[var(--theme-bg)]/50 to-black/25" />
+            </div>
 
             {/* Back Button */}
             <button 
                 onClick={() => router.push("/")}
-                className="absolute top-8 left-6 lg:left-16 z-20 p-2.5 rounded-full bg-[#10141F]/70 backdrop-blur-md border border-[#2563EB]/15 text-[#F4F7FF]/80 hover:text-[#F4F7FF] hover:border-[#60A5FA]/30 transition shadow-lg cursor-pointer"
+                className="absolute top-8 left-6 lg:left-16 z-20 p-2.5 rounded-full bg-[var(--theme-card)]/80 backdrop-blur-md border border-[var(--theme-border)] text-[var(--theme-fg)] hover:border-[var(--theme-accent)]/40 transition shadow-md cursor-pointer"
                 title="Back to Home"
             >
                 <ArrowLeft size={18} />
@@ -174,6 +194,14 @@ export default function PlaylistDetailClient({ id, initialPlaylist }) {
 
             {/* Actions overlay */}
             <div className="absolute top-8 right-6 lg:right-16 z-20 flex items-center gap-2.5">
+                <button
+                    onClick={() => setIsGrooveLinkOpen(true)}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-full bg-[var(--theme-card)]/90 backdrop-blur-md border border-[var(--theme-border)] text-[var(--theme-fg)] hover:border-[var(--theme-accent)] hover:text-[var(--theme-accent)] transition-all duration-300 shadow-md cursor-pointer hover:scale-105 active:scale-95 text-xs font-bold"
+                    title="Open GrooveLink"
+                >
+                    <img src="/in.svg" alt="GrooveLink" className="w-4 h-4 object-contain" />
+                    <span className="hidden sm:inline">GrooveLink</span>
+                </button>
                 <ShareTrackComponent
                     trackId={playlist.id}
                     title={playlist.name}
@@ -192,10 +220,10 @@ export default function PlaylistDetailClient({ id, initialPlaylist }) {
                 ) : (
                     <button 
                         onClick={toggleSave} 
-                        className={`p-2.5 rounded-full backdrop-blur-md transition-all duration-300 shadow-md ${
+                        className={`p-2.5 rounded-full backdrop-blur-md transition-all duration-300 shadow-md cursor-pointer ${
                             saved 
-                                ? "bg-[#2563EB] text-[#F4F7FF] scale-105" 
-                                : "bg-white/[0.03] border border-[#2563EB]/15 text-[#F4F7FF] hover:bg-[#2563EB]/15"
+                                ? "bg-[var(--theme-accent-bg)] text-[var(--theme-accent-fg)] scale-105" 
+                                : "bg-[var(--theme-surface)]/80 border border-[var(--theme-border)] text-[var(--theme-fg)] hover:bg-[var(--theme-card)]"
                         }`}
                         title={saved ? "Remove Bookmark" : "Bookmark Playlist"}
                     >
@@ -205,60 +233,52 @@ export default function PlaylistDetailClient({ id, initialPlaylist }) {
             </div>
 
             {/* Playlist Info Panel Container */}
-            <div className="relative z-10 mt-14 sm:mt-6 w-full bg-transparent sm:bg-[#10141F]/60 sm:backdrop-blur-xl border-0 sm:border border-transparent sm:border-[#2563EB]/10 rounded-none sm:rounded-3xl p-2 sm:p-8 flex flex-col md:flex-row items-center gap-8 sm:gap-12 sm:shadow-2xl mb-12">
+            <div className="relative z-10 mt-14 sm:mt-6 w-full bg-[var(--theme-card)]/80 backdrop-blur-xl border border-[var(--theme-border)] rounded-2xl sm:rounded-3xl p-4 sm:p-8 flex flex-col md:flex-row items-center gap-8 sm:gap-12 shadow-xl mb-12">
                 {/* Cover Image */}
-                <div className="relative flex-shrink-0 w-48 h-48 sm:w-56 sm:h-56 md:w-64 md:h-64 rounded-2xl overflow-hidden shadow-2xl bg-[#10141F] ring-1 ring-[#2563EB]/15">
+                <div className="relative flex-shrink-0 w-48 h-48 sm:w-56 sm:h-56 md:w-64 md:h-64 rounded-2xl overflow-hidden shadow-xl bg-[var(--theme-surface)] ring-1 ring-[var(--theme-border)]">
                     <img src={coverUrl} alt={playlist.name} className="w-full h-full object-cover" />
                 </div>
 
                 {/* Details info */}
                 <div className="flex-1 min-w-0 text-center md:text-left flex flex-col justify-between">
                     <div>
-                        <div className="flex items-center justify-center md:justify-start gap-2 mb-2 text-xs font-bold text-[#60A5FA] uppercase tracking-widest">
-                            <ListMusic size={14} />
-                            <span>Playlist Collection</span>
+                        <div className="flex items-center justify-center md:justify-start gap-2 mb-2">
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-[var(--theme-border)] bg-[var(--theme-surface)] text-[var(--theme-accent)] text-[10px] font-bold tracking-widest uppercase">
+                                <ListMusic size={12} />
+                                <span>Playlist Collection</span>
+                            </span>
                         </div>
-                        <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold mb-3 leading-tight tracking-tight text-[#F4F7FF]">{playlist.name}</h1>
-                        <div className="flex items-center justify-center md:justify-start gap-2 text-base text-[#F4F7FF]/80 mb-2">
-                            <User size={16} className="text-[#8992A5]/70" />
+                        <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold mb-3 leading-tight tracking-tight text-[var(--theme-fg)]">{playlist.name}</h1>
+                        <div className="flex items-center justify-center md:justify-start gap-2 text-base text-[var(--theme-muted)] mb-2">
+                            <User size={16} className="text-[var(--theme-muted)]/70" />
                             <span>By {ownerName}</span>
                         </div>
-                        <p className="text-xs text-[#8992A5]/70 font-medium mb-4 uppercase tracking-wider">{playlist.tracks?.total} tracks total</p>
+                        <p className="text-xs text-[var(--theme-muted)]/80 font-medium mb-4 uppercase tracking-wider">{playlist.tracks?.total} tracks total</p>
                         
                         {playlist.description && (
-                            <p className="text-sm text-[#8992A5] leading-relaxed max-w-xl mb-6" dangerouslySetInnerHTML={{ __html: playlist.description }} />
+                            <p className="text-sm text-[var(--theme-muted)] leading-relaxed max-w-xl mb-6" dangerouslySetInnerHTML={{ __html: playlist.description }} />
                         )}
                     </div>
                     
                     {/* GrooveLink & History Actions */}
-                    <div className="border-t border-[#2563EB]/10 pt-6 w-full flex flex-col sm:flex-row items-center justify-center md:justify-start gap-3">
-                        <Link 
-                            href={`/s/spotify/playlist/${id}`}
-                            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-[#2563EB]/20 bg-[#2563EB]/5 hover:bg-[#2563EB]/15 text-[#F4F7FF] text-xs font-bold uppercase tracking-wider transition-all duration-300"
+                    <div className="border-t border-[var(--theme-border)] pt-6 w-full flex flex-col sm:flex-row items-center justify-center md:justify-start gap-3">
+                        <button 
+                            onClick={() => setIsGrooveLinkOpen(true)}
+                            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-full border border-[var(--theme-border)] bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] text-[var(--theme-fg)] text-xs font-bold uppercase tracking-wider transition-all duration-300 shadow-sm cursor-pointer hover:border-[var(--theme-accent)]"
                         >
                             <img src="/in.svg" alt="GrooveLink" className="w-4 h-4 object-contain" />
                             <span>Open in GrooveLink</span>
-                            <ChevronRight className="w-3 h-3 text-[#60A5FA]" />
-                        </Link>
-                        
-                        <Link 
-                            href={`https://history.grooveestrella.com/playlist/${id}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-2.5 px-4 py-2.5 rounded-full border border-[#60A5FA]/20 bg-[#10141F] hover:bg-[#60A5FA]/10 text-[#F4F7FF] text-xs font-bold uppercase tracking-wider transition-all duration-300 shadow-lg shadow-[#2563EB]/5"
-                        >
-                            <span>Explore its history, legacy and cultural impact →</span>
-                            <span className="text-[10px] text-[#8992A5] font-normal border-l border-[#8992A5]/30 pl-2">Read on NEW PROJECT</span>
-                        </Link>
+                            <ChevronRight className="w-3 h-3 text-[var(--theme-accent)]" />
+                        </button>
                     </div>
                 </div>
             </div>
 
             {/* Tracks list */}
-            <div className="relative z-10 border-t border-[#2563EB]/10 pt-8 mb-12">
-                <h2 className="text-xl sm:text-2xl font-extrabold mb-6 flex items-center gap-2">
+            <div className="relative z-10 border-t border-[var(--theme-border)] pt-8 mb-12">
+                <h2 className="text-xl sm:text-2xl font-extrabold mb-6 flex items-center gap-2 text-[var(--theme-fg)]">
                     <span>Playlist Tracks</span>
-                    <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-white/[0.03] text-[#8992A5] border border-[#2563EB]/10">{tracks.length}</span>
+                    <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-[var(--theme-surface)] text-[var(--theme-muted)] border border-[var(--theme-border)]">{tracks.length}</span>
                 </h2>
                 <div className="flex flex-col gap-2.5">
                     {tracks.map((item, index) => {
@@ -291,6 +311,26 @@ export default function PlaylistDetailClient({ id, initialPlaylist }) {
                     })}
                 </div>
             </div>
+
+            {/* GrooveLink Modal */}
+            <GrooveLinkModal
+                isOpen={isGrooveLinkOpen}
+                onClose={() => setIsGrooveLinkOpen(false)}
+                item={{
+                    id: playlist.id || id,
+                    type: "playlist",
+                    name: playlist.name,
+                    title: playlist.name,
+                    artist: ownerName,
+                    imageUrl: coverUrl,
+                    coverArt: coverUrl,
+                    popularity: 80,
+                    explicit: false,
+                    genres: [],
+                    externalLinks: [],
+                    spotifyUrl: playlist.external_urls?.spotify
+                }}
+            />
         </div>
     );
 }

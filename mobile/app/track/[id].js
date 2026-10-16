@@ -25,6 +25,8 @@ import Animated, {
   FadeInDown,
 } from 'react-native-reanimated';
 import { COLORS } from '../../src/constants/theme';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useTheme } from '../../src/context/ThemeContext';
 import { ApiService } from '../../src/services/api';
 import { StorageService } from '../../src/services/storage';
 import {
@@ -50,6 +52,7 @@ export default function TrackDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { colors, isDark } = useTheme();
 
   const [track, setTrack] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -144,7 +147,7 @@ export default function TrackDetailScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.bg }]}>
         <GrooveLoader fullScreen text="Loading Track Details..." />
       </SafeAreaView>
     );
@@ -158,18 +161,31 @@ export default function TrackDetailScreen() {
   const popularityScore = track?.popularity || 85;
   const canonicalMbid = track?.id || id;
   const canonicalTrackUrl = `https://grooveestrella.com/s/musicbrainz/track/${canonicalMbid}`;
-  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&color=60A5FA&bgcolor=10141F&ecc=H&data=${encodeURIComponent(canonicalTrackUrl)}`;
+  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&color=${(colors.accent || '#E8A87C').replace('#', '')}&bgcolor=${(colors.bg || '#17020B').replace('#', '')}&ecc=H&data=${encodeURIComponent(canonicalTrackUrl)}`;
 
   const artistsList = Array.isArray(track?.artists)
     ? track.artists
     : [{ name: trackArtist }];
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['left', 'right']}>
-      {/* Dynamic Ambient Track Backdrop Glow */}
-      <View style={styles.backdropContainer}>
-        <Image source={{ uri: coverUrl }} style={styles.backdropImage} blurRadius={Platform.OS === 'ios' ? 70 : 25} />
-        <View style={styles.backdropOverlay} />
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.bg }]} edges={['left', 'right']}>
+      {/* Dynamic Ambient Art-Cover Gradient Backdrop */}
+      <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
+        <Image
+          source={{ uri: coverUrl }}
+          style={[StyleSheet.absoluteFillObject, { opacity: isDark ? 0.72 : 0.88 }]}
+          blurRadius={Platform.OS === 'ios' ? 24 : 14}
+          resizeMode="cover"
+        />
+        <LinearGradient
+          colors={[
+            'rgba(0, 0, 0, 0.3)',
+            isDark ? 'rgba(23, 2, 11, 0.5)' : 'rgba(250, 244, 235, 0.5)',
+            colors.bg,
+          ]}
+          locations={[0, 0.45, 0.95]}
+          style={StyleSheet.absoluteFillObject}
+        />
       </View>
 
       {/* Apple Music Style Unified App Bar */}
@@ -201,14 +217,14 @@ export default function TrackDetailScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Hero Card Container (matches web app Track Card) */}
-        <Animated.View entering={FadeInDown.duration(400)} style={styles.heroCard}>
+        <Animated.View entering={FadeInDown.duration(400)} style={[styles.heroCard, { backgroundColor: colors.cardBg, borderColor: colors.border }]}>
           {/* Spinning Vinyl Record Hero Component */}
           <View style={styles.vinylContainer}>
             {/* Spinning Vinyl Grooved Disc */}
-            <Animated.View style={[styles.vinylDisc, spinStyle]}>
-              <View style={styles.vinylGroove1}>
-                <View style={styles.vinylGroove2}>
-                  <View style={styles.vinylGroove3} />
+            <Animated.View style={[styles.vinylDisc, spinStyle, { backgroundColor: isDark ? '#2D0717' : '#FFF5EB', borderColor: colors.border }]}>
+              <View style={[styles.vinylGroove1, { borderColor: colors.border }]}>
+                <View style={[styles.vinylGroove2, { borderColor: colors.border }]}>
+                  <View style={[styles.vinylGroove3, { borderColor: colors.border }]} />
                 </View>
               </View>
             </Animated.View>
@@ -222,20 +238,20 @@ export default function TrackDetailScreen() {
           {/* Track Metadata */}
           <View style={styles.metaContent}>
             {/* Category Label */}
-            <View style={styles.categoryBadgeRow}>
-              <Ionicons name="musical-notes" size={14} color="#60A5FA" />
-              <Text style={styles.categoryBadgeText}>TRACK DETAILS</Text>
+            <View style={[styles.categoryBadgeRow, { backgroundColor: isDark ? 'rgba(181, 190, 221, 0.15)' : 'rgba(71, 11, 36, 0.08)', borderColor: colors.border, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 }]}>
+              <Ionicons name="musical-notes" size={13} color={colors.accent} />
+              <Text style={[styles.categoryBadgeText, { color: colors.accent }]}>TRACK DETAILS</Text>
             </View>
 
             {/* Track Title */}
-            <Text style={styles.trackTitleText}>{trackTitle}</Text>
+            <Text style={[styles.trackTitleText, { color: colors.text }]}>{trackTitle}</Text>
 
             {/* Artist and Album Subtitle */}
-            <Text style={styles.subtitleText}>
+            <Text style={[styles.subtitleText, { color: colors.textSecondary }]}>
               {artistsList.map((a, i) => (
                 <Text
                   key={i}
-                  style={styles.clickableLink}
+                  style={[styles.clickableLink, { color: colors.accent, fontWeight: '700' }]}
                   onPress={() => {
                     if (a.id) {
                       router.push(`/artist/${a.id}`);
@@ -250,9 +266,9 @@ export default function TrackDetailScreen() {
               ))}
               {trackAlbum ? (
                 <>
-                  <Text style={styles.subtitleBullet}> • </Text>
+                  <Text style={[styles.subtitleBullet, { color: colors.textSecondary }]}> • </Text>
                   <Text
-                    style={styles.clickableAlbum}
+                    style={[styles.clickableAlbum, { color: colors.textSecondary, fontWeight: '600' }]}
                     onPress={() => {
                       if (track.albumId) {
                         router.push(`/album/${track.albumId}`);
@@ -270,13 +286,13 @@ export default function TrackDetailScreen() {
             {/* Meta Row: Duration + Score */}
             <View style={styles.metaRow}>
               <View style={styles.metaItem}>
-                <Ionicons name="time-outline" size={14} color="#8992A5" />
-                <Text style={styles.metaItemText}>{durationText}</Text>
+                <Ionicons name="time-outline" size={14} color={colors.textSecondary} />
+                <Text style={[styles.metaItemText, { color: colors.textSecondary }]}>{durationText}</Text>
               </View>
-              <Text style={styles.metaDot}>•</Text>
+              <Text style={[styles.metaDot, { color: colors.textSecondary }]}>•</Text>
               <View style={styles.metaItem}>
-                <Ionicons name="trophy-outline" size={14} color="#8992A5" />
-                <Text style={styles.metaItemText}>Score: {popularityScore}</Text>
+                <Ionicons name="trophy-outline" size={14} color={colors.textSecondary} />
+                <Text style={[styles.metaItemText, { color: colors.textSecondary }]}>Score: {popularityScore}</Text>
               </View>
             </View>
 
@@ -292,6 +308,7 @@ export default function TrackDetailScreen() {
                   style={[
                     styles.overviewText,
                     !expandedHeroDesc && styles.overviewTextClamped,
+                    { color: colors.textSecondary },
                   ]}
                 >
                   {track.description}
@@ -301,13 +318,13 @@ export default function TrackDetailScreen() {
                     onPress={() => setExpandedHeroDesc(!expandedHeroDesc)}
                     style={styles.readMoreBtn}
                   >
-                    <Text style={styles.readMoreText}>
+                    <Text style={[styles.readMoreText, { color: colors.accent }]}>
                       {expandedHeroDesc ? 'Show less' : 'Read full overview'}
                     </Text>
                     <Ionicons
                       name={expandedHeroDesc ? 'chevron-up' : 'chevron-down'}
                       size={12}
-                      color="#60A5FA"
+                      color={colors.accent}
                     />
                   </TouchableOpacity>
                 )}
@@ -315,18 +332,24 @@ export default function TrackDetailScreen() {
             ) : null}
 
             {/* "Open in GrooveLink" Pill Button */}
-            <View style={styles.grooveLinkSection}>
+            <View style={[styles.grooveLinkSection, { borderTopColor: colors.border }]}>
               <TouchableOpacity
-                style={styles.grooveLinkBtn}
+                style={[
+                  styles.grooveLinkBtn,
+                  {
+                    backgroundColor: isDark ? 'rgba(232, 168, 124, 0.12)' : 'rgba(154, 74, 47, 0.08)',
+                    borderColor: isDark ? 'rgba(232, 168, 124, 0.3)' : 'rgba(154, 74, 47, 0.25)',
+                  },
+                ]}
                 activeOpacity={0.8}
                 onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   setShowGrooveLinkModal(true);
                 }}
               >
-                <Ionicons name="link" size={15} color="#F4F7FF" style={{ marginRight: 6 }} />
-                <Text style={styles.grooveLinkBtnText}>Open in GrooveLink</Text>
-                <Ionicons name="chevron-forward" size={14} color="#60A5FA" style={{ marginLeft: 4 }} />
+                <Ionicons name="link" size={15} color={colors.accent} style={{ marginRight: 6 }} />
+                <Text style={[styles.grooveLinkBtnText, { color: colors.text }]}>Open in GrooveLink</Text>
+                <Ionicons name="chevron-forward" size={14} color={colors.accent} style={{ marginLeft: 4 }} />
               </TouchableOpacity>
             </View>
           </View>
@@ -334,15 +357,21 @@ export default function TrackDetailScreen() {
 
         {/* QR Code Sharing Banner (if toggled) */}
         {showQR && (
-          <Animated.View entering={FadeInDown.duration(300)} style={styles.qrCard}>
-            <Text style={styles.qrTitle}>SCAN TO SHARE TRACK</Text>
+          <Animated.View entering={FadeInDown.duration(300)} style={[styles.qrCard, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
+            <Text style={[styles.qrTitle, { color: colors.text }]}>SCAN TO SHARE TRACK</Text>
             <TouchableOpacity
               activeOpacity={0.9}
-              style={styles.qrImageWrapper}
+              style={[
+                styles.qrImageWrapper,
+                {
+                  backgroundColor: colors.cardBg,
+                  borderColor: colors.border,
+                },
+              ]}
               onPress={() => setQrFullScreen(true)}
             >
               <Image source={{ uri: qrCodeUrl }} style={styles.qrImage} />
-              <View style={styles.qrLogoBadge}>
+              <View style={[styles.qrLogoBadge, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
                 <Image
                   source={require('../../assets/icon.png')}
                   style={styles.qrAppLogo}
@@ -350,7 +379,7 @@ export default function TrackDetailScreen() {
                 />
               </View>
             </TouchableOpacity>
-            <Text style={styles.qrDescription}>
+            <Text style={[styles.qrDescription, { color: colors.textSecondary }]}>
               Scan this QR code with any camera to open this track card instantly. Tap code to view full-screen.
             </Text>
           </Animated.View>
@@ -360,11 +389,11 @@ export default function TrackDetailScreen() {
         {qrFullScreen && (
           <Modal transparent animationType="fade" visible={qrFullScreen} onRequestClose={() => setQrFullScreen(false)}>
             <Pressable style={styles.modalBackdrop} onPress={() => setQrFullScreen(false)}>
-              <View style={styles.modalContent} onStartShouldSetResponder={() => true}>
-                <Text style={styles.modalTitle}>SCAN QR CODE</Text>
-                <View style={styles.modalQrWrapper}>
+              <View style={[styles.modalContent, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]} onStartShouldSetResponder={() => true}>
+                <Text style={[styles.modalTitle, { color: colors.text }]}>SCAN QR CODE</Text>
+                <View style={[styles.modalQrWrapper, { backgroundColor: colors.cardBg, borderColor: colors.border }]}>
                   <Image source={{ uri: qrCodeUrl }} style={styles.modalQrImage} />
-                  <View style={styles.modalQrLogo}>
+                  <View style={[styles.modalQrLogo, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
                     <Image
                       source={require('../../assets/icon.png')}
                       style={styles.modalQrLogoIcon}
@@ -372,12 +401,12 @@ export default function TrackDetailScreen() {
                     />
                   </View>
                 </View>
-                <Text style={styles.modalSub}>Scan with your phone's camera to instantly view and share this track card.</Text>
+                <Text style={[styles.modalSub, { color: colors.textSecondary }]}>Scan with your phone's camera to instantly view and share this track card.</Text>
                 <TouchableOpacity
-                  style={styles.modalCloseBtn}
+                  style={[styles.modalCloseBtn, { backgroundColor: colors.accent }]}
                   onPress={() => setQrFullScreen(false)}
                 >
-                  <Text style={styles.modalCloseText}>CLOSE</Text>
+                  <Text style={[styles.modalCloseText, { color: isDark ? '#17020B' : '#FFFFFF' }]}>CLOSE</Text>
                 </TouchableOpacity>
               </View>
             </Pressable>
@@ -432,7 +461,7 @@ export default function TrackDetailScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#07090F',
+    backgroundColor: '#17020B',
   },
   backdropContainer: {
     position: 'absolute',
@@ -450,7 +479,7 @@ const styles = StyleSheet.create({
   },
   backdropOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#07090F',
+    backgroundColor: '#17020B',
     opacity: 0.7,
   },
   header: {
@@ -470,15 +499,15 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(16, 20, 31, 0.7)',
+    backgroundColor: 'rgba(23, 2, 11, 0.7)',
     borderWidth: 1,
-    borderColor: 'rgba(37, 99, 235, 0.2)',
+    borderColor: 'rgba(232, 168, 124, 0.2)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   circleBtnActive: {
-    backgroundColor: '#2563EB',
-    borderColor: '#60A5FA',
+    backgroundColor: '#D4A373',
+    borderColor: '#E8A87C',
   },
   scrollContent: {
     paddingHorizontal: 16,
@@ -487,9 +516,9 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   heroCard: {
-    backgroundColor: 'rgba(16, 20, 31, 0.65)',
+    backgroundColor: 'rgba(23, 2, 11, 0.65)',
     borderWidth: 1,
-    borderColor: 'rgba(37, 99, 235, 0.15)',
+    borderColor: 'rgba(232, 168, 124, 0.15)',
     borderRadius: 28,
     padding: 20,
     alignItems: 'center',
@@ -519,9 +548,9 @@ const styles = StyleSheet.create({
     width: 210,
     height: 210,
     borderRadius: 105,
-    backgroundColor: '#07090F',
+    backgroundColor: '#17020B',
     borderWidth: 4,
-    borderColor: '#10141F',
+    borderColor: '#2D0717',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
@@ -535,7 +564,7 @@ const styles = StyleSheet.create({
     height: '90%',
     borderRadius: 100,
     borderWidth: 1,
-    borderColor: 'rgba(37, 99, 235, 0.12)',
+    borderColor: 'rgba(232, 168, 124, 0.12)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -544,7 +573,7 @@ const styles = StyleSheet.create({
     height: '80%',
     borderRadius: 90,
     borderWidth: 1,
-    borderColor: 'rgba(37, 99, 235, 0.12)',
+    borderColor: 'rgba(232, 168, 124, 0.12)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -553,7 +582,7 @@ const styles = StyleSheet.create({
     height: '70%',
     borderRadius: 80,
     borderWidth: 1,
-    borderColor: 'rgba(37, 99, 235, 0.12)',
+    borderColor: 'rgba(232, 168, 124, 0.12)',
   },
   artworkLabelWrapper: {
     width: 120,
@@ -561,8 +590,8 @@ const styles = StyleSheet.create({
     borderRadius: 60,
     overflow: 'hidden',
     borderWidth: 3,
-    borderColor: '#10141F',
-    backgroundColor: '#10141F',
+    borderColor: '#2D0717',
+    backgroundColor: '#17020B',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
@@ -586,7 +615,7 @@ const styles = StyleSheet.create({
   categoryBadgeText: {
     fontSize: 11,
     fontWeight: '800',
-    color: '#60A5FA',
+    color: '#E8A87C',
     letterSpacing: 1.5,
   },
   trackTitleText: {
@@ -608,10 +637,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   subtitleBullet: {
-    color: '#8992A5',
+    color: '#A89E92',
   },
   clickableAlbum: {
-    color: '#8992A5',
+    color: '#A89E92',
     fontWeight: '500',
   },
   metaRow: {
@@ -628,11 +657,11 @@ const styles = StyleSheet.create({
   metaItemText: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#8992A5',
+    color: '#A89E92',
     textTransform: 'uppercase',
   },
   metaDot: {
-    color: '#8992A5',
+    color: '#A89E92',
     fontSize: 12,
   },
   ratingRow: {
@@ -647,7 +676,7 @@ const styles = StyleSheet.create({
   },
   overviewText: {
     fontSize: 12,
-    color: '#8992A5',
+    color: '#A89E92',
     lineHeight: 18,
     textAlign: 'left',
   },
@@ -664,11 +693,11 @@ const styles = StyleSheet.create({
   readMoreText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#60A5FA',
+    color: '#E8A87C',
   },
   grooveLinkSection: {
     borderTopWidth: 1,
-    borderTopColor: 'rgba(37, 99, 235, 0.15)',
+    borderTopColor: 'rgba(232, 168, 124, 0.15)',
     paddingTop: 14,
     width: '100%',
     alignItems: 'center',
@@ -680,9 +709,9 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
     paddingHorizontal: 16,
     borderRadius: 20,
-    backgroundColor: 'rgba(37, 99, 235, 0.12)',
+    backgroundColor: 'rgba(232, 168, 124, 0.12)',
     borderWidth: 1,
-    borderColor: 'rgba(37, 99, 235, 0.3)',
+    borderColor: 'rgba(232, 168, 124, 0.3)',
   },
   grooveLinkBtnText: {
     fontSize: 11,
@@ -692,9 +721,9 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   qrCard: {
-    backgroundColor: 'rgba(16, 20, 31, 0.7)',
+    backgroundColor: 'rgba(23, 2, 11, 0.7)',
     borderWidth: 1,
-    borderColor: 'rgba(37, 99, 235, 0.15)',
+    borderColor: 'rgba(232, 168, 124, 0.15)',
     borderRadius: 24,
     padding: 20,
     alignItems: 'center',
@@ -711,9 +740,9 @@ const styles = StyleSheet.create({
     width: 160,
     height: 160,
     borderRadius: 16,
-    backgroundColor: '#10141F',
+    backgroundColor: '#17020B',
     borderWidth: 1,
-    borderColor: 'rgba(37, 99, 235, 0.25)',
+    borderColor: 'rgba(232, 168, 124, 0.25)',
     padding: 8,
     alignItems: 'center',
     justifyContent: 'center',
@@ -730,9 +759,9 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#2D0717',
     borderWidth: 1.5,
-    borderColor: '#E5E7EB',
+    borderColor: 'rgba(232, 168, 124, 0.25)',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 3,
@@ -749,7 +778,7 @@ const styles = StyleSheet.create({
   },
   qrDescription: {
     fontSize: 11,
-    color: '#8992A5',
+    color: '#A89E92',
     textAlign: 'center',
     lineHeight: 16,
   },
@@ -763,10 +792,10 @@ const styles = StyleSheet.create({
   modalContent: {
     width: '100%',
     maxWidth: 320,
-    backgroundColor: '#0D121F',
+    backgroundColor: '#230413',
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: 'rgba(37, 99, 235, 0.3)',
+    borderColor: 'rgba(232, 168, 124, 0.3)',
     padding: 24,
     alignItems: 'center',
   },
@@ -781,9 +810,9 @@ const styles = StyleSheet.create({
     width: 200,
     height: 200,
     borderRadius: 20,
-    backgroundColor: '#10141F',
+    backgroundColor: '#17020B',
     borderWidth: 1,
-    borderColor: 'rgba(37, 99, 235, 0.3)',
+    borderColor: 'rgba(232, 168, 124, 0.3)',
     padding: 10,
     alignItems: 'center',
     justifyContent: 'center',
@@ -800,9 +829,9 @@ const styles = StyleSheet.create({
     width: 46,
     height: 46,
     borderRadius: 23,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#2D0717',
     borderWidth: 2,
-    borderColor: '#E5E7EB',
+    borderColor: 'rgba(232, 168, 124, 0.25)',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 4,
@@ -819,13 +848,13 @@ const styles = StyleSheet.create({
   },
   modalSub: {
     fontSize: 12,
-    color: '#8992A5',
+    color: '#A89E92',
     textAlign: 'center',
     lineHeight: 18,
     marginBottom: 18,
   },
   modalCloseBtn: {
-    backgroundColor: '#2563EB',
+    backgroundColor: '#D4A373',
     paddingVertical: 10,
     paddingHorizontal: 24,
     borderRadius: 14,
@@ -833,7 +862,7 @@ const styles = StyleSheet.create({
   modalCloseText: {
     fontSize: 12,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: '#17020B',
     letterSpacing: 1,
   },
 });

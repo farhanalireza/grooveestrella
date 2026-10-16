@@ -18,10 +18,12 @@ import * as Haptics from 'expo-haptics';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { COLORS, GRADIENTS } from '../../src/constants/theme';
 import { ApiService, isUrl } from '../../src/services/api';
+import { useTheme } from '../../src/context/ThemeContext';
 import GlassCard from '../../src/components/GlassCard';
 import GrooveLogo from '../../src/components/GrooveLogo';
 
 export default function HomeScreen() {
+  const { colors, isDark } = useTheme();
   const router = useRouter();
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(false);
@@ -66,7 +68,7 @@ export default function HomeScreen() {
   const isLink = isUrl(inputText);
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.bg }]} edges={['top', 'left', 'right']}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardContainer}
@@ -81,9 +83,17 @@ export default function HomeScreen() {
             entering={FadeInDown.duration(600).delay(100)}
             style={styles.missionTagWrapper}
           >
-            <View style={styles.missionTag}>
+            <View
+              style={[
+                styles.missionTag,
+                {
+                  backgroundColor: isDark ? 'rgba(232, 168, 124, 0.12)' : 'rgba(154, 74, 47, 0.1)',
+                  borderColor: isDark ? 'rgba(232, 168, 124, 0.25)' : 'rgba(154, 74, 47, 0.2)',
+                },
+              ]}
+            >
               <GrooveLogo size={18} style={{ marginRight: 8 }} />
-              <Text style={styles.missionTagText}>MUSIC LAYER</Text>
+              <Text style={[styles.missionTagText, { color: colors.accent }]}>MUSIC LAYER</Text>
             </View>
           </Animated.View>
 
@@ -92,14 +102,14 @@ export default function HomeScreen() {
             entering={FadeInDown.duration(650).delay(200)}
             style={styles.titleContainer}
           >
-            <Text style={styles.titleLineOne}>Share and open music</Text>
-            <Text style={styles.titleLineTwo}>across all platforms</Text>
+            <Text style={[styles.titleLineOne, { color: colors.text }]}>Share and open music</Text>
+            <Text style={[styles.titleLineTwo, { color: colors.accent }]}>across all platforms</Text>
           </Animated.View>
 
           {/* Subtitle */}
           <Animated.Text
             entering={FadeInDown.duration(700).delay(300)}
-            style={styles.subtitle}
+            style={[styles.subtitle, { color: colors.textSecondary }]}
           >
             Paste a link from Spotify, Apple Music, YouTube—or search for any song title to create a universal link and customizable GrooveCard sharing badge.
           </Animated.Text>
@@ -114,14 +124,14 @@ export default function HomeScreen() {
                 <Ionicons
                   name="search"
                   size={20}
-                  color={COLORS.textSecondary}
+                  color={colors.textSecondary}
                   style={styles.searchIcon}
                 />
 
                 <TextInput
-                  style={styles.textInput}
+                  style={[styles.textInput, { color: colors.text }]}
                   placeholder="Paste link or search song title..."
-                  placeholderTextColor="rgba(137, 146, 165, 0.55)"
+                  placeholderTextColor={colors.textSecondary}
                   value={inputText}
                   onChangeText={(text) => {
                     setInputText(text);
@@ -140,7 +150,7 @@ export default function HomeScreen() {
                     style={styles.clearButton}
                     hitSlop={10}
                   >
-                    <Ionicons name="close-circle" size={18} color={COLORS.textSecondary} />
+                    <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
                   </Pressable>
                 )}
 
@@ -153,7 +163,7 @@ export default function HomeScreen() {
                   ]}
                 >
                   <LinearGradient
-                    colors={['#870087', '#A21CAF', '#C026D3']}
+                    colors={['#470B24', '#D4A373']}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 0 }}
                     style={styles.submitGradient}
@@ -194,10 +204,10 @@ export default function HomeScreen() {
             <Ionicons
               name="information-circle-outline"
               size={16}
-              color={COLORS.textSecondary}
+              color={colors.textSecondary}
               style={{ opacity: 0.7 }}
             />
-            <Text style={styles.tipText}>
+            <Text style={[styles.tipText, { color: colors.textSecondary }]}>
               Search title/artist or paste direct links to get universal routing paths.
             </Text>
           </Animated.View>
@@ -207,7 +217,7 @@ export default function HomeScreen() {
             entering={FadeInUp.duration(700).delay(600)}
             style={styles.quickSuggestions}
           >
-            <Text style={styles.suggestionsTitle}>POPULAR SEARCHES</Text>
+            <Text style={[styles.suggestionsTitle, { color: colors.textSecondary }]}>POPULAR SEARCHES</Text>
             <View style={styles.suggestionChips}>
               {['Starboy', 'Blinding Lights', 'Midnight City', 'Random Access Memories'].map(
                 (term) => (
@@ -218,10 +228,10 @@ export default function HomeScreen() {
                       setInputText(term);
                       router.push(`/explore?q=${encodeURIComponent(term)}`);
                     }}
-                    style={styles.suggestionChip}
+                    style={[styles.suggestionChip, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}
                   >
-                    <Ionicons name="trending-up" size={12} color={COLORS.purpleLighter} style={{ marginRight: 5 }} />
-                    <Text style={styles.suggestionChipText}>{term}</Text>
+                    <Ionicons name="trending-up" size={12} color={colors.accent} style={{ marginRight: 5 }} />
+                    <Text style={[styles.suggestionChipText, { color: colors.textSecondary }]}>{term}</Text>
                   </Pressable>
                 )
               )}
@@ -258,9 +268,9 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     paddingHorizontal: 12,
     borderRadius: 9999,
-    backgroundColor: 'rgba(37, 99, 235, 0.1)',
+    backgroundColor: 'rgba(232, 168, 124, 0.12)',
     borderWidth: 1,
-    borderColor: 'rgba(37, 99, 235, 0.25)',
+    borderColor: 'rgba(232, 168, 124, 0.25)',
   },
   sparkleIcon: {
     marginRight: 6,
@@ -268,7 +278,7 @@ const styles = StyleSheet.create({
   missionTagText: {
     fontSize: 10,
     fontWeight: '800',
-    color: COLORS.accentLight,
+    color: '#D4A373',
     letterSpacing: 2,
   },
   titleContainer: {
@@ -285,7 +295,7 @@ const styles = StyleSheet.create({
   titleLineTwo: {
     fontSize: 32,
     fontWeight: '900',
-    color: COLORS.accentLight,
+    color: '#D4A373',
     textAlign: 'center',
     letterSpacing: -0.5,
   },
@@ -402,8 +412,8 @@ const styles = StyleSheet.create({
   suggestionChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(16, 20, 31, 0.8)',
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: 'rgba(232, 168, 124, 0.1)',
+    borderColor: 'rgba(232, 168, 124, 0.2)',
     borderWidth: 1,
     paddingVertical: 6,
     paddingHorizontal: 12,

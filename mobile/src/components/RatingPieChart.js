@@ -1,10 +1,11 @@
-// src/components/RatingPieChart.js
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { COLORS } from '../constants/theme';
+import { useTheme } from '../context/ThemeContext';
 
 export default function RatingPieChart({ rating, size = 'md', style = {} }) {
+  const { colors, isDark } = useTheme();
   const rawStar =
     rating?.value !== undefined && rating?.value !== null
       ? Number(rating.value)
@@ -35,7 +36,7 @@ export default function RatingPieChart({ rating, size = 'md', style = {} }) {
   const strokeDashoffset = circumference - progressRatio * circumference;
 
   return (
-    <View style={[styles.container, style]}>
+    <View style={[styles.container, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }, style]}>
       {/* Circular Pie Chart SVG */}
       <View style={styles.svgWrapper}>
         <Svg width={44} height={44} viewBox="0 0 44 44" style={styles.svg}>
@@ -44,8 +45,8 @@ export default function RatingPieChart({ rating, size = 'md', style = {} }) {
             cx="22"
             cy="22"
             r={radius}
-            fill="rgba(0, 0, 0, 0.4)"
-            stroke="rgba(255, 255, 255, 0.08)"
+            fill={isDark ? "rgba(0, 0, 0, 0.4)" : "rgba(0, 0, 0, 0.04)"}
+            stroke={colors.border}
             strokeWidth={strokeWidth}
           />
           {/* Dynamic colored progress pie arc */}
@@ -71,8 +72,8 @@ export default function RatingPieChart({ rating, size = 'md', style = {} }) {
       {/* Label and Status */}
       <View style={styles.textWrapper}>
         <View style={styles.headerRow}>
-          <Text style={styles.grooveScoreLabel}>GROOVE SCORE</Text>
-          <Text style={styles.scoreRatioText}>{score10}/10</Text>
+          <Text style={[styles.grooveScoreLabel, { color: colors.textSecondary }]}>GROOVE SCORE</Text>
+          <Text style={[styles.scoreRatioText, { color: colors.textSecondary }]}>{score10}/10</Text>
         </View>
         <View style={styles.statusRow}>
           <View style={[styles.pulsingDot, { backgroundColor: color }]} />

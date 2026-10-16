@@ -35,17 +35,17 @@ const DataNoticeModal = ({ isOpen: externalOpen = false, onClose }) => {
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.9, opacity: 0 }}
             transition={{ type: "spring", damping: 20, stiffness: 300 }}
-            className="max-w-md w-full bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl shadow-2xl p-6 border border-gray-700"
+            className="max-w-md w-full bg-[var(--theme-card)] text-[var(--theme-fg)] rounded-2xl shadow-2xl p-6 border border-[var(--theme-border)]"
           >
             <div className="flex items-center gap-3 mb-4">
-              <Shield className="w-6 h-6 text-blue-400" />
-              <h3 className="text-xl font-semibold text-white">Privacy Notice</h3>
+              <Shield className="w-6 h-6 text-[var(--theme-accent)]" />
+              <h3 className="text-xl font-semibold text-[var(--theme-fg)]">Privacy Notice</h3>
             </div>
 
-            <div className="space-y-3 text-sm text-gray-300 mb-6">
+            <div className="space-y-3 text-sm text-[var(--theme-muted)] mb-6">
               <p>
-                This app stores your <strong className="text-white">saved music, playlists, artists and albums</strong> and{" "}
-                <strong className="text-white">preferences</strong> locally in your browser.
+                This app stores your <strong className="text-[var(--theme-fg)]">saved music, playlists, artists and albums</strong> and{" "}
+                <strong className="text-[var(--theme-fg)]">preferences</strong> locally in your browser.
               </p>
               <p>• Data stays on your device only</p>
               <p>• Nothing is sent to external servers</p>
@@ -56,7 +56,7 @@ const DataNoticeModal = ({ isOpen: externalOpen = false, onClose }) => {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={handleAcknowledge}
-              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white py-3 rounded-xl font-medium transition-all duration-200"
+              className="w-full bg-[var(--theme-accent-bg)] hover:opacity-90 text-[var(--theme-accent-fg)] py-3 rounded-xl font-bold transition-all duration-200 cursor-pointer shadow-md"
             >
               Understood
             </motion.button>

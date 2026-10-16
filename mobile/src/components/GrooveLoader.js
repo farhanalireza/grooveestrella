@@ -10,9 +10,11 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 import { COLORS } from '../constants/theme';
+import { useTheme } from '../context/ThemeContext';
 import GrooveLogo from './GrooveLogo';
 
 export default function GrooveLoader({ size = 48, fullScreen = false }) {
+  const { colors } = useTheme();
   const rotation = useSharedValue(0);
   const pulse = useSharedValue(1);
 
@@ -57,6 +59,8 @@ export default function GrooveLoader({ size = 48, fullScreen = false }) {
               width: size * 1.4,
               height: size * 1.4,
               borderRadius: (size * 1.4) / 2,
+              backgroundColor: colors.accent,
+              shadowColor: colors.accentLight || colors.accent,
             },
           ]}
         />
@@ -70,7 +74,7 @@ export default function GrooveLoader({ size = 48, fullScreen = false }) {
   );
 
   if (fullScreen) {
-    return <View style={styles.fullScreen}>{content}</View>;
+    return <View style={[styles.fullScreen, { backgroundColor: colors.bg }]}>{content}</View>;
   }
 
   return content;
@@ -84,7 +88,6 @@ const styles = StyleSheet.create({
   },
   fullScreen: {
     flex: 1,
-    backgroundColor: '#07090F',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -95,8 +98,6 @@ const styles = StyleSheet.create({
   },
   glow: {
     position: 'absolute',
-    backgroundColor: '#870087',
-    shadowColor: '#E879F9',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.8,
     shadowRadius: 20,

@@ -40,29 +40,77 @@ export default function SearchPage() {
         debouncedSearch(query, type);
     }
 
+    const POPULAR_SEARCHES = [
+        { label: "David Bowie", type: "artist" },
+        { label: "Pink Floyd", type: "artist" },
+        { label: "The Beatles", type: "artist" },
+        { label: "Queen", type: "artist" },
+        { label: "Daft Punk", type: "artist" },
+        { label: "Radiohead", type: "artist" },
+        { label: "Led Zeppelin", type: "artist" },
+        { label: "Michael Jackson", type: "artist" },
+    ];
+
+    const GENRE_TAGS = ["Classic Rock", "Synthpop", "Jazz", "Electronic", "Indie Rock", "Post-Punk", "Ambient"];
+
     return (
-        <div className="min-h-screen bg-[#07090F] text-[#F4F7FF] p-6 pb-24 md:pl-10 md:pr-10 lg:pl-32 lg:pr-32 pt-12">
+        <div className="min-h-screen bg-[var(--theme-bg)] text-[var(--theme-fg)] p-6 pb-36 md:pl-10 md:pr-10 lg:pl-32 lg:pr-32 pt-12 transition-colors duration-300">
             {/* Header / Search Controls */}
-            <div className="mb-8">
+            <div className="mb-6">
                 <SearchComp initialQuery={searchTerm} handleChange={handleSearchChange} />
             </div>
 
             {/* Prompt helper */}
-            <p className="text-[#8992A5]/60 text-xs md:text-sm font-semibold text-center mb-10 tracking-wide uppercase">
+            <p className="text-[var(--theme-muted)] text-xs md:text-sm font-semibold text-center mb-6 tracking-wide uppercase">
                 {searchTerm
                     ? `Displaying results for: "${searchTerm}"`
-                    : "Discover tracks, artists, albums, or playlists..."}
+                    : "Discover tracks, artists, albums, or playlists"}
             </p>
 
+            {/* If no search term entered, show engaging popular search chips */}
+            {!searchTerm && (
+                <div className="max-w-2xl mx-auto mb-10 flex flex-col items-center text-center space-y-4">
+                    <span className="text-[11px] font-bold tracking-widest uppercase text-[var(--theme-muted)]">
+                        Popular Searches
+                    </span>
+                    <div className="flex flex-wrap justify-center gap-2">
+                        {POPULAR_SEARCHES.map((item) => (
+                            <button
+                                key={item.label}
+                                onClick={() => handleSearchChange(item.label, item.type)}
+                                className="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-[var(--theme-card)] border border-[var(--theme-border)] text-[var(--theme-fg)] hover:border-[var(--theme-accent)] hover:text-[var(--theme-accent)] transition shadow-sm cursor-pointer"
+                            >
+                                🔥 {item.label}
+                            </button>
+                        ))}
+                    </div>
+
+                    <span className="text-[11px] font-bold tracking-widest uppercase text-[var(--theme-muted)] pt-2">
+                        Browse by Musical Style
+                    </span>
+                    <div className="flex flex-wrap justify-center gap-1.5">
+                        {GENRE_TAGS.map((genre) => (
+                            <button
+                                key={genre}
+                                onClick={() => handleSearchChange(genre, "album")}
+                                className="px-3 py-1 rounded-full text-[11px] font-medium bg-[var(--theme-surface)] border border-[var(--theme-border)] text-[var(--theme-muted)] hover:text-[var(--theme-fg)] hover:border-[var(--theme-accent)] transition cursor-pointer"
+                            >
+                                #{genre}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+
             {/* Results Grid */}
-            <div className="flex justify-center p-4">
+            <div className="flex justify-center p-2 sm:p-4">
                 {loading ? (
                     <div className="flex flex-col items-center justify-center py-20">
                         <GrooveLoader size={44} text="Searching catalog..." />
                     </div>
                 ) : searchResults.length === 0 && searchTerm ? (
                     <div className="text-center py-20">
-                        <span className="text-[#8992A5]/60 text-sm font-medium">No results found for your search query.</span>
+                        <span className="text-[var(--theme-muted)] text-sm font-medium">No results found for "{searchTerm}". Try another search.</span>
                     </div>
                 ) : (
                     <div className={

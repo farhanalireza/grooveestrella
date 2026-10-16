@@ -47,7 +47,7 @@ export default function RatingPieChart({ rating, size = "md", className = "" }) 
 
   return (
     <div 
-      className={`inline-flex items-center gap-3 px-3 py-1.5 rounded-2xl bg-[#07090F]/80 backdrop-blur-md border border-white/10 shadow-lg ${className}`}
+      className={`inline-flex items-center gap-3 px-3.5 py-1.5 rounded-2xl bg-[var(--theme-card)]/90 backdrop-blur-md border border-[var(--theme-border)] shadow-md ${className}`}
       title={`Community Rating: ${rawStar.toFixed(1)} ★ × 2 = ${score10}/10 based on ${votesCount} votes`}
     >
       {/* Circular Pie Chart SVG */}
@@ -58,8 +58,8 @@ export default function RatingPieChart({ rating, size = "md", className = "" }) 
             cx="22"
             cy="22"
             r={radius}
-            fill="rgba(0, 0, 0, 0.4)"
-            stroke="rgba(255, 255, 255, 0.08)"
+            fill="transparent"
+            stroke="var(--theme-border)"
             strokeWidth="4"
           />
           {/* Dynamic colored progress pie arc */}
@@ -88,10 +88,10 @@ export default function RatingPieChart({ rating, size = "md", className = "" }) 
       {/* Label and Status */}
       <div className="flex flex-col text-left">
         <div className="flex items-center gap-1.5">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-[#8992A5]">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--theme-muted)]">
             Groove Score
           </span>
-          <span className="text-[9px] font-mono text-[#8992A5]/70">
+          <span className="text-[9px] font-mono text-[var(--theme-muted)]">
             {score10}/10
           </span>
         </div>

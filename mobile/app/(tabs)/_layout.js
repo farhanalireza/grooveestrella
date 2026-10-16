@@ -12,7 +12,7 @@ import Animated, {
   useAnimatedStyle,
   withSpring,
 } from 'react-native-reanimated';
-import { COLORS } from '../../src/constants/theme';
+import { useTheme } from '../../src/context/ThemeContext';
 
 const TAB_CONFIG = {
   index: { label: 'Music', icon: 'musical-notes' },
@@ -23,6 +23,7 @@ const TAB_CONFIG = {
 };
 
 function TabButton({ route, isFocused, onPress }) {
+  const { colors } = useTheme();
   const scale = useSharedValue(1);
   const config = TAB_CONFIG[route.name] || { label: route.name, icon: 'musical-notes' };
 
@@ -57,14 +58,15 @@ function TabButton({ route, isFocused, onPress }) {
           <Ionicons
             name={config.icon}
             size={20}
-            color={isFocused ? COLORS.purpleLightest : COLORS.textSecondary}
+            color={isFocused ? '#FFFFFF' : colors.textSecondary}
             style={isFocused ? styles.activeIconGlow : undefined}
           />
         </Animated.View>
         <Text
           style={[
             styles.tabLabel,
-            isFocused ? styles.tabLabelActive : styles.tabLabelInactive,
+            { color: isFocused ? colors.text : colors.textSecondary },
+            isFocused && styles.tabLabelActive,
           ]}
         >
           {config.label}
@@ -75,6 +77,7 @@ function TabButton({ route, isFocused, onPress }) {
 }
 
 function CustomTabBar({ state, descriptors, navigation }) {
+  const { colors, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const screenWidth = Dimensions.get('window').width;
   const initialRowWidth = screenWidth - 32;
@@ -121,15 +124,15 @@ function CustomTabBar({ state, descriptors, navigation }) {
         { bottom: insets.bottom > 0 ? insets.bottom + 8 : 16 },
       ]}
     >
-      <View style={styles.floatingBar}>
+      <View style={[styles.floatingBar, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         {/* Frosted Glass Backdrop */}
         {Platform.OS === 'ios' ? (
-          <BlurView intensity={45} tint="dark" style={StyleSheet.absoluteFill} />
+          <BlurView intensity={45} tint={isDark ? "dark" : "light"} style={StyleSheet.absoluteFill} />
         ) : (
           <View
             style={[
               StyleSheet.absoluteFill,
-              { backgroundColor: COLORS.surface, opacity: 0.94 },
+              { backgroundColor: colors.surface, opacity: 0.94 },
             ]}
           />
         )}
@@ -143,9 +146,9 @@ function CustomTabBar({ state, descriptors, navigation }) {
         />
 
         {/* Sliding Liquid Active Pill Background */}
-        <Animated.View style={[styles.slidingPill, pillAnimStyle]}>
+        <Animated.View style={[styles.slidingPill, { borderColor: colors.borderActive }, pillAnimStyle]}>
           <LinearGradient
-            colors={['rgba(135,0,135,0.65)', 'rgba(192,38,211,0.25)']}
+            colors={colors.purpleGradient}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.pillGradient}
@@ -196,12 +199,13 @@ function CustomTabBar({ state, descriptors, navigation }) {
 }
 
 export default function TabLayout() {
+  const { colors } = useTheme();
   return (
     <Tabs
       tabBar={(props) => <CustomTabBar {...props} />}
       screenOptions={{
         headerShown: false,
-        sceneStyle: { backgroundColor: COLORS.bg },
+        sceneStyle: { backgroundColor: colors.bg },
       }}
     >
       <Tabs.Screen name="index" options={{ title: 'Music' }} />
@@ -255,11 +259,11 @@ const styles = StyleSheet.create({
     bottom: 6,
     borderRadius: 9999,
     borderWidth: 1,
-    borderColor: 'rgba(232, 121, 249, 0.45)',
+    borderColor: 'rgba(212, 163, 115, 0.45)',
     overflow: 'hidden',
     ...Platform.select({
       ios: {
-        shadowColor: '#870087',
+        shadowColor: '#D4A373',
         shadowOffset: { width: 0, height: 0 },
         shadowOpacity: 0.55,
         shadowRadius: 16,
@@ -307,7 +311,7 @@ const styles = StyleSheet.create({
   activeIconGlow: {
     ...Platform.select({
       ios: {
-        shadowColor: '#E879F9',
+        shadowColor: '#D4A373',
         shadowOffset: { width: 0, height: 0 },
         shadowOpacity: 0.8,
         shadowRadius: 6,

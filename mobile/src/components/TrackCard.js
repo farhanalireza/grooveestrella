@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Toast from 'react-native-toast-message';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
+import { useTheme } from '../context/ThemeContext';
 import { COLORS } from '../constants/theme';
 import { StorageService } from '../services/storage';
 
@@ -18,6 +19,7 @@ export default function TrackCard({
   layout = 'list', // 'list' | 'grid'
 }) {
   const router = useRouter();
+  const { colors, isDark } = useTheme();
   const scale = useSharedValue(1);
   const [saved, setSaved] = useState(false);
 
@@ -99,23 +101,38 @@ export default function TrackCard({
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         onPress={handleCardPress}
-        style={[styles.gridContainer, animatedStyle]}
+        style={[
+          styles.gridContainer,
+          { backgroundColor: colors.cardBg, borderColor: colors.border },
+          animatedStyle,
+        ]}
       >
-        <View style={styles.gridImageWrapper}>
+        <View style={[styles.gridImageWrapper, { backgroundColor: colors.surfaceElevated }]}>
           <Image source={{ uri: imageUrl }} style={styles.gridImage} resizeMode="cover" />
-          <Pressable onPress={toggleSave} style={styles.floatingBookmark} hitSlop={10}>
+          <Pressable
+            onPress={toggleSave}
+            style={[
+              styles.floatingBookmark,
+              {
+                backgroundColor: isDark
+                  ? 'rgba(23, 2, 11, 0.75)'
+                  : 'rgba(250, 244, 235, 0.85)',
+              },
+            ]}
+            hitSlop={10}
+          >
             <Ionicons
               name={saved ? 'bookmark' : 'bookmark-outline'}
               size={18}
-              color={saved ? COLORS.purpleLighter : COLORS.textSecondary}
+              color={saved ? colors.accent : colors.textSecondary}
             />
           </Pressable>
         </View>
 
-        <Text style={styles.gridTitle} numberOfLines={1}>
+        <Text style={[styles.gridTitle, { color: colors.text }]} numberOfLines={1}>
           {title}
         </Text>
-        <Text style={styles.gridArtist} numberOfLines={1}>
+        <Text style={[styles.gridArtist, { color: colors.textSecondary }]} numberOfLines={1}>
           {artist}
         </Text>
       </AnimatedPressable>
@@ -127,15 +144,23 @@ export default function TrackCard({
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
       onPress={handleCardPress}
-      style={[styles.listContainer, animatedStyle]}
+      style={[
+        styles.listContainer,
+        { backgroundColor: colors.cardBg, borderColor: colors.border },
+        animatedStyle,
+      ]}
     >
-      <Image source={{ uri: imageUrl }} style={styles.listImage} resizeMode="cover" />
+      <Image
+        source={{ uri: imageUrl }}
+        style={[styles.listImage, { backgroundColor: colors.surfaceElevated }]}
+        resizeMode="cover"
+      />
 
       <View style={styles.textContainer}>
-        <Text style={styles.listTitle} numberOfLines={1}>
+        <Text style={[styles.listTitle, { color: colors.text }]} numberOfLines={1}>
           {title}
         </Text>
-        <Text style={styles.listArtist} numberOfLines={1}>
+        <Text style={[styles.listArtist, { color: colors.textSecondary }]} numberOfLines={1}>
           {artist}
         </Text>
       </View>
@@ -150,19 +175,19 @@ export default function TrackCard({
             style={styles.iconButton}
             hitSlop={8}
           >
-            <Ionicons name="trash-outline" size={19} color={COLORS.error} />
+            <Ionicons name="trash-outline" size={19} color={colors.error} />
           </Pressable>
         ) : (
           <Pressable onPress={toggleSave} style={styles.iconButton} hitSlop={8}>
             <Ionicons
               name={saved ? 'bookmark' : 'bookmark-outline'}
               size={19}
-              color={saved ? COLORS.purpleLighter : COLORS.textSecondary}
+              color={saved ? colors.accent : colors.textSecondary}
             />
           </Pressable>
         )}
 
-        <Ionicons name="chevron-forward" size={16} color={COLORS.textSecondary} style={{ opacity: 0.5 }} />
+        <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} style={{ opacity: 0.5 }} />
       </View>
     </AnimatedPressable>
   );
@@ -174,16 +199,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 10,
     borderRadius: 16,
-    backgroundColor: 'rgba(13, 18, 31, 0.75)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
     marginBottom: 8,
   },
   listImage: {
     width: 48,
     height: 48,
     borderRadius: 10,
-    backgroundColor: COLORS.surfaceElevated,
   },
   textContainer: {
     flex: 1,
@@ -194,12 +216,10 @@ const styles = StyleSheet.create({
   listTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: COLORS.text,
     marginBottom: 3,
   },
   listArtist: {
     fontSize: 12,
-    color: COLORS.textSecondary,
     fontWeight: '500',
   },
   actions: {
@@ -217,9 +237,7 @@ const styles = StyleSheet.create({
     margin: 6,
     padding: 8,
     borderRadius: 16,
-    backgroundColor: 'rgba(13, 18, 31, 0.75)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
   },
   gridImageWrapper: {
     width: '100%',
@@ -227,7 +245,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     overflow: 'hidden',
     position: 'relative',
-    backgroundColor: COLORS.surfaceElevated,
     marginBottom: 8,
   },
   gridImage: {
@@ -238,18 +255,15 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 6,
     right: 6,
-    backgroundColor: 'rgba(7, 9, 15, 0.7)',
     borderRadius: 20,
     padding: 5,
   },
   gridTitle: {
     fontSize: 13,
     fontWeight: '700',
-    color: COLORS.text,
     marginBottom: 2,
   },
   gridArtist: {
     fontSize: 11,
-    color: COLORS.textSecondary,
   },
 });

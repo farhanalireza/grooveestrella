@@ -1,4 +1,3 @@
-// src/components/LiquidPill.js
 import React from 'react';
 import { Pressable, Text, StyleSheet, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -9,6 +8,7 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../context/ThemeContext';
 import { COLORS } from '../constants/theme';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -21,6 +21,7 @@ export default function LiquidPill({
   count,
   style,
 }) {
+  const { colors, isDark } = useTheme();
   const scale = useSharedValue(1);
 
   const handlePressIn = () => {
@@ -40,6 +41,10 @@ export default function LiquidPill({
     transform: [{ scale: scale.value }],
   }));
 
+  const activeGradient = isDark
+    ? ['rgba(71, 11, 36, 0.85)', 'rgba(212, 163, 115, 0.45)']
+    : ['rgba(212, 163, 115, 0.7)', 'rgba(154, 74, 47, 0.45)'];
+
   return (
     <AnimatedPressable
       onPressIn={handlePressIn}
@@ -47,14 +52,16 @@ export default function LiquidPill({
       onPress={handlePress}
       style={[
         styles.pill,
-        active ? styles.pillActive : styles.pillInactive,
+        active
+          ? [styles.pillActive, { borderColor: colors.accent }]
+          : [styles.pillInactive, { backgroundColor: colors.surface, borderColor: colors.border }],
         animatedStyle,
         style,
       ]}
     >
       {active && (
         <LinearGradient
-          colors={['rgba(135,0,135,0.5)', 'rgba(192,38,211,0.2)']}
+          colors={activeGradient}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={StyleSheet.absoluteFill}
@@ -65,7 +72,7 @@ export default function LiquidPill({
         <Ionicons
           name={icon}
           size={14}
-          color={active ? COLORS.purpleLightest : COLORS.textSecondary}
+          color={active ? (isDark ? '#FFF2DF' : '#FFFFFF') : colors.textSecondary}
           style={styles.icon}
         />
       )}
@@ -73,7 +80,9 @@ export default function LiquidPill({
       <Text
         style={[
           styles.label,
-          active ? styles.labelActive : styles.labelInactive,
+          active
+            ? [styles.labelActive, { color: isDark ? '#FFF2DF' : '#FFFFFF' }]
+            : [styles.labelInactive, { color: colors.textSecondary }],
         ]}
       >
         {label}
@@ -83,7 +92,18 @@ export default function LiquidPill({
         <Text
           style={[
             styles.countBadge,
-            active ? styles.countActive : styles.countInactive,
+            active
+              ? [
+                  styles.countActive,
+                  {
+                    backgroundColor: isDark ? 'rgba(232, 168, 124, 0.25)' : 'rgba(154, 74, 47, 0.25)',
+                    color: isDark ? '#FFF2DF' : '#FFFFFF',
+                  },
+                ]
+              : [
+                  styles.countInactive,
+                  { backgroundColor: colors.surfaceHighlight, color: colors.textSecondary },
+                ],
           ]}
         >
           {count}
@@ -106,10 +126,10 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   pillActive: {
-    borderColor: 'rgba(232, 121, 249, 0.45)',
+    borderColor: '#D4A373',
     ...Platform.select({
       ios: {
-        shadowColor: '#870087',
+        shadowColor: '#D4A373',
         shadowOffset: { width: 0, height: 0 },
         shadowOpacity: 0.45,
         shadowRadius: 10,
@@ -120,8 +140,7 @@ const styles = StyleSheet.create({
     }),
   },
   pillInactive: {
-    backgroundColor: 'rgba(13, 18, 31, 0.65)',
-    borderColor: 'rgba(255, 255, 255, 0.12)',
+    borderWidth: 1,
   },
   icon: {
     marginRight: 6,
@@ -132,12 +151,9 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   labelActive: {
-    color: '#FFFFFF',
     fontWeight: '800',
   },
-  labelInactive: {
-    color: COLORS.textSecondary,
-  },
+  labelInactive: {},
   countBadge: {
     marginLeft: 6,
     fontSize: 10,
@@ -147,12 +163,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     overflow: 'hidden',
   },
-  countActive: {
-    backgroundColor: 'rgba(240, 171, 252, 0.25)',
-    color: '#FFFFFF',
-  },
-  countInactive: {
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    color: COLORS.textSecondary,
-  },
+  countActive: {},
+  countInactive: {},
 });

@@ -3,33 +3,41 @@ import React from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useTheme } from '../context/ThemeContext';
 import { COLORS } from '../constants/theme';
 
 export default function GlassCard({
   children,
   style,
   intensity = 25,
-  tint = 'dark',
+  tint,
   elevated = false,
   showHighlight = true,
   ...props
 }) {
+  const { colors, isDark } = useTheme();
+  const activeTint = tint || (isDark ? 'dark' : 'light');
+
   return (
     <View
       style={[
         styles.container,
+        {
+          borderColor: colors.border,
+          backgroundColor: elevated ? colors.surfaceElevated : colors.cardBg,
+        },
         elevated ? styles.elevated : styles.standard,
         style,
       ]}
       {...props}
     >
       {Platform.OS === 'ios' ? (
-        <BlurView intensity={intensity} tint={tint} style={StyleSheet.absoluteFill} />
+        <BlurView intensity={intensity} tint={activeTint} style={StyleSheet.absoluteFill} />
       ) : (
         <View
           style={[
             StyleSheet.absoluteFill,
-            { backgroundColor: elevated ? COLORS.surfaceElevated : COLORS.surface, opacity: 0.94 },
+            { backgroundColor: elevated ? colors.surfaceElevated : colors.surface, opacity: isDark ? 0.94 : 0.98 },
           ]}
         />
       )}
@@ -52,15 +60,13 @@ const styles = StyleSheet.create({
   container: {
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: COLORS.border,
     overflow: 'hidden',
     position: 'relative',
-    backgroundColor: COLORS.cardBg,
     ...Platform.select({
       ios: {
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.45,
+        shadowOpacity: 0.35,
         shadowRadius: 20,
       },
       android: {
@@ -68,16 +74,12 @@ const styles = StyleSheet.create({
       },
     }),
   },
-  standard: {
-    backgroundColor: 'rgba(13, 18, 31, 0.82)',
-  },
+  standard: {},
   elevated: {
-    backgroundColor: 'rgba(16, 20, 31, 0.92)',
-    borderColor: 'rgba(255, 255, 255, 0.16)',
     ...Platform.select({
       ios: {
         shadowOffset: { width: 0, height: 16 },
-        shadowOpacity: 0.55,
+        shadowOpacity: 0.45,
         shadowRadius: 28,
       },
       android: {

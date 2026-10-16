@@ -17,6 +17,8 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Toast from 'react-native-toast-message';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useTheme } from '../../src/context/ThemeContext';
 import { COLORS } from '../../src/constants/theme';
 import { ApiService } from '../../src/services/api';
 import { StorageService } from '../../src/services/storage';
@@ -50,6 +52,7 @@ export default function ArtistDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { colors, isDark } = useTheme();
 
   const [artist, setArtist] = useState(null);
   const [topTracks, setTopTracks] = useState([]);
@@ -167,11 +170,24 @@ export default function ArtistDetailScreen() {
   const popularityScore = artist?.popularity || 90;
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['left', 'right']}>
-      {/* Ambient Backdrop Glow */}
-      <View style={styles.backdropContainer}>
-        <Image source={{ uri: avatarUrl }} style={styles.backdropImage} blurRadius={Platform.OS === 'ios' ? 70 : 25} />
-        <View style={styles.backdropOverlay} />
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.bg }]} edges={['left', 'right']}>
+      {/* Dynamic Ambient Artist Picture Gradient Backdrop */}
+      <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
+        <Image
+          source={{ uri: avatarUrl }}
+          style={[StyleSheet.absoluteFillObject, { opacity: isDark ? 0.72 : 0.88 }]}
+          blurRadius={Platform.OS === 'ios' ? 24 : 14}
+          resizeMode="cover"
+        />
+        <LinearGradient
+          colors={[
+            'rgba(0, 0, 0, 0.3)',
+            isDark ? 'rgba(23, 2, 11, 0.5)' : 'rgba(250, 244, 235, 0.5)',
+            colors.bg,
+          ]}
+          locations={[0, 0.45, 0.95]}
+          style={StyleSheet.absoluteFillObject}
+        />
       </View>
 
       {/* Top Apple Music Style Unified App Bar */}
@@ -203,29 +219,29 @@ export default function ArtistDetailScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Hero Card Container (Matches web app Artist Card - Image 3) */}
-        <Animated.View entering={FadeInDown.duration(400)} style={styles.heroCard}>
+        <Animated.View entering={FadeInDown.duration(400)} style={[styles.heroCard, { backgroundColor: colors.cardBg, borderColor: colors.border }]}>
           {/* Circular Artist Avatar */}
-          <View style={styles.avatarWrapper}>
+          <View style={[styles.avatarWrapper, { borderColor: colors.border }]}>
             <Image source={{ uri: avatarUrl }} style={styles.avatarImage} resizeMode="cover" />
           </View>
 
           {/* Artist Metadata */}
           <View style={styles.metaContent}>
             {/* Category Label */}
-            <View style={styles.categoryBadgeRow}>
-              <Ionicons name="people" size={14} color="#60A5FA" />
-              <Text style={styles.categoryBadgeText}>ARTIST PROFILE</Text>
+            <View style={[styles.categoryBadgeRow, { backgroundColor: isDark ? 'rgba(181, 190, 221, 0.15)' : 'rgba(71, 11, 36, 0.08)', borderColor: colors.border, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 }]}>
+              <Ionicons name="people" size={13} color={colors.accent} />
+              <Text style={[styles.categoryBadgeText, { color: colors.accent }]}>ARTIST PROFILE</Text>
             </View>
 
             {/* Artist Name */}
-            <Text style={styles.artistNameText}>{artistName}</Text>
+            <Text style={[styles.artistNameText, { color: colors.text }]}>{artistName}</Text>
 
             {/* Genre Pills */}
             {genres.length > 0 && (
               <View style={styles.genresRow}>
                 {genres.map((g, idx) => (
-                  <View key={idx} style={styles.genrePill}>
-                    <Text style={styles.genrePillText}>{g}</Text>
+                  <View key={idx} style={[styles.genrePill, { backgroundColor: isDark ? 'rgba(181, 190, 221, 0.15)' : 'rgba(71, 11, 36, 0.06)', borderColor: colors.border }]}>
+                    <Text style={[styles.genrePillText, { color: colors.accent, fontWeight: '700' }]}>{g}</Text>
                   </View>
                 ))}
               </View>
@@ -234,13 +250,13 @@ export default function ArtistDetailScreen() {
             {/* Meta Row: Followers + Score */}
             <View style={styles.metaRow}>
               <View style={styles.metaItem}>
-                <Ionicons name="people-outline" size={14} color="#8992A5" />
-                <Text style={styles.metaItemText}>{followersCount} followers</Text>
+                <Ionicons name="people-outline" size={14} color={colors.textSecondary} />
+                <Text style={[styles.metaItemText, { color: colors.textSecondary }]}>{followersCount} followers</Text>
               </View>
-              <Text style={styles.metaDot}>•</Text>
+              <Text style={[styles.metaDot, { color: colors.textSecondary }]}>•</Text>
               <View style={styles.metaItem}>
-                <Ionicons name="trophy-outline" size={14} color="#8992A5" />
-                <Text style={styles.metaItemText}>Score: {popularityScore}</Text>
+                <Ionicons name="trophy-outline" size={14} color={colors.textSecondary} />
+                <Text style={[styles.metaItemText, { color: colors.textSecondary }]}>Score: {popularityScore}</Text>
               </View>
             </View>
 
@@ -265,13 +281,13 @@ export default function ArtistDetailScreen() {
                     onPress={() => setExpandedHeroDesc(!expandedHeroDesc)}
                     style={styles.readMoreBtn}
                   >
-                    <Text style={styles.readMoreText}>
+                    <Text style={[styles.readMoreText, { color: colors.accent }]}>
                       {expandedHeroDesc ? 'Show less' : 'Read full overview'}
                     </Text>
                     <Ionicons
                       name={expandedHeroDesc ? 'chevron-up' : 'chevron-down'}
                       size={12}
-                      color="#60A5FA"
+                      color={colors.accent}
                     />
                   </TouchableOpacity>
                 )}
@@ -279,9 +295,15 @@ export default function ArtistDetailScreen() {
             ) : null}
 
             {/* "Open in GrooveLink" Pill Button */}
-            <View style={styles.grooveLinkSection}>
+            <View style={[styles.grooveLinkSection, { borderTopColor: colors.border }]}>
               <TouchableOpacity
-                style={styles.grooveLinkBtn}
+                style={[
+                  styles.grooveLinkBtn,
+                  {
+                    backgroundColor: isDark ? 'rgba(232, 168, 124, 0.15)' : 'rgba(154, 74, 47, 0.12)',
+                    borderColor: isDark ? 'rgba(232, 168, 124, 0.3)' : 'rgba(154, 74, 47, 0.25)',
+                  },
+                ]}
                 activeOpacity={0.8}
                 onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -289,9 +311,9 @@ export default function ArtistDetailScreen() {
                   setShowGrooveLinkModal(true);
                 }}
               >
-                <Ionicons name="link" size={15} color="#F4F7FF" style={{ marginRight: 6 }} />
-                <Text style={styles.grooveLinkBtnText}>Open in GrooveLink</Text>
-                <Ionicons name="chevron-forward" size={14} color="#60A5FA" style={{ marginLeft: 4 }} />
+                <Ionicons name="link" size={15} color={colors.accent} style={{ marginRight: 6 }} />
+                <Text style={[styles.grooveLinkBtnText, { color: colors.accent }]}>Open in GrooveLink</Text>
+                <Ionicons name="chevron-forward" size={14} color={colors.accent} style={{ marginLeft: 4 }} />
               </TouchableOpacity>
             </View>
           </View>
@@ -302,8 +324,8 @@ export default function ArtistDetailScreen() {
           <View style={styles.discographySection}>
             <View style={styles.sectionHeader}>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Ionicons name="disc-outline" size={16} color="#E879F9" style={{ marginRight: 6 }} />
-                <Text style={styles.sectionTitle}>Studio Albums</Text>
+                <Ionicons name="disc-outline" size={16} color={colors.accent} style={{ marginRight: 6 }} />
+                <Text style={[styles.sectionTitle, { color: colors.text }]}>Studio Albums</Text>
               </View>
               {allReleases.length > 0 && (
                 <TouchableOpacity
@@ -314,8 +336,8 @@ export default function ArtistDetailScreen() {
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   style={{ flexDirection: 'row', alignItems: 'center' }}
                 >
-                  <Text style={styles.seeAllText}>See All ({allReleases.length})</Text>
-                  <Ionicons name="chevron-forward" size={12} color="#60A5FA" style={{ marginLeft: 2 }} />
+                  <Text style={[styles.seeAllText, { color: colors.accent }]}>See All ({allReleases.length})</Text>
+                  <Ionicons name="chevron-forward" size={12} color={colors.accent} style={{ marginLeft: 2 }} />
                 </TouchableOpacity>
               )}
             </View>
@@ -329,7 +351,7 @@ export default function ArtistDetailScreen() {
                 return (
                   <TouchableOpacity
                     key={album.id || idx}
-                    style={styles.albumGridCard}
+                    style={[styles.albumGridCard, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}
                     activeOpacity={0.8}
                     onPress={() => {
                       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -337,10 +359,10 @@ export default function ArtistDetailScreen() {
                     }}
                   >
                     <Image source={{ uri: albCover }} style={styles.albumGridCover} />
-                    <Text style={styles.albumGridTitle} numberOfLines={1}>
+                    <Text style={[styles.albumGridTitle, { color: colors.text }]} numberOfLines={1}>
                       {albTitle}
                     </Text>
-                    <Text style={styles.albumGridYear}>{albYear}</Text>
+                    <Text style={[styles.albumGridYear, { color: colors.textSecondary }]}>{albYear}</Text>
                   </TouchableOpacity>
                 );
               })}
@@ -350,10 +372,10 @@ export default function ArtistDetailScreen() {
 
         {/* Popular Tracks Section (Top Hit Songs) */}
         {topTracks.length > 0 && (
-          <View style={styles.sectionCard}>
+          <View style={[styles.sectionCard, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
             <View style={styles.sectionHeader}>
-              <Ionicons name="musical-notes-outline" size={16} color="#60A5FA" style={{ marginRight: 6 }} />
-              <Text style={styles.sectionTitle}>Top Hit Songs</Text>
+              <Ionicons name="musical-notes-outline" size={16} color={colors.accent} style={{ marginRight: 6 }} />
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Top Hit Songs</Text>
             </View>
 
             {topTracks.slice(0, 8).map((track, idx) => {
@@ -364,33 +386,36 @@ export default function ArtistDetailScreen() {
               return (
                 <TouchableOpacity
                   key={track.id || idx}
-                  style={styles.popularTrackRow}
+                  style={[styles.popularTrackRow, { borderBottomColor: colors.border }]}
                   activeOpacity={0.7}
                   onPress={() => {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                     router.push(`/track/${track.id || encodeURIComponent(trackTitle)}`);
                   }}
                 >
-                  <Text style={styles.popularTrackIndex}>{idx + 1}</Text>
+                  <Text style={[styles.popularTrackIndex, { color: colors.textSecondary }]}>{idx + 1}</Text>
                   <Image source={{ uri: trackCover }} style={styles.popularTrackThumb} />
                   <View style={styles.popularTrackInfo}>
-                    <Text style={styles.popularTrackTitle} numberOfLines={1}>
+                    <Text style={[styles.popularTrackTitle, { color: colors.text }]} numberOfLines={1}>
                       {trackTitle}
                     </Text>
-                    <Text style={styles.popularTrackAlbum} numberOfLines={1}>
+                    <Text style={[styles.popularTrackAlbum, { color: colors.textSecondary }]} numberOfLines={1}>
                       {track.album || artistName}
                     </Text>
                   </View>
-                  <Text style={styles.popularTrackDur}>{trackDur}</Text>
+                  <Text style={[styles.popularTrackDur, { color: colors.textSecondary }]}>{trackDur}</Text>
                   <TouchableOpacity
-                    style={styles.popularTrackLinkBtn}
+                    style={[
+                      styles.popularTrackLinkBtn,
+                      { backgroundColor: isDark ? 'rgba(232, 168, 124, 0.15)' : 'rgba(154, 74, 47, 0.12)' },
+                    ]}
                     hitSlop={8}
                     onPress={(e) => {
                       e.stopPropagation();
                       openItemInGrooveLink(track, 'track');
                     }}
                   >
-                    <Ionicons name="link-outline" size={15} color="#60A5FA" />
+                    <Ionicons name="link-outline" size={15} color={colors.accent} />
                   </TouchableOpacity>
                 </TouchableOpacity>
               );
@@ -449,19 +474,19 @@ export default function ArtistDetailScreen() {
         presentationStyle="pageSheet"
         onRequestClose={() => setShowFullDiscography(false)}
       >
-        <SafeAreaView style={[styles.safeArea, { backgroundColor: '#07090F' }]}>
+        <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.bg }]}>
           {/* Modal Header */}
-          <View style={styles.modalHeader}>
+          <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
             <TouchableOpacity
               onPress={() => setShowFullDiscography(false)}
               style={styles.modalCloseBtn}
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             >
-              <Ionicons name="close" size={24} color="#F4F7FF" />
+              <Ionicons name="close" size={24} color={colors.text} />
             </TouchableOpacity>
             <View style={{ flex: 1, alignItems: 'center' }}>
-              <Text style={styles.modalHeaderTitle} numberOfLines={1}>{artistName}</Text>
-              <Text style={styles.modalHeaderSubtitle}>All Discography Releases ({filteredReleases.length})</Text>
+              <Text style={[styles.modalHeaderTitle, { color: colors.text }]} numberOfLines={1}>{artistName}</Text>
+              <Text style={[styles.modalHeaderSubtitle, { color: colors.textSecondary }]}>All Discography Releases ({filteredReleases.length})</Text>
             </View>
             <View style={{ width: 40 }} />
           </View>
@@ -480,7 +505,8 @@ export default function ArtistDetailScreen() {
                   key={tab.id}
                   style={[
                     styles.filterTabPill,
-                    discographyTab === tab.id && styles.filterTabPillActive,
+                    { backgroundColor: colors.surface, borderColor: colors.border },
+                    discographyTab === tab.id && { backgroundColor: colors.accent, borderColor: colors.borderActive },
                   ]}
                   onPress={() => {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -491,7 +517,8 @@ export default function ArtistDetailScreen() {
                   <Text
                     style={[
                       styles.filterTabPillText,
-                      discographyTab === tab.id && styles.filterTabPillTextActive,
+                      { color: colors.textSecondary },
+                      discographyTab === tab.id && { color: colors.bg, fontWeight: '800' },
                     ]}
                   >
                     {tab.label}
@@ -507,7 +534,7 @@ export default function ArtistDetailScreen() {
               {pagedReleases.map((item, idx) => (
                 <TouchableOpacity
                   key={item.id || idx}
-                  style={styles.pagedGridItem}
+                  style={[styles.pagedGridItem, { backgroundColor: colors.cardBg, borderColor: colors.border }]}
                   activeOpacity={0.8}
                   onPress={() => {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -515,12 +542,12 @@ export default function ArtistDetailScreen() {
                     router.push(`/album/${item.id || encodeURIComponent(item.title)}`);
                   }}
                 >
-                  <Image source={{ uri: item.coverArt || avatarUrl }} style={styles.pagedItemCover} />
-                  <Text style={styles.pagedItemTitle} numberOfLines={1}>{item.title}</Text>
+                  <Image source={{ uri: item.coverArt || avatarUrl }} style={[styles.pagedItemCover, { backgroundColor: colors.surface }]} />
+                  <Text style={[styles.pagedItemTitle, { color: colors.text }]} numberOfLines={1}>{item.title}</Text>
                   <View style={styles.pagedItemMetaRow}>
-                    <Text style={styles.pagedItemYear}>{item.releaseYear || item.releaseDate || 'Release'}</Text>
-                    <View style={styles.pagedItemTypeBadge}>
-                      <Text style={styles.pagedItemTypeBadgeText}>{item.primaryType || 'Album'}</Text>
+                    <Text style={[styles.pagedItemYear, { color: colors.textSecondary }]}>{item.releaseYear || item.releaseDate || 'Release'}</Text>
+                    <View style={[styles.pagedItemTypeBadge, { backgroundColor: colors.surface }]}>
+                      <Text style={[styles.pagedItemTypeBadgeText, { color: colors.accent }]}>{item.primaryType || 'Album'}</Text>
                     </View>
                   </View>
                 </TouchableOpacity>
@@ -530,14 +557,14 @@ export default function ArtistDetailScreen() {
             {/* Pagination Controls */}
             {pagedReleases.length < filteredReleases.length && (
               <TouchableOpacity
-                style={styles.loadMoreBtn}
+                style={[styles.loadMoreBtn, { backgroundColor: colors.cardBg, borderColor: colors.border }]}
                 activeOpacity={0.8}
                 onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   setDiscographyPage((p) => p + 1);
                 }}
               >
-                <Text style={styles.loadMoreBtnText}>
+                <Text style={[styles.loadMoreBtnText, { color: colors.accent }]}>
                   Load More ({pagedReleases.length} of {filteredReleases.length})
                 </Text>
               </TouchableOpacity>
@@ -552,7 +579,7 @@ export default function ArtistDetailScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#07090F',
+    backgroundColor: '#10141F',
   },
   backdropContainer: {
     position: 'absolute',
@@ -570,7 +597,7 @@ const styles = StyleSheet.create({
   },
   backdropOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#07090F',
+    backgroundColor: '#10141F',
     opacity: 0.7,
   },
   header: {
@@ -592,13 +619,13 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: 'rgba(16, 20, 31, 0.7)',
     borderWidth: 1,
-    borderColor: 'rgba(37, 99, 235, 0.2)',
+    borderColor: 'rgba(232, 168, 124, 0.25)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   circleBtnActive: {
-    backgroundColor: '#2563EB',
-    borderColor: '#60A5FA',
+    backgroundColor: '#D4A373',
+    borderColor: '#E8A87C',
   },
   scrollContent: {
     paddingHorizontal: 16,
@@ -609,7 +636,7 @@ const styles = StyleSheet.create({
   heroCard: {
     backgroundColor: 'rgba(16, 20, 31, 0.65)',
     borderWidth: 1,
-    borderColor: 'rgba(37, 99, 235, 0.15)',
+    borderColor: 'rgba(232, 168, 124, 0.2)',
     borderRadius: 28,
     padding: 20,
     alignItems: 'center',
@@ -632,10 +659,10 @@ const styles = StyleSheet.create({
     borderRadius: 85,
     overflow: 'hidden',
     borderWidth: 3,
-    borderColor: 'rgba(37, 99, 235, 0.35)',
+    borderColor: 'rgba(232, 168, 124, 0.35)',
     backgroundColor: '#10141F',
     marginBottom: 16,
-    shadowColor: '#2563EB',
+    shadowColor: '#D4A373',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.35,
     shadowRadius: 15,
@@ -658,7 +685,7 @@ const styles = StyleSheet.create({
   categoryBadgeText: {
     fontSize: 11,
     fontWeight: '800',
-    color: '#60A5FA',
+    color: '#D4A373',
     letterSpacing: 1.5,
   },
   artistNameText: {
@@ -677,9 +704,9 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   genrePill: {
-    backgroundColor: 'rgba(37, 99, 235, 0.12)',
+    backgroundColor: 'rgba(232, 168, 124, 0.12)',
     borderWidth: 1,
-    borderColor: 'rgba(37, 99, 235, 0.25)',
+    borderColor: 'rgba(232, 168, 124, 0.25)',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
@@ -687,7 +714,7 @@ const styles = StyleSheet.create({
   genrePillText: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#60A5FA',
+    color: '#D4A373',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
@@ -741,11 +768,11 @@ const styles = StyleSheet.create({
   readMoreText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#60A5FA',
+    color: '#D4A373',
   },
   grooveLinkSection: {
     borderTopWidth: 1,
-    borderTopColor: 'rgba(37, 99, 235, 0.15)',
+    borderTopColor: 'rgba(232, 168, 124, 0.15)',
     paddingTop: 14,
     width: '100%',
     alignItems: 'center',
@@ -757,9 +784,9 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
     paddingHorizontal: 16,
     borderRadius: 20,
-    backgroundColor: 'rgba(37, 99, 235, 0.12)',
+    backgroundColor: 'rgba(232, 168, 124, 0.12)',
     borderWidth: 1,
-    borderColor: 'rgba(37, 99, 235, 0.3)',
+    borderColor: 'rgba(232, 168, 124, 0.3)',
   },
   grooveLinkBtnText: {
     fontSize: 11,
@@ -837,7 +864,7 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: 'rgba(37, 99, 235, 0.12)',
+    backgroundColor: 'rgba(232, 168, 124, 0.15)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -876,7 +903,7 @@ const styles = StyleSheet.create({
   seeAllText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#60A5FA',
+    color: '#D4A373',
     letterSpacing: 0.2,
   },
   modalHeader: {
@@ -925,8 +952,8 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   filterTabPillActive: {
-    backgroundColor: 'rgba(135, 0, 135, 0.35)',
-    borderColor: '#E879F9',
+    backgroundColor: 'rgba(232, 168, 124, 0.25)',
+    borderColor: '#D4A373',
   },
   filterTabPillText: {
     fontSize: 12,
@@ -986,22 +1013,22 @@ const styles = StyleSheet.create({
   pagedItemTypeBadgeText: {
     fontSize: 9,
     fontWeight: '700',
-    color: '#E879F9',
+    color: '#D4A373',
     textTransform: 'uppercase',
   },
   loadMoreBtn: {
     marginTop: 20,
     paddingVertical: 14,
     borderRadius: 14,
-    backgroundColor: 'rgba(135, 0, 135, 0.2)',
+    backgroundColor: 'rgba(232, 168, 124, 0.15)',
     borderWidth: 1,
-    borderColor: 'rgba(232, 121, 249, 0.3)',
+    borderColor: 'rgba(232, 168, 124, 0.3)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   loadMoreBtnText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#E879F9',
+    color: '#D4A373',
   },
 });

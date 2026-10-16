@@ -14,6 +14,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
+import { useTheme } from '../../src/context/ThemeContext';
 import { COLORS } from '../../src/constants/theme';
 import { ApiService } from '../../src/services/api';
 import GlassCard from '../../src/components/GlassCard';
@@ -32,6 +33,7 @@ const CATEGORIES = [
 ];
 
 export default function ExploreScreen() {
+  const { colors, isDark } = useTheme();
   const params = useLocalSearchParams();
   const [searchTerm, setSearchTerm] = useState(params.q ? String(params.q) : '');
   const [activeCategory, setActiveCategory] = useState('track');
@@ -123,22 +125,22 @@ export default function ExploreScreen() {
   const isGrid = activeCategory === 'album' || activeCategory === 'artist' || activeCategory === 'playlist';
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.bg }]} edges={['top', 'left', 'right']}>
       {/* Search Header */}
       <View style={styles.header}>
         <Animated.View entering={FadeInDown.duration(400)}>
-          <GlassCard style={styles.searchCard}>
+          <GlassCard style={[styles.searchCard, { backgroundColor: colors.cardBg, borderColor: colors.border }]}>
             <View style={styles.searchInner}>
               <Ionicons
                 name="search"
                 size={18}
-                color={COLORS.textSecondary}
+                color={colors.textSecondary}
                 style={styles.searchIcon}
               />
               <TextInput
-                style={styles.input}
+                style={[styles.input, { color: colors.text }]}
                 placeholder="Search tracks, artists, albums..."
-                placeholderTextColor="rgba(137, 146, 165, 0.55)"
+                placeholderTextColor={isDark ? 'rgba(255, 242, 223, 0.45)' : 'rgba(84, 30, 48, 0.45)'}
                 value={searchTerm}
                 onChangeText={handleTextChange}
                 returnKeyType="search"
@@ -146,7 +148,7 @@ export default function ExploreScreen() {
               />
               {searchTerm.length > 0 && (
                 <Pressable onPress={handleClear} style={styles.clearBtn} hitSlop={10}>
-                  <Ionicons name="close-circle" size={18} color={COLORS.textSecondary} />
+                  <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
                 </Pressable>
               )}
             </View>
@@ -182,13 +184,13 @@ export default function ExploreScreen() {
           <Ionicons
             name={searchTerm ? 'search-outline' : 'compass-outline'}
             size={48}
-            color={COLORS.textSecondary}
+            color={colors.textSecondary}
             style={{ opacity: 0.4 }}
           />
-          <Text style={styles.emptyTitle}>
+          <Text style={[styles.emptyTitle, { color: colors.text }]}>
             {searchTerm ? `No ${activeCategory}s found` : 'Search Groove'}
           </Text>
-          <Text style={styles.emptyDesc}>
+          <Text style={[styles.emptyDesc, { color: colors.textSecondary }]}>
             {searchTerm
               ? `We couldn't find any results matching "${searchTerm}". Try another query.`
               : 'Search songs, albums, and artists across the decentralized music index.'}
@@ -196,20 +198,26 @@ export default function ExploreScreen() {
 
           {!searchTerm && (
             <View style={styles.suggestSection}>
-              <Text style={styles.suggestTitle}>POPULAR SEARCHES</Text>
+              <Text style={[styles.suggestTitle, { color: colors.textMuted }]}>POPULAR SEARCHES</Text>
               <View style={styles.suggestRow}>
                 {['Pink Floyd', 'David Bowie', 'The Beatles', 'Queen', 'Michael Jackson', 'Led Zeppelin'].map((item) => (
                   <Pressable
                     key={item}
-                    style={styles.suggestChip}
+                    style={[
+                      styles.suggestChip,
+                      {
+                        backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : colors.cardBg,
+                        borderColor: colors.border,
+                      },
+                    ]}
                     onPress={() => {
                       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                       setSearchTerm(item);
                       fetchResults(item, activeCategory);
                     }}
                   >
-                    <Ionicons name="trending-up" size={13} color="#60A5FA" style={{ marginRight: 6 }} />
-                    <Text style={styles.suggestChipText}>{item}</Text>
+                    <Ionicons name="trending-up" size={13} color={colors.accent} style={{ marginRight: 6 }} />
+                    <Text style={[styles.suggestChipText, { color: colors.text }]}>{item}</Text>
                   </Pressable>
                 ))}
               </View>
@@ -238,7 +246,6 @@ export default function ExploreScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: COLORS.bg,
   },
   header: {
     paddingHorizontal: 16,
@@ -260,7 +267,6 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    color: COLORS.text,
     fontSize: 14,
     fontWeight: '500',
     paddingVertical: 10,
@@ -297,14 +303,12 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 18,
     fontWeight: '800',
-    color: COLORS.text,
     marginTop: 16,
     marginBottom: 8,
     textAlign: 'center',
   },
   emptyDesc: {
     fontSize: 13,
-    color: COLORS.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
   },
