@@ -99,9 +99,9 @@ export default function TrackDetailsClient({ metadata, platformLinks, currentUrl
     <div className="w-full max-w-4xl mx-auto px-4 py-8">
       {/* Auto-redirect Banner */}
       {preferredPlatform && platformLinks[preferredPlatform] && (
-        <div className="mb-6 p-4 rounded-xl border border-[#2563EB]/15 bg-white/[0.03] backdrop-blur-md flex items-center justify-between text-xs sm:text-sm text-[#F4F7FF]/80 animate-pulse">
+        <div className="mb-6 p-4 rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] backdrop-blur-md flex items-center justify-between text-xs sm:text-sm text-[var(--theme-fg)] animate-pulse shadow-sm">
           <div className="flex items-center gap-2">
-            <Volume2 className="w-4 h-4 text-[#60A5FA]" />
+            <Volume2 className="w-4 h-4 text-[var(--theme-accent)]" />
             <span>Redirecting to <strong>{platformMeta[preferredPlatform]?.name}</strong> automatically...</span>
           </div>
           <button 
@@ -112,7 +112,7 @@ export default function TrackDetailsClient({ metadata, platformLinks, currentUrl
               window.history.pushState({}, '', url);
               window.location.reload();
             }}
-            className="px-3 py-1 bg-[#2563EB]/10 hover:bg-[#2563EB]/20 rounded-full text-[10px] font-bold uppercase transition"
+            className="px-3 py-1 bg-[var(--theme-card)] border border-[var(--theme-border)] hover:bg-[var(--theme-surface)] rounded-full text-[10px] font-bold uppercase transition text-[var(--theme-muted)]"
           >
             Cancel Redirect
           </button>
@@ -123,31 +123,31 @@ export default function TrackDetailsClient({ metadata, platformLinks, currentUrl
       <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
         {/* Album Artwork & Actions (Left) */}
         <div className="col-span-1 md:col-span-5 flex flex-col items-center">
-          <div className="relative group w-64 h-64 sm:w-72 sm:h-72 lg:w-80 lg:h-80 rounded-2xl overflow-hidden shadow-2xl border border-[#2563EB]/15 mb-6 transition-all duration-500 hover:scale-[1.02] hover:shadow-[0_0_40px_rgba(37,99,235,0.15)]">
+          <div className="relative group w-64 h-64 sm:w-72 sm:h-72 lg:w-80 lg:h-80 rounded-2xl overflow-hidden shadow-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] mb-6 transition-all duration-500 hover:scale-[1.02]">
             <img 
               src={metadata.coverArt} 
               alt={metadata.album} 
               className="w-full h-full object-cover"
               crossOrigin="anonymous"
               onError={(e) => {
-                e.currentTarget.src = 'https://placehold.co/500x500/10141F/60A5FA?text=No+Cover';
+                e.currentTarget.src = 'https://placehold.co/500x500/17020B/E8A87C?text=No+Cover';
               }}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-              <span className="text-[10px] text-[#8992A5] font-medium tracking-widest uppercase">Album</span>
-              <span className="text-[#F4F7FF] text-sm font-semibold truncate">{metadata.album}</span>
+              <span className="text-[10px] text-zinc-300 font-medium tracking-widest uppercase">Album</span>
+              <span className="text-white text-sm font-semibold truncate">{metadata.album}</span>
             </div>
           </div>
 
           <div className="w-full flex flex-col gap-3 px-4">
             <button
               onClick={handleCopyLink}
-              className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl border border-[#2563EB]/15 bg-white/[0.03] hover:bg-[#2563EB]/15 text-[#F4F7FF] font-medium text-sm transition-all duration-300 active:scale-95"
+              className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] text-[var(--theme-fg)] font-medium text-sm transition-all duration-300 active:scale-95 shadow-sm cursor-pointer"
             >
               {copied ? (
                 <>
-                  <Check className="w-4 h-4 text-[#60A5FA]" />
-                  <span className="text-[#60A5FA]">Link Copied!</span>
+                  <Check className="w-4 h-4 text-[var(--theme-accent)]" />
+                  <span className="text-[var(--theme-accent)]">Link Copied!</span>
                 </>
               ) : (
                 <>
@@ -159,7 +159,7 @@ export default function TrackDetailsClient({ metadata, platformLinks, currentUrl
 
             <button
               onClick={() => setShowCardModal(true)}
-              className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-[#10141F] border border-[#2563EB]/15 hover:bg-[#2563EB]/15 hover:border-[#60A5FA]/20 text-[#F4F7FF] font-semibold text-sm transition-all duration-300 active:scale-95 shadow-lg shadow-[#2563EB]/10 cursor-pointer"
+              className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-[var(--theme-accent-bg)] hover:opacity-90 text-[var(--theme-accent-fg)] font-bold text-sm transition-all duration-300 active:scale-95 shadow-md cursor-pointer"
             >
               <Share2 className="w-4 h-4" />
               <span>Create GrooveCard</span>
@@ -170,60 +170,60 @@ export default function TrackDetailsClient({ metadata, platformLinks, currentUrl
         {/* Streaming Platform Options (Right) */}
         <div className="col-span-1 md:col-span-7 flex flex-col gap-6">
           <div className="px-4 md:px-0">
-            <div className="flex items-center gap-2 text-[#8992A5] text-xs font-bold uppercase tracking-wider mb-2">
-              <Sparkles className="w-3.5 h-3.5 animate-spin" />
+            <div className="flex items-center gap-2 text-[var(--theme-muted)] text-xs font-bold uppercase tracking-wider mb-2">
+              <Sparkles className="w-3.5 h-3.5 text-[var(--theme-accent)]" />
               <span>MUSIC LAYER</span>
             </div>
-            <h1 className="text-3xl sm:text-4xl font-extrabold text-[#F4F7FF] tracking-tight mb-1 font-display">
+            <h1 className="text-3xl sm:text-4xl font-extrabold text-[var(--theme-fg)] tracking-tight mb-1 font-display">
               {metadata.title}
             </h1>
-            <p className="text-lg text-[#8992A5] font-medium font-body mb-4">
+            <p className="text-lg text-[var(--theme-muted)] font-medium font-body mb-4">
               {metadata.artist}
             </p>
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-[#8992A5]/70 border-t border-[#2563EB]/10 pt-4">
-              <span>Album: <strong className="text-[#8992A5]">{metadata.album}</strong></span>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-[var(--theme-muted)] border-t border-[var(--theme-border)] pt-4">
+              <span>Album: <strong className="text-[var(--theme-fg)]">{metadata.album}</strong></span>
               {(metadata.releaseDate || metadata.releaseYear) && (
                 <>
-                  <span className="w-1 h-1 rounded-full bg-zinc-700"></span>
-                  <span>Release: <strong className="text-[#8992A5]">{metadata.releaseDate || metadata.releaseYear}</strong></span>
+                  <span className="w-1 h-1 rounded-full bg-[var(--theme-border)]"></span>
+                  <span>Release: <strong className="text-[var(--theme-fg)]">{metadata.releaseDate || metadata.releaseYear}</strong></span>
                 </>
               )}
             </div>
-            <div className="mt-4 pt-4 border-t border-[#2563EB]/10 flex items-center justify-between flex-wrap gap-2">
+            <div className="mt-4 pt-4 border-t border-[var(--theme-border)] flex items-center justify-between flex-wrap gap-2">
               <Link 
                 href={`/${metadata.type}/${metadata.originalId || metadata.id}`}
-                className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-[#2563EB]/20 bg-[#2563EB]/5 hover:bg-[#2563EB]/15 text-[#F4F7FF] text-xs font-bold uppercase tracking-wider transition-all duration-300"
+                className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-[var(--theme-border)] bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] text-[var(--theme-fg)] text-xs font-bold uppercase tracking-wider transition-all duration-300"
               >
                 <img src="/in.svg" alt="GrooveEstrella" className="w-4 h-4 object-contain" />
                 <span>Open in Groove</span>
-                <ChevronRight className="w-3 h-3 text-[#60A5FA]" />
+                <ChevronRight className="w-3 h-3 text-[var(--theme-accent)]" />
               </Link>
             </div>
           </div>
 
           {/* Platform Grid */}
           <div className="flex flex-col gap-2.5">
-            <span className="text-xs font-bold text-[#8992A5] tracking-widest uppercase px-4 md:px-0">
+            <span className="text-xs font-bold text-[var(--theme-muted)] tracking-widest uppercase px-4 md:px-0">
               Select platform to open track:
             </span>
             <div className="space-y-2.5">
               {Object.keys(platformLinks).map((platform) => {
                 const url = platformLinks[platform];
                 const isPreferred = preferredPlatform === platform;
-                const meta = platformMeta[platform] || { name: platform, color: "text-[#8992A5]", btnBg: "bg-[#10141F] text-[#F4F7FF]" };
+                const meta = platformMeta[platform] || { name: platform, color: "text-[var(--theme-muted)]", btnBg: "bg-[var(--theme-card)] text-[var(--theme-fg)]" };
 
                 return (
                   <div 
                     key={platform}
-                    className={`flex items-center justify-between p-3.5 rounded-xl border bg-[#07090F]/40 backdrop-blur-md transition-all duration-300 ${meta.color}`}
+                    className={`flex items-center justify-between p-3.5 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)]/80 backdrop-blur-md transition-all duration-300 shadow-sm ${meta.color}`}
                   >
                     <div className="flex items-center gap-3">
                       <Music className="w-5 h-5 opacity-80" />
                       <div className="flex flex-col">
-                        <span className="text-sm font-semibold text-[#F4F7FF]">{meta.name}</span>
+                        <span className="text-sm font-semibold text-[var(--theme-fg)]">{meta.name}</span>
                         <button 
                           onClick={() => selectPlatformPreference(platform)}
-                          className="text-[10px] text-[#8992A5]/70 hover:text-[#F4F7FF]/80 text-left transition"
+                          className="text-[10px] text-[var(--theme-muted)] hover:text-[var(--theme-fg)] text-left transition cursor-pointer"
                         >
                           {isPreferred ? "★ Your default preference" : "Set as default platform"}
                         </button>
@@ -255,9 +255,9 @@ export default function TrackDetailsClient({ metadata, platformLinks, currentUrl
             if (extraLinks.length === 0) return null;
 
             return (
-              <div className="flex flex-col gap-2.5 pt-4 border-t border-[#2563EB]/10">
-                <span className="text-xs font-bold text-[#8992A5] tracking-widest uppercase px-4 md:px-0 flex items-center gap-2">
-                  <Globe size={14} className="text-[#60A5FA]" />
+              <div className="flex flex-col gap-2.5 pt-4 border-t border-[var(--theme-border)]">
+                <span className="text-xs font-bold text-[var(--theme-muted)] tracking-widest uppercase px-4 md:px-0 flex items-center gap-2">
+                  <Globe size={14} className="text-[var(--theme-accent)]" />
                   <span>Reference, Lyrics & Discography Data</span>
                 </span>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -267,22 +267,22 @@ export default function TrackDetailsClient({ metadata, platformLinks, currentUrl
                       href={link.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center justify-between p-3 rounded-xl border border-[#2563EB]/15 bg-[#07090F]/40 hover:bg-[#2563EB]/10 hover:border-[#60A5FA]/30 transition group"
+                      className="flex items-center justify-between p-3 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)]/80 hover:bg-[var(--theme-card)] hover:border-[var(--theme-accent)]/30 transition group shadow-sm"
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-7 h-7 rounded-lg bg-[#2563EB]/15 flex items-center justify-center text-[#60A5FA] flex-shrink-0 group-hover:scale-105 transition">
+                        <div className="w-7 h-7 rounded-lg bg-[var(--theme-surface)] flex items-center justify-center text-[var(--theme-accent)] flex-shrink-0 group-hover:scale-105 transition">
                           <Globe size={13} />
                         </div>
                         <div className="flex flex-col min-w-0">
-                          <span className="text-xs font-bold text-[#F4F7FF] group-hover:text-[#60A5FA] truncate transition">
+                          <span className="text-xs font-bold text-[var(--theme-fg)] group-hover:text-[var(--theme-accent)] truncate transition">
                             {link.label}
                           </span>
-                          <span className="text-[10px] text-[#8992A5] capitalize">
+                          <span className="text-[10px] text-[var(--theme-muted)] capitalize">
                             {link.category || "Database"}
                           </span>
                         </div>
                       </div>
-                      <ExternalLink size={12} className="text-[#8992A5] group-hover:text-white flex-shrink-0" />
+                      <ExternalLink size={12} className="text-[var(--theme-muted)] group-hover:text-[var(--theme-fg)] flex-shrink-0" />
                     </a>
                   ))}
                 </div>

@@ -150,19 +150,19 @@ const MusicChatbot = () => {
     );
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex flex-col pb-16">
+        <div className="min-h-screen bg-[var(--theme-bg)] text-[var(--theme-fg)] flex flex-col pb-16 transition-colors duration-300">
             {/* Header */}
-            <div className="bg-black/60 backdrop-blur-md border-b border-white/10 px-4 py-3 flex items-center justify-between sticky top-0 lg:top-16 z-40">
+            <div className="bg-[var(--theme-card)]/80 backdrop-blur-md border-b border-[var(--theme-border)] px-4 py-3 flex items-center justify-between sticky top-0 lg:top-16 z-40">
                 <div className="flex items-center gap-2">
-                    <Headphones className="w-5 h-5 text-white/80" />
+                    <Headphones className="w-5 h-5 text-[var(--theme-accent)]" />
                     <div>
-                        <h2 className="text-white font-semibold text-base">GrooveBot</h2>
-                        <p className="text-xs text-white/50">Minimal mood-based assistant</p>
+                        <h2 className="text-[var(--theme-fg)] font-semibold text-base">GrooveBot</h2>
+                        <p className="text-xs text-[var(--theme-muted)]">Minimal mood-based assistant</p>
                     </div>
                 </div>
 
                 <button
-                    className="text-white cursor-pointer hover:text-red-400 transition-colors active:scale-90 transform animate-spin"
+                    className="text-[var(--theme-fg)] cursor-pointer hover:text-[var(--theme-accent)] transition-colors active:scale-90 transform animate-spin"
                     onClick={() => window.location.href = "/"}
                     title="Go Home"
                 >
@@ -175,8 +175,8 @@ const MusicChatbot = () => {
                 {messages.map((message, index) => (
                     <div key={index} className={`text-sm ${message.type === 'user' ? 'text-right' : 'text-left'}`}>
                         <div className={`inline-block px-4 py-2 rounded-lg max-w-[85%] ${message.type === 'user'
-                            ? 'ml-auto bg-blue-600 text-white rounded-br-none'
-                            : 'bg-white/95 text-gray-900 rounded-bl-none shadow-lg'
+                            ? 'ml-auto bg-[var(--theme-accent-bg)] text-[var(--theme-accent-fg)] rounded-br-none shadow-md font-medium'
+                            : 'bg-[var(--theme-card)] text-[var(--theme-fg)] border border-[var(--theme-border)] rounded-bl-none shadow-lg'
                             }`}>
                             <p>{message.content}</p>
 
@@ -186,7 +186,7 @@ const MusicChatbot = () => {
                                     {/* Emotions */}
                                     {message.analysis.emotions?.length > 0 && (
                                         <div>
-                                            <p className="text-xs font-medium text-gray-600 mb-1">😊 Emotions:</p>
+                                            <p className="text-xs font-medium text-[var(--theme-muted)] mb-1">😊 Emotions:</p>
                                             <div className="flex flex-wrap gap-1">
                                                 {message.analysis.emotions.map((emotion, i) => (
                                                     <EmotionBadge key={i} emotion={emotion} />
@@ -198,8 +198,8 @@ const MusicChatbot = () => {
                                     {/* Confidence */}
                                     {message.confidence !== null && message.confidence !== undefined && (
                                         <div className="flex items-center gap-1">
-                                            <Target className="w-3 h-3 text-gray-500" />
-                                            <span className="text-xs text-gray-600">
+                                            <Target className="w-3 h-3 text-[var(--theme-muted)]" />
+                                            <span className="text-xs text-[var(--theme-muted)]">
                                                 Confidence: {Math.round(message.confidence * 100)}%
                                             </span>
                                         </div>
@@ -208,7 +208,7 @@ const MusicChatbot = () => {
                                     {/* Activities */}
                                     {message.activities?.length > 0 && (
                                         <div>
-                                            <p className="text-xs font-medium text-gray-600 mb-1">🎯 Activities:</p>
+                                            <p className="text-xs font-medium text-[var(--theme-muted)] mb-1">🎯 Activities:</p>
                                             <div className="flex flex-wrap gap-1">
                                                 {message.activities.map((activity, i) => (
                                                     <ActivityBadge key={i} activity={activity} />
@@ -220,7 +220,7 @@ const MusicChatbot = () => {
                                     {/* Genres */}
                                     {message.genres?.length > 0 && (
                                         <div>
-                                            <p className="text-xs font-medium text-gray-600 mb-1">🎵 Genres:</p>
+                                            <p className="text-xs font-medium text-[var(--theme-muted)] mb-1">🎵 Genres:</p>
                                             <div className="flex flex-wrap gap-1">
                                                 {message.genres.map((genre, i) => (
                                                     <GenreBadge key={i} genre={genre} />
@@ -233,9 +233,9 @@ const MusicChatbot = () => {
 
                             {/* Recommended Songs */}
                             {message.songs?.length > 0 && (
-                                <div className="mt-4 bg-gray-50 text-gray-800 p-3 rounded-lg">
-                                    <p className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
-                                        <Music className="w-4 h-4 text-blue-500" />
+                                <div className="mt-4 bg-[var(--theme-surface)] text-[var(--theme-fg)] border border-[var(--theme-border)] p-3 rounded-xl">
+                                    <p className="text-sm font-medium text-[var(--theme-fg)] mb-3 flex items-center gap-2">
+                                        <Music className="w-4 h-4 text-[var(--theme-accent)]" />
                                         Recommended Songs ({message.songs.length})
                                     </p>
 
@@ -263,12 +263,12 @@ const MusicChatbot = () => {
                                         <div className="space-y-1">
                                             {message.songs.slice(0, 5).map((song, i) => (
                                                 <div key={i} className="flex items-center gap-2 text-sm">
-                                                    <Music className="w-3 h-3 text-blue-500 flex-shrink-0" />
+                                                    <Music className="w-3 h-3 text-[var(--theme-accent)] flex-shrink-0" />
                                                     <span className="truncate">{song}</span>
                                                 </div>
                                             ))}
                                             {message.songs.length > 5 && (
-                                                <p className="text-xs text-gray-500 mt-2">
+                                                <p className="text-xs text-[var(--theme-muted)] mt-2">
                                                     +{message.songs.length - 5} more songs
                                                 </p>
                                             )}
@@ -279,19 +279,19 @@ const MusicChatbot = () => {
 
                             {/* Follow Up */}
                             {message.followUp && (
-                                <div className="mt-3 p-2 bg-blue-50 rounded text-xs text-blue-800 italic">
+                                <div className="mt-3 p-2 bg-[var(--theme-surface)] border border-[var(--theme-border)] rounded-lg text-xs text-[var(--theme-accent)] italic">
                                     💭 {message.followUp}
                                 </div>
                             )}
 
                             {/* Debug Info (Optional) */}
                             {message.randomizationSeed && (
-                                <div className="mt-2 text-[10px] text-gray-400">
+                                <div className="mt-2 text-[10px] text-[var(--theme-muted)]">
                                     Seed: {message.randomizationSeed}
                                 </div>
                             )}
                         </div>
-                        <div className="text-[10px] text-white/60 mt-1">
+                        <div className="text-[10px] text-[var(--theme-muted)] mt-1">
                             {message.timestamp.toLocaleTimeString()}
                         </div>
                     </div>
@@ -299,9 +299,9 @@ const MusicChatbot = () => {
 
                 {isLoading && (
                     <div className="text-left">
-                        <div className="inline-block bg-white/80 text-gray-800 px-4 py-2 rounded-lg rounded-bl-none shadow-sm">
+                        <div className="inline-block bg-[var(--theme-card)] text-[var(--theme-fg)] border border-[var(--theme-border)] px-4 py-2 rounded-lg rounded-bl-none shadow-sm">
                             <div className="flex items-center gap-2">
-                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[var(--theme-accent)]"></div>
                                 <span className="text-sm">Finding perfect songs for you...</span>
                             </div>
                         </div>
@@ -312,19 +312,19 @@ const MusicChatbot = () => {
             </div>
 
             {/* Sticky Bottom Container */}
-            <div className="fixed bottom-16 lg:bottom-0 left-0 right-0 bg-black/60 backdrop-blur-md border-t border-white/10">
+            <div className="fixed bottom-16 lg:bottom-0 left-0 right-0 bg-[var(--theme-card)]/80 backdrop-blur-md border-t border-[var(--theme-border)]">
                 {/* Quick Suggestions */}
                 <div className={`transition-all duration-300 ease-in-out overflow-hidden ${showSuggestions ? 'max-h-auto opacity-100' : 'max-h-0 opacity-0'
                     }`}>
-                    <div className="p-3 border-b border-white/10">
-                        <p className="text-xs text-white/70 mb-2">Quick Suggestions</p>
+                    <div className="p-3 border-b border-[var(--theme-border)]">
+                        <p className="text-xs text-[var(--theme-muted)] mb-2 font-medium">Quick Suggestions</p>
                         <div className="flex flex-wrap gap-2">
                             {moodSuggestions.map((s, i) => (
                                 <button
                                     key={i}
                                     onClick={() => handleSendMessage(s.text)}
                                     disabled={isLoading}
-                                    className="flex items-center gap-1 px-3 py-1 bg-white/10 text-white/80 rounded-full text-xs hover:bg-white/20 transition-colors transform hover:scale-105 active:scale-95"
+                                    className="flex items-center gap-1 px-3 py-1 bg-[var(--theme-surface)] text-[var(--theme-fg)] border border-[var(--theme-border)] rounded-full text-xs hover:bg-[var(--theme-card)] transition-colors transform hover:scale-105 active:scale-95 cursor-pointer"
                                 >
                                     {s.icon}
                                     {s.text}
@@ -339,7 +339,7 @@ const MusicChatbot = () => {
                     <div className="flex items-center gap-2">
                         <button
                             onClick={() => setShowSuggestions(prev => !prev)}
-                            className="text-white/70 hover:text-white transition-colors p-2 hover:bg-white/10 rounded-lg"
+                            className="text-[var(--theme-muted)] hover:text-[var(--theme-fg)] transition-colors p-2 hover:bg-[var(--theme-surface)] rounded-lg cursor-pointer"
                         >
                             {showSuggestions ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                         </button>
@@ -349,13 +349,13 @@ const MusicChatbot = () => {
                             onChange={(e) => setInputText(e.target.value)}
                             onKeyPress={handleKeyPress}
                             placeholder="Tell me how you're feeling..."
-                            className="flex-1 px-3 py-2 bg-white/10 text-white text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-white/50"
+                            className="flex-1 px-3 py-2 bg-[var(--theme-surface)] border border-[var(--theme-border)] text-[var(--theme-fg)] text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--theme-accent)] placeholder-[var(--theme-muted)] font-medium"
                             disabled={isLoading}
                         />
                         <button
                             onClick={() => handleSendMessage()}
                             disabled={isLoading || !inputText.trim()}
-                            className="bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                            className="bg-[var(--theme-accent-bg)] text-[var(--theme-accent-fg)] p-2 rounded-lg hover:opacity-90 disabled:opacity-50 transition-colors cursor-pointer shadow-sm"
                         >
                             <Send className="w-4 h-4" />
                         </button>

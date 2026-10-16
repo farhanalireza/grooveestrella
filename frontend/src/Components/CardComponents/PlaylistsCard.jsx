@@ -75,16 +75,16 @@ export const PlaylistCard = ({
       viewport={{ once: true, margin: "-50px" }}
       whileHover={{ y: -6 }}
       onClick={handleCardClick}
-      className="group relative w-full sm:w-64 mx-auto bg-[#10141F]/60 backdrop-blur-xl border border-[#2563EB]/10 hover:border-[#60A5FA]/30 rounded-3xl overflow-hidden shadow-2xl transition-all duration-500 cursor-pointer flex flex-col justify-between"
+      className="group relative w-full sm:w-64 mx-auto bg-[var(--theme-card)]/80 backdrop-blur-xl border border-[var(--theme-border)] hover:border-[var(--theme-accent)]/40 rounded-3xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-500 cursor-pointer flex flex-col justify-between"
     >
       {/* Cover Image Section */}
-      <div className="relative aspect-square w-full overflow-hidden bg-[#10141F]">
+      <div className="relative aspect-square w-full overflow-hidden bg-[var(--theme-surface)]">
         <img
           src={url || "https://placehold.co/300x300?text=No+Cover"}
           alt={title || "Untitled Playlist"}
           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#07090F] via-[#07090F]/20 to-transparent opacity-60" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[var(--theme-bg)]/80 via-[var(--theme-bg)]/20 to-transparent opacity-60" />
         
         {/* Save & Share overlays */}
         <div className="absolute top-3 right-3 z-20 flex items-center gap-1.5 noskip" onClick={(e) => e.stopPropagation()}>
@@ -99,8 +99,8 @@ export const PlaylistCard = ({
             onClick={handleSave}
             className={`p-2 rounded-full backdrop-blur-md transition-all duration-300 shadow-md ${
               saved 
-                ? "bg-[#2563EB] text-[#F4F7FF] scale-110" 
-                : "bg-[#07090F]/70 text-[#F4F7FF]/80 hover:bg-[#07090F] hover:text-white"
+                ? "bg-[var(--theme-accent)] text-[var(--theme-bg)] scale-110" 
+                : "bg-[var(--theme-surface)]/80 text-[var(--theme-muted)] hover:text-[var(--theme-fg)]"
             }`}
           >
             {saved ? <BookmarkCheck size={14} /> : <Bookmark size={14} />}
@@ -121,23 +121,23 @@ export const PlaylistCard = ({
       <div className="p-4 flex flex-col justify-between flex-grow gap-2">
         <div className="space-y-1">
           <h3 
-            className="text-sm sm:text-base font-bold text-white truncate group-hover:text-[#60A5FA] transition-colors" 
+            className="text-sm sm:text-base font-bold text-[var(--theme-fg)] truncate group-hover:text-[var(--theme-accent)] transition-colors" 
             title={title}
           >
             {title || "Untitled Playlist"}
           </h3>
-          <div className="flex items-center gap-1 text-[11px] text-[#8992A5]">
-            <User size={12} className="text-[#8992A5]/70" />
+          <div className="flex items-center gap-1 text-[11px] text-[var(--theme-muted)]">
+            <User size={12} className="text-[var(--theme-muted)]/70" />
             <span className="truncate">{owner ? `by ${owner}` : "Unknown Creator"}</span>
           </div>
           {truncatedDesc && (
-            <p className="text-[11px] text-[#8992A5]/60 line-clamp-2 mt-1 leading-normal">{truncatedDesc}</p>
+            <p className="text-[11px] text-[var(--theme-muted)]/70 line-clamp-2 mt-1 leading-normal">{truncatedDesc}</p>
           )}
         </div>
 
         <div className="space-y-3 mt-1">
-          <div className="flex items-center gap-1.5 text-[10px] text-[#8992A5]/70 font-semibold uppercase tracking-wider">
-            <ListMusic size={12} className="text-[#2563EB]" />
+          <div className="flex items-center gap-1.5 text-[10px] text-[var(--theme-muted)]/80 font-semibold uppercase tracking-wider">
+            <ListMusic size={12} className="text-[var(--theme-accent)]" />
             <span>Playlist</span>
           </div>
         </div>

@@ -86,25 +86,25 @@ export const AlbumTrackCard = ({
         : duration;
 
     return (
-        <div className="group flex items-center justify-between p-3.5 bg-zinc-900/20 backdrop-blur-md border border-white/5 hover:border-[#E879F9]/30 hover:bg-white/5 rounded-2xl transition-all duration-300 w-full min-w-0 relative">
+        <div className="group flex items-center justify-between p-3.5 bg-[var(--theme-card)]/80 backdrop-blur-md border border-[var(--theme-border)] hover:border-[var(--theme-accent)]/50 rounded-2xl transition-all duration-300 w-full min-w-0 relative">
             <div className="flex items-center gap-4 min-w-0 flex-1">
                 <div className="flex-shrink-0 w-6 flex items-center justify-center">
-                    <span className="text-zinc-500 group-hover:text-[#F0ABFC] font-bold text-sm transition-colors">{pos + 1}</span>
+                    <span className="text-[var(--theme-muted)] group-hover:text-[var(--theme-accent)] font-bold text-sm transition-colors">{pos + 1}</span>
                 </div>
 
                 <div className="flex flex-col gap-0.5 min-w-0 flex-1">
                     <h3 
-                        className="text-sm font-bold text-white truncate cursor-pointer hover:text-[#F0ABFC] transition-colors"
+                        className="text-sm font-bold text-[var(--theme-fg)] truncate cursor-pointer hover:text-[var(--theme-accent)] transition-colors"
                         title={title}
                         onClick={() => router.push(`/track/${trackID}`)}
                     >
                         {title}
                     </h3>
-                    <div className="text-xs text-zinc-400 truncate">
+                    <div className="text-xs text-[var(--theme-muted)] truncate">
                         {artist?.map((a, i) => (
                             <span 
                                 key={a.id || i} 
-                                className="hover:underline cursor-pointer"
+                                className="hover:underline cursor-pointer hover:text-[var(--theme-accent)] transition-colors"
                                 onClick={() => a.id && router.push(`/artist/${a.id}`)}
                             >
                                 {a.name}{i < artist.length - 1 && ", "}
@@ -115,12 +115,12 @@ export const AlbumTrackCard = ({
             </div>
 
             <div className="flex items-center gap-3 flex-shrink-0 ml-4">
-                {formattedDuration && <span className="text-xs text-zinc-400 font-mono font-medium">{formattedDuration}</span>}
+                {formattedDuration && <span className="text-xs text-[var(--theme-muted)] font-mono font-medium">{formattedDuration}</span>}
                 
                 {/* Save button */}
                 <button 
                     onClick={toggleSave}
-                    className={`p-1.5 rounded-lg hover:bg-white/10 transition duration-200 ${saved ? "text-[#E879F9]" : "text-zinc-500 hover:text-white"}`}
+                    className={`p-1.5 rounded-lg hover:bg-[var(--theme-surface)] transition duration-200 cursor-pointer ${saved ? "text-[var(--theme-accent)]" : "text-[var(--theme-muted)] hover:text-[var(--theme-fg)]"}`}
                 >
                     {saved ? <BookmarkCheck size={16} /> : <Bookmark size={16} />}
                 </button>
@@ -128,12 +128,12 @@ export const AlbumTrackCard = ({
                 {/* Dropdown Menu for external platforms */}
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <button className="p-1.5 rounded-lg hover:bg-white/10 text-zinc-400 hover:text-white transition">
+                        <button className="p-1.5 rounded-lg hover:bg-[var(--theme-surface)] text-[var(--theme-muted)] hover:text-[var(--theme-fg)] transition cursor-pointer">
                             <EllipsisVertical size={16} />
                         </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent 
-                        className="bg-zinc-900/95 backdrop-blur-2xl text-white min-w-[180px] rounded-2xl p-2 border border-white/10 shadow-2xl"
+                        className="bg-[var(--theme-card)] backdrop-blur-2xl text-[var(--theme-fg)] min-w-[180px] rounded-2xl p-2 border border-[var(--theme-border)] shadow-2xl z-[9999]"
                         align="end"
                         sideOffset={8}
                     >
@@ -149,32 +149,32 @@ export const AlbumTrackCard = ({
                                 };
                                 window.dispatchEvent(new CustomEvent('open-playlist-picker', { detail: { track: trackToAdd } }));
                             }}
-                            className="cursor-pointer px-3 py-2 hover:bg-white/10 rounded-xl transition flex items-center gap-2 text-emerald-400"
+                            className="cursor-pointer px-3 py-2 hover:bg-[var(--theme-surface)] rounded-xl transition flex items-center gap-2 text-[var(--theme-accent)]"
                         >
                             <ListMusic size={14} />
                             Add to Playlist
                         </DropdownMenuItem>
                         <DropdownMenuItem
                             onSelect={() => router.push(`/track/${trackID}`)}
-                            className="cursor-pointer px-3 py-2 hover:bg-white/10 rounded-xl transition flex items-center gap-2"
+                            className="cursor-pointer px-3 py-2 hover:bg-[var(--theme-surface)] rounded-xl transition flex items-center gap-2"
                         >
-                            <MusicIcon size={14} className="text-emerald-400" />
+                            <MusicIcon size={14} className="text-[var(--theme-accent)]" />
                             Track Details
                         </DropdownMenuItem>
                         <DropdownMenuItem
                             onSelect={() => copyToClipboard(spoURL || `${window.location.origin}/track/${trackID}`)}
-                            className="cursor-pointer px-3 py-2 hover:bg-white/10 rounded-xl transition flex items-center gap-2"
+                            className="cursor-pointer px-3 py-2 hover:bg-[var(--theme-surface)] rounded-xl transition flex items-center gap-2"
                         >
-                            <LinkIcon size={14} className="text-zinc-400" />
+                            <LinkIcon size={14} className="text-[var(--theme-muted)]" />
                             Copy Link
                         </DropdownMenuItem>
                         
-                        <DropdownMenuSeparator className="my-1 bg-white/5" />
+                        <DropdownMenuSeparator className="my-1 bg-[var(--theme-border)]" />
                         
                         {spoURL && (
                             <DropdownMenuItem
                                 onSelect={() => handleClick(spoURL)}
-                                className="cursor-pointer px-3 py-2 hover:bg-white/10 rounded-xl transition flex items-center gap-2"
+                                className="cursor-pointer px-3 py-2 hover:bg-[var(--theme-surface)] rounded-xl transition flex items-center gap-2"
                             >
                                 <img src="/2024-spotify-logo-icon/Primary_Logo_Green_RGB.svg" className="w-4 h-4" alt="Spotify" />
                                 Spotify
@@ -183,7 +183,7 @@ export const AlbumTrackCard = ({
                         {YTURL && (
                             <DropdownMenuItem
                                 onSelect={() => handleClick(YTURL)}
-                                className="cursor-pointer px-3 py-2 hover:bg-white/10 rounded-xl transition flex items-center gap-2"
+                                className="cursor-pointer px-3 py-2 hover:bg-[var(--theme-surface)] rounded-xl transition flex items-center gap-2"
                             >
                                 <YouTubeIcon size={16} className="text-red-500" />
                                 YouTube
@@ -191,19 +191,19 @@ export const AlbumTrackCard = ({
                         )}
                         <DropdownMenuItem
                             onSelect={() => handleClick(appleURL)}
-                            className="cursor-pointer px-3 py-2 hover:bg-white/10 rounded-xl transition flex items-center gap-2"
+                            className="cursor-pointer px-3 py-2 hover:bg-[var(--theme-surface)] rounded-xl transition flex items-center gap-2"
                         >
                             <span className="text-[#FC3C44] font-extrabold text-[10px]"></span> Apple Music
                         </DropdownMenuItem>
                         <DropdownMenuItem
                             onSelect={() => handleClick(tidalURL)}
-                            className="cursor-pointer px-3 py-2 hover:bg-white/10 rounded-xl transition flex items-center gap-2"
+                            className="cursor-pointer px-3 py-2 hover:bg-[var(--theme-surface)] rounded-xl transition flex items-center gap-2"
                         >
                             <span className="text-cyan-400 font-extrabold text-[10px]">❖</span> Tidal
                         </DropdownMenuItem>
                         <DropdownMenuItem
                             onSelect={() => handleClick(soundcloudURL)}
-                            className="cursor-pointer px-3 py-2 hover:bg-white/10 rounded-xl transition flex items-center gap-2"
+                            className="cursor-pointer px-3 py-2 hover:bg-[var(--theme-surface)] rounded-xl transition flex items-center gap-2"
                         >
                             <span className="text-orange-500 font-extrabold text-[10px]">☁</span> SoundCloud
                         </DropdownMenuItem>
@@ -264,42 +264,42 @@ export const ArtistTrackCard = ({
     const soundcloudURL = `https://soundcloud.com/search?q=${encodeURIComponent(title + ' ' + artistsQuery)}`;
 
     return (
-        <div className="group flex items-center justify-between p-3.5 bg-zinc-900/20 backdrop-blur-md border border-white/5 hover:border-purple-500/20 hover:bg-white/5 rounded-2xl transition-all duration-300 w-full min-w-0 relative">
+        <div className="group flex items-center justify-between p-3.5 bg-[var(--theme-card)]/80 backdrop-blur-md border border-[var(--theme-border)] hover:border-[var(--theme-accent)]/50 rounded-2xl transition-all duration-300 w-full min-w-0 relative">
             <div className="flex items-center gap-4 min-w-0 flex-1">
                 <div className="flex-shrink-0 w-6 flex items-center justify-center">
-                    <span className="text-zinc-500 group-hover:text-purple-400 font-bold text-sm transition-colors">{pos + 1}</span>
+                    <span className="text-[var(--theme-muted)] group-hover:text-[var(--theme-accent)] font-bold text-sm transition-colors">{pos + 1}</span>
                 </div>
 
-                <div className="flex-shrink-0 relative w-10 h-10 rounded-lg overflow-hidden bg-zinc-800 border border-white/5">
+                <div className="flex-shrink-0 relative w-10 h-10 rounded-lg overflow-hidden bg-[var(--theme-surface)] border border-[var(--theme-border)]">
                     <img
-                        src={coverImage || "https://placehold.co/200x200/10141F/60A5FA?text=Track"}
+                        src={coverImage || "https://placehold.co/200x200/17020B/E8A87C?text=Track"}
                         alt={title}
                         className="w-full h-full object-cover"
                         onError={(e) => {
-                            e.currentTarget.src = 'https://placehold.co/200x200/10141F/60A5FA?text=Track';
+                            e.currentTarget.src = 'https://placehold.co/200x200/17020B/E8A87C?text=Track';
                         }}
                     />
                 </div>
 
                 <div className="flex flex-col gap-0.5 min-w-0 flex-1">
                     <h3 
-                        className="text-sm font-bold text-white truncate cursor-pointer hover:text-purple-400 transition-colors"
+                        className="text-sm font-bold text-[var(--theme-fg)] truncate cursor-pointer hover:text-[var(--theme-accent)] transition-colors"
                         title={title}
                         onClick={() => router.push(`/track/${trackID}`)}
                     >
                         {title}
                     </h3>
-                    <span className="text-xs text-zinc-500 truncate">{album?.name || album}</span>
+                    <span className="text-xs text-[var(--theme-muted)] truncate">{album?.name || album}</span>
                 </div>
             </div>
 
             <div className="flex items-center gap-3 flex-shrink-0 ml-4">
-                {duration && <span className="text-xs text-zinc-500 font-medium">{duration}</span>}
+                {duration && <span className="text-xs text-[var(--theme-muted)] font-mono font-medium">{duration}</span>}
                 
                 {/* Save button */}
                 <button 
                     onClick={toggleSave}
-                    className={`p-1.5 rounded-lg hover:bg-white/10 transition duration-200 ${saved ? "text-purple-400" : "text-zinc-500 hover:text-white"}`}
+                    className={`p-1.5 rounded-lg hover:bg-[var(--theme-surface)] transition duration-200 cursor-pointer ${saved ? "text-[var(--theme-accent)]" : "text-[var(--theme-muted)] hover:text-[var(--theme-fg)]"}`}
                 >
                     {saved ? <BookmarkCheck size={16} /> : <Bookmark size={16} />}
                 </button>
@@ -307,12 +307,12 @@ export const ArtistTrackCard = ({
                 {/* Dropdown Menu for external platforms */}
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <button className="p-1.5 rounded-lg hover:bg-white/10 text-zinc-400 hover:text-white transition">
+                        <button className="p-1.5 rounded-lg hover:bg-[var(--theme-surface)] text-[var(--theme-muted)] hover:text-[var(--theme-fg)] transition cursor-pointer">
                             <EllipsisVertical size={16} />
                         </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent 
-                        className="bg-zinc-900/95 backdrop-blur-2xl text-white min-w-[180px] rounded-2xl p-2 border border-white/10 shadow-2xl"
+                        className="bg-[var(--theme-card)] backdrop-blur-2xl text-[var(--theme-fg)] min-w-[180px] rounded-2xl p-2 border border-[var(--theme-border)] shadow-2xl z-[9999]"
                         align="end"
                         sideOffset={8}
                     >
@@ -328,32 +328,32 @@ export const ArtistTrackCard = ({
                                 };
                                 window.dispatchEvent(new CustomEvent('open-playlist-picker', { detail: { track: trackToAdd } }));
                             }}
-                            className="cursor-pointer px-3 py-2 hover:bg-white/10 rounded-xl transition flex items-center gap-2 text-emerald-400"
+                            className="cursor-pointer px-3 py-2 hover:bg-[var(--theme-surface)] rounded-xl transition flex items-center gap-2 text-[var(--theme-accent)]"
                         >
                             <ListMusic size={14} />
                             Add to Playlist
                         </DropdownMenuItem>
                         <DropdownMenuItem
                             onSelect={() => router.push(`/track/${trackID}`)}
-                            className="cursor-pointer px-3 py-2 hover:bg-white/10 rounded-xl transition flex items-center gap-2"
+                            className="cursor-pointer px-3 py-2 hover:bg-[var(--theme-surface)] rounded-xl transition flex items-center gap-2"
                         >
-                            <MusicIcon size={14} className="text-purple-400" />
+                            <MusicIcon size={14} className="text-[var(--theme-accent)]" />
                             Track Details
                         </DropdownMenuItem>
                         <DropdownMenuItem
                             onSelect={() => copyToClipboard(spoURL || `${window.location.origin}/track/${trackID}`)}
-                            className="cursor-pointer px-3 py-2 hover:bg-white/10 rounded-xl transition flex items-center gap-2"
+                            className="cursor-pointer px-3 py-2 hover:bg-[var(--theme-surface)] rounded-xl transition flex items-center gap-2"
                         >
-                            <LinkIcon size={14} className="text-zinc-400" />
+                            <LinkIcon size={14} className="text-[var(--theme-muted)]" />
                             Copy Link
                         </DropdownMenuItem>
                         
-                        <DropdownMenuSeparator className="my-1 bg-white/5" />
+                        <DropdownMenuSeparator className="my-1 bg-[var(--theme-border)]" />
                         
                         {spoURL && (
                             <DropdownMenuItem
                                 onSelect={() => handleClick(spoURL)}
-                                className="cursor-pointer px-3 py-2 hover:bg-white/10 rounded-xl transition flex items-center gap-2"
+                                className="cursor-pointer px-3 py-2 hover:bg-[var(--theme-surface)] rounded-xl transition flex items-center gap-2"
                             >
                                 <img src="/2024-spotify-logo-icon/Primary_Logo_Green_RGB.svg" className="w-4 h-4" alt="Spotify" />
                                 Spotify
@@ -362,7 +362,7 @@ export const ArtistTrackCard = ({
                         {YTURL && (
                             <DropdownMenuItem
                                 onSelect={() => handleClick(YTURL)}
-                                className="cursor-pointer px-3 py-2 hover:bg-white/10 rounded-xl transition flex items-center gap-2"
+                                className="cursor-pointer px-3 py-2 hover:bg-[var(--theme-surface)] rounded-xl transition flex items-center gap-2"
                             >
                                 <YouTubeIcon size={16} className="text-red-500" />
                                 YouTube
@@ -370,19 +370,19 @@ export const ArtistTrackCard = ({
                         )}
                         <DropdownMenuItem
                             onSelect={() => handleClick(appleURL)}
-                            className="cursor-pointer px-3 py-2 hover:bg-white/10 rounded-xl transition flex items-center gap-2"
+                            className="cursor-pointer px-3 py-2 hover:bg-[var(--theme-surface)] rounded-xl transition flex items-center gap-2"
                         >
                             <span className="text-[#FC3C44] font-extrabold text-[10px]"></span> Apple Music
                         </DropdownMenuItem>
                         <DropdownMenuItem
                             onSelect={() => handleClick(tidalURL)}
-                            className="cursor-pointer px-3 py-2 hover:bg-white/10 rounded-xl transition flex items-center gap-2"
+                            className="cursor-pointer px-3 py-2 hover:bg-[var(--theme-surface)] rounded-xl transition flex items-center gap-2"
                         >
                             <span className="text-cyan-400 font-extrabold text-[10px]">❖</span> Tidal
                         </DropdownMenuItem>
                         <DropdownMenuItem
                             onSelect={() => handleClick(soundcloudURL)}
-                            className="cursor-pointer px-3 py-2 hover:bg-white/10 rounded-xl transition flex items-center gap-2"
+                            className="cursor-pointer px-3 py-2 hover:bg-[var(--theme-surface)] rounded-xl transition flex items-center gap-2"
                         >
                             <span className="text-orange-500 font-extrabold text-[10px]">☁</span> SoundCloud
                         </DropdownMenuItem>
@@ -445,36 +445,36 @@ export const PlaylistTrackCard = ({
     const soundcloudURL = `https://soundcloud.com/search?q=${encodeURIComponent(title + ' ' + artistsQuery)}`;
 
     return (
-        <div className="group flex items-center justify-between p-3.5 bg-zinc-900/20 backdrop-blur-md border border-white/5 hover:border-orange-500/20 hover:bg-white/5 rounded-2xl transition-all duration-300 w-full min-w-0 relative">
+        <div className="group flex items-center justify-between p-3.5 bg-[var(--theme-card)]/80 backdrop-blur-md border border-[var(--theme-border)] hover:border-[var(--theme-accent)]/50 rounded-2xl transition-all duration-300 w-full min-w-0 relative">
             <div className="flex items-center gap-4 min-w-0 flex-1">
                 <div className="flex-shrink-0 w-6 flex items-center justify-center">
-                    <span className="text-zinc-500 group-hover:text-orange-400 font-bold text-sm transition-colors">{pos + 1}</span>
+                    <span className="text-[var(--theme-muted)] group-hover:text-[var(--theme-accent)] font-bold text-sm transition-colors">{pos + 1}</span>
                 </div>
 
-                <div className="flex-shrink-0 relative w-10 h-10 rounded-lg overflow-hidden bg-zinc-800 border border-white/5">
+                <div className="flex-shrink-0 relative w-10 h-10 rounded-lg overflow-hidden bg-[var(--theme-surface)] border border-[var(--theme-border)]">
                     <img
-                        src={coverImage || "https://placehold.co/200x200/10141F/60A5FA?text=Track"}
+                        src={coverImage || "https://placehold.co/200x200/17020B/E8A87C?text=Track"}
                         alt={title}
                         className="w-full h-full object-cover"
                         onError={(e) => {
-                            e.currentTarget.src = 'https://placehold.co/200x200/10141F/60A5FA?text=Track';
+                            e.currentTarget.src = 'https://placehold.co/200x200/17020B/E8A87C?text=Track';
                         }}
                     />
                 </div>
 
                 <div className="flex flex-col gap-0.5 min-w-0 flex-1">
                     <h3 
-                        className="text-sm font-bold text-white truncate cursor-pointer hover:text-orange-400 transition-colors"
+                        className="text-sm font-bold text-[var(--theme-fg)] truncate cursor-pointer hover:text-[var(--theme-accent)] transition-colors"
                         title={title}
                         onClick={() => router.push(`/track/${trackID}`)}
                     >
                         {title}
                     </h3>
-                    <div className="text-xs text-zinc-400 truncate">
+                    <div className="text-xs text-[var(--theme-muted)] truncate">
                         {artist?.map((a, i) => (
                             <span 
                                 key={a.id || i} 
-                                className="hover:underline cursor-pointer"
+                                className="hover:underline cursor-pointer hover:text-[var(--theme-accent)] transition-colors"
                                 onClick={() => a.id && router.push(`/artist/${a.id}`)}
                             >
                                 {a.name}{i < artist.length - 1 && ", "}
@@ -485,12 +485,12 @@ export const PlaylistTrackCard = ({
             </div>
 
             <div className="flex items-center gap-3 flex-shrink-0 ml-4">
-                {duration && <span className="text-xs text-zinc-500 font-medium">{duration}</span>}
+                {duration && <span className="text-xs text-[var(--theme-muted)] font-mono font-medium">{duration}</span>}
                 
                 {/* Save button */}
                 <button 
                     onClick={toggleSave}
-                    className={`p-1.5 rounded-lg hover:bg-white/10 transition duration-200 ${saved ? "text-orange-400" : "text-zinc-500 hover:text-white"}`}
+                    className={`p-1.5 rounded-lg hover:bg-[var(--theme-surface)] transition duration-200 cursor-pointer ${saved ? "text-[var(--theme-accent)]" : "text-[var(--theme-muted)] hover:text-[var(--theme-fg)]"}`}
                 >
                     {saved ? <BookmarkCheck size={16} /> : <Bookmark size={16} />}
                 </button>
@@ -498,12 +498,12 @@ export const PlaylistTrackCard = ({
                 {/* Dropdown Menu for external platforms */}
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <button className="p-1.5 rounded-lg hover:bg-white/10 text-zinc-400 hover:text-white transition">
+                        <button className="p-1.5 rounded-lg hover:bg-[var(--theme-surface)] text-[var(--theme-muted)] hover:text-[var(--theme-fg)] transition cursor-pointer">
                             <EllipsisVertical size={16} />
                         </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent 
-                        className="bg-zinc-900/95 backdrop-blur-2xl text-white min-w-[180px] rounded-2xl p-2 border border-white/10 shadow-2xl"
+                        className="bg-[var(--theme-card)] backdrop-blur-2xl text-[var(--theme-fg)] min-w-[180px] rounded-2xl p-2 border border-[var(--theme-border)] shadow-2xl z-[9999]"
                         align="end"
                         sideOffset={8}
                     >
@@ -519,32 +519,32 @@ export const PlaylistTrackCard = ({
                                 };
                                 window.dispatchEvent(new CustomEvent('open-playlist-picker', { detail: { track: trackToAdd } }));
                             }}
-                            className="cursor-pointer px-3 py-2 hover:bg-white/10 rounded-xl transition flex items-center gap-2 text-emerald-400"
+                            className="cursor-pointer px-3 py-2 hover:bg-[var(--theme-surface)] rounded-xl transition flex items-center gap-2 text-[var(--theme-accent)]"
                         >
                             <ListMusic size={14} />
                             Add to Playlist
                         </DropdownMenuItem>
                         <DropdownMenuItem
                             onSelect={() => router.push(`/track/${trackID}`)}
-                            className="cursor-pointer px-3 py-2 hover:bg-white/10 rounded-xl transition flex items-center gap-2"
+                            className="cursor-pointer px-3 py-2 hover:bg-[var(--theme-surface)] rounded-xl transition flex items-center gap-2"
                         >
-                            <MusicIcon size={14} className="text-orange-400" />
+                            <MusicIcon size={14} className="text-[var(--theme-accent)]" />
                             Track Details
                         </DropdownMenuItem>
                         <DropdownMenuItem
                             onSelect={() => copyToClipboard(spoURL || `${window.location.origin}/track/${trackID}`)}
-                            className="cursor-pointer px-3 py-2 hover:bg-white/10 rounded-xl transition flex items-center gap-2"
+                            className="cursor-pointer px-3 py-2 hover:bg-[var(--theme-surface)] rounded-xl transition flex items-center gap-2"
                         >
-                            <LinkIcon size={14} className="text-zinc-400" />
+                            <LinkIcon size={14} className="text-[var(--theme-muted)]" />
                             Copy Link
                         </DropdownMenuItem>
                         
-                        <DropdownMenuSeparator className="my-1 bg-white/5" />
+                        <DropdownMenuSeparator className="my-1 bg-[var(--theme-border)]" />
                         
                         {spoURL && (
                             <DropdownMenuItem
                                 onSelect={() => handleClick(spoURL)}
-                                className="cursor-pointer px-3 py-2 hover:bg-white/10 rounded-xl transition flex items-center gap-2"
+                                className="cursor-pointer px-3 py-2 hover:bg-[var(--theme-surface)] rounded-xl transition flex items-center gap-2"
                             >
                                 <img src="/2024-spotify-logo-icon/Primary_Logo_Green_RGB.svg" className="w-4 h-4" alt="Spotify" />
                                 Spotify
@@ -553,7 +553,7 @@ export const PlaylistTrackCard = ({
                         {YTURL && (
                             <DropdownMenuItem
                                 onSelect={() => handleClick(YTURL)}
-                                className="cursor-pointer px-3 py-2 hover:bg-white/10 rounded-xl transition flex items-center gap-2"
+                                className="cursor-pointer px-3 py-2 hover:bg-[var(--theme-surface)] rounded-xl transition flex items-center gap-2"
                             >
                                 <YouTubeIcon size={16} className="text-red-500" />
                                 YouTube
@@ -561,19 +561,19 @@ export const PlaylistTrackCard = ({
                         )}
                         <DropdownMenuItem
                             onSelect={() => handleClick(appleURL)}
-                            className="cursor-pointer px-3 py-2 hover:bg-white/10 rounded-xl transition flex items-center gap-2"
+                            className="cursor-pointer px-3 py-2 hover:bg-[var(--theme-surface)] rounded-xl transition flex items-center gap-2"
                         >
                             <span className="text-[#FC3C44] font-extrabold text-[10px]"></span> Apple Music
                         </DropdownMenuItem>
                         <DropdownMenuItem
                             onSelect={() => handleClick(tidalURL)}
-                            className="cursor-pointer px-3 py-2 hover:bg-white/10 rounded-xl transition flex items-center gap-2"
+                            className="cursor-pointer px-3 py-2 hover:bg-[var(--theme-surface)] rounded-xl transition flex items-center gap-2"
                         >
                             <span className="text-cyan-400 font-extrabold text-[10px]">❖</span> Tidal
                         </DropdownMenuItem>
                         <DropdownMenuItem
                             onSelect={() => handleClick(soundcloudURL)}
-                            className="cursor-pointer px-3 py-2 hover:bg-white/10 rounded-xl transition flex items-center gap-2"
+                            className="cursor-pointer px-3 py-2 hover:bg-[var(--theme-surface)] rounded-xl transition flex items-center gap-2"
                         >
                             <span className="text-orange-500 font-extrabold text-[10px]">☁</span> SoundCloud
                         </DropdownMenuItem>
@@ -634,41 +634,41 @@ export const SmallTrackCardWithCover = ({
     const soundcloudURL = `https://soundcloud.com/search?q=${encodeURIComponent(title + ' ' + artistsQuery)}`;
 
     return (
-        <div className="group flex items-center justify-between p-3 bg-zinc-900/20 backdrop-blur-md border border-white/5 hover:border-emerald-500/20 hover:bg-white/5 rounded-2xl transition-all duration-300 w-full min-w-0">
+        <div className="group flex items-center justify-between p-3 bg-[var(--theme-card)]/80 backdrop-blur-md border border-[var(--theme-border)] hover:border-[var(--theme-accent)]/50 rounded-2xl transition-all duration-300 w-full min-w-0">
             <div className="flex items-center gap-4 min-w-0 flex-1">
                 {pos !== undefined && (
                     <div className="flex-shrink-0 w-6 flex items-center justify-center">
-                        <span className="text-zinc-500 group-hover:text-emerald-400 font-bold text-sm transition-colors">{pos + 1}</span>
+                        <span className="text-[var(--theme-muted)] group-hover:text-[var(--theme-accent)] font-bold text-sm transition-colors">{pos + 1}</span>
                     </div>
                 )}
 
-                <div className="flex-shrink-0 relative w-11 h-11 sm:w-12 sm:h-12 rounded-xl overflow-hidden bg-zinc-800 border border-white/5">
+                <div className="flex-shrink-0 relative w-11 h-11 sm:w-12 sm:h-12 rounded-xl overflow-hidden bg-[var(--theme-surface)] border border-[var(--theme-border)]">
                     <img
-                        src={coverImage || "https://placehold.co/200x200/10141F/60A5FA?text=Track"}
+                        src={coverImage || "https://placehold.co/200x200/17020B/E8A87C?text=Track"}
                         alt={title}
                         className="w-full h-full object-cover"
                         onError={(e) => {
-                            e.currentTarget.src = 'https://placehold.co/200x200/10141F/60A5FA?text=Track';
+                            e.currentTarget.src = 'https://placehold.co/200x200/17020B/E8A87C?text=Track';
                         }}
                     />
                 </div>
 
                 <div className="flex flex-col gap-0.5 min-w-0 flex-1">
                     <h3
-                        className="text-sm font-bold text-white truncate cursor-pointer hover:text-emerald-400 transition-colors leading-tight"
+                        className="text-sm font-bold text-[var(--theme-fg)] truncate cursor-pointer hover:text-[var(--theme-accent)] transition-colors leading-tight"
                         title={title}
                         onClick={() => router.push(`/track/${trackID}`)}
                     >
                         {title}
                     </h3>
-                    <div className="text-xs text-zinc-400 truncate">
+                    <div className="text-xs text-[var(--theme-muted)] truncate">
                         {subtitle ? (
                             <span title={subtitle}>{subtitle}</span>
                         ) : (
                             artist?.map((a, i) => (
                                 <span 
                                     key={a.id || i}
-                                    className="hover:underline cursor-pointer"
+                                    className="hover:underline cursor-pointer hover:text-[var(--theme-accent)] transition-colors"
                                     onClick={() => a.id && router.push(`/artist/${a.id}`)}
                                 >
                                     {a.name}{i < artist.length - 1 && ", "}
@@ -683,7 +683,7 @@ export const SmallTrackCardWithCover = ({
                 {/* Save button */}
                 <button 
                     onClick={toggleSave}
-                    className={`p-1.5 rounded-lg hover:bg-white/10 transition duration-200 ${saved ? "text-emerald-400" : "text-zinc-500 hover:text-white"}`}
+                    className={`p-1.5 rounded-lg hover:bg-[var(--theme-surface)] transition duration-200 cursor-pointer ${saved ? "text-[var(--theme-accent)]" : "text-[var(--theme-muted)] hover:text-[var(--theme-fg)]"}`}
                 >
                     {saved ? <BookmarkCheck size={16} /> : <Bookmark size={16} />}
                 </button>
@@ -691,12 +691,12 @@ export const SmallTrackCardWithCover = ({
                 {/* Dropdown Menu for external platforms */}
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <button className="p-1.5 rounded-lg hover:bg-white/10 text-zinc-400 hover:text-white transition">
+                        <button className="p-1.5 rounded-lg hover:bg-[var(--theme-surface)] text-[var(--theme-muted)] hover:text-[var(--theme-fg)] transition cursor-pointer">
                             <EllipsisVertical size={16} />
                         </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent 
-                        className="bg-zinc-900/95 backdrop-blur-2xl text-white min-w-[180px] rounded-2xl p-2 border border-white/10 shadow-2xl"
+                        className="bg-[var(--theme-card)] backdrop-blur-2xl text-[var(--theme-fg)] min-w-[180px] rounded-2xl p-2 border border-[var(--theme-border)] shadow-2xl z-[9999]"
                         align="end"
                         sideOffset={8}
                     >
@@ -712,32 +712,32 @@ export const SmallTrackCardWithCover = ({
                                 };
                                 window.dispatchEvent(new CustomEvent('open-playlist-picker', { detail: { track: trackToAdd } }));
                             }}
-                            className="cursor-pointer px-3 py-2 hover:bg-white/10 rounded-xl transition flex items-center gap-2 text-emerald-400"
+                            className="cursor-pointer px-3 py-2 hover:bg-[var(--theme-surface)] rounded-xl transition flex items-center gap-2 text-[var(--theme-accent)]"
                         >
                             <ListMusic size={14} />
                             Add to Playlist
                         </DropdownMenuItem>
                         <DropdownMenuItem
                             onSelect={() => router.push(`/track/${trackID}`)}
-                            className="cursor-pointer px-3 py-2 hover:bg-white/10 rounded-xl transition flex items-center gap-2"
+                            className="cursor-pointer px-3 py-2 hover:bg-[var(--theme-surface)] rounded-xl transition flex items-center gap-2"
                         >
-                            <MusicIcon size={14} className="text-emerald-400" />
+                            <MusicIcon size={14} className="text-[var(--theme-accent)]" />
                             Track Details
                         </DropdownMenuItem>
                         <DropdownMenuItem
                             onSelect={() => copyToClipboard(spoURL || `${window.location.origin}/track/${trackID}`)}
-                            className="cursor-pointer px-3 py-2 hover:bg-white/10 rounded-xl transition flex items-center gap-2"
+                            className="cursor-pointer px-3 py-2 hover:bg-[var(--theme-surface)] rounded-xl transition flex items-center gap-2"
                         >
-                            <LinkIcon size={14} className="text-zinc-400" />
+                            <LinkIcon size={14} className="text-[var(--theme-muted)]" />
                             Copy Link
                         </DropdownMenuItem>
                         
-                        <DropdownMenuSeparator className="my-1 bg-white/5" />
+                        <DropdownMenuSeparator className="my-1 bg-[var(--theme-border)]" />
                         
                         {spoURL && (
                             <DropdownMenuItem
                                 onSelect={() => handleClick(spoURL)}
-                                className="cursor-pointer px-3 py-2 hover:bg-white/10 rounded-xl transition flex items-center gap-2"
+                                className="cursor-pointer px-3 py-2 hover:bg-[var(--theme-surface)] rounded-xl transition flex items-center gap-2"
                             >
                                 <img src="/2024-spotify-logo-icon/Primary_Logo_Green_RGB.svg" className="w-4 h-4" alt="Spotify" />
                                 Spotify
@@ -746,7 +746,7 @@ export const SmallTrackCardWithCover = ({
                         {YTURL && (
                             <DropdownMenuItem
                                 onSelect={() => handleClick(YTURL)}
-                                className="cursor-pointer px-3 py-2 hover:bg-white/10 rounded-xl transition flex items-center gap-2"
+                                className="cursor-pointer px-3 py-2 hover:bg-[var(--theme-surface)] rounded-xl transition flex items-center gap-2"
                             >
                                 <YouTubeIcon size={16} className="text-red-500" />
                                 YouTube
@@ -754,19 +754,19 @@ export const SmallTrackCardWithCover = ({
                         )}
                         <DropdownMenuItem
                             onSelect={() => handleClick(appleURL)}
-                            className="cursor-pointer px-3 py-2 hover:bg-white/10 rounded-xl transition flex items-center gap-2"
+                            className="cursor-pointer px-3 py-2 hover:bg-[var(--theme-surface)] rounded-xl transition flex items-center gap-2"
                         >
                             <span className="text-[#FC3C44] font-extrabold text-[10px]"></span> Apple Music
                         </DropdownMenuItem>
                         <DropdownMenuItem
                             onSelect={() => handleClick(tidalURL)}
-                            className="cursor-pointer px-3 py-2 hover:bg-white/10 rounded-xl transition flex items-center gap-2"
+                            className="cursor-pointer px-3 py-2 hover:bg-[var(--theme-surface)] rounded-xl transition flex items-center gap-2"
                         >
                             <span className="text-cyan-400 font-extrabold text-[10px]">❖</span> Tidal
                         </DropdownMenuItem>
                         <DropdownMenuItem
                             onSelect={() => handleClick(soundcloudURL)}
-                            className="cursor-pointer px-3 py-2 hover:bg-white/10 rounded-xl transition flex items-center gap-2"
+                            className="cursor-pointer px-3 py-2 hover:bg-[var(--theme-surface)] rounded-xl transition flex items-center gap-2"
                         >
                             <span className="text-orange-500 font-extrabold text-[10px]">☁</span> SoundCloud
                         </DropdownMenuItem>

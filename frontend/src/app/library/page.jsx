@@ -78,47 +78,47 @@ export default function LibraryPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#07090F] text-[#F4F7FF] p-6 pb-24 md:pl-20 md:pr-20 lg:pl-40 lg:pr-40 pt-12">
+    <div className="min-h-screen bg-[var(--theme-bg)] text-[var(--theme-fg)] p-6 pb-24 md:pl-20 md:pr-20 lg:pl-40 lg:pr-40 pt-12">
       {/* Title */}
       <div className="flex items-center gap-3 mb-8">
-        <FolderHeart className="w-8 h-8 text-[#60A5FA]" />
+        <FolderHeart className="w-8 h-8 text-[var(--theme-accent)]" />
         <h1 className="text-3xl font-extrabold tracking-tight">Your Library Collection</h1>
       </div>
 
       {/* Library Statistics Panel */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-10">
-        <div className="bg-[#10141F]/60 backdrop-blur-xl border border-[#2563EB]/10 rounded-2xl p-4 flex flex-col justify-between shadow-lg">
-          <div className="flex items-center justify-between text-[#8992A5]/70 mb-2">
+        <div className="bg-[var(--theme-card)]/80 backdrop-blur-xl border border-[var(--theme-border)] rounded-2xl p-4 flex flex-col justify-between shadow-md">
+          <div className="flex items-center justify-between text-[var(--theme-muted)] mb-2">
             <span className="text-xs font-bold uppercase tracking-wider">Tracks</span>
             <Music size={16} />
           </div>
-          <span className="text-2xl font-extrabold text-[#F4F7FF]">{songs.length}</span>
+          <span className="text-2xl font-extrabold text-[var(--theme-fg)]">{songs.length}</span>
         </div>
-        <div className="bg-[#10141F]/60 backdrop-blur-xl border border-[#2563EB]/10 rounded-2xl p-4 flex flex-col justify-between shadow-lg">
-          <div className="flex items-center justify-between text-[#8992A5]/70 mb-2">
+        <div className="bg-[var(--theme-card)]/80 backdrop-blur-xl border border-[var(--theme-border)] rounded-2xl p-4 flex flex-col justify-between shadow-md">
+          <div className="flex items-center justify-between text-[var(--theme-muted)] mb-2">
             <span className="text-xs font-bold uppercase tracking-wider">Albums</span>
             <Disc size={16} />
           </div>
-          <span className="text-2xl font-extrabold text-[#F4F7FF]">{albums.length}</span>
+          <span className="text-2xl font-extrabold text-[var(--theme-fg)]">{albums.length}</span>
         </div>
-        <div className="bg-[#10141F]/60 backdrop-blur-xl border border-[#2563EB]/10 rounded-2xl p-4 flex flex-col justify-between shadow-lg">
-          <div className="flex items-center justify-between text-[#8992A5]/70 mb-2">
+        <div className="bg-[var(--theme-card)]/80 backdrop-blur-xl border border-[var(--theme-border)] rounded-2xl p-4 flex flex-col justify-between shadow-md">
+          <div className="flex items-center justify-between text-[var(--theme-muted)] mb-2">
             <span className="text-xs font-bold uppercase tracking-wider">Artists</span>
             <Users size={16} />
           </div>
-          <span className="text-2xl font-extrabold text-[#F4F7FF]">{artists.length}</span>
+          <span className="text-2xl font-extrabold text-[var(--theme-fg)]">{artists.length}</span>
         </div>
-        <div className="bg-[#10141F]/60 backdrop-blur-xl border border-[#2563EB]/10 rounded-2xl p-4 flex flex-col justify-between shadow-lg">
-          <div className="flex items-center justify-between text-[#8992A5]/70 mb-2">
+        <div className="bg-[var(--theme-card)]/80 backdrop-blur-xl border border-[var(--theme-border)] rounded-2xl p-4 flex flex-col justify-between shadow-md">
+          <div className="flex items-center justify-between text-[var(--theme-muted)] mb-2">
             <span className="text-xs font-bold uppercase tracking-wider">Playlists</span>
             <Heart size={16} />
           </div>
-          <span className="text-2xl font-extrabold text-[#F4F7FF]">{playlists.length + customPlaylists.length}</span>
+          <span className="text-2xl font-extrabold text-[var(--theme-fg)]">{playlists.length + customPlaylists.length}</span>
         </div>
       </div>
 
       {/* Navigation Tabs */}
-      <div className="flex gap-2 overflow-x-auto pb-3 mb-8 border-b border-[#2563EB]/10">
+      <div className="flex gap-2 overflow-x-auto pb-3 mb-8 border-b border-[var(--theme-border)]">
         {tabs.map(tab => {
           const Icon = tab.icon;
           return (
@@ -127,14 +127,14 @@ export default function LibraryPage() {
               onClick={() => setActiveTab(tab.id)}
               className={`flex items-center gap-2 px-5 py-2.5 rounded-full font-semibold text-xs md:text-sm whitespace-nowrap transition-all duration-300 ${
                 activeTab === tab.id
-                  ? 'bg-[#2563EB] text-black shadow-lg shadow-[#2563EB]/20'
-                  : 'bg-white/[0.03] text-[#8992A5] hover:bg-[#2563EB]/15 hover:text-zinc-200'
+                  ? 'bg-[var(--theme-accent-bg)] text-[var(--theme-accent-fg)] shadow-md font-bold'
+                  : 'bg-[var(--theme-surface)] text-[var(--theme-muted)] hover:bg-[var(--theme-card)] hover:text-[var(--theme-fg)]'
               }`}
             >
               <Icon size={16} />
               <span>{tab.label}</span>
               <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold ${
-                activeTab === tab.id ? 'bg-black/10 text-black' : 'bg-white/[0.03] text-[#8992A5]/70'
+                activeTab === tab.id ? 'bg-black/15 text-[var(--theme-accent-fg)]' : 'bg-[var(--theme-card)] text-[var(--theme-muted)]'
               }`}>
                 {tab.count}
               </span>
@@ -182,16 +182,16 @@ export default function LibraryPage() {
               <div className="col-span-full"><EmptyState type="albums" /></div>
             ) : (
               albums.map((album, index) => (
-                <div key={album.id || index} className="group bg-[#10141F]/40 border border-[#2563EB]/10 rounded-3xl p-4 relative hover:border-[#60A5FA]/20 hover:bg-[#2563EB]/10 transition duration-300 flex flex-col justify-between shadow-lg">
+                <div key={album.id || index} className="group bg-[var(--theme-card)]/80 border border-[var(--theme-border)] rounded-3xl p-4 relative hover:border-[var(--theme-accent)]/40 hover:bg-[var(--theme-card)] transition duration-300 flex flex-col justify-between shadow-md">
                   <div className="cursor-pointer" onClick={() => router.push(`/album/${album.id}`)}>
                     <img src={album.image || 'https://placehold.co/150x150?text=No+Cover'} alt={album.title} className="w-full aspect-square object-cover rounded-2xl mb-4" />
-                    <h3 className="font-bold text-sm truncate text-[#F4F7FF] group-hover:text-[#60A5FA] transition">{album.title}</h3>
-                    <p className="text-xs text-[#8992A5]/70 truncate mb-4">{album.artist?.map(a => a.name).join(', ') || 'Various Artists'}</p>
+                    <h3 className="font-bold text-sm truncate text-[var(--theme-fg)] group-hover:text-[var(--theme-accent)] transition">{album.title}</h3>
+                    <p className="text-xs text-[var(--theme-muted)] truncate mb-4">{album.artist?.map(a => a.name).join(', ') || 'Various Artists'}</p>
                   </div>
-                  <div className="flex justify-between items-center mt-2 pt-2 border-t border-[#2563EB]/10">
+                  <div className="flex justify-between items-center mt-2 pt-2 border-t border-[var(--theme-border)]">
                     <button
                       onClick={() => router.push(`/album/${album.id}`)}
-                      className="text-xs text-[#60A5FA] hover:text-[#60A5FA] font-semibold flex items-center gap-1"
+                      className="text-xs text-[var(--theme-accent)] font-semibold flex items-center gap-1 hover:opacity-80 transition"
                     >
                       View Album <ArrowRight size={12} />
                     </button>
@@ -214,16 +214,16 @@ export default function LibraryPage() {
               <div className="col-span-full"><EmptyState type="artists" /></div>
             ) : (
               artists.map((artist, index) => (
-                <div key={artist.id || index} className="group bg-[#10141F]/40 border border-[#2563EB]/10 rounded-3xl p-4 relative hover:border-[#60A5FA]/20 hover:bg-[#2563EB]/10 transition duration-300 flex flex-col items-center text-center shadow-lg">
+                <div key={artist.id || index} className="group bg-[var(--theme-card)]/80 border border-[var(--theme-border)] rounded-3xl p-4 relative hover:border-[var(--theme-accent)]/40 hover:bg-[var(--theme-card)] transition duration-300 flex flex-col items-center text-center shadow-md">
                   <div className="cursor-pointer flex flex-col items-center" onClick={() => router.push(`/artist/${artist.id}`)}>
-                    <img src={artist.image || 'https://placehold.co/150x150?text=No+Cover'} alt={artist.title} className="w-24 h-24 sm:w-28 sm:h-28 rounded-full object-cover mb-4 ring-4 ring-[#2563EB]/10 group-hover:ring-[#2563EB]/30 transition-all duration-300" />
-                    <h3 className="font-bold text-sm truncate max-w-[140px] text-[#F4F7FF] group-hover:text-[#60A5FA] transition">{artist.title}</h3>
-                    <p className="text-[10px] text-[#8992A5]/70 font-semibold uppercase tracking-wider mt-1 mb-4">Artist</p>
+                    <img src={artist.image || 'https://placehold.co/150x150?text=No+Cover'} alt={artist.title} className="w-24 h-24 sm:w-28 sm:h-28 rounded-full object-cover mb-4 ring-4 ring-[var(--theme-border)] group-hover:ring-[var(--theme-accent)]/40 transition-all duration-300" />
+                    <h3 className="font-bold text-sm truncate max-w-[140px] text-[var(--theme-fg)] group-hover:text-[var(--theme-accent)] transition">{artist.title}</h3>
+                    <p className="text-[10px] text-[var(--theme-muted)] font-semibold uppercase tracking-wider mt-1 mb-4">Artist</p>
                   </div>
-                  <div className="flex justify-between items-center w-full border-t border-[#2563EB]/10 pt-3">
+                  <div className="flex justify-between items-center w-full border-t border-[var(--theme-border)] pt-3">
                     <button
                       onClick={() => router.push(`/artist/${artist.id}`)}
-                      className="text-xs text-[#60A5FA] hover:text-[#60A5FA] font-semibold flex items-center gap-1"
+                      className="text-xs text-[var(--theme-accent)] font-semibold flex items-center gap-1 hover:opacity-80 transition"
                     >
                       View Artist <ArrowRight size={12} />
                     </button>
@@ -243,11 +243,11 @@ export default function LibraryPage() {
         {activeTab === 'playlists' && (
           <div className="space-y-10">
             {/* Header / Create button */}
-            <div className="flex justify-between items-center pb-2 border-b border-[#2563EB]/10">
-              <h2 className="text-lg font-bold text-[#F4F7FF]/80">Playlists & Collections</h2>
+            <div className="flex justify-between items-center pb-2 border-b border-[var(--theme-border)]">
+              <h2 className="text-lg font-bold text-[var(--theme-fg)]">Playlists & Collections</h2>
               <button
                 onClick={() => setIsCreateModalOpen(true)}
-                className="flex items-center gap-2 px-5 py-2 bg-[#2563EB] hover:bg-[#60A5FA] text-black font-extrabold text-xs md:text-sm rounded-full transition hover:scale-105 active:scale-95 shadow-lg shadow-[#2563EB]/10 cursor-pointer"
+                className="flex items-center gap-2 px-5 py-2 bg-[var(--theme-accent-bg)] hover:opacity-90 text-[var(--theme-accent-fg)] font-extrabold text-xs md:text-sm rounded-full transition hover:scale-105 active:scale-95 shadow-md cursor-pointer"
               >
                 <Plus size={14} />
                 Create Playlist
@@ -261,19 +261,19 @@ export default function LibraryPage() {
                 {/* Custom Playlists */}
                 {customPlaylists.length > 0 && (
                   <div>
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-[#60A5FA] mb-4">Your Playlists ({customPlaylists.length})</h3>
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--theme-accent)] mb-4">Your Playlists ({customPlaylists.length})</h3>
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
                       {customPlaylists.map((pl, index) => (
-                        <div key={pl.id || index} className="group bg-[#10141F]/40 border border-[#2563EB]/10 hover:border-[#60A5FA]/20 hover:bg-[#2563EB]/10 rounded-3xl p-4 relative transition duration-300 flex flex-col justify-between shadow-lg">
+                        <div key={pl.id || index} className="group bg-[var(--theme-card)]/80 border border-[var(--theme-border)] hover:border-[var(--theme-accent)]/40 hover:bg-[var(--theme-card)] rounded-3xl p-4 relative transition duration-300 flex flex-col justify-between shadow-md">
                           <div className="cursor-pointer" onClick={() => router.push(`/playlist/${pl.id}`)}>
                             <img src={pl.image || 'https://placehold.co/150x150?text=Playlist'} alt={pl.name} className="w-full aspect-square object-cover rounded-2xl mb-4" />
-                            <h3 className="font-bold text-sm truncate text-[#F4F7FF] group-hover:text-[#60A5FA] transition">{pl.name}</h3>
-                            <p className="text-xs text-[#8992A5]/70 truncate mb-4">Custom Playlist</p>
+                            <h3 className="font-bold text-sm truncate text-[var(--theme-fg)] group-hover:text-[var(--theme-accent)] transition">{pl.name}</h3>
+                            <p className="text-xs text-[var(--theme-muted)] truncate mb-4">Custom Playlist</p>
                           </div>
-                          <div className="flex justify-between items-center mt-2 pt-2 border-t border-[#2563EB]/10">
+                          <div className="flex justify-between items-center mt-2 pt-2 border-t border-[var(--theme-border)]">
                             <button
                               onClick={() => router.push(`/playlist/${pl.id}`)}
-                              className="text-xs text-[#60A5FA] hover:text-[#60A5FA] font-semibold flex items-center gap-1"
+                              className="text-xs text-[var(--theme-accent)] hover:opacity-80 font-semibold flex items-center gap-1"
                             >
                               View Playlist <ArrowRight size={12} />
                             </button>
@@ -294,19 +294,19 @@ export default function LibraryPage() {
                 {/* Spotify Playlists */}
                 {playlists.length > 0 && (
                   <div>
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-[#60A5FA] mb-4">Bookmarked Spotify Playlists ({playlists.length})</h3>
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--theme-accent)] mb-4">Bookmarked Spotify Playlists ({playlists.length})</h3>
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
                       {playlists.map((pl, index) => (
-                        <div key={pl.id || index} className="group bg-[#10141F]/40 border border-[#2563EB]/10 hover:border-[#60A5FA]/20 hover:bg-[#2563EB]/10 rounded-3xl p-4 relative transition duration-300 flex flex-col justify-between shadow-lg">
+                        <div key={pl.id || index} className="group bg-[var(--theme-card)]/80 border border-[var(--theme-border)] hover:border-[var(--theme-accent)]/40 hover:bg-[var(--theme-card)] rounded-3xl p-4 relative transition duration-300 flex flex-col justify-between shadow-md">
                           <div className="cursor-pointer" onClick={() => router.push(`/playlist/${pl.id}`)}>
                             <img src={pl.image || 'https://placehold.co/150x150?text=No+Cover'} alt={pl.title} className="w-full aspect-square object-cover rounded-2xl mb-4" />
-                            <h3 className="font-bold text-sm truncate text-[#F4F7FF] group-hover:text-[#60A5FA] transition">{pl.title}</h3>
-                            <p className="text-xs text-[#8992A5]/70 truncate mb-4">By {pl.owner || 'Unknown'}</p>
+                            <h3 className="font-bold text-sm truncate text-[var(--theme-fg)] group-hover:text-[var(--theme-accent)] transition">{pl.title}</h3>
+                            <p className="text-xs text-[var(--theme-muted)] truncate mb-4">By {pl.owner || 'Unknown'}</p>
                           </div>
-                          <div className="flex justify-between items-center mt-2 pt-2 border-t border-[#2563EB]/10">
+                          <div className="flex justify-between items-center mt-2 pt-2 border-t border-[var(--theme-border)]">
                             <button
                               onClick={() => router.push(`/playlist/${pl.id}`)}
-                              className="text-xs text-[#60A5FA] hover:text-[#60A5FA] font-semibold flex items-center gap-1"
+                              className="text-xs text-[var(--theme-accent)] hover:opacity-80 font-semibold flex items-center gap-1"
                             >
                               View Playlist <ArrowRight size={12} />
                             </button>
@@ -331,10 +331,10 @@ export default function LibraryPage() {
 
       {/* Create Playlist Modal */}
       {isCreateModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#07090F]/90 backdrop-blur-sm px-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
           <div className="absolute inset-0" onClick={() => setIsCreateModalOpen(false)} />
-          <div className="relative max-w-sm w-full bg-[#10141F] border border-[#2563EB]/15 rounded-3xl shadow-2xl p-6 z-10">
-            <h3 className="text-lg font-bold text-[#F4F7FF] mb-4">Create Custom Playlist</h3>
+          <div className="relative max-w-sm w-full bg-[var(--theme-card)] border border-[var(--theme-border)] rounded-3xl shadow-2xl p-6 z-10 text-[var(--theme-fg)]">
+            <h3 className="text-lg font-bold text-[var(--theme-fg)] mb-4">Create Custom Playlist</h3>
             <form onSubmit={(e) => {
               e.preventDefault();
               if (!newPlName.trim()) return;
@@ -358,37 +358,37 @@ export default function LibraryPage() {
               toast.success(`Created playlist "${newPl.name}"! 🎉`);
             }} className="flex flex-col gap-4">
               <div>
-                <label className="block text-xs font-bold text-[#8992A5] uppercase tracking-wider mb-2">Playlist Name</label>
+                <label className="block text-xs font-bold text-[var(--theme-muted)] uppercase tracking-wider mb-2">Playlist Name</label>
                 <input
                   type="text"
                   required
                   placeholder="e.g. Chill Beats"
                   value={newPlName}
                   onChange={(e) => setNewPlName(e.target.value)}
-                  className="w-full bg-[#07090F] border border-[#2563EB]/15 rounded-2xl py-3 px-4 text-[#F4F7FF] text-sm focus:outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB] transition"
+                  className="w-full bg-[var(--theme-surface)] border border-[var(--theme-border)] rounded-2xl py-3 px-4 text-[var(--theme-fg)] placeholder:text-[var(--theme-muted)]/50 text-sm focus:outline-none focus:border-[var(--theme-accent)] focus:ring-1 focus:ring-[var(--theme-accent)] transition"
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-[#8992A5] uppercase tracking-wider mb-2">Description (Optional)</label>
+                <label className="block text-xs font-bold text-[var(--theme-muted)] uppercase tracking-wider mb-2">Description (Optional)</label>
                 <textarea
                   placeholder="Tell us about this playlist..."
                   value={newPlDesc}
                   onChange={(e) => setNewPlDesc(e.target.value)}
                   rows={3}
-                  className="w-full bg-[#07090F] border border-[#2563EB]/15 rounded-2xl py-3 px-4 text-[#F4F7FF] text-sm focus:outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB] transition resize-none"
+                  className="w-full bg-[var(--theme-surface)] border border-[var(--theme-border)] rounded-2xl py-3 px-4 text-[var(--theme-fg)] placeholder:text-[var(--theme-muted)]/50 text-sm focus:outline-none focus:border-[var(--theme-accent)] focus:ring-1 focus:ring-[var(--theme-accent)] transition resize-none"
                 />
               </div>
               <div className="flex gap-3 pt-2">
                 <button
                   type="button"
                   onClick={() => setIsCreateModalOpen(false)}
-                  className="flex-1 py-2.5 border border-[#2563EB]/15 text-[#F4F7FF] font-bold rounded-full hover:bg-[#2563EB]/10 transition text-sm cursor-pointer"
+                  className="flex-1 py-2.5 border border-[var(--theme-border)] text-[var(--theme-fg)] font-bold rounded-full hover:bg-[var(--theme-surface)] transition text-sm cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 bg-[#2563EB] hover:bg-[#60A5FA] text-black font-bold rounded-full transition text-sm cursor-pointer"
+                  className="flex-1 py-2.5 bg-[var(--theme-accent-bg)] hover:opacity-90 text-[var(--theme-accent-fg)] font-bold rounded-full transition text-sm cursor-pointer"
                 >
                   Create
                 </button>
@@ -403,13 +403,13 @@ export default function LibraryPage() {
 
 function EmptyState({ type }) {
   return (
-    <div className="text-center py-20 bg-[#10141F]/40 border border-[#2563EB]/10 rounded-3xl p-8 max-w-md mx-auto">
-      <FolderHeart className="w-12 h-12 text-zinc-600 mx-auto mb-4" />
-      <h3 className="text-lg font-bold text-[#F4F7FF]/80 mb-2">No Saved {type.charAt(0).toUpperCase() + type.slice(1)}</h3>
-      <p className="text-sm text-[#8992A5]/70 mb-6 leading-relaxed">
+    <div className="text-center py-20 bg-[var(--theme-card)]/80 border border-[var(--theme-border)] rounded-3xl p-8 max-w-md mx-auto">
+      <FolderHeart className="w-12 h-12 text-[var(--theme-muted)] mx-auto mb-4" />
+      <h3 className="text-lg font-bold text-[var(--theme-fg)] mb-2">No Saved {type.charAt(0).toUpperCase() + type.slice(1)}</h3>
+      <p className="text-sm text-[var(--theme-muted)] mb-6 leading-relaxed">
         Items you bookmark while discovering new music will be collected here.
       </p>
-      <Link href="/" className="inline-flex items-center px-6 py-2.5 bg-[#2563EB] text-black font-semibold text-sm rounded-full hover:scale-105 active:scale-95 transition-all shadow-lg shadow-[#2563EB]/10">
+      <Link href="/" className="inline-flex items-center px-6 py-2.5 bg-[var(--theme-accent-bg)] text-[var(--theme-accent-fg)] font-bold text-sm rounded-full hover:scale-105 active:scale-95 transition-all shadow-md">
         Start Exploring
       </Link>
     </div>

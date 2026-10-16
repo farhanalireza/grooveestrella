@@ -9,7 +9,7 @@ export const DropdownMenuContent = React.forwardRef(
     <DropdownMenuPrimitive.Portal>
       <DropdownMenuPrimitive.Content
         ref={ref}
-        className={`z-[9999] min-w-[8rem] overflow-hidden rounded-xl border border-white/20 bg-black/95 backdrop-blur-lg p-2 text-white shadow-2xl shadow-black/50 animate-in fade-in-0 slide-in-from-top-2 ${className}`}
+        className={`z-[9999] min-w-[8rem] overflow-hidden rounded-xl border border-[var(--theme-border)] bg-[var(--theme-card)] backdrop-blur-xl p-2 text-[var(--theme-fg)] shadow-2xl animate-in fade-in-0 slide-in-from-top-2 ${className}`}
         sideOffset={8}
         alignOffset={-4}
         {...props}
@@ -23,7 +23,7 @@ export const DropdownMenuItem = React.forwardRef(
   ({ className = "", ...props }, ref) => (
     <DropdownMenuPrimitive.Item
       ref={ref}
-      className={`cursor-pointer select-none rounded-lg px-3 py-2.5 text-sm text-white outline-none transition-all duration-200 hover:bg-white/10 focus:bg-white/10 active:bg-white/20 active:scale-95 z-[9999] flex items-center gap-2 ${className}`}
+      className={`cursor-pointer select-none rounded-lg px-3 py-2.5 text-sm text-[var(--theme-fg)] outline-none transition-all duration-200 hover:bg-[var(--theme-surface)] hover:text-[var(--theme-accent)] focus:bg-[var(--theme-surface)] focus:text-[var(--theme-accent)] active:bg-[var(--theme-surface)] active:scale-95 z-[9999] flex items-center gap-2 ${className}`}
       {...props}
     />
   )
@@ -34,7 +34,7 @@ export const DropdownMenuSeparator = React.forwardRef(
   ({ className = "", ...props }, ref) => (
     <DropdownMenuPrimitive.Separator
       ref={ref}
-      className={`-mx-1 my-2 h-px bg-white/20 ${className}`}
+      className={`-mx-1 my-2 h-px bg-[var(--theme-border)] ${className}`}
       {...props}
     />
   )

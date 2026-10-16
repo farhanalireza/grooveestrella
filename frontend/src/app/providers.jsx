@@ -3,13 +3,16 @@
 import React from 'react';
 import { PlayerProvider } from '@/contexts/PlayerContext';
 import { AuthProvider } from '@/hooks/AuthContext';
+import { ThemeProvider } from '@/contexts/ThemeContext';
 
 export function Providers({ children }) {
   return (
-    <PlayerProvider>
-      <AuthProvider>
-        {children}
-      </AuthProvider>
-    </PlayerProvider>
+    <ThemeProvider>
+      <PlayerProvider>
+        <AuthProvider>
+          {children}
+        </AuthProvider>
+      </PlayerProvider>
+    </ThemeProvider>
   );
 }

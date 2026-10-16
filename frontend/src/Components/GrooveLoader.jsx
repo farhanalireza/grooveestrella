@@ -9,7 +9,7 @@ export default function GrooveLoader({ size = 36, text = null, className = "", f
       <div className="relative flex items-center justify-center">
         {/* Ambient colored blur glow */}
         <div 
-          className="absolute rounded-full bg-gradient-to-tr from-[#870087]/60 to-[#C026D3]/40 blur-lg animate-pulse pointer-events-none"
+          className="absolute rounded-full bg-gradient-to-tr from-[var(--theme-accent)]/40 to-[var(--theme-plum)]/30 blur-lg animate-pulse pointer-events-none"
           style={{ width: size * 1.4, height: size * 1.4 }}
         />
         
@@ -17,7 +17,7 @@ export default function GrooveLoader({ size = 36, text = null, className = "", f
         <img
           src="/in.svg"
           alt="Groove Loading..."
-          className="animate-spin object-contain pointer-events-none drop-shadow-[0_0_15px_rgba(192,38,211,0.6)] transition-transform"
+          className="animate-spin object-contain pointer-events-none drop-shadow-[0_0_15px_var(--theme-border-active)] transition-transform"
           style={{ 
             width: size, 
             height: size, 
@@ -28,7 +28,7 @@ export default function GrooveLoader({ size = 36, text = null, className = "", f
       </div>
 
       {text && (
-        <span className="text-xs font-bold text-[#8992A5] tracking-widest uppercase animate-pulse">
+        <span className="text-xs font-bold text-[var(--theme-muted)] tracking-widest uppercase animate-pulse">
           {text}
         </span>
       )}
@@ -37,7 +37,7 @@ export default function GrooveLoader({ size = 36, text = null, className = "", f
 
   if (fullScreen) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] w-full bg-[#07090F] text-[#F4F7FF] p-6">
+      <div className="flex flex-col items-center justify-center min-h-[60vh] w-full bg-[var(--theme-bg)] text-[var(--theme-fg)] p-6">
         {content}
       </div>
     );

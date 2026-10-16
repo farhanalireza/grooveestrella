@@ -17,21 +17,21 @@ const ConfirmationModal = ({ isOpen, onConfirm, onCancel, title, message, confir
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.9, opacity: 0 }}
             transition={{ type: "spring", damping: 20, stiffness: 300 }}
-            className="max-w-sm w-full bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl shadow-2xl p-6 border border-gray-700"
+            className="max-w-sm w-full bg-[var(--theme-card)] text-[var(--theme-fg)] rounded-2xl shadow-2xl p-6 border border-[var(--theme-border)]"
           >
             <div className="flex items-center gap-3 mb-4">
               {icon}
-              <h3 className="text-lg font-semibold text-white">{title}</h3>
+              <h3 className="text-lg font-semibold text-[var(--theme-fg)]">{title}</h3>
             </div>
             
-            <p className="text-gray-300 text-sm mb-6">{message}</p>
+            <p className="text-[var(--theme-muted)] text-sm mb-6">{message}</p>
             
             <div className="flex gap-3">
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={onCancel}
-                className="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-2.5 rounded-lg font-medium transition-colors duration-200"
+                className="flex-1 bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] text-[var(--theme-fg)] border border-[var(--theme-border)] py-2.5 rounded-lg font-medium transition-colors duration-200 cursor-pointer"
               >
                 Cancel
               </motion.button>
@@ -41,9 +41,9 @@ const ConfirmationModal = ({ isOpen, onConfirm, onCancel, title, message, confir
                 onClick={onConfirm}
                 className={`flex-1 ${
                   confirmColor === 'red' 
-                    ? 'bg-red-600 hover:bg-red-700' 
-                    : 'bg-blue-600 hover:bg-blue-700'
-                } text-white py-2.5 rounded-lg font-medium transition-colors duration-200`}
+                    ? 'bg-red-600 hover:bg-red-700 text-white' 
+                    : 'bg-[var(--theme-accent)] hover:opacity-90 text-[var(--theme-bg)]'
+                } py-2.5 rounded-lg font-medium transition-colors duration-200 cursor-pointer`}
               >
                 {confirmText}
               </motion.button>
