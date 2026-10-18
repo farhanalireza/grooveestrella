@@ -2,7 +2,7 @@
 import { Bookmark, BookmarkCheck, EllipsisVertical, Link as LinkIcon, Music as MusicIcon, ListMusic } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { toast } from "react-toastify";
+import { toast } from "@/lib/toast";
 import {
     DropdownMenu,
     DropdownMenuTrigger,

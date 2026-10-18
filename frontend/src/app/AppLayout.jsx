@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import AppBar from '@/Components/AppBar';
 import GrooveLoader from '@/Components/GrooveLoader';
+import PlaylistPickerModal from '@/Components/PlaylistPickerModal';
 
 export default function AppLayout({ children }) {
   const [mounted, setMounted] = useState(false);
@@ -17,7 +18,7 @@ export default function AppLayout({ children }) {
   if (!mounted) {
     return (
       <div className="min-h-screen bg-[var(--theme-bg)] flex items-center justify-center text-[var(--theme-fg)] font-sans">
-        <GrooveLoader size={44} text="Loading Groove..." />
+        <GrooveLoader size={64} fullScreen={true} />
       </div>
     );
   }
@@ -29,6 +30,7 @@ export default function AppLayout({ children }) {
       <div className="flex-1 w-full lg:pt-16 pb-28 lg:pb-0">
         {children}
       </div>
+      <PlaylistPickerModal />
     </div>
   );
 }

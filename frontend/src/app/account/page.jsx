@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import GrooveLoader from '@/Components/GrooveLoader';
 import Link from 'next/link';
-import { toast } from 'react-toastify';
+import { toast } from '@/lib/toast';
 import { generateRandomName, getOrSetUserName } from '@/lib/nameGenerator';
 
 const AVAILABLE_GENRES = [

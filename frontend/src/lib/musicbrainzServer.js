@@ -95,7 +95,7 @@ export function getPlaceholderCover(title = 'Music', artist = 'GrooveEstrella') 
 
 /**
  * Open Artwork Resolver for Tracks:
- * Queries iTunes API (600x600 Apple CDN) -> Deezer API -> Cover Art Archive -> Fallback SVG
+ * Queries Cover Art Archive -> Deezer API -> Fallback SVG (strictly NO iTunes)
  */
 export async function resolveOpenTrackCover(title, artist = '', rgId = null, relId = null) {
   const cleanTitle = (title || '').trim();
@@ -105,24 +105,16 @@ export async function resolveOpenTrackCover(title, artist = '', rgId = null, rel
   const cached = getCached(cacheKey);
   if (cached) return cached;
 
-  // 1. Try iTunes Store API (Ultra-fast Apple CDN, no key needed, 600x600 artwork)
-  try {
-    const itunesRes = await axios.get('https://itunes.apple.com/search', {
-      params: {
-        term: query || cleanTitle,
-        entity: 'song',
-        limit: 1,
-      },
-      timeout: 3000,
-    });
-    const item = itunesRes.data?.results?.[0];
-    if (item?.artworkUrl100) {
-      const highRes = item.artworkUrl100.replace('100x100bb.jpg', '600x600bb.jpg');
-      setCached(cacheKey, highRes);
-      return highRes;
-    }
-  } catch (_) {
-    // continue
+  // 1. Cover Art Archive
+  if (rgId) {
+    const caa = `https://coverartarchive.org/release-group/${rgId}/front-500`;
+    setCached(cacheKey, caa);
+    return caa;
+  }
+  if (relId) {
+    const caa = `https://coverartarchive.org/release/${relId}/front-500`;
+    setCached(cacheKey, caa);
+    return caa;
   }
 
   // 2. Try Deezer public API
@@ -141,27 +133,57 @@ export async function resolveOpenTrackCover(title, artist = '', rgId = null, rel
     // continue
   }
 
-  // 3. Cover Art Archive
-  if (rgId) {
-    const caa = `https://coverartarchive.org/release-group/${rgId}/front-500`;
-    setCached(cacheKey, caa);
-    return caa;
-  }
-  if (relId) {
-    const caa = `https://coverartarchive.org/release/${relId}/front-500`;
-    setCached(cacheKey, caa);
-    return caa;
-  }
-
-  // 4. Fallback SVG
+  // 3. Fallback SVG
   const fallback = getPlaceholderCover(cleanTitle, cleanArtist);
   setCached(cacheKey, fallback);
   return fallback;
 }
 
 /**
+ * Filters out numeric tags, year tags (e.g. #1973, 1973, 70s), and non-musical catalog metadata
+ */
+export function sanitizeGenreTags(tags = []) {
+  if (!Array.isArray(tags)) return [];
+  const valid = [];
+  const seen = new Set();
+
+  for (const t of tags) {
+    const raw = typeof t === 'string' ? t : (t?.name || '');
+    if (!raw) continue;
+    const clean = raw.trim();
+    const lower = clean.toLowerCase();
+
+    // Discard any hashtags or tags starting with/containing digits (e.g. #1973, #70s, 1973, 1980s)
+    if (lower.includes('#')) continue;
+    if (/^\d/.test(lower)) continue;
+    if (/^#?\d{2,4}s?$/i.test(lower)) continue;
+    if (lower.length < 3) continue;
+
+    // Discard non-musical catalog/status metadata
+    const ignoredMetadata = new Set([
+      'album', 'albums', 'ep', 'single', 'singles', 'lp', 'cd', 'vinyl', 'audio',
+      'favorite', 'favourites', 'favorites', 'favourite', 'seen live',
+      'owned', 'wishlist', 'my collection', 'all time favorite', 'classic', 'masterpiece'
+    ]);
+    if (ignoredMetadata.has(lower)) continue;
+
+    if (!seen.has(lower)) {
+      seen.add(lower);
+      // Format with Title Case
+      const formatted = clean
+        .split(/[\s-]+/)
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+        .join(' ');
+      valid.push(formatted);
+    }
+  }
+
+  return valid;
+}
+
+/**
  * Open Artwork Resolver for Artists:
- * Queries Deezer artist photography -> iTunes song artwork -> Fallback SVG
+ * Queries Deezer artist photography -> Wikipedia summary photo -> Fallback SVG (strictly NO iTunes)
  */
 export async function resolveOpenArtistPhoto(artistName, mbid = null) {
   const name = (artistName || '').trim();
@@ -170,7 +192,7 @@ export async function resolveOpenArtistPhoto(artistName, mbid = null) {
   const cached = getCached(cacheKey);
   if (cached) return cached;
 
-  // 1. Try Deezer artist search (returns authentic artist photography)
+  // 1. Try Deezer artist search (authentic artist photography)
   try {
     const deezerRes = await axios.get('https://api.deezer.com/search/artist', {
       params: { q: name, limit: 1 },
@@ -186,20 +208,23 @@ export async function resolveOpenArtistPhoto(artistName, mbid = null) {
     // continue
   }
 
-  // 2. Try iTunes artist search (find top song artwork as artist visual)
-  try {
-    const itunesRes = await axios.get('https://itunes.apple.com/search', {
-      params: { term: name, entity: 'song', limit: 1 },
-      timeout: 3000,
-    });
-    const song = itunesRes.data?.results?.[0];
-    if (song?.artworkUrl100) {
-      const highRes = song.artworkUrl100.replace('100x100bb.jpg', '600x600bb.jpg');
-      setCached(cacheKey, highRes);
-      return highRes;
-    }
-  } catch (_) {
-    // continue
+  // 2. Wikipedia summary candidate search
+  const candidates = [name, `${name} (band)`, `${name} (musician)`];
+  for (const cand of candidates) {
+    try {
+      const wikiRes = await axios.get(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(cand)}`, {
+        headers: { 'User-Agent': USER_AGENT },
+        timeout: 2500,
+      });
+      const data = wikiRes.data;
+      if (data && data.type !== 'disambiguation') {
+        const photo = data.originalimage?.source || data.thumbnail?.source;
+        if (photo && !photo.includes('Disambig') && !photo.includes('question_mark')) {
+          setCached(cacheKey, photo);
+          return photo;
+        }
+      }
+    } catch (_) {}
   }
 
   // 3. Fallback SVG
@@ -210,7 +235,7 @@ export async function resolveOpenArtistPhoto(artistName, mbid = null) {
 
 /**
  * Open Artwork Resolver for Albums:
- * Queries iTunes album search -> Deezer album search -> Cover Art Archive -> Fallback SVG
+ * Queries Cover Art Archive -> Deezer album search -> Fallback SVG (strictly NO iTunes)
  */
 export async function resolveOpenAlbumCover(albumTitle, artistName = '', rgId = null) {
   const query = `${albumTitle} ${artistName}`.trim();
@@ -218,24 +243,11 @@ export async function resolveOpenAlbumCover(albumTitle, artistName = '', rgId = 
   const cached = getCached(cacheKey);
   if (cached) return cached;
 
-  // 1. Try iTunes album search
-  try {
-    const itunesRes = await axios.get('https://itunes.apple.com/search', {
-      params: {
-        term: query || albumTitle,
-        entity: 'album',
-        limit: 1,
-      },
-      timeout: 3000,
-    });
-    const item = itunesRes.data?.results?.[0];
-    if (item?.artworkUrl100) {
-      const highRes = item.artworkUrl100.replace('100x100bb.jpg', '600x600bb.jpg');
-      setCached(cacheKey, highRes);
-      return highRes;
-    }
-  } catch (_) {
-    // continue
+  // 1. Cover Art Archive
+  if (rgId) {
+    const caa = `https://coverartarchive.org/release-group/${rgId}/front-500`;
+    setCached(cacheKey, caa);
+    return caa;
   }
 
   // 2. Try Deezer album search
@@ -252,13 +264,6 @@ export async function resolveOpenAlbumCover(albumTitle, artistName = '', rgId = 
     }
   } catch (_) {
     // continue
-  }
-
-  // 3. Cover Art Archive
-  if (rgId) {
-    const caa = `https://coverartarchive.org/release-group/${rgId}/front-500`;
-    setCached(cacheKey, caa);
-    return caa;
   }
 
   const fallback = getPlaceholderCover(albumTitle, artistName || 'Album');
@@ -627,6 +632,9 @@ export async function resolveDescription(name, title, artist, wikidataId, annota
  */
 export async function fetchMusicBrainzTrackServer(id) {
   if (!id) return null;
+  const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+  if (!isUUID) return null;
+
   const cacheKey = `track_detail_${id}`;
   const cached = getCached(cacheKey);
   if (cached) return cached;
@@ -707,7 +715,7 @@ export async function fetchMusicBrainzTrackServer(id) {
       releaseYear: releaseYear,
       duration_ms: rec.length || 0,
       durationMs: rec.length || 0,
-      genres: tags.slice(0, 5),
+      genres: sanitizeGenreTags(tags).slice(0, 5),
       tags: tags,
       allTags: allTags,
       description: description,
@@ -750,12 +758,12 @@ export async function fetchMusicBrainzArtistServer(id) {
     const artistRes = await rateLimitedGet(`${MUSICBRAINZ_BASE}/artist/${id}`, { inc: 'tags+ratings+url-rels+annotation' });
     const releaseGroupsRes = await rateLimitedGet(`${MUSICBRAINZ_BASE}/release-group`, {
       artist: id,
-      type: 'album|single',
-      limit: 12,
+      type: 'album|ep|single',
+      limit: 100,
     });
     const recordingsRes = await rateLimitedGet(`${MUSICBRAINZ_BASE}/recording`, {
       artist: id,
-      limit: 10,
+      limit: 25,
     });
 
     const artistData = artistRes.data;
@@ -765,7 +773,7 @@ export async function fetchMusicBrainzArtistServer(id) {
     const allTags = artistData.tags?.map((t) => ({ name: t.name, count: t.count || 0 })) || [];
     const queryForLinks = artistData.name;
 
-    // Resolve real artist photography
+    // Resolve real artist photography (NO iTunes)
     const coverUrl = await resolveOpenArtistPhoto(artistData.name, artistData.id);
 
     // Extract Wikidata ID if available
@@ -791,25 +799,46 @@ export async function fetchMusicBrainzArtistServer(id) {
         }
       : null;
 
-    // Format top albums with real album covers
+    // Process all releases and categorize into studio albums vs other release types
     const rawRgs = releaseGroupsRes.data?.['release-groups'] || [];
-    const seenNames = new Set();
-    const albums = [];
+    const seenTitles = new Set();
+    const studioAlbums = [];
+    const allReleases = [];
+
     for (const rg of rawRgs) {
-      if (!seenNames.has(rg.title)) {
-        seenNames.add(rg.title);
-        const albumCover = await resolveOpenAlbumCover(rg.title, artistData.name, rg.id);
-        let releaseDate = rg['first-release-date'] || null;
+      const cleanTitle = (rg.title || '').trim();
+      const primaryType = rg['primary-type'] || 'Album';
+      const secondaryTypes = rg['secondary-types'] || [];
+      const normKey = `${cleanTitle.toLowerCase()}_${primaryType.toLowerCase()}`;
+
+      if (!seenTitles.has(normKey)) {
+        seenTitles.add(normKey);
+        const releaseDate = rg['first-release-date'] || null;
         let releaseYear = null;
         if (releaseDate) {
           const parsed = new Date(releaseDate).getFullYear();
           if (!isNaN(parsed)) releaseYear = parsed;
         }
 
-        albums.push({
+        const isCompilation = secondaryTypes.some((s) => (s || '').toLowerCase().includes('compilation'));
+        const isLive = secondaryTypes.some((s) => (s || '').toLowerCase().includes('live'));
+        const isRemix = secondaryTypes.some((s) => (s || '').toLowerCase().includes('remix'));
+
+        let typeCategory = 'album';
+        if (isCompilation) typeCategory = 'compilation';
+        else if (isLive) typeCategory = 'live';
+        else if (isRemix) typeCategory = 'remix';
+        else if (primaryType.toLowerCase() === 'single') typeCategory = 'single';
+        else if (primaryType.toLowerCase() === 'ep') typeCategory = 'ep';
+
+        const albumCover = rg.id
+          ? `https://coverartarchive.org/release-group/${rg.id}/front-500`
+          : getPlaceholderCover(cleanTitle, artistData.name);
+
+        const releaseObj = {
           id: rg.id,
-          title: rg.title,
-          name: rg.title,
+          title: cleanTitle,
+          name: cleanTitle,
           url: albumCover,
           image: albumCover,
           coverArt: albumCover,
@@ -818,48 +847,128 @@ export async function fetchMusicBrainzArtistServer(id) {
           releaseDate: releaseDate,
           releaseYear: releaseYear,
           trackURI: `musicbrainz:album:${rg.id}`,
+          primaryType: primaryType,
+          secondaryTypes: secondaryTypes,
+          typeCategory: typeCategory,
           type: 'album',
-        });
+          explicit: false,
+        };
+
+        allReleases.push(releaseObj);
+
+        // Strict Studio Albums: Primary type Album, no compilations, no live recordings, no remixes
+        if (primaryType.toLowerCase() === 'album' && !isCompilation && !isLive && !isRemix) {
+          studioAlbums.push(releaseObj);
+        }
       }
     }
 
-    // Format top recordings with real track artwork
-    const rawRecs = recordingsRes.data?.recordings || [];
-    const topTracks = await Promise.all(
-      rawRecs.map(async (rec) => {
-        const primaryRel = rec.releases?.[0];
-        const trackCover = await resolveOpenTrackCover(rec.title, artistData.name, primaryRel?.['release-group']?.id, primaryRel?.id);
-        let releaseDate = primaryRel?.date || rec['first-release-date'] || null;
-        let releaseYear = null;
-        if (releaseDate) {
-          const parsed = new Date(releaseDate).getFullYear();
-          if (!isNaN(parsed)) releaseYear = parsed;
-        }
+    // Sort studio albums strictly in REVERSE CHRONOLOGICAL ORDER (newest first)
+    studioAlbums.sort((a, b) => {
+      const ya = a.releaseYear || 0;
+      const yb = b.releaseYear || 0;
+      if (ya !== yb) return yb - ya;
+      return (b.releaseDate || '').localeCompare(a.releaseDate || '');
+    });
 
-        return {
-          id: rec.id,
-          trackId: rec.id,
-          title: rec.title,
-          name: rec.title,
-          url: trackCover,
-          coverArt: trackCover,
-          artists: [{ name: artistData.name, id: artistData.id }],
-          artist: [{ name: artistData.name, id: artistData.id }],
-          album: primaryRel?.title || '',
-          albumID: primaryRel?.id || '',
-          releaseDate: releaseDate,
-          releaseYear: releaseYear,
-          durationMs: rec.length || 0,
-          duration_ms: rec.length || 0,
-          popularity: 85,
-          explicit: false,
-          spoURL: `https://open.spotify.com/search/${encodeURIComponent(rec.title + ' ' + artistData.name)}`,
-          YTURL: `https://www.youtube.com/results?search_query=${encodeURIComponent(rec.title + ' ' + artistData.name)}`,
-          trackURI: `musicbrainz:track:${rec.id}`,
-          type: 'track',
-        };
-      })
-    );
+    // Sort all releases strictly in REVERSE CHRONOLOGICAL ORDER
+    allReleases.sort((a, b) => {
+      const ya = a.releaseYear || 0;
+      const yb = b.releaseYear || 0;
+      if (ya !== yb) return yb - ya;
+      return (b.releaseDate || '').localeCompare(a.releaseDate || '');
+    });
+
+    // Fetch top hit recordings: First try Deezer artist top tracks (NO iTunes)
+    let topTracks = [];
+    try {
+      const deezerArtistRes = await axios.get('https://api.deezer.com/search/artist', {
+        params: { q: artistData.name, limit: 1 },
+        timeout: 2500,
+      });
+      const deezerArtist = deezerArtistRes.data?.data?.[0];
+      if (deezerArtist?.id) {
+        const deezerTopRes = await axios.get(`https://api.deezer.com/artist/${deezerArtist.id}/top`, {
+          params: { limit: 10 },
+          timeout: 2500,
+        });
+        const deezerSongs = deezerTopRes.data?.data || [];
+        if (deezerSongs.length > 0) {
+          topTracks = deezerSongs.map((s) => {
+            const songCover = s.album?.cover_xl || s.album?.cover_big || s.album?.cover_medium || coverUrl;
+            let songYear = null;
+            if (s.album?.release_date) {
+              const parsed = new Date(s.album.release_date).getFullYear();
+              if (!isNaN(parsed)) songYear = parsed;
+            }
+            return {
+              id: `dz-${s.id}`,
+              trackId: `dz-${s.id}`,
+              title: s.title,
+              name: s.title,
+              url: songCover,
+              coverArt: songCover,
+              artists: [{ name: artistData.name, id: artistData.id }],
+              artist: [{ name: artistData.name, id: artistData.id }],
+              album: s.album?.title || '',
+              albumID: s.album?.id ? `dz-${s.album.id}` : '',
+              releaseDate: s.album?.release_date || null,
+              releaseYear: songYear,
+              durationMs: (s.duration || 0) * 1000,
+              duration_ms: (s.duration || 0) * 1000,
+              duration: (s.duration || 0) * 1000,
+              popularity: s.rank ? Math.min(100, Math.round(s.rank / 10000)) : 88,
+              explicit: !!s.explicit_lyrics,
+              spoURL: `https://open.spotify.com/search/${encodeURIComponent(s.title + ' ' + artistData.name)}`,
+              YTURL: `https://www.youtube.com/results?search_query=${encodeURIComponent(s.title + ' ' + artistData.name)}`,
+              trackURI: `deezer:track:${s.id}`,
+              type: 'track',
+            };
+          });
+        }
+      }
+    } catch (_) {}
+
+    // Fallback to MusicBrainz recordings if Deezer unavailable
+    if (topTracks.length === 0) {
+      const rawRecs = recordingsRes.data?.recordings || [];
+      topTracks = await Promise.all(
+        rawRecs.slice(0, 10).map(async (rec) => {
+          const primaryRel = rec.releases?.[0];
+          const trackCover = await resolveOpenTrackCover(rec.title, artistData.name, primaryRel?.['release-group']?.id, primaryRel?.id);
+          let releaseDate = primaryRel?.date || rec['first-release-date'] || null;
+          let releaseYear = null;
+          if (releaseDate) {
+            const parsed = new Date(releaseDate).getFullYear();
+            if (!isNaN(parsed)) releaseYear = parsed;
+          }
+
+          return {
+            id: rec.id,
+            trackId: rec.id,
+            title: rec.title,
+            name: rec.title,
+            url: trackCover,
+            coverArt: trackCover,
+            artists: [{ name: artistData.name, id: artistData.id }],
+            artist: [{ name: artistData.name, id: artistData.id }],
+            album: primaryRel?.title || '',
+            albumID: primaryRel?.id || '',
+            releaseDate: releaseDate,
+            releaseYear: releaseYear,
+            durationMs: rec.length || 0,
+            duration_ms: rec.length || 0,
+            duration: rec.length || 0,
+            popularity: 85,
+            explicit: false,
+            spoURL: `https://open.spotify.com/search/${encodeURIComponent(rec.title + ' ' + artistData.name)}`,
+            YTURL: `https://www.youtube.com/results?search_query=${encodeURIComponent(rec.title + ' ' + artistData.name)}`,
+            trackURI: `musicbrainz:track:${rec.id}`,
+            type: 'track',
+          };
+        })
+      );
+    }
 
     const formatted = {
       id: artistData.id,
@@ -867,7 +976,7 @@ export async function fetchMusicBrainzArtistServer(id) {
       title: artistData.name,
       country: artistData.country || 'Global',
       type: artistData.type || 'Artist',
-      genres: tags.slice(0, 6),
+      genres: sanitizeGenreTags(tags).slice(0, 6),
       tags: tags,
       allTags: allTags,
       description: description,
@@ -885,7 +994,10 @@ export async function fetchMusicBrainzArtistServer(id) {
       uri: `musicbrainz:artist:${artistData.id}`,
       trackURI: `musicbrainz:artist:${artistData.id}`,
       topTracks: topTracks,
-      albums: albums,
+      albums: studioAlbums,
+      studioAlbums: studioAlbums,
+      allReleases: allReleases,
+      discography: allReleases,
     };
 
     setCached(cacheKey, formatted);
@@ -1017,6 +1129,10 @@ export async function fetchMusicBrainzAlbumServer(id, targetReleaseId = null) {
               title: trackTitle,
               name: trackTitle,
               pos: t.position || candidateTracks.length + 1,
+              trackNumber: t.number || String(t.position || candidateTracks.length + 1),
+              disc: m.position || 1,
+              discTitle: m.title || '',
+              discFormat: m.format || 'Disc',
               duration: t.length || t.recording?.length || 0,
               duration_ms: t.length || t.recording?.length || 0,
               artist: trackArtists,
@@ -1133,7 +1249,7 @@ export async function fetchMusicBrainzAlbumServer(id, targetReleaseId = null) {
       originalReleaseYear: canonicalOriginalYear,
       total_tracks: tracks.length,
       totalDurationMs: totalDurationMs,
-      genres: tags.slice(0, 6),
+      genres: sanitizeGenreTags(tags).slice(0, 6),
       tags: tags,
       allTags: allTags,
       description: description,

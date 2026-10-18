@@ -4,14 +4,21 @@
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Bookmark, BookmarkCheck, Disc, ChevronRight, Clock, Layers } from "lucide-react";
+import { ArrowLeft, Bookmark, BookmarkCheck, Disc, ChevronRight, Clock, Layers, Sparkles, Plus, Check, MoreHorizontal, Copy, Play, Share2, ListPlus } from "lucide-react";
+import {
+    DropdownMenu,
+    DropdownMenuTrigger,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+} from "@/Components/ui/dropdown-menu";
 import { AlbumTrackCard } from "@/Components/CardComponents/SmallTracksCard";
-import { ShareTrackComponent } from "@/Components/CardComponents/ShareTrackComponent";
 import GrooveLinkModal from "@/Components/GrooveLinkModal";
+import GrooveCardComposer from "@/Components/GrooveCardComposer";
 import MusicLoreAndReviews from "@/Components/MusicLoreAndReviews";
 import RatingPieChart from "@/Components/RatingPieChart";
 import GrooveLoader from "@/Components/GrooveLoader";
-import { toast } from "react-toastify";
+import { toast } from "@/lib/toast";
 
 export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
     const router = useRouter();
@@ -23,6 +30,9 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
     const [expandedHeroDesc, setExpandedHeroDesc] = useState(false);
     const [selectedReleaseId, setSelectedReleaseId] = useState(initialAlbum?.selectedReleaseId || null);
     const [isGrooveLinkOpen, setIsGrooveLinkOpen] = useState(false);
+    const [isGrooveCardOpen, setIsGrooveCardOpen] = useState(false);
+    const [selectedTrackForGrooveLink, setSelectedTrackForGrooveLink] = useState(null);
+    const [selectedTrackForGrooveCard, setSelectedTrackForGrooveCard] = useState(null);
 
     useEffect(() => {
         if (typeof window !== "undefined") {
@@ -161,6 +171,38 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
         }
     };
 
+    const handleNativeShare = async () => {
+        const albumName = album?.name || album?.title || 'Album';
+        const artistsStr = (Array.isArray(album?.artists) ? album.artists : [{ name: album?.artist || 'Various Artists' }]).map(a => a.name).join(', ');
+        const shareTitle = `${albumName} by ${artistsStr}`;
+        const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
+        const shareText = `Check out "${albumName}" by ${artistsStr} on GrooveEstrella! 💿\n${shareUrl}`;
+
+        if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+            try {
+                await navigator.share({
+                    title: shareTitle,
+                    text: shareText,
+                    url: shareUrl,
+                });
+                return;
+            } catch (err) {
+                if (err.name === 'AbortError') return;
+            }
+        }
+
+        if (typeof navigator !== 'undefined' && navigator.clipboard) {
+            try {
+                await navigator.clipboard.writeText(`${shareTitle}\n${shareUrl}`);
+                toast.success('Album link copied to clipboard! 📋');
+            } catch (_) {
+                toast.info(shareUrl);
+            }
+        } else {
+            toast.info(shareUrl);
+        }
+    };
+
     // Client-side fallback fetch only if initial SSR props were empty
     useEffect(() => {
         if (album && tracks && tracks.length > 0) return;
@@ -211,7 +253,7 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
 
     if (!album) {
         return (
-            <GrooveLoader fullScreen={true} text="Loading Album..." />
+            <GrooveLoader fullScreen={true} size={72} />
         );
     }
 
@@ -229,8 +271,89 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
     }
     const formattedTotalTime = formatTotalDuration(totalDurationMs);
 
+    const handleBack = () => {
+        if (typeof window !== "undefined" && window.history.length > 1) {
+            router.back();
+        } else {
+            router.push("/");
+        }
+    };
+
+    // Filter out numeric tags, year tags (e.g. #1973, 1973, 70s), and non-musical catalog metadata
+    const validGenres = useMemo(() => {
+        const rawList = album?.genres || album?.tags || [];
+        const valid = [];
+        const seen = new Set();
+        for (const t of rawList) {
+            const raw = typeof t === "string" ? t : (t?.name || "");
+            if (!raw) continue;
+            const clean = raw.trim();
+            const lower = clean.toLowerCase();
+            // Discard hashtags or numeric/year tags like #1973, 1973, 70s, #70s, 1980s
+            if (lower.includes("#")) continue;
+            if (/^\d/.test(lower)) continue;
+            if (/^#?\d{2,4}s?$/i.test(lower)) continue;
+            if (lower.length < 3) continue;
+
+            const ignored = new Set([
+                "album", "albums", "ep", "single", "singles", "lp", "cd", "vinyl", "audio",
+                "favorite", "favourites", "favorites", "favourite", "seen live",
+                "owned", "wishlist", "my collection", "all time favorite", "classic"
+            ]);
+            if (ignored.has(lower)) continue;
+
+            if (!seen.has(lower)) {
+                seen.add(lower);
+                const formatted = clean
+                    .split(/[\s-]+/)
+                    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+                    .join(" ");
+                valid.push(formatted);
+            }
+        }
+        return valid;
+    }, [album?.genres, album?.tags]);
+
+    const displayGenre = validGenres.length > 0 ? validGenres[0] : null;
+    const releaseYear = album?.releaseYear || (album?.releaseDate ? new Date(album.releaseDate).getFullYear() : null);
+
+    // Group tracks into distinct discs (Disc 1, Disc 2, Disc 3, etc.)
+    const discGroups = useMemo(() => {
+        if (!tracks || tracks.length === 0) return [];
+
+        const groups = new Map();
+        let currentDisc = 1;
+        let lastPos = 0;
+
+        tracks.forEach((track, idx) => {
+            let discNum = track.disc;
+            if (!discNum) {
+                const pos = Number(track.pos) || (idx + 1);
+                if (idx > 0 && pos <= lastPos && pos === 1) {
+                    currentDisc += 1;
+                }
+                discNum = currentDisc;
+                lastPos = pos;
+            } else {
+                currentDisc = discNum;
+                lastPos = Number(track.pos) || (idx + 1);
+            }
+
+            if (!groups.has(discNum)) {
+                groups.set(discNum, {
+                    discNumber: discNum,
+                    title: track.discTitle ? `Disc ${discNum}: ${track.discTitle}` : `Disc ${discNum}`,
+                    tracks: [],
+                });
+            }
+            groups.get(discNum).tracks.push(track);
+        });
+
+        return Array.from(groups.values()).sort((a, b) => a.discNumber - b.discNumber);
+    }, [tracks]);
+
     return (
-        <div className="relative min-h-screen bg-[var(--theme-bg)] text-[var(--theme-fg)] p-4 pb-32 sm:p-6 md:pl-20 md:pr-20 lg:pl-40 lg:pr-40 pt-12 overflow-hidden transition-colors duration-300">
+        <div className="relative min-h-screen bg-[var(--theme-bg)] text-[var(--theme-fg)] p-4 pb-32 sm:p-6 md:pl-20 md:pr-20 lg:pl-40 lg:pr-40 pt-5 sm:pt-8 overflow-hidden transition-colors duration-300">
             {/* Full Screen Dynamic Ambient Art-Cover Gradient Backdrop */}
             <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
                 <div 
@@ -243,155 +366,161 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
                 />
             </div>
 
-            {/* Back Button */}
-            <button 
-                onClick={() => router.push("/")}
-                className="absolute top-6 left-5 sm:top-8 sm:left-6 lg:left-16 z-20 p-2.5 rounded-full bg-[var(--theme-card)]/90 backdrop-blur-md border border-[var(--theme-border)] text-[var(--theme-fg)] hover:border-[var(--theme-accent)] transition shadow-lg cursor-pointer"
-                title="Back to Home"
-            >
-                <ArrowLeft size={18} />
-            </button>
-
-            {/* Actions overlay */}
-            <div className="absolute top-6 right-5 sm:top-8 sm:right-6 lg:right-16 z-20 flex items-center gap-2.5">
-                <button
-                    onClick={() => setIsGrooveLinkOpen(true)}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-full bg-[var(--theme-card)]/90 backdrop-blur-md border border-[var(--theme-border)] text-[var(--theme-fg)] hover:border-[var(--theme-accent)] hover:text-[var(--theme-accent)] transition-all duration-300 shadow-md cursor-pointer hover:scale-105 active:scale-95 text-xs font-bold"
-                    title="Open GrooveLink"
-                >
-                    <img src="/in.svg" alt="GrooveLink" className="w-4 h-4 object-contain" />
-                    <span className="hidden sm:inline">GrooveLink</span>
-                </button>
-                <ShareTrackComponent 
-                    trackId={album.id} 
-                    artist={artistsList} 
-                    explicit={false} 
-                    title={album.name || album.title} 
-                    popularity={85} 
-                    url={coverUrl}
-                    releaseDate={album.releaseDate || album.release_date || (album.releaseYear ? String(album.releaseYear) : null)}
-                    releaseYear={album.releaseYear}
-                    album={album.name || album.title}
-                    genres={album.genres || []}
-                    type="album" 
-                />
+            {/* Top Bar for Mobile (compact pill with blurred bg, back button, logo + wordmark, and share) */}
+            <header className="sm:hidden relative z-20 w-full max-w-xs mx-auto flex items-center justify-between px-2.5 py-1.5 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 shadow-2xl mb-6">
                 <button 
-                    onClick={toggleSave} 
-                    className={`p-2.5 rounded-full backdrop-blur-md transition-all duration-300 shadow-md cursor-pointer ${
-                        saved 
-                            ? "bg-[var(--theme-accent)] text-[var(--theme-accent-fg)] scale-105 shadow-md" 
-                            : "bg-[var(--theme-card)]/90 border border-[var(--theme-border)] text-[var(--theme-fg)] hover:bg-[var(--theme-surface)] hover:border-[var(--theme-accent)]"
-                    }`}
-                    title={saved ? "Remove Bookmark" : "Bookmark Album"}
+                    onClick={handleBack}
+                    className="w-9 h-9 rounded-full aspect-square shrink-0 bg-white/10 hover:bg-white/20 active:scale-95 text-white flex items-center justify-center transition border border-white/10 cursor-pointer"
+                    title="Go Back"
                 >
-                    {saved ? <BookmarkCheck size={18} /> : <Bookmark size={18} />}
+                    <ArrowLeft size={16} />
                 </button>
-            </div>
 
-            {/* Album Card Details Container */}
-            <div className="relative z-10 mt-14 sm:mt-6 w-full bg-transparent sm:bg-[var(--theme-card)]/80 sm:backdrop-blur-xl border-0 sm:border border-transparent sm:border-[var(--theme-border)] rounded-none sm:rounded-3xl p-2 sm:p-8 flex flex-col md:flex-row items-center gap-8 sm:gap-12 sm:shadow-2xl mb-12">
-                {/* Album Cover Art */}
-                <div className="relative flex-shrink-0 w-48 h-48 sm:w-56 sm:h-56 md:w-64 md:h-64 rounded-2xl overflow-hidden shadow-2xl bg-[var(--theme-surface)] ring-1 ring-[var(--theme-border)]">
+                {/* App Logo & Word Mark */}
+                <div 
+                    onClick={() => router.push("/")}
+                    className="flex items-center gap-1.5 px-2 py-1 rounded-full hover:bg-white/10 active:scale-95 transition cursor-pointer select-none"
+                    title="GrooveEstrella Home"
+                >
+                    <img src="/in.svg" alt="GrooveEstrella" className="w-5 h-5 object-contain shrink-0" />
+                    <span className="text-xs font-bold text-white tracking-tight font-display">GrooveEstrella</span>
+                </div>
+
+                <button 
+                    onClick={handleNativeShare}
+                    className="w-9 h-9 rounded-full aspect-square shrink-0 bg-white/10 hover:bg-white/20 active:scale-95 text-white flex items-center justify-center transition border border-white/10 cursor-pointer"
+                    title="Share Album"
+                >
+                    <Share2 size={16} />
+                </button>
+            </header>
+
+            {/* Top Navigation for Desktop / PC (isolated buttons on left and right, no top bar needed) */}
+            <header className="hidden sm:flex relative z-20 w-full items-center justify-between mb-8 px-2 md:px-6">
+                <button 
+                    onClick={handleBack}
+                    className="w-11 h-11 rounded-full aspect-square shrink-0 bg-black/35 hover:bg-black/55 active:scale-95 text-white flex items-center justify-center transition backdrop-blur-md cursor-pointer border border-white/15 shadow-lg"
+                    title="Go Back"
+                >
+                    <ArrowLeft size={18} />
+                </button>
+
+                <button 
+                    onClick={handleNativeShare}
+                    className="w-11 h-11 rounded-full aspect-square shrink-0 bg-black/35 hover:bg-black/55 active:scale-95 text-white flex items-center justify-center transition backdrop-blur-md cursor-pointer border border-white/15 shadow-lg"
+                    title="Share Album"
+                >
+                    <Share2 size={18} />
+                </button>
+            </header>
+
+            {/* Centered Apple Music Style Hero (Matching Image 3) */}
+            <div className="relative z-10 w-full max-w-xl mx-auto flex flex-col items-center text-center px-4 mb-8">
+                {/* Square Album Cover */}
+                <div className="w-56 h-56 sm:w-64 sm:h-64 md:w-72 md:h-72 aspect-square rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl bg-[var(--theme-surface)] ring-1 ring-white/10 group relative">
                     <img 
                         src={coverUrl} 
-                        alt={album.name} 
-                        className="w-full h-full object-cover transition-transform duration-500 hover:scale-105" 
-                        onError={(e) => { e.currentTarget.src = 'https://placehold.co/400x400/17020B/E8A87C?text=Album'; }}
+                        alt={album.name || album.title} 
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" 
+                        onError={(e) => { e.currentTarget.src = 'https://placehold.co/500x500/17020B/E8A87C?text=Album'; }}
                     />
                 </div>
 
-                {/* Meta details */}
-                <div className="flex-1 min-w-0 text-center md:text-left flex flex-col justify-between">
-                    <div>
-                        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--theme-card)]/80 border border-[var(--theme-border)] text-xs font-bold text-[var(--theme-accent)] uppercase tracking-wider mb-2">
-                            <Disc size={13} />
-                            <span>Album Release</span>
-                        </div>
-                        <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold mb-3 leading-tight tracking-tight text-[var(--theme-fg)]">{album.name || album.title}</h1>
-                        <p className="text-base sm:text-lg text-[var(--theme-fg)]/85 mb-2">
-                            {artistsList.map((a, i) => (
-                                <span
-                                    key={`${a.id || 'artist'}-${i}`}
-                                    className="cursor-pointer font-semibold hover:text-[var(--theme-accent)] hover:underline transition"
-                                    onClick={() => a.id && router.push(`/artist/${a.id}`)}
-                                >
-                                    {a.name}{i < artistsList.length - 1 && ', '}
-                                </span>
-                            ))} • <span className="text-[var(--theme-muted)] text-sm">{album.releaseDate || album.release_date || 'Release'}</span>
-                        </p>
-                        
-                        <div className="flex items-center justify-center md:justify-start gap-3 text-xs text-[var(--theme-muted)] font-medium mb-4 uppercase tracking-wider flex-wrap">
-                            <span>{tracks.length || album.total_tracks || 0} tracks total</span>
-                            {formattedTotalTime && (
-                                <>
-                                    <span>•</span>
-                                    <span className="inline-flex items-center gap-1 text-[var(--theme-fg)] font-bold">
-                                        <Clock size={13} className="text-[var(--theme-accent)]" />
-                                        <span>{formattedTotalTime}</span>
-                                    </span>
-                                </>
-                            )}
-                            {album.genres?.length > 0 && (
-                                <>
-                                    <span>•</span>
-                                    <span className="px-2 py-0.5 rounded-md bg-[var(--theme-card)] border border-[var(--theme-border)] text-[var(--theme-accent)] font-bold">{album.genres.slice(0, 3).join(', ')}</span>
-                                </>
-                            )}
-                        </div>
-
-                        {/* Rating Pie Chart */}
-                        <div className="flex items-center justify-center md:justify-start mb-3">
-                            <RatingPieChart rating={album.rating} />
-                        </div>
-                    </div>
-                    
-                    {/* Minimized Description before GrooveLink button */}
-                    {album.description && (
-                        <div className="my-3 text-left">
-                            <p className={`text-xs sm:text-sm text-[var(--theme-muted)] leading-relaxed font-body ${!expandedHeroDesc ? "line-clamp-2" : ""}`}>
-                                {album.description}
-                            </p>
-                            {album.description.length > 120 && (
-                                <button
-                                    onClick={() => setExpandedHeroDesc(!expandedHeroDesc)}
-                                    className="mt-1 text-[11px] font-bold text-[var(--theme-accent)] hover:underline transition inline-flex items-center gap-1 cursor-pointer"
-                                >
-                                    <span>{expandedHeroDesc ? "Show less" : "Read full overview"}</span>
-                                </button>
-                            )}
-                        </div>
-                    )}
-
-                    {/* GrooveLink & History Actions */}
-                    <div className="border-t border-[var(--theme-border)] pt-4 w-full flex flex-col sm:flex-row items-center justify-center md:justify-start gap-3">
-                        <button 
-                            onClick={() => setIsGrooveLinkOpen(true)}
-                            className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-[var(--theme-border)] bg-[var(--theme-surface)] hover:border-[var(--theme-accent)] text-[var(--theme-fg)] text-xs font-bold uppercase tracking-wider transition-all duration-300 shadow-md cursor-pointer"
-                        >
-                            <img src="/in.svg" alt="GrooveLink" className="w-4 h-4 object-contain" />
-                            <span>Open in GrooveLink</span>
-                            <ChevronRight className="w-3 h-3 text-[var(--theme-accent)]" />
-                        </button>
-                    </div>
+                {/* Album Title with Explicit [E] badge */}
+                <div className="mt-5 sm:mt-6 flex items-center justify-center gap-2 flex-wrap">
+                    <h1 className="text-2xl sm:text-3xl md:text-4xl font-black leading-tight text-white tracking-tight">
+                        {album.name || album.title}
+                    </h1>
+                    <span className="inline-flex items-center justify-center w-4 h-4 rounded-[3px] text-[10px] font-bold bg-white/20 text-white/90 shrink-0 select-none">
+                        E
+                    </span>
                 </div>
+
+                {/* Clickable Artist Name */}
+                <div className="mt-1">
+                    {artistsList.map((a, i) => (
+                        <span
+                            key={`${a.id || 'artist'}-${i}`}
+                            className="text-base sm:text-lg font-semibold text-white/90 hover:text-[var(--theme-accent)] transition cursor-pointer"
+                            onClick={() => a.id && router.push(`/artist/${a.id}`)}
+                        >
+                            {a.name}{i < artistsList.length - 1 && ', '}
+                        </span>
+                    ))}
+                </div>
+
+                {/* Subtitle: Genre · Year */}
+                <p className="text-xs sm:text-sm text-white/60 font-medium mt-1">
+                    {displayGenre ? `${displayGenre} · ` : ""}{releaseYear || "Album"}
+                </p>
+
+                {/* Multi-Disc Info: No. of Discs · Combined Timing */}
+                {discGroups.length > 1 && (
+                    <p className="text-xs sm:text-sm text-white/50 font-medium mt-0.5 flex items-center justify-center gap-1.5">
+                        <span>{discGroups.length} Discs</span>
+                        {formattedTotalTime && (
+                            <>
+                                <span>·</span>
+                                <span>{formattedTotalTime}</span>
+                            </>
+                        )}
+                    </p>
+                )}
+
+                {/* Centered Action Controls Row: GrooveCard, Open GrooveLink, Bookmark */}
+                <div className="mt-6 flex items-center justify-center gap-3 sm:gap-4 max-w-full">
+                    {/* Create GrooveCard Button */}
+                    <button
+                        onClick={() => setIsGrooveCardOpen(true)}
+                        className="w-12 h-12 rounded-full aspect-square shrink-0 bg-white/10 hover:bg-white/20 active:scale-95 text-white flex items-center justify-center transition-all duration-200 backdrop-blur-md cursor-pointer shadow-lg border border-white/15 group"
+                        title="Create GrooveCard"
+                    >
+                        <Sparkles size={20} className="text-white group-hover:text-[var(--theme-accent)] transition-colors" />
+                    </button>
+
+                    {/* Prominent Open GrooveLink Pill Button */}
+                    <button
+                        onClick={() => setIsGrooveLinkOpen(true)}
+                        className="h-12 px-6 sm:px-8 rounded-full bg-[var(--theme-accent)] hover:opacity-95 active:scale-95 text-[var(--theme-accent-fg)] font-black text-xs sm:text-sm tracking-wide flex items-center justify-center gap-2 transition-all duration-200 shadow-xl cursor-pointer shrink-0 whitespace-nowrap"
+                        title="Open GrooveLink"
+                    >
+                        <img src="/in.svg" alt="GrooveLink" className="w-4 h-4 object-contain brightness-0 invert shrink-0" />
+                        <span className="whitespace-nowrap">Open GrooveLink</span>
+                        <ChevronRight size={15} className="shrink-0" />
+                    </button>
+
+                    {/* Bookmark / Plus Button */}
+                    <button
+                        onClick={toggleSave}
+                        className="w-12 h-12 rounded-full aspect-square shrink-0 bg-white/10 hover:bg-white/20 active:scale-95 text-white flex items-center justify-center transition-all duration-200 backdrop-blur-md cursor-pointer shadow-lg border border-white/15"
+                        title={saved ? "Remove from Library" : "Add to Library"}
+                    >
+                        {saved ? <Check size={20} className="text-[var(--theme-accent)]" /> : <Plus size={20} />}
+                    </button>
+                </div>
+
+                {/* Description / Editorial Notes (Matching Image 3) */}
+                {album.description && (
+                    <div className="mt-6 w-full text-left text-xs sm:text-sm text-white/80 leading-relaxed font-body">
+                        <strong className="font-extrabold text-white mr-1.5">Editor's Notes</strong>
+                        <span className={!expandedHeroDesc ? "line-clamp-2" : ""}>
+                            {album.description}
+                        </span>
+                        {album.description.length > 80 && (
+                            <button
+                                onClick={() => setExpandedHeroDesc(!expandedHeroDesc)}
+                                className="font-black text-white hover:underline uppercase text-xs ml-1 tracking-wider cursor-pointer inline"
+                            >
+                                {expandedHeroDesc ? "LESS" : "MORE"}
+                            </button>
+                        )}
+                    </div>
+                )}
             </div>
 
             {/* Tracks Section */}
             <div className="relative z-10 border-t border-[var(--theme-border)] pt-8 mb-12">
-                <div className="flex items-center justify-between mb-6 flex-wrap gap-2">
-                    <h2 className="text-xl sm:text-2xl font-extrabold flex items-center gap-2">
-                        <span>Tracks List</span>
-                        <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-[var(--theme-surface)] text-[var(--theme-muted)] border border-[var(--theme-border)]">{tracks.length}</span>
-                    </h2>
-                    {formattedTotalTime && (
-                        <span className="text-xs text-[var(--theme-muted)] font-medium flex items-center gap-1.5 bg-[var(--theme-surface)] px-3 py-1 rounded-full border border-[var(--theme-border)]">
-                            <Clock size={13} className="text-[var(--theme-accent)]" />
-                            <span>Total Runtime: {formattedTotalTime}</span>
-                        </span>
-                    )}
-                </div>
-
-                {/* Grouped Editions & Variations Switcher Bar */}
+                {/* Grouped Editions & Variations Switcher Bar (Pressing / Versions) */}
                 {groupedVariations.length > 0 && (
                     <div className="mb-6 p-4 rounded-2xl bg-[var(--theme-card)]/80 border border-[var(--theme-border)] backdrop-blur-xl space-y-3">
                         <div className="flex items-center justify-between flex-wrap gap-2">
@@ -481,29 +610,199 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
 
                 {tracks.length === 0 || loadingTracks ? (
                     <div className="flex flex-col items-center justify-center p-12 rounded-2xl bg-[var(--theme-card)]/50 border border-[var(--theme-border)] text-center">
-                        <GrooveLoader size={36} text="Loading album tracks from catalog..." />
+                        <GrooveLoader size={56} />
                     </div>
                 ) : (
-                    <div className="flex flex-col gap-2.5">
-                    {tracks.map((track, index) => {
-                        const trackArtists = Array.isArray(track.artists) ? track.artists : Array.isArray(track.artist) ? track.artist : artistsList;
-                        const trackTitle = track.title || track.name;
-                        const artistsStr = trackArtists.map(a => a.name).join(' ');
-                        return (
-                            <AlbumTrackCard
-                                key={`${track.id || track.trackID || 'track'}-${index}`}
-                                title={trackTitle}
-                                artist={trackArtists}
-                                spoURL={track.spoURL || track.external_urls?.spotify}
-                                YTURL={track.YTURL || `https://www.youtube.com/results?search_query=${encodeURIComponent(trackTitle + ' ' + artistsStr)}`}
-                                trackURI={track.trackURI || `musicbrainz:track:${track.id || index}`}
-                                pos={index}
-                                trackID={track.trackID || track.id}
-                                duration={track.duration || track.duration_ms}
-                                coverImage={coverUrl}
-                            />
-                        );
-                    })}
+                    <div className="space-y-10">
+                        {discGroups.map((discGroup) => {
+                            const discDurationMs = discGroup.tracks.reduce((acc, t) => acc + (t.duration || t.duration_ms || 0), 0);
+                            const discFormattedTime = formatTotalDuration(discDurationMs);
+
+                            return (
+                                <div key={`disc-group-${discGroup.discNumber}`} className="space-y-3">
+                                    {/* Disc Header (Disc 1, Disc 2, Disc 3, etc.) */}
+                                    <div className="flex items-center justify-between px-1 border-b border-white/10 pb-2">
+                                        <h2 className="text-base sm:text-lg font-bold text-white tracking-tight flex items-center gap-2">
+                                            <span>{discGroup.title}</span>
+                                            {discGroups.length > 1 && (
+                                                <span className="text-[10px] font-semibold text-[var(--theme-accent)] px-2 py-0.5 rounded-full bg-white/5 border border-white/10">
+                                                    {discGroup.tracks.length} songs
+                                                </span>
+                                            )}
+                                        </h2>
+                                        {discFormattedTime && (
+                                            <span className="text-xs text-white/50 font-medium flex items-center gap-1.5">
+                                                <Clock size={13} className="text-[var(--theme-accent)]" />
+                                                <span>{discFormattedTime}</span>
+                                            </span>
+                                        )}
+                                    </div>
+
+                                    {/* Tracklist for this Disc */}
+                                    <div className="flex flex-col">
+                                        {discGroup.tracks.map((track, index) => {
+                                            const trackArtists = Array.isArray(track.artists) ? track.artists : Array.isArray(track.artist) ? track.artist : artistsList;
+                                            const trackTitle = track.title || track.name;
+                                            const artistsStr = trackArtists.map(a => a.name).join(', ');
+                                            const isExplicit = track.explicit || false;
+                                            const formattedDuration = typeof (track.duration || track.duration_ms) === 'number' && (track.duration || track.duration_ms) > 0
+                                                ? `${Math.floor((track.duration || track.duration_ms) / 60000)}:${Math.floor(((track.duration || track.duration_ms) % 60000) / 1000).toString().padStart(2, '0')}`
+                                                : null;
+
+                                            return (
+                                                <div 
+                                                    key={`${track.id || track.trackID || 'track'}-${discGroup.discNumber}-${index}`}
+                                                    className="flex items-center justify-between py-2.5 sm:py-3 px-2 sm:px-3 hover:bg-white/5 rounded-xl transition duration-150 border-b border-white/10 last:border-b-0 group cursor-pointer"
+                                                    onClick={() => (track.id || track.trackID) && router.push(`/track/${track.id || track.trackID}`)}
+                                                >
+                                                    <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
+                                                        <span className="w-7 text-center text-xs sm:text-sm font-semibold text-white/50 group-hover:text-white shrink-0">
+                                                            {track.trackNumber || track.pos || index + 1}
+                                                        </span>
+
+                                                        <div className="flex flex-col min-w-0 flex-1">
+                                                            <div className="flex items-center gap-1.5 min-w-0">
+                                                                <span className="font-semibold text-sm sm:text-base text-white group-hover:text-[var(--theme-accent)] transition-colors truncate">
+                                                                    {trackTitle}
+                                                                </span>
+                                                                {isExplicit && (
+                                                                    <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-[3px] text-[9px] font-bold bg-white/20 text-white/90 shrink-0 select-none">
+                                                                        E
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            {artistsStr && artistsStr !== (album.name || album.title) && (
+                                                                <span className="text-xs text-white/50 truncate block mt-0.5">
+                                                                    {artistsStr}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex items-center gap-3 shrink-0 ml-3" onClick={(e) => e.stopPropagation()}>
+                                                        {formattedDuration && (
+                                                            <span className="text-xs text-white/50 font-mono font-medium">
+                                                                {formattedDuration}
+                                                            </span>
+                                                        )}
+
+                                                        <DropdownMenu>
+                                                            <DropdownMenuTrigger asChild>
+                                                                <button 
+                                                                    className="p-1.5 rounded-lg hover:bg-white/10 text-white/50 hover:text-white transition cursor-pointer"
+                                                                    title="More options"
+                                                                >
+                                                                    <MoreHorizontal size={18} />
+                                                                </button>
+                                                            </DropdownMenuTrigger>
+                                                            <DropdownMenuContent 
+                                                                className="bg-[var(--theme-card)] backdrop-blur-2xl text-[var(--theme-fg)] min-w-[200px] rounded-2xl p-2 border border-[var(--theme-border)] shadow-2xl z-[9999]"
+                                                                align="end"
+                                                                sideOffset={8}
+                                                            >
+                                                                <DropdownMenuItem
+                                                                    onClick={() => setSelectedTrackForGrooveLink({
+                                                                        id: track.id || track.trackID,
+                                                                        type: 'track',
+                                                                        name: trackTitle,
+                                                                        title: trackTitle,
+                                                                        artist: trackArtists,
+                                                                        album: album.name || album.title,
+                                                                        imageUrl: coverUrl,
+                                                                        coverArt: coverUrl,
+                                                                        popularity: 85,
+                                                                        explicit: isExplicit,
+                                                                        genres: album.genres || [],
+                                                                        spotifyUrl: track.spoURL,
+                                                                        youtubeUrl: track.YTURL
+                                                                    })}
+                                                                    className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold hover:bg-[var(--theme-surface)] rounded-xl cursor-pointer"
+                                                                >
+                                                                    <img src="/in.svg" alt="GrooveLink" className="w-4 h-4 object-contain" />
+                                                                    <span>Open GrooveLink</span>
+                                                                </DropdownMenuItem>
+                                                                <DropdownMenuItem
+                                                                    onClick={() => setSelectedTrackForGrooveCard({
+                                                                        id: track.id || track.trackID,
+                                                                        title: trackTitle,
+                                                                        artist: trackArtists,
+                                                                        imageUrl: coverUrl,
+                                                                        album: album.name || album.title,
+                                                                        explicit: isExplicit,
+                                                                        genres: album.genres || []
+                                                                    })}
+                                                                    className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold hover:bg-[var(--theme-surface)] rounded-xl cursor-pointer"
+                                                                >
+                                                                    <Bookmark size={15} className="text-[var(--theme-accent)]" />
+                                                                    <span>Create GrooveCard</span>
+                                                                </DropdownMenuItem>
+                                                                <DropdownMenuItem
+                                                                    onClick={() => {
+                                                                        window.dispatchEvent(new CustomEvent('open-playlist-picker', {
+                                                                            detail: {
+                                                                                track: {
+                                                                                    id: track.id || track.trackID,
+                                                                                    name: trackTitle,
+                                                                                    title: trackTitle,
+                                                                                    artists: trackArtists,
+                                                                                    duration_ms: track.duration || track.duration_ms,
+                                                                                    album: {
+                                                                                        id: album.id || id,
+                                                                                        name: album.name || album.title,
+                                                                                        images: [{ url: coverUrl }]
+                                                                                    },
+                                                                                    spoURL: track.spoURL,
+                                                                                    YTURL: track.YTURL
+                                                                                }
+                                                                            }
+                                                                        }));
+                                                                    }}
+                                                                    className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold hover:bg-[var(--theme-surface)] rounded-xl cursor-pointer"
+                                                                >
+                                                                    <ListPlus size={15} />
+                                                                    <span>Add to Playlist</span>
+                                                                </DropdownMenuItem>
+                                                                <DropdownMenuSeparator className="my-1 bg-[var(--theme-border)]" />
+                                                                {track.spoURL && (
+                                                                    <DropdownMenuItem
+                                                                        onClick={() => window.open(track.spoURL, "_blank")}
+                                                                        className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold hover:bg-[var(--theme-surface)] rounded-xl cursor-pointer text-[#1DB954]"
+                                                                    >
+                                                                        <Play size={14} fill="currentColor" />
+                                                                        <span>Play on Spotify</span>
+                                                                    </DropdownMenuItem>
+                                                                )}
+                                                                {track.YTURL && (
+                                                                    <DropdownMenuItem
+                                                                        onClick={() => window.open(track.YTURL, "_blank")}
+                                                                        className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold hover:bg-[var(--theme-surface)] rounded-xl cursor-pointer text-[#FF0000]"
+                                                                    >
+                                                                        <Play size={14} fill="currentColor" />
+                                                                        <span>Play on YouTube</span>
+                                                                    </DropdownMenuItem>
+                                                                )}
+                                                                <DropdownMenuItem
+                                                                    onClick={() => {
+                                                                        if (typeof navigator !== "undefined") {
+                                                                            navigator.clipboard.writeText(`${window.location.origin}/track/${track.id || track.trackID}`);
+                                                                            toast.success("Track link copied! 📋");
+                                                                        }
+                                                                    }}
+                                                                    className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold hover:bg-[var(--theme-surface)] rounded-xl cursor-pointer"
+                                                                >
+                                                                    <Copy size={14} />
+                                                                    <span>Copy Link</span>
+                                                                </DropdownMenuItem>
+                                                            </DropdownMenuContent>
+                                                        </DropdownMenu>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            );
+                        })}
                     </div>
                 )}
             </div>
@@ -526,6 +825,10 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
             <GrooveLinkModal
                 isOpen={isGrooveLinkOpen}
                 onClose={() => setIsGrooveLinkOpen(false)}
+                onOpenGrooveCard={() => {
+                    setIsGrooveLinkOpen(false);
+                    setIsGrooveCardOpen(true);
+                }}
                 item={{
                     id: album.id || id,
                     type: "album",
@@ -535,16 +838,65 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
                     album: album.name || album.title,
                     imageUrl: coverUrl,
                     coverArt: coverUrl,
-                    releaseDate: album.releaseDate || album.release_date || (album.releaseYear ? String(album.releaseYear) : null),
-                    releaseYear: album.releaseYear,
+                    releaseDate: album.releaseDate || album.release_date || (releaseYear ? String(releaseYear) : null),
+                    releaseYear: releaseYear,
                     popularity: album.popularity || 85,
                     explicit: false,
-                    genres: album.genres || [],
+                    genres: validGenres,
                     externalLinks: album.externalLinks || [],
                     spotifyUrl: album.external_urls?.spotify || album.spoURL,
                     youtubeUrl: album.YTURL
                 }}
             />
+
+            {/* Album GrooveCard Composer Modal */}
+            <GrooveCardComposer
+                isOpen={isGrooveCardOpen}
+                onClose={() => setIsGrooveCardOpen(false)}
+                itemId={album.id || id}
+                title={album.name || album.title}
+                artist={artistsList}
+                imageUrl={coverUrl}
+                album={album.name || album.title}
+                releaseYear={releaseYear}
+                releaseDate={album.releaseDate || album.release_date || (releaseYear ? String(releaseYear) : null)}
+                popularity={album.popularity || 85}
+                explicit={false}
+                type="album"
+                genres={validGenres}
+            />
+
+            {/* Track Specific GrooveLink Modal */}
+            {selectedTrackForGrooveLink && (
+                <GrooveLinkModal
+                    isOpen={!!selectedTrackForGrooveLink}
+                    onClose={() => setSelectedTrackForGrooveLink(null)}
+                    onOpenGrooveCard={() => {
+                        const tr = selectedTrackForGrooveLink;
+                        setSelectedTrackForGrooveLink(null);
+                        setSelectedTrackForGrooveCard(tr);
+                    }}
+                    item={selectedTrackForGrooveLink}
+                />
+            )}
+
+            {/* Track Specific GrooveCard Composer Modal */}
+            {selectedTrackForGrooveCard && (
+                <GrooveCardComposer
+                    isOpen={!!selectedTrackForGrooveCard}
+                    onClose={() => setSelectedTrackForGrooveCard(null)}
+                    itemId={selectedTrackForGrooveCard.id}
+                    title={selectedTrackForGrooveCard.title}
+                    artist={selectedTrackForGrooveCard.artist}
+                    imageUrl={selectedTrackForGrooveCard.imageUrl || coverUrl}
+                    album={selectedTrackForGrooveCard.album}
+                    releaseYear={album.releaseYear}
+                    popularity={85}
+                    explicit={selectedTrackForGrooveCard.explicit}
+                    type="track"
+                    genres={selectedTrackForGrooveCard.genres || album.genres || []}
+                />
+            )}
         </div>
     );
 }

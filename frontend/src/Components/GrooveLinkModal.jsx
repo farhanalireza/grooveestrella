@@ -1,7 +1,7 @@
 // src/Components/GrooveLinkModal.jsx
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
@@ -19,7 +19,7 @@ import {
   Maximize2,
   CheckCircle2
 } from "lucide-react";
-import { toast } from "react-toastify";
+import { toast } from "@/lib/toast";
 import { generatePlatformLinks } from "@/lib/musicProviders";
 import GrooveCardComposer from "./GrooveCardComposer";
 
@@ -126,7 +126,7 @@ const platformMeta = {
   }
 };
 
-export default function GrooveLinkModal({ isOpen, onClose, item }) {
+export default function GrooveLinkModal({ isOpen, onClose, item, onOpenGrooveCard }) {
   const [mounted, setMounted] = useState(false);
   const [copied, setCopied] = useState(false);
   const [preferredPlatform, setPreferredPlatform] = useState(null);
@@ -150,26 +150,47 @@ export default function GrooveLinkModal({ isOpen, onClose, item }) {
       document.body.style.overflow = "";
       setShowQR(false);
       setQrFullScreen(false);
+      setShowGrooveCard(false);
     }
     return () => {
       document.body.style.overflow = "";
     };
   }, [isOpen]);
 
+  const handleCloseQrFullScreen = useCallback(() => {
+    setQrFullScreen(false);
+    onClose?.();
+  }, [onClose]);
+
+  const handleOpenQrFullScreen = () => {
+    setShowGrooveCard(false);
+    setQrFullScreen(true);
+  };
+
+  const handleOpenGrooveCard = () => {
+    setShowGrooveCard(false);
+    if (onOpenGrooveCard) {
+      onClose?.();
+      onOpenGrooveCard();
+    } else {
+      setShowGrooveCard(true);
+    }
+  };
+
   // Handle ESC key to close
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === "Escape") {
         if (qrFullScreen) {
-          setQrFullScreen(false);
+          handleCloseQrFullScreen();
         } else if (isOpen) {
-          onClose();
+          onClose?.();
         }
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, qrFullScreen, onClose]);
+  }, [isOpen, qrFullScreen, onClose, handleCloseQrFullScreen]);
 
   const safeItem = item || {};
   const itemType = safeItem.type || "track";
@@ -285,7 +306,8 @@ export default function GrooveLinkModal({ isOpen, onClose, item }) {
             className="fixed inset-0 bg-black/80 backdrop-blur-md"
           />
 
-          {/* Modal Container */}
+          {/* Modal Container: only rendered when neither full-screen QR nor GrooveCard is open */}
+          {!qrFullScreen && !showGrooveCard && (
           <motion.div
             initial={{ opacity: 0, scale: 0.94, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -446,14 +468,14 @@ export default function GrooveLinkModal({ isOpen, onClose, item }) {
                       <span>Scan to Open GrooveLink</span>
                     </span>
                     <button
-                      onClick={() => setQrFullScreen(true)}
+                      onClick={handleOpenQrFullScreen}
                       className="text-[10px] font-bold text-[var(--theme-accent)] hover:underline uppercase tracking-wider cursor-pointer"
                     >
                       Full Screen
                     </button>
                   </div>
                   <div
-                    onClick={() => setQrFullScreen(true)}
+                    onClick={handleOpenQrFullScreen}
                     className="relative w-44 h-44 p-3 bg-white rounded-2xl border border-gray-200 shadow-md flex items-center justify-center cursor-zoom-in group/qr transition duration-300 hover:scale-[1.02]"
                     title="Click to view full screen"
                   >
@@ -531,9 +553,9 @@ export default function GrooveLinkModal({ isOpen, onClose, item }) {
                 )}
               </div>
 
-              {/* GrooveCard Button */}
+              {/* GrooveCard Button: opens GrooveCard and closes GrooveLink modal */}
               <button
-                onClick={() => setShowGrooveCard(true)}
+                onClick={handleOpenGrooveCard}
                 className="flex-1 min-w-[110px] inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-[var(--theme-accent-bg)] hover:opacity-90 text-[var(--theme-accent-fg)] text-xs font-bold transition-all duration-200 active:scale-95 cursor-pointer shadow-md"
                 title="Create customizable GrooveCard"
               >
@@ -541,54 +563,70 @@ export default function GrooveLinkModal({ isOpen, onClose, item }) {
                 <span>GrooveCard</span>
               </button>
 
-              {/* QR Code Button */}
+              {/* QR Code Button: opens QR code in full screen and closes other modals */}
               <button
-                onClick={() => setShowQR((prev) => !prev)}
-                className={`flex-1 min-w-[100px] inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl border transition-all duration-200 active:scale-95 cursor-pointer shadow-sm text-xs font-bold ${
-                  showQR
-                    ? "bg-[var(--theme-accent)] text-[var(--theme-bg)] border-[var(--theme-accent)]"
-                    : "border-[var(--theme-border)] bg-[var(--theme-card)] hover:border-[var(--theme-accent)] text-[var(--theme-fg)]"
-                }`}
-                title="Toggle QR Code preview"
+                onClick={handleOpenQrFullScreen}
+                className="flex-1 min-w-[100px] inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-card)] hover:border-[var(--theme-accent)] text-[var(--theme-fg)] transition-all duration-200 active:scale-95 cursor-pointer shadow-sm text-xs font-bold"
+                title="View QR Code in full screen"
               >
                 <QrCode size={15} />
                 <span>QR Code</span>
               </button>
             </div>
           </motion.div>
+          )}
 
-          {/* Full-screen QR Modal */}
+          {/* Full-screen QR Modal: Shown exclusively and other modals are closed */}
           {qrFullScreen && (
             <div
-              className="fixed inset-0 bg-black/90 backdrop-blur-md z-[600] flex flex-col items-center justify-center p-6 animate-fade-in"
-              onClick={() => setQrFullScreen(false)}
+              className="fixed inset-0 bg-black/95 backdrop-blur-xl z-[600] flex flex-col items-center justify-center p-4 sm:p-6 animate-fade-in"
+              onClick={handleCloseQrFullScreen}
             >
               <div
-                className="max-w-md w-full flex flex-col items-center gap-6"
+                className="max-w-md w-full flex flex-col items-center gap-5 sm:gap-6 bg-[var(--theme-card)]/90 border border-[var(--theme-border)] p-6 sm:p-8 rounded-3xl shadow-2xl backdrop-blur-2xl"
                 onClick={(e) => e.stopPropagation()}
               >
-                <h3 className="text-lg font-bold text-white uppercase tracking-widest font-display">
-                  Scan to Share {itemType}
-                </h3>
-                <div className="relative w-64 h-64 sm:w-80 sm:h-80 p-4 bg-white rounded-3xl shadow-2xl flex items-center justify-center">
+                <div className="flex items-center justify-between w-full">
+                  <h3 className="text-base sm:text-lg font-bold text-white uppercase tracking-widest font-display">
+                    Scan to Share {itemType}
+                  </h3>
+                  <button
+                    onClick={handleCloseQrFullScreen}
+                    className="p-1.5 rounded-full bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] text-[var(--theme-muted)] hover:text-white transition cursor-pointer border border-[var(--theme-border)]"
+                    title="Close full screen QR"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+                <div className="relative w-60 h-60 sm:w-72 sm:h-72 p-3 bg-white rounded-2xl shadow-xl flex items-center justify-center">
                   <img src={qrCodeUrl} alt="QR Code" className="w-full h-full object-contain rounded-xl" />
-                  <div className="absolute w-14 h-14 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-xl p-2">
+                  <div className="absolute w-12 h-12 sm:w-14 sm:h-14 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-lg p-2">
                     <img src="/in.svg" alt="Groove Logo" className="w-full h-full object-contain" />
                   </div>
                 </div>
-                <p className="text-xs text-zinc-400 text-center max-w-[280px]">
-                  Scan with your phone's camera to open this {itemType} on your preferred streaming service.
+                <p className="text-xs text-[var(--theme-muted)] text-center max-w-[280px]">
+                  Scan with your phone&apos;s camera to open this {itemType} directly on your preferred streaming service.
                 </p>
-                <div className="flex gap-3">
+                <div className="flex gap-3 w-full justify-center">
                   <button
                     onClick={handleCopyLink}
-                    className="px-5 py-2.5 rounded-xl border border-white/20 bg-white/10 hover:bg-white/20 text-white text-xs font-bold tracking-wider uppercase transition cursor-pointer"
+                    className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] text-[var(--theme-fg)] text-xs font-bold tracking-wider uppercase transition cursor-pointer"
                   >
-                    Copy Link
+                    {copied ? (
+                      <>
+                        <Check size={14} className="text-[var(--theme-accent)]" />
+                        <span className="text-[var(--theme-accent)]">Copied!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy size={14} />
+                        <span>Copy Link</span>
+                      </>
+                    )}
                   </button>
                   <button
-                    onClick={() => setQrFullScreen(false)}
-                    className="px-6 py-2.5 rounded-xl bg-[var(--theme-accent)] hover:opacity-90 text-[var(--theme-bg)] text-xs font-bold tracking-wider uppercase transition cursor-pointer"
+                    onClick={handleCloseQrFullScreen}
+                    className="flex-1 px-4 py-2.5 rounded-xl bg-[var(--theme-accent)] hover:opacity-90 text-[var(--theme-bg)] text-xs font-bold tracking-wider uppercase transition cursor-pointer text-center"
                   >
                     Close
                   </button>
@@ -597,22 +635,27 @@ export default function GrooveLinkModal({ isOpen, onClose, item }) {
             </div>
           )}
 
-          {/* GrooveCard Composer Modal */}
-          <GrooveCardComposer
-            isOpen={showGrooveCard}
-            onClose={() => setShowGrooveCard(false)}
-            itemId={itemId}
-            title={title}
-            artist={artistsString}
-            imageUrl={coverUrl}
-            popularity={item.popularity || 85}
-            explicit={item.explicit || false}
-            type={itemType}
-            releaseDate={item.releaseDate || item.album?.release_date || (item.releaseYear ? String(item.releaseYear) : null)}
-            releaseYear={item.releaseYear}
-            album={item.album?.name || item.album || (itemType === "album" ? title : "")}
-            genres={item.genres || []}
-          />
+          {/* Fallback GrooveCard Composer Modal */}
+          {showGrooveCard && (
+            <GrooveCardComposer
+              isOpen={showGrooveCard}
+              onClose={() => {
+                setShowGrooveCard(false);
+                onClose?.();
+              }}
+              itemId={itemId}
+              title={title}
+              artist={artistsString}
+              imageUrl={coverUrl}
+              popularity={item.popularity || 85}
+              explicit={item.explicit || false}
+              type={itemType}
+              releaseDate={item.releaseDate || item.album?.release_date || (item.releaseYear ? String(item.releaseYear) : null)}
+              releaseYear={item.releaseYear}
+              album={item.album?.name || item.album || (itemType === "album" ? title : "")}
+              genres={item.genres || []}
+            />
+          )}
         </div>
       )}
     </AnimatePresence>,

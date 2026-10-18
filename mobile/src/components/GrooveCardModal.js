@@ -141,7 +141,7 @@ export default function GrooveCardModal({
             </TouchableOpacity>
           </View>
 
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+          <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
             {/* The Live GrooveCard (Apple Music inspired) wrapped in capture container */}
             <View style={styles.cardPreviewWrapper}>
               <View ref={cardRef} collapsable={false} style={styles.cardCaptureBox}>

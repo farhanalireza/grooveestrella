@@ -9,7 +9,7 @@ import {
   Sun, Moon, Palette
 } from 'lucide-react';
 import Link from 'next/link';
-import { toast } from 'react-toastify';
+import { toast } from '@/lib/toast';
 import { useTheme } from '@/contexts/ThemeContext';
 
 export default function SettingsPage() {
@@ -26,6 +26,14 @@ export default function SettingsPage() {
   const handleSelectTheme = (mode) => {
     setTheme(mode);
     toast.success(`${mode === 'dark' ? 'Dark' : 'Light'} theme activated`);
+  };
+
+  const handleBack = () => {
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+    } else {
+      router.push("/");
+    }
   };
 
   const platforms = [
@@ -116,8 +124,9 @@ export default function SettingsPage() {
         {/* Settings Header */}
         <div className="flex items-center gap-3 border-b border-[var(--theme-border)] pb-6">
           <button 
-            onClick={() => router.push("/")}
+            onClick={handleBack}
             className="p-2 rounded-full bg-[var(--theme-card)] border border-[var(--theme-border)] text-[var(--theme-muted)] hover:text-[var(--theme-fg)] transition cursor-pointer shadow-sm"
+            title="Go Back"
           >
             <ArrowLeft className="w-4 h-4" />
           </button>
