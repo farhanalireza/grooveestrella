@@ -4,9 +4,11 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Music, Disc, Users, Heart, FolderHeart, Trash2, ArrowRight, Library, BarChart2, Plus } from 'lucide-react';
+import { Music, Disc, Users, Heart, FolderHeart, Trash2, ArrowRight, Library, BarChart2, Plus, UploadCloud } from 'lucide-react';
 import { SmallTrackCardWithCover } from '@/Components/CardComponents/SmallTracksCard';
-import { toast } from 'react-toastify';
+import { toast } from '@/lib/toast';
+import ImportPlaylistModal from '@/Components/ImportPlaylistModal';
+import PlaylistCover from '@/Components/PlaylistCover';
 
 export default function LibraryPage() {
   const router = useRouter();
@@ -17,6 +19,7 @@ export default function LibraryPage() {
   const [playlists, setPlaylists] = useState([]);
   const [customPlaylists, setCustomPlaylists] = useState([]);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [newPlName, setNewPlName] = useState('');
   const [newPlDesc, setNewPlDesc] = useState('');
 
@@ -242,16 +245,26 @@ export default function LibraryPage() {
 
         {activeTab === 'playlists' && (
           <div className="space-y-10">
-            {/* Header / Create button */}
-            <div className="flex justify-between items-center pb-2 border-b border-[var(--theme-border)]">
+            {/* Header / Create and Import buttons */}
+            <div className="flex flex-wrap items-center justify-between gap-3 pb-2 border-b border-[var(--theme-border)]">
               <h2 className="text-lg font-bold text-[var(--theme-fg)]">Playlists & Collections</h2>
-              <button
-                onClick={() => setIsCreateModalOpen(true)}
-                className="flex items-center gap-2 px-5 py-2 bg-[var(--theme-accent-bg)] hover:opacity-90 text-[var(--theme-accent-fg)] font-extrabold text-xs md:text-sm rounded-full transition hover:scale-105 active:scale-95 shadow-md cursor-pointer"
-              >
-                <Plus size={14} />
-                Create Playlist
-              </button>
+              <div className="flex items-center gap-2.5">
+                <button
+                  onClick={() => setIsImportModalOpen(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-[var(--theme-surface)] hover:bg-[var(--theme-surface)]/80 text-[var(--theme-fg)] border border-[var(--theme-border)] font-bold text-xs md:text-sm rounded-full transition hover:scale-105 active:scale-95 shadow-sm cursor-pointer"
+                  title="Import playlist from .m3u, .m3u8, .cue, .txt, or .json file"
+                >
+                  <UploadCloud size={15} />
+                  Import Playlist
+                </button>
+                <button
+                  onClick={() => setIsCreateModalOpen(true)}
+                  className="flex items-center gap-2 px-5 py-2 bg-[var(--theme-accent-bg)] hover:opacity-90 text-[var(--theme-accent-fg)] font-extrabold text-xs md:text-sm rounded-full transition hover:scale-105 active:scale-95 shadow-md cursor-pointer"
+                >
+                  <Plus size={14} />
+                  Create Playlist
+                </button>
+              </div>
             </div>
 
             {customPlaylists.length === 0 && playlists.length === 0 ? (
@@ -266,9 +279,17 @@ export default function LibraryPage() {
                       {customPlaylists.map((pl, index) => (
                         <div key={pl.id || index} className="group bg-[var(--theme-card)]/80 border border-[var(--theme-border)] hover:border-[var(--theme-accent)]/40 hover:bg-[var(--theme-card)] rounded-3xl p-4 relative transition duration-300 flex flex-col justify-between shadow-md">
                           <div className="cursor-pointer" onClick={() => router.push(`/playlist/${pl.id}`)}>
-                            <img src={pl.image || 'https://placehold.co/150x150?text=Playlist'} alt={pl.name} className="w-full aspect-square object-cover rounded-2xl mb-4" />
+                            <div className="w-full aspect-square rounded-2xl mb-4 overflow-hidden shadow-sm">
+                              <PlaylistCover 
+                                tracks={pl.tracks?.items || []} 
+                                name={pl.name} 
+                                defaultCover={pl.image} 
+                              />
+                            </div>
                             <h3 className="font-bold text-sm truncate text-[var(--theme-fg)] group-hover:text-[var(--theme-accent)] transition">{pl.name}</h3>
-                            <p className="text-xs text-[var(--theme-muted)] truncate mb-4">Custom Playlist</p>
+                            <p className="text-xs text-[var(--theme-muted)] truncate mb-4">
+                              {pl.tracks?.total || pl.tracks?.items?.length || 0} songs · Custom
+                            </p>
                           </div>
                           <div className="flex justify-between items-center mt-2 pt-2 border-t border-[var(--theme-border)]">
                             <button
@@ -397,6 +418,15 @@ export default function LibraryPage() {
           </div>
         </div>
       )}
+
+      {/* Import Playlist Modal */}
+      <ImportPlaylistModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        onPlaylistImported={(imported) => {
+          setCustomPlaylists((prev) => [imported, ...prev]);
+        }}
+      />
     </div>
   );
 }

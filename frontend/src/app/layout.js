@@ -2,8 +2,7 @@ import "./globals.css";
 import { Providers } from "./providers";
 import AppLayout from "./AppLayout";
 import { Space_Grotesk, Inter } from "next/font/google";
-import { ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import LiquidToastContainer from "@/Components/LiquidToastContainer";
 
 const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
@@ -43,18 +42,7 @@ export default function RootLayout({ children }) {
         <Providers>
           <AppLayout>{children}</AppLayout>
         </Providers>
-        <ToastContainer
-          position="bottom-right"
-          autoClose={2500}
-          hideProgressBar={false}
-          newestOnTop={false}
-          closeOnClick
-          rtl={false}
-          pauseOnFocusLoss
-          draggable
-          pauseOnHover
-          theme="dark"
-        />
+        <LiquidToastContainer />
       </body>
     </html>
   );

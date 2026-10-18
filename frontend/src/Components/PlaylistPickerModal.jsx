@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Plus, ListMusic, ChevronRight, FolderHeart } from 'lucide-react';
-import { toast } from 'react-toastify';
+import { toast } from '@/lib/toast';
 
 export default function PlaylistPickerModal() {
   const [isOpen, setIsOpen] = useState(false);
@@ -37,8 +37,48 @@ export default function PlaylistPickerModal() {
     setNewPlaylistDesc('');
   };
 
+  const extractTrackData = (raw) => {
+    if (!raw) return null;
+    const realId = raw.id || raw.trackId || raw.trackID || 
+      (raw.trackURI && typeof raw.trackURI === 'string' && raw.trackURI.split(':')[2]) || 
+      (raw.uri && typeof raw.uri === 'string' && raw.uri.split(':')[2]) || 
+      '';
+    const title = raw.name || raw.title || 'Untitled Track';
+    const artists = Array.isArray(raw.artists)
+      ? raw.artists
+      : Array.isArray(raw.artist)
+      ? raw.artist
+      : [{ name: raw.artist || 'Unknown Artist' }];
+    const coverUrl = raw.album?.images?.[0]?.url || raw.image || raw.coverArt || raw.imageUrl || '';
+    const albumName = raw.album?.name || (typeof raw.album === 'string' ? raw.album : '') || '';
+    const duration = raw.duration_ms || raw.durationMs || raw.duration || 180000;
+    const spoURL = raw.external_urls?.spotify || raw.spoURL || '';
+    const YTURL = raw.YTURL || '';
+    const explicit = Boolean(raw.explicit);
+
+    return {
+      id: realId,
+      name: title,
+      title: title,
+      artists: artists,
+      duration_ms: duration,
+      album: {
+        id: raw.album?.id || '',
+        name: albumName,
+        images: coverUrl ? [{ url: coverUrl }] : []
+      },
+      image: coverUrl,
+      external_urls: { spotify: spoURL },
+      spoURL: spoURL,
+      YTURL: YTURL,
+      explicit: explicit
+    };
+  };
+
   const handleAddToPlaylist = (playlistId) => {
     if (!track) return;
+    const cleanTrack = extractTrackData(track);
+    if (!cleanTrack) return;
     
     const playlists = JSON.parse(localStorage.getItem('customPlaylists') || '[]');
     const playlistIndex = playlists.findIndex(p => p.id === playlistId);
@@ -53,11 +93,11 @@ export default function PlaylistPickerModal() {
     
     // Check if track already exists in the playlist
     const exists = playlist.tracks.items.some(
-      item => item.track?.id === track.trackId || item.track?.external_urls?.spotify === track.spoURL
+      item => (cleanTrack.id && item.track?.id === cleanTrack.id) || (cleanTrack.spoURL && item.track?.external_urls?.spotify === cleanTrack.spoURL)
     );
     
     if (exists) {
-      toast.info(`"${track.title}" is already in "${playlist.name}".`);
+      toast.info(`"${cleanTrack.title}" is already in "${playlist.name}".`);
       handleClose();
       return;
     }
@@ -65,39 +105,30 @@ export default function PlaylistPickerModal() {
     // Construct the new track item in standard format
     const newTrackItem = {
       added_at: new Date().toISOString(),
-      track: {
-        id: track.trackId || `local-${Date.now()}`,
-        name: track.title,
-        artists: Array.isArray(track.artist) ? track.artist : [{ name: track.artist }],
-        external_urls: { spotify: track.spoURL || '' },
-        album: {
-          images: track.image ? [{ url: track.image }] : []
-        }
-      }
+      track: cleanTrack
     };
     
     playlist.tracks.items.push(newTrackItem);
     playlist.tracks.total = playlist.tracks.items.length;
     
-    // Auto-update playlist cover image if it was a placeholder or empty
-    const isPlaceholder = !playlist.image || 
-                          playlist.image.includes('placeholder') || 
-                          playlist.image.includes('placehold.co');
-    if (isPlaceholder && track.image) {
-      playlist.image = track.image;
-      playlist.images = [{ url: track.image }];
+    // Auto-update playlist cover image
+    if (cleanTrack.image) {
+      playlist.image = cleanTrack.image;
+      playlist.images = [{ url: cleanTrack.image }];
     }
     
     playlists[playlistIndex] = playlist;
     localStorage.setItem('customPlaylists', JSON.stringify(playlists));
     
-    toast.success(`Added "${track.title}" to "${playlist.name}"! 🎵`);
+    toast.success(`Added "${cleanTrack.title}" to "${playlist.name}"! 🎵`);
     handleClose();
   };
 
   const handleCreateAndAdd = (e) => {
     e.preventDefault();
     if (!newPlaylistName.trim() || !track) return;
+    const cleanTrack = extractTrackData(track);
+    if (!cleanTrack) return;
     
     const playlists = JSON.parse(localStorage.getItem('customPlaylists') || '[]');
     
@@ -109,23 +140,15 @@ export default function PlaylistPickerModal() {
       name: newPlaylistName.trim(),
       title: newPlaylistName.trim(),
       description: newPlaylistDesc.trim() || 'Custom playlist created on GrooveEstrella.',
-      image: track.image || 'https://placehold.co/150x150?text=Custom+Playlist',
-      images: [{ url: track.image || 'https://placehold.co/150x150?text=Custom+Playlist' }],
+      image: cleanTrack.image || '',
+      images: cleanTrack.image ? [{ url: cleanTrack.image }] : [],
       owner: { display_name: userName },
       tracks: {
         total: 1,
         items: [
           {
             added_at: new Date().toISOString(),
-            track: {
-              id: track.trackId || `local-${Date.now()}`,
-              name: track.title,
-              artists: Array.isArray(track.artist) ? track.artist : [{ name: track.artist }],
-              external_urls: { spotify: track.spoURL || '' },
-              album: {
-                images: track.image ? [{ url: track.image }] : []
-              }
-            }
+            track: cleanTrack
           }
         ]
       }
@@ -134,7 +157,7 @@ export default function PlaylistPickerModal() {
     playlists.push(newPlaylist);
     localStorage.setItem('customPlaylists', JSON.stringify(playlists));
     
-    toast.success(`Created "${newPlaylist.name}" and added "${track.title}"! 🎉`);
+    toast.success(`Created "${newPlaylist.name}" and added "${cleanTrack.title}"! 🎉`);
     handleClose();
   };
 

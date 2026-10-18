@@ -4,7 +4,7 @@ import { Bookmark, BookmarkCheck, User, ListMusic } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ShareTrackComponent } from "./ShareTrackComponent";
-import { toast } from "react-toastify";
+import { toast } from "@/lib/toast";
 
 export const PlaylistCard = ({
   url,

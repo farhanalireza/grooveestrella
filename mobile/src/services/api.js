@@ -3,7 +3,6 @@ import axios from 'axios';
 
 const MUSICBRAINZ_BASE = 'https://musicbrainz.org/ws/2';
 const USER_AGENT = 'GrooveEstrella/2.0 ( https://github.com/farhanalireza/grooveestrella )';
-const ITUNES_SEARCH_URL = 'https://itunes.apple.com/search';
 
 // In-memory cache for fast snappy performance and to respect rate limits
 const memoryCache = new Map();
@@ -92,32 +91,17 @@ export async function resolveOpenArtwork(title, artist = '', rgId = null, relId 
     return caa;
   }
 
-  // 2. Try iTunes Store API (Ultra-fast Apple CDN, 600x600 crisp artwork) with STRICT artist validation
+  // 2. Try Deezer public API
   try {
-    const itunesRes = await axios.get(ITUNES_SEARCH_URL, {
-      params: {
-        term: query || cleanTitle,
-        entity: rgId ? 'album' : 'song',
-        limit: 5,
-      },
-      timeout: 3500,
+    const deezerRes = await axios.get('https://api.deezer.com/search', {
+      params: { q: query || cleanTitle, limit: 1 },
+      timeout: 3000,
     });
-    const results = itunesRes.data?.results || [];
-    let matchedItem = null;
-    if (cleanArtist) {
-      matchedItem = results.find((r) => {
-        const itemArt = (r.artistName || '').toLowerCase();
-        const tgtArt = cleanArtist.toLowerCase();
-        return itemArt.includes(tgtArt) || tgtArt.includes(itemArt);
-      });
-    } else {
-      matchedItem = results[0];
-    }
-
-    if (matchedItem?.artworkUrl100) {
-      const highRes = matchedItem.artworkUrl100.replace('100x100bb.jpg', '600x600bb.jpg').replace('100x100bb', '600x600bb');
-      setCached(cacheKey, highRes);
-      return highRes;
+    const item = deezerRes.data?.data?.[0];
+    if (item?.album?.cover_xl || item?.album?.cover_big || item?.album?.cover_medium) {
+      const deezerCover = item.album.cover_xl || item.album.cover_big || item.album.cover_medium;
+      setCached(cacheKey, deezerCover);
+      return deezerCover;
     }
   } catch (_) {}
 
@@ -128,7 +112,7 @@ export async function resolveOpenArtwork(title, artist = '', rgId = null, relId 
 }
 
 /**
- * Resolves authentic verified artist / band portraits from Deezer CDN (1000x1000) -> iTunes -> Wikipedia
+ * Resolves authentic verified artist / band portraits from Deezer CDN (1000x1000) -> Wikipedia (NO iTunes)
  */
 export async function resolveArtistImage(artistName, mbid = null) {
   const cleanArtist = (artistName || '').trim();
@@ -152,23 +136,7 @@ export async function resolveArtistImage(artistName, mbid = null) {
     }
   } catch (_) {}
 
-  // 2. iTunes artist visual search
-  try {
-    const itRes = await axios.get(ITUNES_SEARCH_URL, {
-      params: { term: cleanArtist, entity: 'album', limit: 2 },
-      timeout: 2500,
-    });
-    const match = itRes.data?.results?.find((r) =>
-      (r.artistName || '').toLowerCase().includes(cleanArtist.toLowerCase())
-    );
-    if (match?.artworkUrl100) {
-      const highRes = match.artworkUrl100.replace('100x100bb.jpg', '600x600bb.jpg').replace('100x100bb', '600x600bb');
-      setCached(cacheKey, highRes);
-      return highRes;
-    }
-  } catch (_) {}
-
-  // 3. Wikipedia summary candidate search
+  // 2. Wikipedia summary candidate search
   const candidates = [cleanArtist, `${cleanArtist} (band)`, `${cleanArtist} (musician)`];
   for (const cand of candidates) {
     try {
@@ -277,19 +245,7 @@ export const searchCatalog = async (query = '', type = 'track', limit = 20) => {
     // ALBUM SEARCH
     // -------------------------------------------------------------
     if (type === 'album') {
-      // 1. Fast popular resolver via iTunes (provides authentic mainstream ranking for classic albums)
-      let popularHit = null;
-      try {
-        const itRes = await axios.get(ITUNES_SEARCH_URL, {
-          params: { term: cleanQuery, entity: 'album', limit: 2 },
-          timeout: 2500,
-        });
-        if (itRes.data?.results?.[0]) {
-          popularHit = itRes.data.results[0];
-        }
-      } catch (_) {}
-
-      // 2. Query MusicBrainz release-groups with Lucene phrase boost
+      // Query MusicBrainz release-groups with Lucene phrase boost
       const albumLuceneQuery = cleanQuery.includes(' ')
         ? `releasegroup:"${cleanQuery}"^4 OR "${cleanQuery}"^2 OR (${cleanQuery})`
         : cleanQuery;
@@ -300,26 +256,6 @@ export const searchCatalog = async (query = '', type = 'track', limit = 20) => {
       });
 
       let releaseGroups = mbRes.data?.['release-groups'] || [];
-
-      // If popular hit exists, find its authentic MusicBrainz release-group and promote to top
-      if (popularHit && popularHit.collectionName) {
-        const cleanPopAlbum = popularHit.collectionName.replace(/\s*\(.*?\)\s*/g, '').replace(/\[.*?\]/g, '').replace(/remaster(ed)?/i, '').trim();
-        const cleanPopArtist = (popularHit.artistName || '').trim();
-
-        try {
-          const specificRes = await rateLimitedGet(`${MUSICBRAINZ_BASE}/release-group/`, {
-            query: `releasegroup:"${cleanPopAlbum}" AND artist:"${cleanPopArtist}"`,
-            limit: 2,
-          });
-          const specificRgs = specificRes.data?.['release-groups'] || [];
-          if (specificRgs.length > 0) {
-            const canonicalRg = specificRgs[0];
-            // Remove any duplicate if present and prepend at index 0
-            const filteredRgs = releaseGroups.filter((rg) => rg.id !== canonicalRg.id);
-            releaseGroups = [canonicalRg, ...filteredRgs];
-          }
-        } catch (_) {}
-      }
 
       const results = await Promise.all(
         releaseGroups.slice(0, limit).map(async (rg) => {
@@ -365,38 +301,12 @@ export const searchCatalog = async (query = '', type = 'track', limit = 20) => {
     // ARTIST SEARCH
     // -------------------------------------------------------------
     if (type === 'artist') {
-      let popularHit = null;
-      try {
-        const itRes = await axios.get(ITUNES_SEARCH_URL, {
-          params: { term: cleanQuery, entity: 'musicArtist', limit: 2 },
-          timeout: 2500,
-        });
-        if (itRes.data?.results?.[0]) {
-          popularHit = itRes.data.results[0];
-        }
-      } catch (_) {}
-
       const response = await rateLimitedGet(`${MUSICBRAINZ_BASE}/artist/`, {
         query: cleanQuery,
         limit: limit,
       });
 
       let artists = response.data?.artists || [];
-
-      if (popularHit && popularHit.artistName) {
-        try {
-          const specificRes = await rateLimitedGet(`${MUSICBRAINZ_BASE}/artist/`, {
-            query: `artist:"${popularHit.artistName}"`,
-            limit: 2,
-          });
-          const specificArts = specificRes.data?.['artists'] || [];
-          if (specificArts.length > 0) {
-            const canonicalArt = specificArts[0];
-            const filteredArts = artists.filter((a) => a.id !== canonicalArt.id);
-            artists = [canonicalArt, ...filteredArts];
-          }
-        } catch (_) {}
-      }
 
       const results = await Promise.all(
         artists.slice(0, limit).map(async (art) => {
@@ -430,17 +340,6 @@ export const searchCatalog = async (query = '', type = 'track', limit = 20) => {
     // -------------------------------------------------------------
     // TRACK SEARCH (Default)
     // -------------------------------------------------------------
-    let popularHit = null;
-    try {
-      const itRes = await axios.get(ITUNES_SEARCH_URL, {
-        params: { term: cleanQuery, entity: 'song', limit: 2 },
-        timeout: 2500,
-      });
-      if (itRes.data?.results?.[0]) {
-        popularHit = itRes.data.results[0];
-      }
-    } catch (_) {}
-
     const trackLuceneQuery = cleanQuery.includes(' ')
       ? `recording:"${cleanQuery}"^4 OR "${cleanQuery}"^2 OR (${cleanQuery})`
       : cleanQuery;
@@ -451,24 +350,6 @@ export const searchCatalog = async (query = '', type = 'track', limit = 20) => {
     });
 
     let recordings = response.data?.recordings || [];
-
-    if (popularHit && popularHit.trackName) {
-      const cleanTrack = popularHit.trackName.replace(/\s*\(.*?\)\s*/g, '').trim();
-      const cleanArtist = (popularHit.artistName || '').trim();
-
-      try {
-        const specificRes = await rateLimitedGet(`${MUSICBRAINZ_BASE}/recording/`, {
-          query: `recording:"${cleanTrack}" AND artist:"${cleanArtist}"`,
-          limit: 2,
-        });
-        const specificRecs = specificRes.data?.['recordings'] || [];
-        if (specificRecs.length > 0) {
-          const canonicalRec = specificRecs[0];
-          const filteredRecs = recordings.filter((r) => r.id !== canonicalRec.id);
-          recordings = [canonicalRec, ...filteredRecs];
-        }
-      } catch (_) {}
-    }
     const results = await Promise.all(
       recordings.slice(0, limit).map(async (rec) => {
         const artistCredit = rec['artist-credit']?.map((a) => a.name).join('') || 'Unknown Artist';

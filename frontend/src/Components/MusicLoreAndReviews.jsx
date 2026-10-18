@@ -6,7 +6,7 @@ import {
   Star, ExternalLink, Tag, BookOpen, MessageSquare, 
   Send, ThumbsUp, Sparkles, CheckCircle2, ChevronDown, ChevronUp, Globe
 } from "lucide-react";
-import { toast } from "react-toastify";
+import { toast } from "@/lib/toast";
 
 export default function MusicLoreAndReviews({
   id,
@@ -39,8 +39,13 @@ export default function MusicLoreAndReviews({
       if (stored && Array.isArray(stored) && stored.length > 0) {
         setReviews(stored);
       } else {
-        // Construct realistic, genre-relevant community reviews
-        const topTag = tags[0] || (type === "artist" ? "Iconic" : "Essential");
+        // Construct realistic, genre-relevant community reviews (reject year tags like #1973 or 1973)
+        const validTag = (tags || []).find((t) => {
+          const raw = typeof t === "string" ? t : (t?.name || "");
+          const clean = raw.trim().toLowerCase();
+          return clean && !clean.includes("#") && !/^\d/.test(clean) && clean.length > 3;
+        });
+        const topTag = validTag || (type === "artist" ? "Iconic music" : "Essential sound");
         const defaultReviews = [
           {
             id: "seed-1",
@@ -95,10 +100,21 @@ export default function MusicLoreAndReviews({
   const averageScore = rating?.value ? Number(rating.value).toFixed(1) : "4.8";
   const votesCount = rating?.votesCount || (rating?.votes_count) || (reviews.length * 14 + 7);
 
-  // Format tags list: prioritize allTags with counts or tags strings
-  const displayTags = (allTags && allTags.length > 0)
+  // Format tags list: prioritize allTags with counts or tags strings, filtering out pure year tags (#1973, 1973)
+  const rawTags = (allTags && allTags.length > 0)
     ? allTags
-    : tags.map(t => ({ name: t, count: 1 }));
+    : (tags || []).map(t => ({ name: t, count: 1 }));
+
+  const displayTags = rawTags.filter(t => {
+    const raw = typeof t === "string" ? t : (t?.name || "");
+    const clean = raw.trim().toLowerCase();
+    if (!clean) return false;
+    // Discard pure year tags and numeric tags
+    if (/^#?\d{2,4}s?$/i.test(clean)) return false;
+    if (clean.includes("#") && /^\d+$/.test(clean.replace(/#/g, ""))) return false;
+    if (/^\d+$/.test(clean)) return false;
+    return true;
+  });
 
   // Separate editorial / review external links
   const reviewLinks = (externalLinks || []).filter(l => l.category === "review");
@@ -122,14 +138,16 @@ export default function MusicLoreAndReviews({
 
           <div className="flex flex-wrap gap-2">
             {displayTags.map((t, idx) => {
-              const name = typeof t === "string" ? t : t.name;
+              const rawName = typeof t === "string" ? t : t.name;
+              const cleanName = (rawName || "").replace(/^#+/, "").trim();
               const count = typeof t === "object" ? t.count : null;
+              if (!cleanName) return null;
               return (
                 <span
                   key={idx}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--theme-surface)] border border-[var(--theme-border)] text-[var(--theme-accent)] hover:border-[var(--theme-accent)] text-xs font-medium transition cursor-default group"
                 >
-                  <span>#{name}</span>
+                  <span>#{cleanName}</span>
                   {count > 1 && (
                     <span className="text-[10px] text-[var(--theme-muted)] bg-[var(--theme-card)] px-1.5 py-0.2 rounded-full">
                       {count}

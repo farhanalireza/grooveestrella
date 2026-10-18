@@ -331,8 +331,8 @@ export default function TrackDetailScreen() {
               </View>
             ) : null}
 
-            {/* "Open in GrooveLink" Pill Button */}
-            <View style={[styles.grooveLinkSection, { borderTopColor: colors.border }]}>
+            {/* "Open GrooveLink" Pill Button */}
+            <View style={styles.grooveLinkSection}>
               <TouchableOpacity
                 style={[
                   styles.grooveLinkBtn,
@@ -348,7 +348,7 @@ export default function TrackDetailScreen() {
                 }}
               >
                 <Ionicons name="link" size={15} color={colors.accent} style={{ marginRight: 6 }} />
-                <Text style={[styles.grooveLinkBtnText, { color: colors.text }]}>Open in GrooveLink</Text>
+                <Text style={[styles.grooveLinkBtnText, { color: colors.text }]}>Open GrooveLink</Text>
                 <Ionicons name="chevron-forward" size={14} color={colors.accent} style={{ marginLeft: 4 }} />
               </TouchableOpacity>
             </View>
@@ -696,12 +696,9 @@ const styles = StyleSheet.create({
     color: '#E8A87C',
   },
   grooveLinkSection: {
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(232, 168, 124, 0.15)',
-    paddingTop: 14,
     width: '100%',
     alignItems: 'center',
-    marginTop: 4,
+    marginTop: 14,
   },
   grooveLinkBtn: {
     flexDirection: 'row',

@@ -4,9 +4,11 @@ import TrackDetailClient from './TrackDetailClient';
 
 export async function generateMetadata({ params }) {
   const { id } = await params;
-  let track = await fetchMusicBrainzTrackServer(id);
-  if (!track) {
-    track = await searchMusicBrainzTrackServer(decodeURIComponent(id));
+  const cleanId = typeof id === 'string' ? id.trim() : '';
+  const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cleanId);
+  let track = isUUID ? await fetchMusicBrainzTrackServer(cleanId) : null;
+  if (!track && cleanId && !cleanId.startsWith('local-')) {
+    track = await searchMusicBrainzTrackServer(decodeURIComponent(cleanId));
   }
 
   if (!track) {
@@ -41,9 +43,11 @@ export async function generateMetadata({ params }) {
 
 export default async function Page({ params }) {
   const { id } = await params;
-  let initialData = await fetchMusicBrainzTrackServer(id);
-  if (!initialData) {
-    initialData = await searchMusicBrainzTrackServer(decodeURIComponent(id));
+  const cleanId = typeof id === 'string' ? id.trim() : '';
+  const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cleanId);
+  let initialData = isUUID ? await fetchMusicBrainzTrackServer(cleanId) : null;
+  if (!initialData && cleanId && !cleanId.startsWith('local-')) {
+    initialData = await searchMusicBrainzTrackServer(decodeURIComponent(cleanId));
   }
 
   return <TrackDetailClient id={id} initialData={initialData} />;

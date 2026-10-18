@@ -1,16 +1,28 @@
 // src/app/track/[id]/TrackDetailClient.jsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Bookmark, BookmarkCheck, Music, Award, Clock, Share2, QrCode, ChevronRight } from "lucide-react";
-import { ShareTrackComponent } from "@/Components/CardComponents/ShareTrackComponent";
+import { 
+    ArrowLeft, 
+    Share2, 
+    Plus, 
+    Check, 
+    Sparkles, 
+    ListPlus, 
+    QrCode, 
+    ChevronRight, 
+    Award, 
+    Clock, 
+    Music 
+} from "lucide-react";
 import GrooveLinkModal from "@/Components/GrooveLinkModal";
+import GrooveCardComposer from "@/Components/GrooveCardComposer";
 import MusicLoreAndReviews from "@/Components/MusicLoreAndReviews";
 import RatingPieChart from "@/Components/RatingPieChart";
 import GrooveLoader from "@/Components/GrooveLoader";
-import { toast } from "react-toastify";
+import { toast } from "@/lib/toast";
 
 export default function TrackDetailClient({ id, initialData }) {
     const router = useRouter();
@@ -22,6 +34,7 @@ export default function TrackDetailClient({ id, initialData }) {
     const [currentUrl, setCurrentUrl] = useState("");
     const [expandedHeroDesc, setExpandedHeroDesc] = useState(false);
     const [isGrooveLinkOpen, setIsGrooveLinkOpen] = useState(false);
+    const [isGrooveCardOpen, setIsGrooveCardOpen] = useState(false);
 
     useEffect(() => {
         if (typeof window !== "undefined") {
@@ -38,16 +51,6 @@ export default function TrackDetailClient({ id, initialData }) {
         window.addEventListener("open-groovelink", handleOpen);
         return () => window.removeEventListener("open-groovelink", handleOpen);
     }, []);
-
-    function msToMmSs(ms) {
-        if (!ms) return "00:00";
-        const totalSeconds = Math.floor(ms / 1000);
-        const minutes = Math.floor(totalSeconds / 60);
-        const seconds = totalSeconds % 60;
-        const paddedMinutes = String(minutes).padStart(2, '0');
-        const paddedSeconds = String(seconds).padStart(2, '0');
-        return `${paddedMinutes}:${paddedSeconds}`;
-    }
 
     useEffect(() => {
         if (!id) return;
@@ -114,6 +117,113 @@ export default function TrackDetailClient({ id, initialData }) {
         fetchTrackData();
     }, [id, track]);
 
+    const handleBack = () => {
+        if (typeof window !== "undefined" && window.history.length > 1) {
+            router.back();
+        } else {
+            router.push("/");
+        }
+    };
+
+    const artistsList = Array.isArray(track?.artists) ? track.artists : [{ name: track?.artist || 'Unknown Artist' }];
+    const coverUrl = track?.album?.images?.[0]?.url || track?.coverArt || track?.url || 'https://placehold.co/600x600/17020B/E8A87C?text=No+Cover';
+    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&color=000000&bgcolor=ffffff&ecc=H&data=${encodeURIComponent(currentUrl)}`;
+
+    const handleNativeShare = async () => {
+        const trackName = track?.name || track?.title || 'Track';
+        const artistsStr = artistsList.map(a => a.name).join(', ');
+        const shareTitle = `${trackName} - ${artistsStr} on GrooveEstrella`;
+        const shareText = `Check out "${trackName}" by ${artistsStr} on GrooveEstrella! 🎵`;
+        const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
+
+        if (typeof navigator !== 'undefined' && navigator.share) {
+            try {
+                await navigator.share({
+                    title: shareTitle,
+                    text: shareText,
+                    url: shareUrl,
+                });
+                return;
+            } catch (err) {
+                if (err.name === 'AbortError') return;
+            }
+        }
+
+        if (typeof navigator !== 'undefined' && navigator.clipboard) {
+            try {
+                await navigator.clipboard.writeText(`${shareTitle}\n${shareUrl}`);
+                toast.success('Track link copied to clipboard! 📋');
+            } catch (_) {
+                toast.info(shareUrl);
+            }
+        } else {
+            toast.info(shareUrl);
+        }
+    };
+
+    const durationMs = track?.duration_ms || track?.durationMs || track?.duration;
+    function formatDuration(ms) {
+        if (!ms) return null;
+        const totalSeconds = Math.floor(ms / 1000);
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
+        return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    }
+    const formattedDuration = formatDuration(durationMs);
+
+    const validGenres = useMemo(() => {
+        const rawList = track?.genres || track?.tags || [];
+        const valid = [];
+        const seen = new Set();
+        for (const t of rawList) {
+            const raw = typeof t === "string" ? t : (t?.name || "");
+            if (!raw) continue;
+            const clean = raw.trim();
+            const lower = clean.toLowerCase();
+            if (lower.includes("#") || /^\d/.test(lower) || /^#?\d{2,4}s?$/i.test(lower) || lower.length < 3) continue;
+            const ignored = new Set([
+                "album", "albums", "ep", "single", "singles", "lp", "cd", "vinyl", "audio",
+                "favorite", "favourites", "favorites", "favourite", "seen live",
+                "owned", "wishlist", "my collection", "all time favorite", "classic"
+            ]);
+            if (ignored.has(lower)) continue;
+            if (!seen.has(lower)) {
+                seen.add(lower);
+                valid.push(clean.split(/[\s-]+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" "));
+            }
+        }
+        return valid;
+    }, [track?.genres, track?.tags]);
+
+    const displayGenre = validGenres.length > 0 ? validGenres[0] : null;
+    const releaseYear = track?.releaseYear || (track?.releaseDate ? new Date(track.releaseDate).getFullYear() : (track?.album?.release_date ? new Date(track.album.release_date).getFullYear() : null));
+
+    const handleAddToPlaylist = () => {
+        if (!track) return;
+        const trackArtists = Array.isArray(track.artists) ? track.artists : [{ name: track.artist || 'Unknown' }];
+        const trackName = track.name || track.title;
+        const trackCover = track.album?.images?.[0]?.url || track.coverArt || track.url;
+
+        window.dispatchEvent(new CustomEvent('open-playlist-picker', {
+            detail: {
+                track: {
+                    id: track.id || id,
+                    name: trackName,
+                    title: trackName,
+                    artists: trackArtists,
+                    duration_ms: durationMs,
+                    album: {
+                        id: track.album?.id,
+                        name: track.album?.name || track.album || '',
+                        images: [{ url: trackCover }]
+                    },
+                    spoURL: track.external_urls?.spotify || track.spoURL,
+                    YTURL: track.YTURL
+                }
+            }
+        }));
+    };
+
     if (error) {
         return (
             <div className="flex flex-col items-center justify-center min-h-screen bg-[var(--theme-bg)] text-[var(--theme-fg)] p-6">
@@ -133,16 +243,12 @@ export default function TrackDetailClient({ id, initialData }) {
 
     if (!track) {
         return (
-            <GrooveLoader fullScreen={true} text="Loading Track..." />
+            <GrooveLoader fullScreen={true} size={72} />
         );
     }
 
-    const artistsList = Array.isArray(track.artists) ? track.artists : [{ name: track.artist || 'Unknown Artist' }];
-    const coverUrl = track.album?.images?.[0]?.url || track.coverArt || track.url || 'https://placehold.co/600x600/17020B/E8A87C?text=No+Cover';
-    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&color=000000&bgcolor=ffffff&ecc=H&data=${encodeURIComponent(currentUrl)}`;
-
     return (
-        <div className="relative min-h-screen bg-[var(--theme-bg)] text-[var(--theme-fg)] p-4 pb-32 sm:p-6 md:pl-20 md:pr-20 lg:pl-40 lg:pr-40 pt-12 overflow-hidden transition-colors duration-300">
+        <div className="relative min-h-screen bg-[var(--theme-bg)] text-[var(--theme-fg)] p-4 pb-32 sm:p-6 md:pl-20 md:pr-20 lg:pl-40 lg:pr-40 pt-5 sm:pt-8 overflow-hidden transition-colors duration-300">
             {/* Full Screen Dynamic Ambient Art-Cover Gradient Backdrop */}
             <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
                 <div 
@@ -155,163 +261,192 @@ export default function TrackDetailClient({ id, initialData }) {
                 />
             </div>
 
-            {/* Back Button */}
-            <button 
-                onClick={() => router.push("/")}
-                className="absolute top-6 left-5 sm:top-8 sm:left-6 lg:left-16 z-20 p-2.5 rounded-full bg-[var(--theme-card)]/90 backdrop-blur-md border border-[var(--theme-border)] text-[var(--theme-fg)] hover:border-[var(--theme-accent)] transition shadow-lg cursor-pointer"
-                title="Back to Home"
-            >
-                <ArrowLeft size={18} />
-            </button>
-
-            {/* Actions overlay */}
-            <div className="absolute top-6 right-5 sm:top-8 sm:right-6 lg:right-16 z-20 flex items-center gap-2.5">
-                <button
-                    onClick={() => setIsGrooveLinkOpen(true)}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-full bg-[var(--theme-card)]/90 backdrop-blur-md border border-[var(--theme-border)] text-[var(--theme-fg)] hover:border-[var(--theme-accent)] hover:text-[var(--theme-accent)] transition-all duration-300 shadow-md cursor-pointer hover:scale-105 active:scale-95 text-xs font-bold"
-                    title="Open GrooveLink"
-                >
-                    <img src="/in.svg" alt="GrooveLink" className="w-4 h-4 object-contain" />
-                    <span className="hidden sm:inline">GrooveLink</span>
-                </button>
-                <button
-                    onClick={() => setShowQR(!showQR)}
-                    className={`p-2.5 rounded-full backdrop-blur-md transition-all duration-300 shadow-md cursor-pointer ${
-                        showQR 
-                            ? "bg-[var(--theme-accent)] text-[var(--theme-bg)] scale-105" 
-                            : "bg-[var(--theme-card)]/90 border border-[var(--theme-border)] text-[var(--theme-fg)] hover:border-[var(--theme-accent)]"
-                    }`}
-                    title="Show QR Code"
-                >
-                    <QrCode size={18} />
-                </button>
-                <ShareTrackComponent 
-                    trackId={track.id} 
-                    artist={artistsList} 
-                    explicit={track.explicit} 
-                    title={track.name || track.title} 
-                    popularity={track.popularity || 80} 
-                    url={coverUrl}
-                    releaseDate={track.releaseDate || track.album?.release_date || (track.releaseYear ? String(track.releaseYear) : null)}
-                    releaseYear={track.releaseYear}
-                    album={track.album?.name || track.album}
-                    genres={track.genres || []}
-                    type="track" 
-                />
+            {/* Top Bar for Mobile (compact pill with blurred bg, back button, logo + wordmark, and share) */}
+            <header className="sm:hidden relative z-20 w-full max-w-xs mx-auto flex items-center justify-between px-2.5 py-1.5 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 shadow-2xl mb-6">
                 <button 
-                    onClick={toggleSave} 
-                    className={`p-2.5 rounded-full backdrop-blur-md transition-all duration-300 shadow-md cursor-pointer ${
-                        saved 
-                            ? "bg-[var(--theme-accent)] text-[var(--theme-bg)] scale-105" 
-                            : "bg-[var(--theme-card)]/90 border border-[var(--theme-border)] text-[var(--theme-fg)] hover:border-[var(--theme-accent)]"
-                    }`}
-                    title={saved ? "Remove Bookmark" : "Bookmark Track"}
+                    onClick={handleBack}
+                    className="w-9 h-9 rounded-full aspect-square shrink-0 bg-white/10 hover:bg-white/20 active:scale-95 text-white flex items-center justify-center transition border border-white/10 cursor-pointer"
+                    title="Go Back"
                 >
-                    {saved ? <BookmarkCheck size={18} /> : <Bookmark size={18} />}
+                    <ArrowLeft size={16} />
                 </button>
-            </div>
 
-            {/* Track Info Glassmorphic Card Container */}
-            <div className="relative z-10 mt-14 sm:mt-6 w-full bg-transparent sm:bg-[var(--theme-card)]/80 sm:backdrop-blur-xl border-0 sm:border border-transparent sm:border-[var(--theme-border)] rounded-none sm:rounded-3xl p-2 sm:p-8 flex flex-col md:flex-row items-center gap-8 sm:gap-12 sm:shadow-2xl mb-12">
-                {/* Vinyl Record Container */}
-                <div className="relative flex-shrink-0 w-48 h-48 sm:w-56 sm:h-56 md:w-64 md:h-64 flex items-center justify-center">
-                    {/* Spinning Vinyl Record Backing */}
-                    <div className="absolute inset-0 rounded-full bg-[var(--theme-card)] border-4 border-[var(--theme-border)] shadow-2xl flex items-center justify-center animate-[spin_15s_linear_infinite] z-0">
-                        <div className="w-[90%] h-[90%] rounded-full border border-[var(--theme-border)] flex items-center justify-center">
-                            <div className="w-[80%] h-[80%] rounded-full border border-[var(--theme-border)] flex items-center justify-center">
-                                <div className="w-[70%] h-[70%] rounded-full border border-[var(--theme-border)]" />
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Artwork Cover Label */}
-                    <div className="relative z-10 w-[55%] h-[55%] rounded-full overflow-hidden shadow-inner ring-4 ring-[var(--theme-border)] bg-[var(--theme-card)] animate-[spin_15s_linear_infinite]">
-                        <img 
-                            src={coverUrl} 
-                            alt={track.name || track.title} 
-                            className="w-full h-full object-cover" 
-                            onError={(e) => { e.currentTarget.src = 'https://placehold.co/400x400/17020B/E8A87C?text=Track'; }}
-                        />
-                    </div>
+                {/* App Logo & Word Mark */}
+                <div 
+                    onClick={() => router.push("/")}
+                    className="flex items-center gap-1.5 px-2 py-1 rounded-full hover:bg-white/10 active:scale-95 transition cursor-pointer select-none"
+                    title="GrooveEstrella Home"
+                >
+                    <img src="/in.svg" alt="GrooveEstrella" className="w-5 h-5 object-contain shrink-0" />
+                    <span className="text-xs font-bold text-white tracking-tight font-display">GrooveEstrella</span>
                 </div>
 
-                {/* Meta details */}
-                <div className="flex-1 min-w-0 text-center md:text-left flex flex-col justify-between">
-                    <div>
-                        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--theme-card)]/80 border border-[var(--theme-border)] text-xs font-bold text-[var(--theme-accent)] uppercase tracking-wider mb-2">
-                            <Music size={13} />
-                            <span>Track Details</span>
-                        </div>
-                        <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold mb-3 leading-tight tracking-tight text-[var(--theme-fg)]">{track.name || track.title}</h1>
-                        <p className="text-base sm:text-lg text-[var(--theme-fg)]/85 mb-2">
-                            {artistsList.map((a, i) => (
-                                <span
-                                    key={`${a.id || 'artist'}-${i}`}
-                                    className="cursor-pointer font-semibold hover:text-[var(--theme-accent)] hover:underline transition"
-                                    onClick={() => a.id && router.push(`/artist/${a.id}`)}
-                                >
-                                    {a.name}{i < artistsList.length - 1 && ', '}
-                                </span>
-                            ))}
-                            {(track.album?.name || track.album) && (
-                                <> • <span 
-                                    className="cursor-pointer font-medium hover:text-[var(--theme-accent)] hover:underline text-[var(--theme-muted)] text-sm"
-                                    onClick={() => track.album?.id && router.push(`/album/${track.album.id}`)}
-                                >
-                                    {track.album?.name || track.album}
-                                </span></>
-                            )}
-                        </p>
-                        <div className="flex justify-center md:justify-start items-center gap-4 text-xs font-medium text-[var(--theme-muted)] mb-4 uppercase tracking-wider flex-wrap">
-                            <div className="flex items-center gap-1">
-                                <Clock size={14} />
-                                <span>{msToMmSs(track.duration_ms || track.durationMs)}</span>
-                            </div>
-                            <span>•</span>
-                            <div className="flex items-center gap-1">
-                                <Award size={14} />
-                                <span>Score: {track.popularity || 85}</span>
-                            </div>
-                        </div>
+                <button 
+                    onClick={handleNativeShare}
+                    className="w-9 h-9 rounded-full aspect-square shrink-0 bg-white/10 hover:bg-white/20 active:scale-95 text-white flex items-center justify-center transition border border-white/10 cursor-pointer"
+                    title="Share Track"
+                >
+                    <Share2 size={16} />
+                </button>
+            </header>
 
-                        {/* Rating Pie Chart (1-5*2, Green: 8-10, Yellow: 5-8, Red: 1-5) */}
-                        <div className="flex items-center justify-center md:justify-start mb-3">
-                            <RatingPieChart rating={track.rating || { value: (track.popularity ? (track.popularity / 20) : 4.5) }} />
-                        </div>
-                    </div>
-                    
-                    {/* Minimized Description before GrooveLink button */}
-                    {track.description && (
-                        <div className="my-3 text-left">
-                            <p className={`text-xs sm:text-sm text-[var(--theme-muted)] leading-relaxed font-body ${!expandedHeroDesc ? "line-clamp-2" : ""}`}>
-                                {track.description}
-                            </p>
-                            {track.description.length > 120 && (
-                                <button
-                                    onClick={() => setExpandedHeroDesc(!expandedHeroDesc)}
-                                    className="mt-1 text-[11px] font-bold text-[var(--theme-accent)] hover:underline transition inline-flex items-center gap-1 cursor-pointer"
-                                >
-                                    <span>{expandedHeroDesc ? "Show less" : "Read full overview"}</span>
-                                </button>
-                            )}
-                        </div>
+            {/* Top Navigation for Desktop / PC (isolated buttons on left and right, no top bar needed) */}
+            <header className="hidden sm:flex relative z-20 w-full items-center justify-between mb-8 px-2 md:px-6">
+                <button 
+                    onClick={handleBack}
+                    className="w-11 h-11 rounded-full aspect-square shrink-0 bg-black/35 hover:bg-black/55 active:scale-95 text-white flex items-center justify-center transition backdrop-blur-md cursor-pointer border border-white/15 shadow-lg"
+                    title="Go Back"
+                >
+                    <ArrowLeft size={18} />
+                </button>
+
+                <button 
+                    onClick={handleNativeShare}
+                    className="w-11 h-11 rounded-full aspect-square shrink-0 bg-black/35 hover:bg-black/55 active:scale-95 text-white flex items-center justify-center transition backdrop-blur-md cursor-pointer border border-white/15 shadow-lg"
+                    title="Share Track"
+                >
+                    <Share2 size={18} />
+                </button>
+            </header>
+
+            {/* Centered Apple Music Style Hero */}
+            <div className="relative z-10 w-full max-w-xl mx-auto flex flex-col items-center text-center px-4 mb-8">
+                {/* Square Track Artwork */}
+                <div className="w-56 h-56 sm:w-64 sm:h-64 md:w-72 md:h-72 aspect-square rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl bg-[var(--theme-surface)] ring-1 ring-white/10 group relative">
+                    <img 
+                        src={coverUrl} 
+                        alt={track.name || track.title} 
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" 
+                        onError={(e) => { e.currentTarget.src = 'https://placehold.co/500x500/17020B/E8A87C?text=Track'; }}
+                    />
+                </div>
+
+                {/* Track Title with Explicit [E] badge */}
+                <div className="mt-5 sm:mt-6 flex items-center justify-center gap-2 flex-wrap">
+                    <h1 className="text-2xl sm:text-3xl md:text-4xl font-black leading-tight text-white tracking-tight">
+                        {track.name || track.title}
+                    </h1>
+                    {track.explicit && (
+                        <span className="inline-flex items-center justify-center w-4 h-4 rounded-[3px] text-[10px] font-bold bg-white/20 text-white/90 shrink-0 select-none">
+                            E
+                        </span>
                     )}
-
-                    {/* GrooveLink & Sharing Actions */}
-                    <div className="border-t border-[var(--theme-border)] pt-4 w-full flex flex-col sm:flex-row items-center justify-center md:justify-start gap-3">
-                        <button 
-                            onClick={() => setIsGrooveLinkOpen(true)}
-                            className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-[var(--theme-border)] bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] text-[var(--theme-fg)] text-xs font-bold uppercase tracking-wider transition-all duration-300 shadow-md cursor-pointer hover:border-[var(--theme-accent)]"
-                        >
-                            <img src="/in.svg" alt="GrooveLink" className="w-4 h-4 object-contain" />
-                            <span>Open in GrooveLink</span>
-                            <ChevronRight className="w-3 h-3 text-[var(--theme-accent)]" />
-                        </button>
-                    </div>
                 </div>
+
+                {/* Clickable Artists */}
+                <div className="mt-1">
+                    {artistsList.map((a, i) => (
+                        <span
+                            key={`${a.id || 'artist'}-${i}`}
+                            className="text-base sm:text-lg font-semibold text-white/90 hover:text-[var(--theme-accent)] transition cursor-pointer"
+                            onClick={() => a.id && router.push(`/artist/${a.id}`)}
+                        >
+                            {a.name}{i < artistsList.length - 1 && ', '}
+                        </span>
+                    ))}
+                </div>
+
+                {/* Clickable Album Name */}
+                {(track.album?.name || track.album) && (
+                    <div className="mt-0.5">
+                        <span 
+                            className="text-xs sm:text-sm text-white/70 hover:text-[var(--theme-accent)] transition cursor-pointer font-medium"
+                            onClick={() => track.album?.id && router.push(`/album/${track.album.id}`)}
+                        >
+                            {track.album?.name || track.album}
+                        </span>
+                    </div>
+                )}
+
+                {/* Subtitle: Genre · Year · Duration */}
+                <p className="text-xs sm:text-sm text-white/60 font-medium mt-1">
+                    {displayGenre ? `${displayGenre} · ` : ""}{releaseYear || "Track"}
+                    {formattedDuration && ` · ${formattedDuration}`}
+                </p>
+
+                {/* Centered Action Controls Row: GrooveCard, Open GrooveLink, Add to Playlist, Bookmark, QR */}
+                <div className="mt-6 flex items-center justify-center gap-3 sm:gap-4 max-w-full flex-wrap">
+                    {/* Create GrooveCard Button */}
+                    <button
+                        onClick={() => setIsGrooveCardOpen(true)}
+                        className="w-12 h-12 rounded-full aspect-square shrink-0 bg-white/10 hover:bg-white/20 active:scale-95 text-white flex items-center justify-center transition-all duration-200 backdrop-blur-md cursor-pointer shadow-lg border border-white/15 group"
+                        title="Create GrooveCard"
+                    >
+                        <Sparkles size={20} className="text-white group-hover:text-[var(--theme-accent)] transition-colors" />
+                    </button>
+
+                    {/* Prominent Open GrooveLink Pill Button */}
+                    <button
+                        onClick={() => setIsGrooveLinkOpen(true)}
+                        className="h-12 px-6 sm:px-8 rounded-full bg-[var(--theme-accent)] hover:opacity-95 active:scale-95 text-[var(--theme-accent-fg)] font-black text-xs sm:text-sm tracking-wide flex items-center justify-center gap-2 transition-all duration-200 shadow-xl cursor-pointer shrink-0 whitespace-nowrap"
+                        title="Open GrooveLink"
+                    >
+                        <img src="/in.svg" alt="GrooveLink" className="w-4 h-4 object-contain brightness-0 invert shrink-0" />
+                        <span className="whitespace-nowrap">Open GrooveLink</span>
+                        <ChevronRight size={15} className="shrink-0" />
+                    </button>
+
+                    {/* Add to Playlist Button */}
+                    <button
+                        onClick={handleAddToPlaylist}
+                        className="w-12 h-12 rounded-full aspect-square shrink-0 bg-white/10 hover:bg-white/20 active:scale-95 text-white flex items-center justify-center transition-all duration-200 backdrop-blur-md cursor-pointer shadow-lg border border-white/15 group"
+                        title="Add to Playlist"
+                    >
+                        <ListPlus size={20} className="text-white group-hover:text-[var(--theme-accent)] transition-colors" />
+                    </button>
+
+                    {/* Bookmark / Library Button */}
+                    <button
+                        onClick={toggleSave}
+                        className="w-12 h-12 rounded-full aspect-square shrink-0 bg-white/10 hover:bg-white/20 active:scale-95 text-white flex items-center justify-center transition-all duration-200 backdrop-blur-md cursor-pointer shadow-lg border border-white/15"
+                        title={saved ? "Remove from Library" : "Add to Library"}
+                    >
+                        {saved ? <Check size={20} className="text-[var(--theme-accent)]" /> : <Plus size={20} />}
+                    </button>
+
+                    {/* QR Code Toggle Button */}
+                    <button
+                        onClick={() => setShowQR(!showQR)}
+                        className={`w-12 h-12 rounded-full aspect-square shrink-0 transition-all duration-200 backdrop-blur-md cursor-pointer shadow-lg border flex items-center justify-center ${
+                            showQR
+                                ? "bg-[var(--theme-accent)] text-[var(--theme-accent-fg)] border-[var(--theme-accent)] scale-105"
+                                : "bg-white/10 hover:bg-white/20 text-white border-white/15"
+                        }`}
+                        title="Toggle QR Code"
+                    >
+                        <QrCode size={19} />
+                    </button>
+                </div>
+
+                {/* Score & Rating Pie Chart */}
+                <div className="mt-5 flex items-center justify-center gap-3">
+                    <div className="px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/15 flex items-center gap-2">
+                        <Award size={14} className="text-[var(--theme-accent)]" />
+                        <span className="text-xs font-bold text-white">Score: {track.popularity || 85}</span>
+                    </div>
+                    <RatingPieChart rating={track.rating || { value: (track.popularity ? (track.popularity / 20) : 4.5) }} />
+                </div>
+
+                {/* Description / Editorial Notes / Lore */}
+                {track.description && (
+                    <div className="mt-6 w-full text-left text-xs sm:text-sm text-white/80 leading-relaxed font-body">
+                        <strong className="font-extrabold text-white mr-1.5">Overview & Lore</strong>
+                        <span className={!expandedHeroDesc ? "line-clamp-2" : ""}>
+                            {track.description}
+                        </span>
+                        {track.description.length > 80 && (
+                            <button
+                                onClick={() => setExpandedHeroDesc(!expandedHeroDesc)}
+                                className="font-black text-white hover:underline uppercase text-xs ml-1 tracking-wider cursor-pointer inline"
+                            >
+                                {expandedHeroDesc ? "LESS" : "MORE"}
+                            </button>
+                        )}
+                    </div>
+                )}
             </div>
 
-            {/* QR Code sharing component */}
+            {/* QR Code Card */}
             {showQR && (
                 <div className="relative z-10 bg-[var(--theme-card)]/80 backdrop-blur-xl border border-[var(--theme-border)] rounded-3xl p-6 flex flex-col items-center gap-4 text-center max-w-sm mx-auto shadow-2xl mb-12 animate-fade-in">
                     <h3 className="text-sm font-bold text-[var(--theme-fg)] uppercase tracking-wider">Scan to Share Track</h3>
@@ -346,11 +481,11 @@ export default function TrackDetailClient({ id, initialData }) {
                             </div>
                         </div>
                         <p className="text-sm text-[var(--theme-muted)] text-center max-w-[280px]">
-                            Scan with your phone's camera to instantly view and share this track card.
+                            Scan with your phone&apos;s camera to instantly view and share this track card.
                         </p>
                         <button
                             onClick={() => setQrFullScreen(false)}
-                            className="px-6 py-2.5 bg-[var(--theme-accent)] hover:opacity-90 text-[var(--theme-bg)] font-bold text-xs uppercase tracking-wider rounded-xl transition cursor-pointer"
+                            className="px-6 py-2.5 bg-[var(--theme-accent)] hover:opacity-90 text-[var(--theme-accent-fg)] font-bold text-xs uppercase tracking-wider rounded-xl transition cursor-pointer"
                         >
                             Close
                         </button>
@@ -358,24 +493,30 @@ export default function TrackDetailClient({ id, initialData }) {
                 </div>
             )}
 
-            {/* Reviews, Descriptions, Lore, All Tags & External Links */}
-            <MusicLoreAndReviews
-                id={track.id || id}
-                type="track"
-                title={track.name || track.title}
-                artist={artistsList.map(a => a.name).join(', ')}
-                description={track.description}
-                tags={track.tags || track.genres || []}
-                allTags={track.allTags || []}
-                rating={track.rating}
-                externalLinks={track.externalLinks || []}
-                totalDurationMs={track.duration_ms || track.durationMs}
-            />
+            {/* Music Lore, Community Reviews, Tags & Deep Catalog Metadata */}
+            <div className="relative z-10 border-t border-[var(--theme-border)] pt-8 mb-12">
+                <MusicLoreAndReviews
+                    id={track.id || id}
+                    type="track"
+                    title={track.name || track.title}
+                    artist={artistsList.map(a => a.name).join(', ')}
+                    description={track.description}
+                    tags={track.tags || track.genres || []}
+                    allTags={track.allTags || []}
+                    rating={track.rating}
+                    externalLinks={track.externalLinks || []}
+                    totalDurationMs={durationMs}
+                />
+            </div>
 
             {/* GrooveLink Modal */}
             <GrooveLinkModal
                 isOpen={isGrooveLinkOpen}
                 onClose={() => setIsGrooveLinkOpen(false)}
+                onOpenGrooveCard={() => {
+                    setIsGrooveLinkOpen(false);
+                    setIsGrooveCardOpen(true);
+                }}
                 item={{
                     id: track.id || id,
                     type: "track",
@@ -389,11 +530,28 @@ export default function TrackDetailClient({ id, initialData }) {
                     releaseYear: track.releaseYear,
                     popularity: track.popularity,
                     explicit: track.explicit,
-                    genres: track.genres || [],
+                    genres: validGenres,
                     externalLinks: track.externalLinks || [],
                     spotifyUrl: track.external_urls?.spotify || track.spoURL,
                     youtubeUrl: track.YTURL
                 }}
+            />
+
+            {/* GrooveCard Composer Modal */}
+            <GrooveCardComposer
+                isOpen={isGrooveCardOpen}
+                onClose={() => setIsGrooveCardOpen(false)}
+                itemId={track.id || id}
+                title={track.name || track.title}
+                artist={artistsList}
+                imageUrl={coverUrl}
+                popularity={track.popularity || 80}
+                explicit={track.explicit}
+                type="track"
+                releaseDate={track.releaseDate || track.album?.release_date || (track.releaseYear ? String(track.releaseYear) : null)}
+                releaseYear={track.releaseYear}
+                album={track.album?.name || track.album}
+                genres={validGenres}
             />
         </div>
     );

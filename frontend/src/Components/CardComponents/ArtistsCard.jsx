@@ -12,7 +12,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "../ui/dropdown-menu";
-import { toast } from "react-toastify";
+import { toast } from "@/lib/toast";
 
 export const ArtistCard = ({
   url,
