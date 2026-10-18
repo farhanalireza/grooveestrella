@@ -36,6 +36,7 @@ import {
   MusicLoreAndReviews,
   GrooveLoader,
   GrooveAppBar,
+  PlaylistPickerModal,
 } from '../../src/components';
 
 function msToMmSs(ms) {
@@ -62,6 +63,7 @@ export default function TrackDetailScreen() {
   const [qrFullScreen, setQrFullScreen] = useState(false);
   const [showGrooveLinkModal, setShowGrooveLinkModal] = useState(false);
   const [showGrooveCardModal, setShowGrooveCardModal] = useState(false);
+  const [showPlaylistPickerModal, setShowPlaylistPickerModal] = useState(false);
 
   // Spinning Vinyl Animation
   const rotation = useSharedValue(0);
@@ -331,8 +333,8 @@ export default function TrackDetailScreen() {
               </View>
             ) : null}
 
-            {/* "Open GrooveLink" Pill Button */}
-            <View style={styles.grooveLinkSection}>
+            {/* Actions: Open GrooveLink and Add to Playlist */}
+            <View style={styles.actionRowContainer}>
               <TouchableOpacity
                 style={[
                   styles.grooveLinkBtn,
@@ -350,6 +352,24 @@ export default function TrackDetailScreen() {
                 <Ionicons name="link" size={15} color={colors.accent} style={{ marginRight: 6 }} />
                 <Text style={[styles.grooveLinkBtnText, { color: colors.text }]}>Open GrooveLink</Text>
                 <Ionicons name="chevron-forward" size={14} color={colors.accent} style={{ marginLeft: 4 }} />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.addToPlaylistBtn,
+                  {
+                    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)',
+                    borderColor: colors.border,
+                  },
+                ]}
+                activeOpacity={0.8}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setShowPlaylistPickerModal(true);
+                }}
+              >
+                <Ionicons name="list" size={15} color={colors.accent} style={{ marginRight: 6 }} />
+                <Text style={[styles.addToPlaylistBtnText, { color: colors.text }]}>Add to Playlist</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -453,6 +473,13 @@ export default function TrackDetailScreen() {
         releaseDate={track?.releaseDate || track?.releaseYear}
         type="track"
         itemId={track?.id || id}
+      />
+
+      {/* Universal Playlist Picker Modal */}
+      <PlaylistPickerModal
+        visible={showPlaylistPickerModal}
+        onClose={() => setShowPlaylistPickerModal(false)}
+        track={track}
       />
     </SafeAreaView>
   );
@@ -700,6 +727,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 14,
   },
+  actionRowContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    marginTop: 14,
+    flexWrap: 'wrap',
+  },
   grooveLinkBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -714,6 +749,20 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '800',
     color: '#F4F7FF',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+  },
+  addToPlaylistBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 9,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  addToPlaylistBtnText: {
+    fontSize: 11,
+    fontWeight: '800',
     letterSpacing: 0.8,
     textTransform: 'uppercase',
   },

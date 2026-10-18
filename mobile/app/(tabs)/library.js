@@ -27,6 +27,7 @@ import TrackCard from '../../src/components/TrackCard';
 import AlbumCard from '../../src/components/AlbumCard';
 import ArtistCard from '../../src/components/ArtistCard';
 import PlaylistCard from '../../src/components/PlaylistCard';
+import ImportPlaylistModal from '../../src/components/ImportPlaylistModal';
 
 const TABS = [
   { id: 'songs', label: 'Songs', icon: 'musical-notes' },
@@ -49,6 +50,9 @@ export default function LibraryScreen() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newPlName, setNewPlName] = useState('');
   const [newPlDesc, setNewPlDesc] = useState('');
+
+  // Import Playlist Modal State
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
   const loadData = useCallback(async () => {
     const [savedS, savedA, savedArt, savedPl, customPl] = await Promise.all([
@@ -186,7 +190,7 @@ export default function LibraryScreen() {
         })}
       </Animated.ScrollView>
 
-      {/* Playlists Create Button Bar */}
+      {/* Playlists Create & Import Button Bar */}
       {activeTab === 'playlists' && (
         <Animated.View entering={FadeIn.duration(300)} style={styles.createPlBar}>
           <Pressable
@@ -194,7 +198,7 @@ export default function LibraryScreen() {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               setIsModalOpen(true);
             }}
-            style={styles.createPlBtn}
+            style={[styles.createPlBtn, { flex: 1 }]}
           >
             <LinearGradient
               colors={['#470B24', '#D4A373']}
@@ -202,9 +206,20 @@ export default function LibraryScreen() {
               end={{ x: 1, y: 0 }}
               style={styles.createPlGradient}
             >
-              <Ionicons name="add" size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
-              <Text style={styles.createPlText}>Create New Playlist</Text>
+              <Ionicons name="add" size={18} color="#FFFFFF" style={{ marginRight: 4 }} />
+              <Text style={styles.createPlText}>Create</Text>
             </LinearGradient>
+          </Pressable>
+
+          <Pressable
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              setIsImportModalOpen(true);
+            }}
+            style={[styles.importPlBtn, { borderColor: colors.border }]}
+          >
+            <Ionicons name="cloud-download-outline" size={17} color={colors.text} style={{ marginRight: 6 }} />
+            <Text style={[styles.importPlText, { color: colors.text }]}>Import File</Text>
           </Pressable>
         </Animated.View>
       )}
@@ -307,18 +322,14 @@ export default function LibraryScreen() {
           data={allPlaylists}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => {
-            const isCustom = item.id?.startsWith('pl-');
+            const isCustom = item.id?.startsWith('custom-') || item.id?.startsWith('pl-');
             return (
               <PlaylistCard
                 playlist={item}
                 isCustom={isCustom}
                 onDelete={isCustom ? () => handleDeleteCustomPlaylist(item.id) : undefined}
                 onPress={() => {
-                  Toast.show({
-                    type: 'info',
-                    text1: item.name || item.title,
-                    text2: `${item.trackCount || 0} tracks in collection`,
-                  });
+                  router.push(`/playlist/${item.id}`);
                 }}
               />
             );
@@ -411,6 +422,16 @@ export default function LibraryScreen() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      {/* Import Playlist File Modal */}
+      <ImportPlaylistModal
+        visible={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        onImportSuccess={(newPl) => {
+          setCustomPlaylists((prev) => [newPl, ...prev]);
+          loadData();
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -479,6 +500,9 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   createPlBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
     marginBottom: 14,
   },
   createPlBtn: {
@@ -496,6 +520,20 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 13,
     fontWeight: '800',
+  },
+  importPlBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    borderWidth: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  importPlText: {
+    fontSize: 13,
+    fontWeight: '700',
   },
   emptyContainer: {
     alignItems: 'center',

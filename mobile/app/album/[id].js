@@ -28,6 +28,7 @@ import {
   MusicLoreAndReviews,
   GrooveLoader,
   GrooveAppBar,
+  PlaylistPickerModal,
 } from '../../src/components';
 
 function formatDuration(ms) {
@@ -65,6 +66,8 @@ export default function AlbumDetailScreen() {
   // Modals state
   const [showGrooveLinkModal, setShowGrooveLinkModal] = useState(false);
   const [showGrooveCardModal, setShowGrooveCardModal] = useState(false);
+  const [showPlaylistPickerModal, setShowPlaylistPickerModal] = useState(false);
+  const [selectedTrackForPlaylist, setSelectedTrackForPlaylist] = useState(null);
   const [modalTrackTarget, setModalTrackTarget] = useState(null);
 
   useEffect(() => {
@@ -164,6 +167,44 @@ export default function AlbumDetailScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setModalTrackTarget(trackItem);
     setShowGrooveLinkModal(true);
+  };
+
+  const openTrackOptions = (trackItem) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const trackName = trackItem.title || trackItem.name || 'Track';
+    Alert.alert(
+      trackName,
+      trackItem.artist || albumArtist,
+      [
+        {
+          text: 'Add to Playlist',
+          onPress: () => {
+            setSelectedTrackForPlaylist({
+              ...trackItem,
+              image: coverUrl,
+              coverArt: coverUrl,
+              album: albumTitle,
+            });
+            setShowPlaylistPickerModal(true);
+          },
+        },
+        {
+          text: 'Open in GrooveLink',
+          onPress: () => {
+            setModalTrackTarget(trackItem);
+            setShowGrooveLinkModal(true);
+          },
+        },
+        {
+          text: 'Share via GrooveCard',
+          onPress: () => {
+            setModalTrackTarget(trackItem);
+            setShowGrooveCardModal(true);
+          },
+        },
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
   };
 
   if (loading) {
@@ -453,7 +494,7 @@ export default function AlbumDetailScreen() {
                 {/* Duration */}
                 <Text style={[styles.trackRowDuration, { color: colors.textSecondary }]}>{trackDur}</Text>
 
-                {/* Quick GrooveLink Button */}
+                {/* Quick Track Options Menu */}
                 <TouchableOpacity
                   style={[
                     styles.trackRowLinkBtn,
@@ -462,10 +503,10 @@ export default function AlbumDetailScreen() {
                   hitSlop={8}
                   onPress={(e) => {
                     e.stopPropagation();
-                    openTrackInGrooveLink(t);
+                    openTrackOptions(t);
                   }}
                 >
-                  <Ionicons name="link-outline" size={16} color={colors.accent} />
+                  <Ionicons name="ellipsis-horizontal" size={16} color={colors.accent} />
                 </TouchableOpacity>
               </TouchableOpacity>
             );
@@ -515,6 +556,16 @@ export default function AlbumDetailScreen() {
         releaseDate={releaseDate}
         type={modalTrackTarget ? 'track' : 'album'}
         itemId={modalTrackTarget ? (modalTrackTarget.id || modalTrackTarget.name) : (albumData?.id || id)}
+      />
+
+      {/* Universal Playlist Picker Modal */}
+      <PlaylistPickerModal
+        visible={showPlaylistPickerModal}
+        onClose={() => {
+          setShowPlaylistPickerModal(false);
+          setSelectedTrackForPlaylist(null);
+        }}
+        track={selectedTrackForPlaylist}
       />
     </SafeAreaView>
   );

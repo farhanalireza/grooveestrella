@@ -13,3 +13,8 @@ export { default as GrooveCardModal } from './GrooveCardModal';
 export { default as MusicLoreAndReviews } from './MusicLoreAndReviews';
 export { default as GrooveAppBar } from './GrooveAppBar';
 export { default as GrooveLogo } from './GrooveLogo';
+export { default as PlaylistCover, extractPlaylistCovers } from './PlaylistCover';
+export { default as PlaylistPickerModal } from './PlaylistPickerModal';
+export { default as AddTrackToPlaylistModal } from './AddTrackToPlaylistModal';
+export { default as ExportPlaylistModal } from './ExportPlaylistModal';
+export { default as ImportPlaylistModal } from './ImportPlaylistModal';

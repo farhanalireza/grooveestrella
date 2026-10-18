@@ -244,6 +244,10 @@ export const removePlaylist = async (id) => {
 
 export const getCustomPlaylists = async () => getJson(STORAGE_KEYS.CUSTOM_PLAYLISTS, []);
 
+export const setCustomPlaylists = async (playlists) => {
+  return await setJson(STORAGE_KEYS.CUSTOM_PLAYLISTS, Array.isArray(playlists) ? playlists : []);
+};
+
 export const createCustomPlaylist = async (name, desc = '') => {
   const playlists = await getCustomPlaylists();
   const newPl = {
@@ -251,7 +255,8 @@ export const createCustomPlaylist = async (name, desc = '') => {
     name: (name || 'New Playlist').trim(),
     title: (name || 'New Playlist').trim(),
     description: desc.trim() || 'Custom playlist created on GroovEstrella.',
-    image: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=400&auto=format&fit=crop&q=80',
+    image: '',
+    images: [],
     tracks: { total: 0, items: [] },
     createdAt: new Date().toISOString(),
   };
@@ -267,6 +272,92 @@ export const removeCustomPlaylist = async (id) => {
   return await setJson(STORAGE_KEYS.CUSTOM_PLAYLISTS, updated);
 };
 export const deletePlaylist = removeCustomPlaylist;
+
+export const getCustomPlaylistById = async (id) => {
+  const playlists = await getCustomPlaylists();
+  return playlists.find((p) => p.id === id) || null;
+};
+
+export const updateCustomPlaylist = async (id, updates) => {
+  const playlists = await getCustomPlaylists();
+  const idx = playlists.findIndex((p) => p.id === id);
+  if (idx === -1) return null;
+  playlists[idx] = { ...playlists[idx], ...updates };
+  await setJson(STORAGE_KEYS.CUSTOM_PLAYLISTS, playlists);
+  return playlists[idx];
+};
+
+export const addTrackToCustomPlaylist = async (playlistId, track) => {
+  const playlists = await getCustomPlaylists();
+  const idx = playlists.findIndex((p) => p.id === playlistId);
+  if (idx === -1) return false;
+  const pl = playlists[idx];
+  pl.tracks = pl.tracks || { total: 0, items: [] };
+  const items = pl.tracks.items || [];
+  
+  const trackId = track.id || track.trackId || track.trackURI;
+  const alreadyExists = items.some((item) => {
+    const t = item?.track || item;
+    return (t.id || t.trackId || t.trackURI) === trackId;
+  });
+  if (alreadyExists) return false;
+
+  const trackItem = {
+    added_at: new Date().toISOString(),
+    track: {
+      id: trackId,
+      name: track.title || track.name || 'Untitled Track',
+      title: track.title || track.name || 'Untitled Track',
+      artists: track.artists || (track.artist ? [{ name: track.artist }] : [{ name: 'Unknown Artist' }]),
+      artist: track.artist || (Array.isArray(track.artists) ? track.artists.map(a => a.name || a).join(', ') : 'Unknown Artist'),
+      album: track.album ? {
+        name: track.album.name || track.album.title || track.album,
+        images: track.album.images || (track.album.coverArt || track.album.image || track.image ? [{ url: track.album.coverArt || track.album.image || track.image }] : [])
+      } : {
+        name: track.albumTitle || 'Unknown Album',
+        images: track.image ? [{ url: track.image }] : []
+      },
+      image: track.image || track.coverArt || '',
+      duration_ms: track.duration_ms || track.duration || 0,
+      external_urls: track.external_urls || {},
+      spoURL: track.spoURL || track.external_urls?.spotify,
+      YTURL: track.YTURL || track.external_urls?.youtube,
+    }
+  };
+
+  items.unshift(trackItem);
+  pl.tracks.items = items;
+  pl.tracks.total = items.length;
+
+  if (!pl.image) {
+    pl.image = trackItem.track.image || (trackItem.track.album?.images?.[0]?.url) || '';
+  }
+  if (!pl.images || pl.images.length === 0) {
+    if (pl.image) pl.images = [{ url: pl.image }];
+  }
+
+  playlists[idx] = pl;
+  await setJson(STORAGE_KEYS.CUSTOM_PLAYLISTS, playlists);
+  return true;
+};
+
+export const removeTrackFromCustomPlaylist = async (playlistId, trackId) => {
+  const playlists = await getCustomPlaylists();
+  const idx = playlists.findIndex((p) => p.id === playlistId);
+  if (idx === -1) return false;
+  const pl = playlists[idx];
+  pl.tracks = pl.tracks || { total: 0, items: [] };
+  const items = (pl.tracks.items || []).filter((item) => {
+    const t = item?.track || item;
+    return (t.id || t.trackId || t.trackURI) !== trackId;
+  });
+  pl.tracks.items = items;
+  pl.tracks.total = items.length;
+
+  playlists[idx] = pl;
+  await setJson(STORAGE_KEYS.CUSTOM_PLAYLISTS, playlists);
+  return true;
+};
 
 // ==========================================
 // User Profile & Preferences
@@ -413,10 +504,15 @@ export const StorageService = {
   savePlaylist,
   removePlaylist,
   getCustomPlaylists,
+  setCustomPlaylists,
   createCustomPlaylist,
   createPlaylist,
   removeCustomPlaylist,
   deletePlaylist,
+  getCustomPlaylistById,
+  updateCustomPlaylist,
+  addTrackToCustomPlaylist,
+  removeTrackFromCustomPlaylist,
   getPreferredPlatform,
   setPreferredPlatform,
   getTheme,

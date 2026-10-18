@@ -29,6 +29,7 @@ import {
   MusicLoreAndReviews,
   GrooveLoader,
   GrooveAppBar,
+  PlaylistPickerModal,
 } from '../../src/components';
 
 function formatFollowers(num) {
@@ -70,6 +71,8 @@ export default function ArtistDetailScreen() {
   // Modals state
   const [showGrooveLinkModal, setShowGrooveLinkModal] = useState(false);
   const [showGrooveCardModal, setShowGrooveCardModal] = useState(false);
+  const [showPlaylistPickerModal, setShowPlaylistPickerModal] = useState(false);
+  const [selectedTrackForPlaylist, setSelectedTrackForPlaylist] = useState(null);
   const [modalItemTarget, setModalItemTarget] = useState(null);
 
   const filteredReleases = React.useMemo(() => {
@@ -153,6 +156,41 @@ export default function ArtistDetailScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setModalItemTarget({ ...item, type });
     setShowGrooveLinkModal(true);
+  };
+
+  const openTrackOptions = (trackItem) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const trackTitle = trackItem.title || trackItem.name || 'Track';
+    Alert.alert(
+      trackTitle,
+      trackItem.artist || artist?.name || 'Artist',
+      [
+        {
+          text: 'Add to Playlist',
+          onPress: () => {
+            setSelectedTrackForPlaylist({
+              ...trackItem,
+              artist: artist?.name || 'Artist',
+            });
+            setShowPlaylistPickerModal(true);
+          },
+        },
+        {
+          text: 'Open in GrooveLink',
+          onPress: () => {
+            openItemInGrooveLink(trackItem, 'track');
+          },
+        },
+        {
+          text: 'Share via GrooveCard',
+          onPress: () => {
+            setModalItemTarget({ ...trackItem, type: 'track' });
+            setShowGrooveCardModal(true);
+          },
+        },
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
   };
 
   if (loading) {
@@ -331,7 +369,7 @@ export default function ArtistDetailScreen() {
                 <TouchableOpacity
                   onPress={() => {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    setShowFullDiscography(true);
+                    router.push(`/artist/${id}/discography`);
                   }}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   style={{ flexDirection: 'row', alignItems: 'center' }}
@@ -412,10 +450,10 @@ export default function ArtistDetailScreen() {
                     hitSlop={8}
                     onPress={(e) => {
                       e.stopPropagation();
-                      openItemInGrooveLink(track, 'track');
+                      openTrackOptions(track);
                     }}
                   >
-                    <Ionicons name="link-outline" size={15} color={colors.accent} />
+                    <Ionicons name="ellipsis-horizontal" size={15} color={colors.accent} />
                   </TouchableOpacity>
                 </TouchableOpacity>
               );
@@ -465,6 +503,16 @@ export default function ArtistDetailScreen() {
         releaseDate=""
         type={modalItemTarget ? modalItemTarget.type : 'artist'}
         itemId={modalItemTarget ? (modalItemTarget.id || modalItemTarget.name) : (artist?.id || id)}
+      />
+
+      {/* Universal Playlist Picker Modal */}
+      <PlaylistPickerModal
+        visible={showPlaylistPickerModal}
+        onClose={() => {
+          setShowPlaylistPickerModal(false);
+          setSelectedTrackForPlaylist(null);
+        }}
+        track={selectedTrackForPlaylist}
       />
 
       {/* Full Discography Grouped & Paged Modal */}

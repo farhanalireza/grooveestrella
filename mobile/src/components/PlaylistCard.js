@@ -7,6 +7,7 @@ import * as Haptics from 'expo-haptics';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { useTheme } from '../context/ThemeContext';
 import { COLORS } from '../constants/theme';
+import PlaylistCover from './PlaylistCover';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -21,7 +22,7 @@ export default function PlaylistCard({
 
   const name = playlist?.name || playlist?.title || 'Groove Playlist';
   const desc = playlist?.description || playlist?.creator || (isCustom ? 'Custom Collection' : 'Curated Mix');
-  const count = playlist?.trackCount ?? playlist?.tracks?.length ?? 0;
+  const count = playlist?.tracks?.total ?? playlist?.tracks?.items?.length ?? playlist?.tracks?.length ?? playlist?.trackCount ?? 0;
 
   const handlePressIn = () => {
     scale.value = withSpring(0.96, { damping: 15, stiffness: 300 });
@@ -34,12 +35,6 @@ export default function PlaylistCard({
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
   }));
-
-  const gradientColors = isCustom
-    ? ['#470B24', '#D4A373']
-    : isDark
-    ? ['#2D0516', '#470B24']
-    : ['#E8C4A0', '#D4A373'];
 
   return (
     <AnimatedPressable
@@ -55,16 +50,12 @@ export default function PlaylistCard({
         animatedStyle,
       ]}
     >
-      <LinearGradient
-        colors={gradientColors}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.artwork}
-      >
-        <Ionicons
-          name={isCustom ? 'list' : 'musical-notes'}
-          size={28}
-          color="#FFFFFF"
+      <View style={styles.artwork}>
+        <PlaylistCover
+          playlist={playlist}
+          tracks={playlist?.tracks?.items || playlist?.tracks}
+          size={110}
+          style={{ width: '100%', height: 110, borderRadius: 12 }}
         />
         <View
           style={[
@@ -78,7 +69,7 @@ export default function PlaylistCard({
         >
           <Text style={[styles.badgeText, { color: colors.text }]}>{count} tracks</Text>
         </View>
-      </LinearGradient>
+      </View>
 
       <View style={styles.info}>
         <View style={{ flex: 1 }}>
