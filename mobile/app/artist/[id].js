@@ -202,14 +202,26 @@ export default function ArtistDetailScreen() {
         {
           text: 'Open in GrooveLink',
           onPress: () => {
-            setModalItemTarget(trackItem);
+            setModalItemTarget({
+              ...trackItem,
+              artist: trackItem.artist || artistName,
+              imageUrl: trackItem.imageUrl || trackItem.coverArt || avatarUrl,
+              coverArt: trackItem.coverArt || avatarUrl,
+              type: 'track',
+            });
             setShowGrooveLinkModal(true);
           },
         },
         {
           text: 'Share via GrooveCard',
           onPress: () => {
-            setModalItemTarget(trackItem);
+            setModalItemTarget({
+              ...trackItem,
+              artist: trackItem.artist || artistName,
+              imageUrl: trackItem.imageUrl || trackItem.coverArt || avatarUrl,
+              coverArt: trackItem.coverArt || avatarUrl,
+              type: 'track',
+            });
             setShowGrooveCardModal(true);
           },
         },
@@ -495,6 +507,10 @@ export default function ArtistDetailScreen() {
         visible={showGrooveLinkModal}
         onClose={() => setShowGrooveLinkModal(false)}
         target={modalItemTarget || { ...artist, type: 'artist' }}
+        onOpenGrooveCard={(item) => {
+          if (item) setModalItemTarget(item);
+          setShowGrooveCardModal(true);
+        }}
       />
 
       {/* GrooveCard Modal */}

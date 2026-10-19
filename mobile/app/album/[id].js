@@ -194,14 +194,30 @@ export default function AlbumDetailScreen() {
         {
           text: 'Open in GrooveLink',
           onPress: () => {
-            setModalTrackTarget(trackItem);
+            setModalTrackTarget({
+              ...trackItem,
+              artist: trackItem.artist || artistName,
+              album: albumTitle,
+              imageUrl: trackItem.imageUrl || coverUrl,
+              coverArt: trackItem.coverArt || coverUrl,
+              releaseDate: albumData?.releaseDate || albumData?.firstReleaseDate || albumData?.releaseYear || '',
+              type: 'track',
+            });
             setShowGrooveLinkModal(true);
           },
         },
         {
           text: 'Share via GrooveCard',
           onPress: () => {
-            setModalTrackTarget(trackItem);
+            setModalTrackTarget({
+              ...trackItem,
+              artist: trackItem.artist || artistName,
+              album: albumTitle,
+              imageUrl: trackItem.imageUrl || coverUrl,
+              coverArt: trackItem.coverArt || coverUrl,
+              releaseDate: albumData?.releaseDate || albumData?.firstReleaseDate || albumData?.releaseYear || '',
+              type: 'track',
+            });
             setShowGrooveCardModal(true);
           },
         },
@@ -718,6 +734,10 @@ export default function AlbumDetailScreen() {
         visible={showGrooveLinkModal}
         onClose={() => setShowGrooveLinkModal(false)}
         target={modalTrackTarget || { ...albumData, type: 'album' }}
+        onOpenGrooveCard={(item) => {
+          if (item) setModalTrackTarget(item);
+          setShowGrooveCardModal(true);
+        }}
       />
 
       {/* GrooveCard Modal */}

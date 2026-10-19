@@ -1,5 +1,5 @@
 // src/components/GrooveCardModal.js
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
   Modal,
   View,
@@ -8,7 +8,6 @@ import {
   TouchableOpacity,
   ScrollView,
   Image,
-  Share,
   Platform,
   ActivityIndicator,
 } from 'react-native';
@@ -44,11 +43,14 @@ const QR_COLORS = [
 export default function GrooveCardModal({
   visible,
   onClose,
+  item = null,
+  target = null,
   title = '',
   artist = '',
   album = '',
   imageUrl = '',
   releaseDate = '',
+  releaseYear = '',
   type = 'track',
   itemId = '',
 }) {
@@ -60,11 +62,93 @@ export default function GrooveCardModal({
   const [showYear, setShowYear] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
   const [qrFullScreen, setQrFullScreen] = useState(false);
+  const [imgError, setImgError] = useState(false);
+
+  // Normalize input item / target across tracks, albums, artists, playlists
+  const t = item?.track || item || target?.track || target || {};
+
+  const effectiveTitle = useMemo(() => {
+    return (t.title || t.name || title || 'Untitled').trim();
+  }, [t, title]);
+
+  const effectiveArtist = useMemo(() => {
+    if (t.artist && typeof t.artist === 'string') return t.artist;
+    if (t.artistLabel && typeof t.artistLabel === 'string') return t.artistLabel;
+    if (Array.isArray(t.artists) && t.artists.length > 0) {
+      return t.artists
+        .map((a) => (typeof a === 'string' ? a : a.name || a.title || ''))
+        .filter(Boolean)
+        .join(', ');
+    }
+    if (Array.isArray(t.artistCredits) && t.artistCredits.length > 0) {
+      return t.artistCredits
+        .map((a) => (typeof a === 'string' ? a : a.name || ''))
+        .filter(Boolean)
+        .join(', ');
+    }
+    if (t.artist && typeof t.artist === 'object' && t.artist.name) return t.artist.name;
+    if (artist && typeof artist === 'string') return artist;
+    return 'Unknown Artist';
+  }, [t, artist]);
+
+  const effectiveAlbum = useMemo(() => {
+    if (typeof t.album === 'string') return t.album;
+    if (t.album && typeof t.album === 'object' && t.album.title) return t.album.title;
+    if (t.album && typeof t.album === 'object' && t.album.name) return t.album.name;
+    if (album && typeof album === 'string') return album;
+    return '';
+  }, [t, album]);
+
+  const effectiveImageUrl = useMemo(() => {
+    return (
+      t.imageUrl ||
+      t.coverUrl ||
+      t.coverArt ||
+      t.image ||
+      t.album?.images?.[0]?.url ||
+      t.images?.[0]?.url ||
+      imageUrl ||
+      ''
+    );
+  }, [t, imageUrl]);
+
+  useEffect(() => {
+    setImgError(false);
+  }, [effectiveImageUrl]);
+
+  const effectiveType = useMemo(() => {
+    return t.type || type || 'track';
+  }, [t, type]);
+
+  const effectiveId = useMemo(() => {
+    return (
+      t.id ||
+      t.itemId ||
+      t.musicbrainzId ||
+      t.trackId ||
+      t.trackURI ||
+      itemId ||
+      ''
+    );
+  }, [t, itemId]);
+
+  const rawDate = useMemo(() => {
+    return (
+      t.releaseDate ||
+      t.firstReleaseDate ||
+      t.date ||
+      t.year ||
+      t.releaseYear ||
+      releaseDate ||
+      releaseYear ||
+      ''
+    );
+  }, [t, releaseDate, releaseYear]);
 
   // Exact UTC Date calculation matching web app GrooveCardComposer
   const displayReleaseDate = useMemo(() => {
-    if (releaseDate) {
-      const raw = String(releaseDate).trim();
+    if (rawDate) {
+      const raw = String(rawDate).trim();
       if (/^\d{4}$/.test(raw)) return raw;
       const parsed = new Date(raw);
       if (!isNaN(parsed.getTime())) {
@@ -82,16 +166,21 @@ export default function GrooveCardModal({
       return raw;
     }
     return null;
-  }, [releaseDate]);
+  }, [rawDate]);
 
-  const activeThemeObj = THEMES.find((t) => t.id === selectedTheme) || THEMES[0];
+  const activeThemeObj = THEMES.find((theme) => theme.id === selectedTheme) || THEMES[0];
 
   // Universal Groove routing link matching web app
-  const universalUrl = itemId
-    ? `https://grooveestrella.com/s/musicbrainz/${type}/${itemId}`
-    : `https://grooveestrella.com/${type}/${encodeURIComponent(title)}`;
+  const universalUrl = useMemo(() => {
+    if (effectiveId) {
+      return `https://grooveestrella.com/${effectiveType}/${effectiveId}?groovelink=true`;
+    }
+    return `https://grooveestrella.com/${effectiveType}/${encodeURIComponent(effectiveTitle)}?groovelink=true`;
+  }, [effectiveId, effectiveType, effectiveTitle]);
 
-  const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(universalUrl)}&color=${selectedQrColor}&bgcolor=ffffff&ecc=H&format=png`;
+  const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(
+    universalUrl
+  )}&color=${selectedQrColor}&bgcolor=ffffff&ecc=H&format=png`;
 
   // Download Card as high-res PNG into user camera roll
   const handleDownloadCard = async () => {
@@ -99,7 +188,7 @@ export default function GrooveCardModal({
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setIsExporting(true);
     try {
-      await downloadCardImage(cardRef, imageUrl, title);
+      await downloadCardImage(cardRef, effectiveImageUrl, effectiveTitle);
     } finally {
       setIsExporting(false);
     }
@@ -108,7 +197,7 @@ export default function GrooveCardModal({
   // Direct System Share
   const handleShare = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    await shareCard(cardRef, universalUrl, title, artist);
+    await shareCard(cardRef, universalUrl, effectiveTitle, effectiveArtist);
   };
 
   const handleCopyLink = async () => {
@@ -142,62 +231,88 @@ export default function GrooveCardModal({
           </View>
 
           <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-            {/* The Live GrooveCard (Apple Music inspired) wrapped in capture container */}
+            {/* The Live GrooveCard Preview wrapped in capture container */}
             <View style={styles.cardPreviewWrapper}>
-              <View ref={cardRef} collapsable={false} style={styles.cardCaptureBox}>
+              <View
+                ref={cardRef}
+                collapsable={false}
+                style={[
+                  styles.grooveCard,
+                  { borderColor: activeThemeObj.border, overflow: 'hidden' },
+                ]}
+              >
                 <LinearGradient
                   colors={activeThemeObj.colors}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
-                  style={[styles.grooveCard, { borderColor: activeThemeObj.border }]}
-                >
-                  {/* Header row */}
-                  <View style={styles.cardHeaderRow}>
-                    <View style={styles.cardLogoGroup}>
-                      <GrooveLogo size={15} style={{ marginRight: 6 }} />
-                      <Text style={styles.cardLogoText}>GROOVECARD</Text>
+                  style={StyleSheet.absoluteFill}
+                />
+
+                {/* Header row */}
+                <View style={styles.cardHeaderRow}>
+                  <View style={styles.cardLogoGroup}>
+                    <GrooveLogo size={15} style={{ marginRight: 6 }} />
+                    <Text style={styles.cardLogoText}>GROOVECARD</Text>
+                  </View>
+                  <View style={styles.musicLayerBadge}>
+                    <Text style={styles.musicLayerBadgeText}>MUSIC LAYER</Text>
+                  </View>
+                </View>
+
+                {/* Album artwork */}
+                <View style={styles.cardArtworkContainer}>
+                  {effectiveImageUrl && !imgError ? (
+                    <Image
+                      source={{ uri: effectiveImageUrl }}
+                      style={styles.cardArtwork}
+                      onError={() => setImgError(true)}
+                    />
+                  ) : (
+                    <View style={styles.artworkFallback}>
+                      <LinearGradient
+                        colors={['rgba(212, 163, 115, 0.25)', 'rgba(71, 11, 36, 0.55)']}
+                        style={StyleSheet.absoluteFill}
+                      />
+                      <GrooveLogo size={46} />
+                      <Text style={styles.artworkFallbackTitle} numberOfLines={2}>
+                        {effectiveTitle}
+                      </Text>
+                      <Text style={styles.artworkFallbackArtist} numberOfLines={1}>
+                        {effectiveArtist}
+                      </Text>
                     </View>
-                    <View style={styles.musicLayerBadge}>
-                      <Text style={styles.musicLayerBadgeText}>MUSIC LAYER</Text>
-                    </View>
+                  )}
+                </View>
+
+                {/* Metadata & QR code row */}
+                <View style={styles.cardInfoRow}>
+                  <View style={styles.cardTextCol}>
+                    <Text style={styles.cardTitle} numberOfLines={2}>{effectiveTitle}</Text>
+                    <Text style={styles.cardArtist} numberOfLines={1}>{effectiveArtist}</Text>
+                    {effectiveAlbum && effectiveAlbum !== effectiveTitle ? (
+                      <Text style={styles.cardAlbum} numberOfLines={1}>Album: {effectiveAlbum}</Text>
+                    ) : null}
+                    {showYear && displayReleaseDate ? (
+                      <View style={styles.yearPill}>
+                        <Text style={styles.yearText}>{displayReleaseDate}</Text>
+                      </View>
+                    ) : null}
                   </View>
 
-                  {/* Album artwork */}
-                  <Image
-                    source={{ uri: imageUrl || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600&auto=format&fit=crop&q=80' }}
-                    style={styles.cardArtwork}
-                  />
-
-                  {/* Metadata & QR code row */}
-                  <View style={styles.cardInfoRow}>
-                    <View style={styles.cardTextCol}>
-                      <Text style={styles.cardTitle} numberOfLines={2}>{title || 'Untitled'}</Text>
-                      <Text style={styles.cardArtist} numberOfLines={1}>{artist || 'Unknown Artist'}</Text>
-                      {album && album !== title ? (
-                        <Text style={styles.cardAlbum} numberOfLines={1}>Album: {album}</Text>
-                      ) : null}
-                      {showYear && displayReleaseDate ? (
-                        <View style={styles.yearPill}>
-                          <Text style={styles.yearText}>{displayReleaseDate}</Text>
-                        </View>
-                      ) : null}
-                    </View>
-
-                    {/* QR code with centered app logo overlay */}
-                    {showQR && (
-                      <TouchableOpacity
-                        style={styles.qrContainer}
-                        activeOpacity={0.85}
-                        onPress={() => setQrFullScreen(true)}
-                      >
-                        <Image source={{ uri: qrApiUrl }} style={styles.qrImage} />
-                        <View style={styles.qrLogoOverlay}>
-                          <GrooveLogo size={18} />
-                        </View>
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                </LinearGradient>
+                  {/* QR code with centered app logo overlay */}
+                  {showQR && (
+                    <TouchableOpacity
+                      style={styles.qrContainer}
+                      activeOpacity={0.85}
+                      onPress={() => setQrFullScreen(true)}
+                    >
+                      <Image source={{ uri: qrApiUrl }} style={styles.qrImage} />
+                      <View style={styles.qrLogoOverlay}>
+                        <GrooveLogo size={16} />
+                      </View>
+                    </TouchableOpacity>
+                  )}
+                </View>
               </View>
             </View>
 
@@ -205,11 +320,11 @@ export default function GrooveCardModal({
             <View style={styles.customSection}>
               <Text style={[styles.customLabel, { color: colors.textSecondary }]}>CARD THEME</Text>
               <View style={styles.themeGrid}>
-                {THEMES.map((t) => {
-                  const isSelected = selectedTheme === t.id;
+                {THEMES.map((tItem) => {
+                  const isSelected = selectedTheme === tItem.id;
                   return (
                     <TouchableOpacity
-                      key={t.id}
+                      key={tItem.id}
                       style={[
                         styles.themeOptionBtn,
                         { borderColor: colors.border },
@@ -220,11 +335,11 @@ export default function GrooveCardModal({
                       ]}
                       onPress={() => {
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                        setSelectedTheme(t.id);
+                        setSelectedTheme(tItem.id);
                       }}
                       activeOpacity={0.7}
                     >
-                      <View style={[styles.themeSwatch, { backgroundColor: t.colors[1] }]} />
+                      <View style={[styles.themeSwatch, { backgroundColor: tItem.colors[1] }]} />
                       <Text
                         style={[
                           styles.themeOptionText,
@@ -232,7 +347,7 @@ export default function GrooveCardModal({
                           isSelected && { color: colors.text, fontWeight: '700' },
                         ]}
                       >
-                        {t.label}
+                        {tItem.label}
                       </Text>
                     </TouchableOpacity>
                   );
@@ -336,8 +451,14 @@ export default function GrooveCardModal({
               disabled={isExporting}
               activeOpacity={0.8}
             >
-              <Ionicons name="download-outline" size={16} color={colors.text} />
-              <Text style={[styles.actionBtnText, { color: colors.text }]}>Download</Text>
+              {isExporting ? (
+                <ActivityIndicator size="small" color={colors.text} />
+              ) : (
+                <Ionicons name="download-outline" size={16} color={colors.text} />
+              )}
+              <Text style={[styles.actionBtnText, { color: colors.text }]}>
+                {isExporting ? 'Saving...' : 'Download'}
+              </Text>
             </TouchableOpacity>
 
             {/* Copy universal link */}
@@ -444,13 +565,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginVertical: 10,
   },
-  cardCaptureBox: {
-    width: '100%',
-    maxWidth: 340,
-    backgroundColor: 'transparent',
-  },
   grooveCard: {
     width: '100%',
+    maxWidth: 340,
     borderRadius: 24,
     padding: 16,
     borderWidth: 1,
@@ -491,12 +608,40 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.9)',
     letterSpacing: 1,
   },
-  cardArtwork: {
+  cardArtworkContainer: {
     width: '100%',
     aspectRatio: 1,
     borderRadius: 16,
+    overflow: 'hidden',
     backgroundColor: '#10141F',
     marginBottom: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  cardArtwork: {
+    width: '100%',
+    height: '100%',
+  },
+  artworkFallback: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+  },
+  artworkFallbackTitle: {
+    fontSize: 14,
+    fontFamily: FONTS.displayBold,
+    color: '#FFFFFF',
+    marginTop: 10,
+    textAlign: 'center',
+  },
+  artworkFallbackArtist: {
+    fontSize: 12,
+    fontFamily: FONTS.bodyMedium,
+    color: '#8992A5',
+    marginTop: 4,
+    textAlign: 'center',
   },
   cardInfoRow: {
     flexDirection: 'row',
@@ -577,11 +722,6 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 3,
   },
-  qrAppLogo: {
-    width: 14,
-    height: 14,
-  },
-
   customSection: {
     marginBottom: 16,
   },
@@ -653,10 +793,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.08)',
   },
-  toggleBtnActive: {
-    backgroundColor: 'rgba(71, 11, 36, 0.4)',
-    borderColor: '#D4A373',
-  },
   toggleBtnText: {
     fontSize: 12,
     fontFamily: FONTS.bodySemiBold,
@@ -690,12 +826,10 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingVertical: 13,
     borderRadius: 14,
-    backgroundColor: '#D4A373',
   },
   actionBtnPrimaryText: {
     fontSize: 13,
     fontFamily: FONTS.displayBold,
-    color: '#FFFFFF',
   },
   fullQrOverlay: {
     flex: 1,
@@ -750,10 +884,6 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 6,
   },
-  fullQrLogoIcon: {
-    width: 26,
-    height: 26,
-  },
   fullQrSubtitle: {
     fontSize: 12,
     fontFamily: FONTS.body,
@@ -762,7 +892,6 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   fullQrCloseBtn: {
-    backgroundColor: '#D4A373',
     paddingVertical: 10,
     paddingHorizontal: 28,
     borderRadius: 12,

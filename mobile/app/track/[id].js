@@ -449,10 +449,14 @@ export default function TrackDetailScreen() {
           title: trackTitle,
           name: trackTitle,
           artist: trackArtist,
+          album: albumName,
           imageUrl: coverUrl,
           coverArt: coverUrl,
+          releaseDate: releaseYear,
+          releaseYear: releaseYear,
           type: 'track',
         }}
+        onOpenGrooveCard={() => setShowGrooveCardModal(true)}
       />
 
       {/* GrooveCard Modal */}
@@ -465,8 +469,11 @@ export default function TrackDetailScreen() {
           title: trackTitle,
           name: trackTitle,
           artist: trackArtist,
+          album: albumName,
           imageUrl: coverUrl,
           coverArt: coverUrl,
+          releaseDate: releaseYear,
+          releaseYear: releaseYear,
           type: 'track',
         }}
       />

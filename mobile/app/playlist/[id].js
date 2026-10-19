@@ -546,6 +546,10 @@ export default function PlaylistDetailScreen() {
         visible={showGrooveLinkModal}
         onClose={() => setShowGrooveLinkModal(false)}
         target={modalTrackTarget}
+        onOpenGrooveCard={(item) => {
+          if (item) setModalTrackTarget(item);
+          setShowGrooveCardModal(true);
+        }}
       />
 
       {/* GrooveCard Modal */}

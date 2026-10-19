@@ -1,5 +1,5 @@
 // src/components/GrooveLinkModal.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Modal,
   View,
@@ -15,10 +15,12 @@ import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Toast from 'react-native-toast-message';
+import * as Clipboard from 'expo-clipboard';
 import { useTheme } from '../context/ThemeContext';
 import { COLORS, FONTS } from '../constants/theme';
 import { StorageService } from '../services/storage';
 import { generateStreamingLinks } from '../services/api';
+import GrooveLogo from './GrooveLogo';
 
 const PLATFORM_CONFIG = [
   {
@@ -90,6 +92,8 @@ const PLATFORM_CONFIG = [
 export default function GrooveLinkModal({
   visible,
   onClose,
+  item = null,
+  target = null,
   title = '',
   artist = '',
   album = '',
@@ -101,6 +105,67 @@ export default function GrooveLinkModal({
   const { colors, isDark } = useTheme();
   const [preferredPlatform, setPreferredPlatform] = useState('none');
   const [copied, setCopied] = useState(false);
+  const [imgError, setImgError] = useState(false);
+
+  // Normalize input item / target across tracks, albums, artists, playlists
+  const t = item?.track || item || target?.track || target || {};
+
+  const effectiveTitle = useMemo(() => {
+    return (t.title || t.name || title || 'GrooveLink').trim();
+  }, [t, title]);
+
+  const effectiveArtist = useMemo(() => {
+    if (t.artist && typeof t.artist === 'string') return t.artist;
+    if (t.artistLabel && typeof t.artistLabel === 'string') return t.artistLabel;
+    if (Array.isArray(t.artists) && t.artists.length > 0) {
+      return t.artists
+        .map((a) => (typeof a === 'string' ? a : a.name || a.title || ''))
+        .filter(Boolean)
+        .join(', ');
+    }
+    if (Array.isArray(t.artistCredits) && t.artistCredits.length > 0) {
+      return t.artistCredits
+        .map((a) => (typeof a === 'string' ? a : a.name || ''))
+        .filter(Boolean)
+        .join(', ');
+    }
+    if (t.artist && typeof t.artist === 'object' && t.artist.name) return t.artist.name;
+    if (artist && typeof artist === 'string') return artist;
+    return 'Universal Music Link';
+  }, [t, artist]);
+
+  const effectiveImageUrl = useMemo(() => {
+    return (
+      t.imageUrl ||
+      t.coverUrl ||
+      t.coverArt ||
+      t.image ||
+      t.album?.images?.[0]?.url ||
+      t.images?.[0]?.url ||
+      imageUrl ||
+      ''
+    );
+  }, [t, imageUrl]);
+
+  useEffect(() => {
+    setImgError(false);
+  }, [effectiveImageUrl]);
+
+  const effectiveType = useMemo(() => {
+    return t.type || type || 'track';
+  }, [t, type]);
+
+  const effectiveId = useMemo(() => {
+    return (
+      t.id ||
+      t.itemId ||
+      t.musicbrainzId ||
+      t.trackId ||
+      t.trackURI ||
+      itemId ||
+      ''
+    );
+  }, [t, itemId]);
 
   useEffect(() => {
     if (visible) {
@@ -108,10 +173,17 @@ export default function GrooveLinkModal({
     }
   }, [visible]);
 
-  const links = generateStreamingLinks(title, artist);
-  const universalUrl = itemId
-    ? `https://grooveestrella.com/s/musicbrainz/${type}/${itemId}`
-    : `https://grooveestrella.com/${type}/${encodeURIComponent(title)}`;
+  const links = useMemo(() => {
+    const queryArtist = effectiveArtist === 'Universal Music Link' ? '' : effectiveArtist;
+    return generateStreamingLinks(effectiveTitle, queryArtist);
+  }, [effectiveTitle, effectiveArtist]);
+
+  const universalUrl = useMemo(() => {
+    if (effectiveId) {
+      return `https://grooveestrella.com/${effectiveType}/${effectiveId}?groovelink=true`;
+    }
+    return `https://grooveestrella.com/${effectiveType}/${encodeURIComponent(effectiveTitle)}?groovelink=true`;
+  }, [effectiveId, effectiveType, effectiveTitle]);
 
   const handleOpenUrl = async (platformId, url) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -138,8 +210,9 @@ export default function GrooveLinkModal({
     });
   };
 
-  const handleCopy = () => {
+  const handleCopy = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    await Clipboard.setStringAsync(universalUrl);
     setCopied(true);
     Toast.show({
       type: 'success',
@@ -171,16 +244,27 @@ export default function GrooveLinkModal({
           {/* Modal Header */}
           <View style={[styles.header, { borderBottomColor: colors.border }]}>
             <View style={styles.headerInfo}>
-              <Image
-                source={{ uri: imageUrl || 'https://placehold.co/100x100/10141F/60A5FA?text=Music' }}
-                style={[styles.headerCover, { backgroundColor: colors.surface }]}
-              />
+              {effectiveImageUrl && !imgError ? (
+                <Image
+                  source={{ uri: effectiveImageUrl }}
+                  style={[styles.headerCover, { backgroundColor: colors.surface }]}
+                  onError={() => setImgError(true)}
+                />
+              ) : (
+                <View style={[styles.headerCover, { backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' }]}>
+                  <GrooveLogo size={24} />
+                </View>
+              )}
               <View style={styles.headerTextCol}>
                 <View style={styles.badgeRow}>
                   <Text style={[styles.badgeText, { color: colors.accent }]}>GROOVELINK ROUTER</Text>
                 </View>
-                <Text style={[styles.headerTitle, { color: colors.text }]} numberOfLines={1}>{title || 'GrooveLink'}</Text>
-                <Text style={[styles.headerArtist, { color: colors.textSecondary }]} numberOfLines={1}>{artist || 'Universal Music Link'}</Text>
+                <Text style={[styles.headerTitle, { color: colors.text }]} numberOfLines={1}>
+                  {effectiveTitle}
+                </Text>
+                <Text style={[styles.headerArtist, { color: colors.textSecondary }]} numberOfLines={1}>
+                  {effectiveArtist}
+                </Text>
               </View>
             </View>
 
@@ -191,7 +275,7 @@ export default function GrooveLinkModal({
 
           {/* Subtitle guidance */}
           <View style={[styles.subBar, { backgroundColor: colors.surfaceHighlight }]}>
-            <Text style={[styles.subText, { color: colors.textSecondary }]}>Select platform to open this {type}:</Text>
+            <Text style={[styles.subText, { color: colors.textSecondary }]}>Select platform to open this {effectiveType}:</Text>
           </View>
 
           {/* Scrollable Platform List */}
@@ -265,7 +349,7 @@ export default function GrooveLinkModal({
                 ]}
                 onPress={() => {
                   onClose();
-                  onOpenGrooveCard();
+                  onOpenGrooveCard(t);
                 }}
                 activeOpacity={0.8}
               >
@@ -286,90 +370,93 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(7, 9, 15, 0.85)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: 16,
   },
   modalCard: {
     width: '100%',
     maxWidth: 420,
-    maxHeight: '82%',
-    borderRadius: 28,
+    maxHeight: '85%',
+    borderRadius: 24,
     borderWidth: 1,
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 16 },
-    shadowOpacity: 0.6,
-    shadowRadius: 28,
-    elevation: 12,
+    shadowOpacity: 0.45,
+    shadowRadius: 24,
+    elevation: 10,
   },
   topHighlight: {
-    height: 1.5,
-    width: '100%',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 1,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 18,
-    paddingTop: 16,
-    paddingBottom: 12,
+    padding: 16,
     borderBottomWidth: 1,
   },
   headerInfo: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
-    marginRight: 10,
+    marginRight: 12,
   },
   headerCover: {
-    width: 44,
-    height: 44,
+    width: 48,
+    height: 48,
     borderRadius: 10,
+    marginRight: 12,
   },
   headerTextCol: {
-    marginLeft: 12,
     flex: 1,
   },
   badgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 2,
   },
   badgeText: {
     fontSize: 9,
     fontFamily: FONTS.displayBold,
-    letterSpacing: 1,
+    letterSpacing: 1.2,
   },
   headerTitle: {
-    fontSize: 14,
+    fontSize: 15,
     fontFamily: FONTS.displayBold,
   },
   headerArtist: {
-    fontSize: 11,
+    fontSize: 12,
     fontFamily: FONTS.bodyMedium,
     marginTop: 1,
   },
   closeBtn: {
-    padding: 6,
-    borderRadius: 14,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   subBar: {
-    paddingHorizontal: 18,
-    paddingVertical: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
   },
   subText: {
     fontSize: 11,
-    fontFamily: FONTS.displayBold,
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
+    fontFamily: FONTS.bodyMedium,
   },
   platformList: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    padding: 16,
   },
   platformRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 12,
-    borderRadius: 16,
+    borderRadius: 14,
     borderWidth: 1,
     marginBottom: 8,
   },
@@ -379,8 +466,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   iconBox: {
-    width: 36,
-    height: 36,
+    width: 38,
+    height: 38,
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
@@ -390,8 +477,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   platName: {
-    fontSize: 13,
-    fontFamily: FONTS.displayBold,
+    fontSize: 14,
+    fontFamily: FONTS.bodySemiBold,
   },
   defaultBadge: {
     fontSize: 10,
@@ -401,41 +488,36 @@ const styles = StyleSheet.create({
   playBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
     paddingVertical: 7,
-    borderRadius: 10,
+    borderRadius: 8,
   },
   playBtnText: {
-    fontSize: 11,
+    fontSize: 12,
     fontFamily: FONTS.displayBold,
-    color: '#000',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    color: '#000000',
   },
   footerActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    justifyContent: 'flex-end',
+    padding: 12,
     borderTopWidth: 1,
+    gap: 8,
   },
   actionPill: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
     gap: 6,
-    paddingVertical: 10,
-    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 10,
     borderWidth: 1,
   },
   actionPillText: {
     fontSize: 12,
-    fontFamily: FONTS.displayBold,
+    fontFamily: FONTS.bodySemiBold,
   },
-  grooveCardPill: {},
   grooveCardPillText: {
     fontSize: 12,
     fontFamily: FONTS.displayBold,
