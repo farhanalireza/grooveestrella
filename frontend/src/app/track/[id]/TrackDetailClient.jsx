@@ -30,7 +30,6 @@ export default function TrackDetailClient({ id, initialData }) {
     const [track, setTrack] = useState(initialData);
     const [saved, setSaved] = useState(false);
     const [error, setError] = useState(null);
-    const [showQR, setShowQR] = useState(false);
     const [qrFullScreen, setQrFullScreen] = useState(false);
     const [currentUrl, setCurrentUrl] = useState("");
     const [expandedHeroDesc, setExpandedHeroDesc] = useState(false);
@@ -128,7 +127,7 @@ export default function TrackDetailClient({ id, initialData }) {
 
     const artistsList = Array.isArray(track?.artists) ? track.artists : [{ name: track?.artist || 'Unknown Artist' }];
     const coverUrl = track?.album?.images?.[0]?.url || track?.coverArt || track?.url || 'https://placehold.co/600x600/17020B/E8A87C?text=No+Cover';
-    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&color=000000&bgcolor=ffffff&ecc=H&data=${encodeURIComponent(currentUrl)}`;
+    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=350x350&color=d4af37&bgcolor=ffffff&ecc=H&data=${encodeURIComponent(currentUrl)}`;
 
     const handleNativeShare = async () => {
         await shareLink({
@@ -359,7 +358,7 @@ export default function TrackDetailClient({ id, initialData }) {
                         className="h-12 px-6 sm:px-8 rounded-full bg-[var(--theme-accent)] hover:opacity-95 active:scale-95 text-[var(--theme-accent-fg)] font-black text-xs sm:text-sm tracking-wide flex items-center justify-center gap-2 transition-all duration-200 shadow-xl cursor-pointer shrink-0 whitespace-nowrap"
                         title="Open GrooveLink"
                     >
-                        <img src="/in.svg" alt="GrooveLink" className="w-4 h-4 object-contain brightness-0 invert shrink-0" />
+                        <img src="/in.svg" alt="GrooveLink" className="w-5 h-5 object-contain shrink-0" />
                         <span className="whitespace-nowrap">Open GrooveLink</span>
                         <ChevronRight size={15} className="shrink-0" />
                     </button>
@@ -382,17 +381,13 @@ export default function TrackDetailClient({ id, initialData }) {
                         {saved ? <Check size={20} className="text-[var(--theme-accent)]" /> : <Plus size={20} />}
                     </button>
 
-                    {/* QR Code Toggle Button */}
+                    {/* QR Code Button: opens directly in full screen */}
                     <button
-                        onClick={() => setShowQR(!showQR)}
-                        className={`w-12 h-12 rounded-full aspect-square shrink-0 transition-all duration-200 backdrop-blur-md cursor-pointer shadow-lg border flex items-center justify-center ${
-                            showQR
-                                ? "bg-[var(--theme-accent)] text-[var(--theme-accent-fg)] border-[var(--theme-accent)] scale-105"
-                                : "bg-[var(--theme-card)]/80 hover:bg-[var(--theme-surface)] text-[var(--theme-fg)] border-[var(--theme-border)]"
-                        }`}
-                        title="Toggle QR Code"
+                        onClick={() => setQrFullScreen(true)}
+                        className="w-12 h-12 rounded-full aspect-square shrink-0 bg-[var(--theme-card)]/80 hover:bg-[var(--theme-surface)] active:scale-95 text-[var(--theme-fg)] flex items-center justify-center transition-all duration-200 backdrop-blur-md cursor-pointer shadow-lg border border-[var(--theme-border)] group"
+                        title="View Full-Screen QR Code"
                     >
-                        <QrCode size={19} />
+                        <QrCode size={19} className="text-[var(--theme-fg)] group-hover:text-[var(--theme-accent)] transition-colors" />
                     </button>
                 </div>
 
@@ -424,26 +419,6 @@ export default function TrackDetailClient({ id, initialData }) {
                 )}
             </div>
 
-            {/* QR Code Card */}
-            {showQR && (
-                <div className="relative z-10 bg-[var(--theme-card)]/80 backdrop-blur-xl border border-[var(--theme-border)] rounded-3xl p-6 flex flex-col items-center gap-4 text-center max-w-sm mx-auto shadow-2xl mb-12 animate-fade-in">
-                    <h3 className="text-sm font-bold text-[var(--theme-fg)] uppercase tracking-wider">Scan to Share Track</h3>
-                    <div 
-                        onClick={() => setQrFullScreen(true)}
-                        className="relative w-40 h-40 p-2.5 bg-[var(--theme-surface)] border border-[var(--theme-border)] rounded-2xl flex items-center justify-center shadow-inner cursor-zoom-in group/qr transition duration-300 hover:border-[var(--theme-accent)]/50"
-                        title="Click to full screen QR"
-                    >
-                        <img src={qrCodeUrl} alt="QR Code" className="w-full h-full object-contain rounded-lg" />
-                        <div className="absolute w-10 h-10 bg-[var(--theme-surface)] border border-[var(--theme-border)] rounded-full flex items-center justify-center shadow-lg p-1.5 transition duration-300 group-hover/qr:scale-110">
-                            <img src="/in.svg" alt="Groove Logo" className="w-full h-full object-contain" />
-                        </div>
-                    </div>
-                    <p className="text-xs text-[var(--theme-muted)] max-w-[240px]">
-                        Scan this QR code with your phone camera to share or open this track card instantly. Click code to view in full screen.
-                    </p>
-                </div>
-            )}
-
             {/* Full-screen QR Modal */}
             {qrFullScreen && (
                 <div 
@@ -452,18 +427,18 @@ export default function TrackDetailClient({ id, initialData }) {
                 >
                     <div className="max-w-md w-full flex flex-col items-center gap-6" onClick={(e) => e.stopPropagation()}>
                         <h3 className="text-lg font-bold text-white uppercase tracking-widest font-display">Scan QR Code</h3>
-                        <div className="relative w-72 h-72 sm:w-80 sm:h-80 p-4 bg-[var(--theme-card)] border border-[var(--theme-border)] rounded-3xl flex items-center justify-center shadow-2xl">
+                        <div className="relative w-72 h-72 sm:w-80 sm:h-80 p-5 bg-white rounded-3xl flex items-center justify-center shadow-2xl border border-white/20">
                             <img src={qrCodeUrl} alt="QR Code" className="w-full h-full object-contain rounded-xl" />
-                            <div className="absolute w-16 h-16 bg-[var(--theme-surface)] border border-[var(--theme-border)] rounded-full flex items-center justify-center shadow-xl p-2.5">
+                            <div className="absolute w-14 h-14 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-xl p-2">
                                 <img src="/in.svg" alt="Groove Logo" className="w-full h-full object-contain" />
                             </div>
                         </div>
-                        <p className="text-sm text-[var(--theme-muted)] text-center max-w-[280px]">
+                        <p className="text-sm text-gray-300 text-center max-w-[280px]">
                             Scan with your phone&apos;s camera to instantly view and share this track card.
                         </p>
                         <button
                             onClick={() => setQrFullScreen(false)}
-                            className="px-6 py-2.5 bg-[var(--theme-accent)] hover:opacity-90 text-[var(--theme-accent-fg)] font-bold text-xs uppercase tracking-wider rounded-xl transition cursor-pointer"
+                            className="px-6 py-2.5 bg-[var(--theme-accent)] hover:opacity-90 text-[var(--theme-accent-fg)] font-bold text-xs uppercase tracking-wider rounded-xl transition cursor-pointer shadow-lg active:scale-95"
                         >
                             Close
                         </button>

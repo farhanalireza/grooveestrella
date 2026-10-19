@@ -339,7 +339,7 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
                             className="h-12 px-6 sm:px-8 rounded-full bg-[var(--theme-accent)] hover:opacity-95 active:scale-95 text-[var(--theme-accent-fg)] font-black text-xs sm:text-sm tracking-wide flex items-center justify-center gap-2 transition-all duration-200 shadow-xl cursor-pointer shrink-0 whitespace-nowrap"
                             title="Open GrooveLink"
                         >
-                            <img src="/in.svg" alt="GrooveLink" className="w-4 h-4 object-contain brightness-0 invert shrink-0" />
+                            <img src="/in.svg" alt="GrooveLink" className="w-5 h-5 object-contain shrink-0" />
                             <span className="whitespace-nowrap">Open GrooveLink</span>
                             <ChevronRight size={15} className="shrink-0" />
                         </button>

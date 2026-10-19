@@ -242,7 +242,7 @@ export default function GrooveLinkModal({ isOpen, onClose, item, onOpenGrooveCar
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const shareUrl = itemId ? `${origin}/${itemType}/${itemId}` : (typeof window !== "undefined" ? window.location.href.split("?")[0] : "");
 
-  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=350x350&color=000000&bgcolor=ffffff&ecc=H&data=${encodeURIComponent(shareUrl)}`;
+  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=350x350&color=d4af37&bgcolor=ffffff&ecc=H&data=${encodeURIComponent(shareUrl)}`;
 
   const handleCopyLink = async () => {
     const { fullText } = getShareData({
@@ -525,49 +525,35 @@ export default function GrooveLinkModal({ isOpen, onClose, item, onOpenGrooveCar
             </div>
 
             {/* Modal Bottom Footer Actions */}
-            <div className="p-3 sm:p-4 border-t border-[var(--theme-border)] bg-[var(--theme-surface)]/90 backdrop-blur-md flex items-center justify-between gap-2 sm:gap-3 flex-wrap">
-              {/* Share / Copy Link Button */}
-              <div className="flex items-center gap-1.5 flex-1 min-w-[120px]">
-                <button
-                  onClick={handleNativeShare}
-                  className="w-full inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-card)] hover:border-[var(--theme-accent)] text-[var(--theme-fg)] text-xs font-bold transition-all duration-200 active:scale-95 cursor-pointer shadow-sm"
-                  title="Share GrooveLink"
-                >
-                  <Share2 size={15} />
-                  <span>Share Link</span>
-                </button>
-
-                <button
-                  onClick={handleCopyLink}
-                  className="p-2.5 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-card)] hover:border-[var(--theme-accent)] text-[var(--theme-fg)] transition-all duration-200 active:scale-95 cursor-pointer shadow-sm flex items-center justify-center"
-                  title="Copy link to clipboard"
-                >
-                  {copied ? (
-                    <Check size={15} className="text-[var(--theme-accent)]" />
-                  ) : (
-                    <Copy size={15} />
-                  )}
-                </button>
-              </div>
+            <div className="p-3 sm:p-4 border-t border-[var(--theme-border)] bg-[var(--theme-surface)]/90 backdrop-blur-md grid grid-cols-3 gap-2 sm:gap-3">
+              {/* Share Link Button */}
+              <button
+                onClick={handleNativeShare}
+                className="h-10 px-2 sm:px-3 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-card)] hover:border-[var(--theme-accent)] text-[var(--theme-fg)] text-xs font-bold transition-all duration-200 active:scale-95 cursor-pointer shadow-sm flex items-center justify-center gap-1.5 whitespace-nowrap overflow-hidden"
+                title="Share GrooveLink"
+              >
+                <Share2 size={14} className="shrink-0 text-[var(--theme-accent)]" />
+                <span className="truncate">Share Link</span>
+              </button>
 
               {/* GrooveCard Button: opens GrooveCard and closes GrooveLink modal */}
               <button
                 onClick={handleOpenGrooveCard}
-                className="flex-1 min-w-[110px] inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-[var(--theme-accent-bg)] hover:opacity-90 text-[var(--theme-accent-fg)] text-xs font-bold transition-all duration-200 active:scale-95 cursor-pointer shadow-md"
+                className="h-10 px-2 sm:px-3 rounded-xl bg-[var(--theme-accent-bg)] hover:opacity-90 text-[var(--theme-accent-fg)] text-xs font-extrabold transition-all duration-200 active:scale-95 cursor-pointer shadow-md flex items-center justify-center gap-1.5 whitespace-nowrap overflow-hidden"
                 title="Create customizable GrooveCard"
               >
-                <Sparkles size={15} />
-                <span>GrooveCard</span>
+                <Sparkles size={14} className="shrink-0" />
+                <span className="truncate">GrooveCard</span>
               </button>
 
               {/* QR Code Button: opens QR code in full screen and closes other modals */}
               <button
                 onClick={handleOpenQrFullScreen}
-                className="flex-1 min-w-[100px] inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-card)] hover:border-[var(--theme-accent)] text-[var(--theme-fg)] transition-all duration-200 active:scale-95 cursor-pointer shadow-sm text-xs font-bold"
+                className="h-10 px-2 sm:px-3 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-card)] hover:border-[var(--theme-accent)] text-[var(--theme-fg)] transition-all duration-200 active:scale-95 cursor-pointer shadow-sm text-xs font-bold flex items-center justify-center gap-1.5 whitespace-nowrap overflow-hidden"
                 title="View QR Code in full screen"
               >
-                <QrCode size={15} />
-                <span>QR Code</span>
+                <QrCode size={14} className="shrink-0 text-[var(--theme-accent)]" />
+                <span className="truncate">QR Code</span>
               </button>
             </div>
           </motion.div>

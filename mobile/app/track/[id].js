@@ -51,7 +51,6 @@ export default function TrackDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState(false);
   const [expandedHeroDesc, setExpandedHeroDesc] = useState(false);
-  const [showQR, setShowQR] = useState(false);
   const [qrFullScreen, setQrFullScreen] = useState(false);
 
   // Modals state
@@ -167,7 +166,7 @@ export default function TrackDetailScreen() {
   const releaseYear = track?.releaseYear || (track?.releaseDate ? new Date(track.releaseDate).getFullYear() : 'Track');
   const popularityScore = track?.popularity || 85;
   const canonicalUrl = `https://groove.amplecen.com/track/${id}`;
-  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&color=${(colors.accent || '#E8A87C').replace('#', '')}&bgcolor=${(colors.bg || '#17020B').replace('#', '')}&ecc=H&data=${encodeURIComponent(canonicalUrl)}`;
+  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=350x350&color=d4af37&bgcolor=ffffff&ecc=H&data=${encodeURIComponent(canonicalUrl)}`;
 
   const artistsList = Array.isArray(track?.artists)
     ? track.artists
@@ -327,22 +326,19 @@ export default function TrackDetailScreen() {
               />
             </TouchableOpacity>
 
-            {/* 5. QR Code Toggle Button */}
+            {/* 5. QR Code Button (Direct full screen) */}
             <TouchableOpacity
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                setShowQR(!showQR);
+                setQrFullScreen(true);
               }}
-              style={[
-                styles.circleActionBtn,
-                showQR && { backgroundColor: colors.accent, borderColor: colors.accent },
-              ]}
+              style={styles.circleActionBtn}
               activeOpacity={0.8}
             >
               <Ionicons
                 name="qr-code-outline"
                 size={19}
-                color={showQR ? '#17020B' : '#FFF2DF'}
+                color="#FFF2DF"
               />
             </TouchableOpacity>
           </View>
@@ -383,26 +379,6 @@ export default function TrackDetailScreen() {
           ) : null}
         </Animated.View>
 
-        {/* QR Code Sharing Card */}
-        {showQR && (
-          <View style={[styles.qrCard, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
-            <Text style={[styles.qrTitle, { color: colors.text }]}>SCAN TO SHARE TRACK</Text>
-            <TouchableOpacity
-              onPress={() => setQrFullScreen(true)}
-              activeOpacity={0.85}
-              style={[styles.qrCodeWrapper, { backgroundColor: colors.surface, borderColor: colors.border }]}
-            >
-              <Image source={{ uri: qrCodeUrl }} style={styles.qrImage} resizeMode="contain" />
-              <View style={[styles.qrCenterLogo, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
-                <GrooveLogo size={20} color={colors.accent} />
-              </View>
-            </TouchableOpacity>
-            <Text style={[styles.qrHint, { color: colors.textSecondary }]}>
-              Scan this QR code with any camera to instantly open this track card. Tap to enlarge.
-            </Text>
-          </View>
-        )}
-
         {/* Music Lore & Reviews Section */}
         <MusicLoreAndReviews
           entityType="track"
@@ -421,17 +397,23 @@ export default function TrackDetailScreen() {
         onRequestClose={() => setQrFullScreen(false)}
       >
         <Pressable style={styles.modalBackdrop} onPress={() => setQrFullScreen(false)}>
-          <View style={[styles.modalCard, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
+          <View
+            style={[styles.modalCard, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}
+            onStartShouldSetResponder={() => true}
+          >
             <Text style={[styles.modalTitle, { color: colors.text }]}>SCAN QR CODE</Text>
-            <View style={styles.modalQrWrapper}>
+            <View style={[styles.modalQrWrapper, { backgroundColor: '#ffffff', borderRadius: 24, padding: 14 }]}>
               <Image source={{ uri: qrCodeUrl }} style={styles.modalQrImage} resizeMode="contain" />
-              <View style={[styles.modalQrCenterLogo, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
-                <GrooveLogo size={28} color={colors.accent} />
+              <View style={[styles.modalQrCenterLogo, { backgroundColor: '#ffffff', borderColor: '#e5e7eb' }]}>
+                <GrooveLogo size={28} color="#d4af37" />
               </View>
             </View>
+            <Text style={[styles.qrHint, { color: colors.textSecondary, textAlign: 'center', marginTop: 12 }]}>
+              Scan with your phone camera to share or open this track instantly.
+            </Text>
             <TouchableOpacity
               onPress={() => setQrFullScreen(false)}
-              style={[styles.closeModalBtn, { backgroundColor: colors.accent }]}
+              style={[styles.closeModalBtn, { backgroundColor: colors.accent, marginTop: 16 }]}
             >
               <Text style={styles.closeModalBtnText}>Close</Text>
             </TouchableOpacity>

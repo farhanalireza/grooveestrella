@@ -498,20 +498,6 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
 
                 {/* Centered Action Controls Row: Editions, GrooveCard, Open GrooveLink, Bookmark */}
                 <div className="mt-6 flex items-center justify-center gap-3 sm:gap-4 max-w-full">
-                    {/* Browse Editions Button */}
-                    {album.editions && album.editions.length > 1 && (
-                        <button
-                            onClick={() => setIsEditionsDrawerOpen(true)}
-                            className="w-12 h-12 rounded-full aspect-square shrink-0 bg-[var(--theme-card)]/80 hover:bg-[var(--theme-surface)] active:scale-95 text-[var(--theme-fg)] flex items-center justify-center transition-all duration-200 backdrop-blur-md cursor-pointer shadow-lg border border-[var(--theme-border)] group relative"
-                            title={`Browse ${album.editions.length} Editions & Pressings`}
-                        >
-                            <Layers size={20} className="text-[var(--theme-fg)] group-hover:text-[var(--theme-accent)] transition-colors" />
-                            <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-[var(--theme-accent)] text-[var(--theme-accent-fg)] text-[10px] font-black flex items-center justify-center shadow">
-                                {album.editions.length}
-                            </span>
-                        </button>
-                    )}
-
                     {/* Create GrooveCard Button */}
                     <button
                         onClick={() => setIsGrooveCardOpen(true)}
@@ -527,7 +513,7 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
                         className="h-12 px-6 sm:px-8 rounded-full bg-[var(--theme-accent)] hover:opacity-95 active:scale-95 text-[var(--theme-accent-fg)] font-black text-xs sm:text-sm tracking-wide flex items-center justify-center gap-2 transition-all duration-200 shadow-xl cursor-pointer shrink-0 whitespace-nowrap"
                         title="Open GrooveLink"
                     >
-                        <img src="/in.svg" alt="GrooveLink" className="w-4 h-4 object-contain brightness-0 invert shrink-0" />
+                        <img src="/in.svg" alt="GrooveLink" className="w-5 h-5 object-contain shrink-0" />
                         <span className="whitespace-nowrap">Open GrooveLink</span>
                         <ChevronRight size={15} className="shrink-0" />
                     </button>
