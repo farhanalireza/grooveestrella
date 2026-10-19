@@ -16,7 +16,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
-import { COLORS, GRADIENTS } from '../../src/constants/theme';
+import { COLORS, GRADIENTS, FONTS } from '../../src/constants/theme';
 import { ApiService, isUrl } from '../../src/services/api';
 import { useTheme } from '../../src/context/ThemeContext';
 import GlassCard from '../../src/components/GlassCard';
@@ -278,6 +278,7 @@ const styles = StyleSheet.create({
   missionTagText: {
     fontSize: 10,
     fontWeight: '800',
+    fontFamily: FONTS.display,
     color: '#D4A373',
     letterSpacing: 2,
   },
@@ -288,6 +289,7 @@ const styles = StyleSheet.create({
   titleLineOne: {
     fontSize: 32,
     fontWeight: '900',
+    fontFamily: FONTS.display,
     color: '#FFFFFF',
     textAlign: 'center',
     letterSpacing: -0.5,
@@ -295,6 +297,7 @@ const styles = StyleSheet.create({
   titleLineTwo: {
     fontSize: 32,
     fontWeight: '900',
+    fontFamily: FONTS.display,
     color: '#D4A373',
     textAlign: 'center',
     letterSpacing: -0.5,
@@ -302,6 +305,7 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 14,
     lineHeight: 22,
+    fontFamily: FONTS.body,
     color: COLORS.textSecondary,
     textAlign: 'center',
     maxWidth: 320,
@@ -331,6 +335,7 @@ const styles = StyleSheet.create({
     flex: 1,
     color: COLORS.text,
     fontSize: 14,
+    fontFamily: FONTS.bodyMedium,
     fontWeight: '500',
     paddingVertical: 10,
     paddingRight: 6,
@@ -357,6 +362,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 13,
     fontWeight: '800',
+    fontFamily: FONTS.display,
   },
   errorWrapper: {
     width: '100%',
@@ -378,6 +384,7 @@ const styles = StyleSheet.create({
     color: '#F87171',
     fontSize: 12,
     fontWeight: '500',
+    fontFamily: FONTS.body,
     lineHeight: 18,
   },
   tipContainer: {
@@ -389,6 +396,7 @@ const styles = StyleSheet.create({
   tipText: {
     marginLeft: 8,
     fontSize: 12,
+    fontFamily: FONTS.body,
     color: 'rgba(137, 146, 165, 0.65)',
     textAlign: 'center',
   },
@@ -399,6 +407,7 @@ const styles = StyleSheet.create({
   suggestionsTitle: {
     fontSize: 10,
     fontWeight: '800',
+    fontFamily: FONTS.display,
     color: 'rgba(137, 146, 165, 0.6)',
     letterSpacing: 1.5,
     marginBottom: 12,
@@ -423,5 +432,6 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     fontSize: 12,
     fontWeight: '600',
+    fontFamily: FONTS.bodySemiBold,
   },
 });

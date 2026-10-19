@@ -7,7 +7,7 @@ import * as Haptics from 'expo-haptics';
 import Toast from 'react-native-toast-message';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { useTheme } from '../context/ThemeContext';
-import { COLORS } from '../constants/theme';
+import { COLORS, FONTS } from '../constants/theme';
 import { StorageService } from '../services/storage';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -226,11 +226,13 @@ const styles = StyleSheet.create({
   gridName: {
     fontSize: 13,
     fontWeight: '700',
+    fontFamily: FONTS.displaySemiBold,
     textAlign: 'center',
     marginBottom: 2,
   },
   gridSubtitle: {
     fontSize: 11,
+    fontFamily: FONTS.body,
     textAlign: 'center',
   },
   // List
@@ -255,10 +257,12 @@ const styles = StyleSheet.create({
   listName: {
     fontSize: 14,
     fontWeight: '700',
+    fontFamily: FONTS.displaySemiBold,
     marginBottom: 3,
   },
   listSubtitle: {
     fontSize: 12,
+    fontFamily: FONTS.body,
   },
   actions: {
     flexDirection: 'row',

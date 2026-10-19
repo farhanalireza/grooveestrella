@@ -14,7 +14,7 @@ import * as Haptics from 'expo-haptics';
 import Toast from 'react-native-toast-message';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
-import { COLORS, PLATFORMS } from '../../src/constants/theme';
+import { COLORS, PLATFORMS, FONTS } from '../../src/constants/theme';
 import { StorageService } from '../../src/services/storage';
 import { useTheme } from '../../src/context/ThemeContext';
 import GlassCard from '../../src/components/GlassCard';
@@ -446,11 +446,13 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 26,
     fontWeight: '800',
+    fontFamily: FONTS.display,
     color: COLORS.text,
     marginBottom: 4,
   },
   headerSubtitle: {
     fontSize: 13,
+    fontFamily: FONTS.body,
     color: COLORS.textSecondary,
     lineHeight: 18,
   },
@@ -462,11 +464,13 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 11,
     fontWeight: '800',
+    fontFamily: FONTS.display,
     color: COLORS.purpleLightest,
     letterSpacing: 1.2,
   },
   sectionDescription: {
     fontSize: 12,
+    fontFamily: FONTS.body,
     color: COLORS.textSecondary,
     marginBottom: 14,
     lineHeight: 18,
@@ -498,15 +502,18 @@ const styles = StyleSheet.create({
   platformName: {
     fontSize: 13,
     fontWeight: '700',
+    fontFamily: FONTS.displaySemiBold,
     color: COLORS.text,
     marginBottom: 3,
   },
   platformNameSelected: {
     color: '#FFFFFF',
     fontWeight: '800',
+    fontFamily: FONTS.display,
   },
   platformDesc: {
     fontSize: 10,
+    fontFamily: FONTS.body,
     color: COLORS.textSecondary,
     lineHeight: 14,
   },
@@ -521,6 +528,7 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     fontSize: 12,
     fontWeight: '600',
+    fontFamily: FONTS.bodySemiBold,
   },
   sectionSpacing: {
     marginTop: 20,
@@ -546,11 +554,13 @@ const styles = StyleSheet.create({
   managerName: {
     fontSize: 13,
     fontWeight: '700',
+    fontFamily: FONTS.displaySemiBold,
     color: COLORS.text,
     marginBottom: 2,
   },
   managerCount: {
     fontSize: 11,
+    fontFamily: FONTS.body,
     color: COLORS.textSecondary,
   },
   deleteMiniBtn: {
@@ -574,6 +584,7 @@ const styles = StyleSheet.create({
     color: '#F87171',
     fontSize: 13,
     fontWeight: '800',
+    fontFamily: FONTS.display,
   },
   resetAllBtn: {
     flexDirection: 'row',
@@ -589,6 +600,7 @@ const styles = StyleSheet.create({
     color: '#FBBF24',
     fontSize: 13,
     fontWeight: '800',
+    fontFamily: FONTS.display,
   },
   privacyCard: {
     backgroundColor: 'rgba(232, 168, 124, 0.08)',
@@ -601,11 +613,13 @@ const styles = StyleSheet.create({
   privacyTitle: {
     fontSize: 13,
     fontWeight: '800',
+    fontFamily: FONTS.displayBold,
     color: COLORS.text,
     marginBottom: 4,
   },
   privacyText: {
     fontSize: 11,
+    fontFamily: FONTS.body,
     color: 'rgba(137, 146, 165, 0.75)',
     textAlign: 'center',
     lineHeight: 16,
@@ -638,11 +652,13 @@ const styles = StyleSheet.create({
   themeCardTitle: {
     fontSize: 14,
     fontWeight: '800',
+    fontFamily: FONTS.displayBold,
     marginBottom: 4,
   },
   themeCardDesc: {
     fontSize: 10,
     fontWeight: '600',
+    fontFamily: FONTS.bodyMedium,
     lineHeight: 14,
   },
   gradientPreviewCard: {
@@ -660,10 +676,12 @@ const styles = StyleSheet.create({
   gradientPreviewTitle: {
     fontSize: 12,
     fontWeight: '800',
+    fontFamily: FONTS.displayBold,
   },
   gradientHexText: {
     fontSize: 10,
     fontWeight: '700',
+    fontFamily: FONTS.mono,
     letterSpacing: 0.5,
   },
   gradientBar: {

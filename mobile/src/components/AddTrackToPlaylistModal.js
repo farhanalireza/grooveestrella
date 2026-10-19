@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Toast from 'react-native-toast-message';
 import { useTheme } from '../context/ThemeContext';
+import { FONTS } from '../constants/theme';
 import { ApiService } from '../services/api';
 import { StorageService } from '../services/storage';
 
@@ -40,7 +41,7 @@ export default function AddTrackToPlaylistModal({
       setResults([]);
       setLoading(false);
     }
-  }, [visible, existingTrackIds]);
+  }, [visible]);
 
   const handleSearchChange = (text) => {
     setQuery(text);
@@ -295,10 +296,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 16,
     fontWeight: '700',
+    fontFamily: FONTS.displaySemiBold,
     letterSpacing: -0.3,
   },
   subtitle: {
     fontSize: 11,
+    fontFamily: FONTS.body,
     marginTop: 2,
   },
   searchBar: {
@@ -318,6 +321,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 13,
+    fontFamily: FONTS.body,
     padding: 0,
   },
   listContainer: {
@@ -348,10 +352,12 @@ const styles = StyleSheet.create({
   trackTitle: {
     fontSize: 13,
     fontWeight: '600',
+    fontFamily: FONTS.displaySemiBold,
     marginBottom: 2,
   },
   trackArtist: {
     fontSize: 11,
+    fontFamily: FONTS.body,
   },
   addButton: {
     flexDirection: 'row',
@@ -364,6 +370,7 @@ const styles = StyleSheet.create({
   addButtonText: {
     fontSize: 11,
     fontWeight: '700',
+    fontFamily: FONTS.bodySemiBold,
   },
   emptyContainer: {
     flex: 1,
@@ -373,6 +380,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 12,
+    fontFamily: FONTS.body,
     textAlign: 'center',
   },
   footer: {
@@ -389,5 +397,6 @@ const styles = StyleSheet.create({
   doneButtonText: {
     fontSize: 12,
     fontWeight: '700',
+    fontFamily: FONTS.displaySemiBold,
   },
 });

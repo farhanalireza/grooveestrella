@@ -16,7 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Toast from 'react-native-toast-message';
 import { useTheme } from '../context/ThemeContext';
-import { COLORS } from '../constants/theme';
+import { COLORS, FONTS } from '../constants/theme';
 import { StorageService } from '../services/storage';
 import { generateStreamingLinks } from '../services/api';
 
@@ -334,15 +334,16 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     fontSize: 9,
-    fontWeight: '800',
+    fontFamily: FONTS.displayBold,
     letterSpacing: 1,
   },
   headerTitle: {
     fontSize: 14,
-    fontWeight: '700',
+    fontFamily: FONTS.displayBold,
   },
   headerArtist: {
     fontSize: 11,
+    fontFamily: FONTS.bodyMedium,
     marginTop: 1,
   },
   closeBtn: {
@@ -355,7 +356,7 @@ const styles = StyleSheet.create({
   },
   subText: {
     fontSize: 11,
-    fontWeight: '700',
+    fontFamily: FONTS.displayBold,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
   },
@@ -390,10 +391,11 @@ const styles = StyleSheet.create({
   },
   platName: {
     fontSize: 13,
-    fontWeight: '700',
+    fontFamily: FONTS.displayBold,
   },
   defaultBadge: {
     fontSize: 10,
+    fontFamily: FONTS.body,
     marginTop: 2,
   },
   playBtn: {
@@ -405,7 +407,7 @@ const styles = StyleSheet.create({
   },
   playBtnText: {
     fontSize: 11,
-    fontWeight: '800',
+    fontFamily: FONTS.displayBold,
     color: '#000',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -431,11 +433,11 @@ const styles = StyleSheet.create({
   },
   actionPillText: {
     fontSize: 12,
-    fontWeight: '700',
+    fontFamily: FONTS.displayBold,
   },
   grooveCardPill: {},
   grooveCardPillText: {
     fontSize: 12,
-    fontWeight: '700',
+    fontFamily: FONTS.displayBold,
   },
 });

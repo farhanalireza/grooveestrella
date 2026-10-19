@@ -16,7 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Toast from 'react-native-toast-message';
 import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
-import { COLORS, AVAILABLE_GENRES } from '../../src/constants/theme';
+import { COLORS, AVAILABLE_GENRES, FONTS } from '../../src/constants/theme';
 import { useTheme } from '../../src/context/ThemeContext';
 import { StorageService, generateRandomName } from '../../src/services/storage';
 import GlassCard from '../../src/components/GlassCard';
@@ -555,6 +555,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 28,
     fontWeight: '900',
+    fontFamily: FONTS.display,
   },
   profileInfo: {
     flex: 1,
@@ -576,6 +577,7 @@ const styles = StyleSheet.create({
     color: '#D4A373',
     fontSize: 9,
     fontWeight: '800',
+    fontFamily: FONTS.display,
     letterSpacing: 1,
   },
   nameRow: {
@@ -585,6 +587,7 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: 20,
     fontWeight: '800',
+    fontFamily: FONTS.display,
     color: COLORS.text,
     marginRight: 8,
   },
@@ -603,6 +606,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     color: COLORS.text,
     fontSize: 16,
+    fontFamily: FONTS.bodySemiBold,
     fontWeight: '700',
   },
   nameActionBtn: {
@@ -629,6 +633,7 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     fontSize: 12,
     fontWeight: '700',
+    fontFamily: FONTS.bodySemiBold,
   },
   profileGenresRow: {
     flexDirection: 'row',
@@ -650,6 +655,7 @@ const styles = StyleSheet.create({
     color: '#D4A373',
     fontSize: 10,
     fontWeight: '700',
+    fontFamily: FONTS.bodyMedium,
   },
   statsGrid: {
     flexDirection: 'row',
@@ -670,12 +676,14 @@ const styles = StyleSheet.create({
   statLabel: {
     fontSize: 9,
     fontWeight: '800',
+    fontFamily: FONTS.display,
     color: COLORS.textSecondary,
     letterSpacing: 0.8,
   },
   statNumber: {
     fontSize: 20,
     fontWeight: '900',
+    fontFamily: FONTS.display,
     color: COLORS.text,
   },
   tabsScroll: {
@@ -695,11 +703,13 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     fontSize: 15,
     fontWeight: '700',
+    fontFamily: FONTS.displaySemiBold,
     marginTop: 12,
   },
   emptyTabSub: {
     color: COLORS.textSecondary,
     fontSize: 12,
+    fontFamily: FONTS.body,
     marginTop: 4,
     textAlign: 'center',
   },
@@ -720,7 +730,7 @@ const styles = StyleSheet.create({
   },
   reviewTitle: {
     fontSize: 14,
-    fontWeight: '700',
+    fontFamily: FONTS.displaySemiBold,
     color: COLORS.text,
   },
   ratingBadge: {
@@ -735,17 +745,19 @@ const styles = StyleSheet.create({
   ratingText: {
     color: '#FBBF24',
     fontSize: 11,
-    fontWeight: '800',
+    fontFamily: FONTS.displayBold,
   },
   reviewComment: {
     color: COLORS.textSecondary,
     fontSize: 13,
+    fontFamily: FONTS.body,
     lineHeight: 18,
     marginBottom: 6,
   },
   reviewDate: {
     color: 'rgba(137, 146, 165, 0.5)',
     fontSize: 10,
+    fontFamily: FONTS.body,
   },
   tasteContainer: {
     paddingVertical: 8,
@@ -753,6 +765,7 @@ const styles = StyleSheet.create({
   tasteInstruction: {
     color: COLORS.textSecondary,
     fontSize: 13,
+    fontFamily: FONTS.body,
     marginBottom: 14,
     lineHeight: 18,
   },
@@ -778,10 +791,10 @@ const styles = StyleSheet.create({
   genreToggleText: {
     color: COLORS.textSecondary,
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: FONTS.bodySemiBold,
   },
   genreToggleTextActive: {
     color: '#FFFFFF',
-    fontWeight: '800',
+    fontFamily: FONTS.bodyBold,
   },
 });

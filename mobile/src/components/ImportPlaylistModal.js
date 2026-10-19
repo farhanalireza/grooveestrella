@@ -15,6 +15,7 @@ import * as Haptics from 'expo-haptics';
 import * as Clipboard from 'expo-clipboard';
 import Toast from 'react-native-toast-message';
 import { useTheme } from '../context/ThemeContext';
+import { FONTS } from '../constants/theme';
 import { parsePlaylistFile } from '../utils/playlistFileFormats';
 import { StorageService } from '../services/storage';
 
@@ -236,16 +237,17 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: FONTS.displayBold,
     letterSpacing: -0.3,
   },
   subtitle: {
     fontSize: 11,
+    fontFamily: FONTS.body,
     marginTop: 2,
   },
   label: {
     fontSize: 10,
-    fontWeight: '800',
+    fontFamily: FONTS.displayBold,
     letterSpacing: 1,
     marginTop: 14,
     marginBottom: 6,
@@ -256,6 +258,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 13,
+    fontFamily: FONTS.body,
   },
   contentHeaderRow: {
     flexDirection: 'row',
@@ -271,7 +274,7 @@ const styles = StyleSheet.create({
   },
   pasteButtonText: {
     fontSize: 11,
-    fontWeight: '700',
+    fontFamily: FONTS.bodySemiBold,
   },
   textArea: {
     borderWidth: 1,
@@ -279,7 +282,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 12,
-    fontFamily: 'monospace',
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
     height: 120,
   },
   actions: {
@@ -299,6 +302,6 @@ const styles = StyleSheet.create({
   importButtonText: {
     color: '#000',
     fontSize: 14,
-    fontWeight: '700',
+    fontFamily: FONTS.displayBold,
   },
 });

@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useTheme } from '../../../src/context/ThemeContext';
+import { FONTS } from '../../../src/constants/theme';
 import { ApiService } from '../../../src/services/api';
 import { GrooveLoader, GrooveAppBar } from '../../../src/components';
 
@@ -198,6 +199,7 @@ const styles = StyleSheet.create({
   },
   tabPillText: {
     fontSize: 12,
+    fontFamily: FONTS.displaySemiBold,
   },
   gridContent: {
     padding: 12,
@@ -222,6 +224,7 @@ const styles = StyleSheet.create({
   releaseTitle: {
     fontSize: 13,
     fontWeight: '700',
+    fontFamily: FONTS.displaySemiBold,
     marginBottom: 4,
   },
   releaseMetaRow: {
@@ -231,6 +234,7 @@ const styles = StyleSheet.create({
   },
   releaseYear: {
     fontSize: 11,
+    fontFamily: FONTS.body,
   },
   typeBadge: {
     paddingHorizontal: 5,
@@ -240,5 +244,6 @@ const styles = StyleSheet.create({
   typeBadgeText: {
     fontSize: 9,
     fontWeight: '700',
+    fontFamily: FONTS.display,
   },
 });

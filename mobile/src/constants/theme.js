@@ -184,6 +184,26 @@ export const fontWeight = {
   extrabold: '800',
 };
 
+export const FONTS = {
+  // Brand Display Typography (Matches Web App Space Grotesk)
+  display: 'SpaceGrotesk-Bold',
+  displaySemiBold: 'SpaceGrotesk-SemiBold',
+  displayMedium: 'SpaceGrotesk-Medium',
+  displayRegular: 'SpaceGrotesk-Regular',
+
+  // Clean Modern UI Typography (Matches Web App Inter)
+  body: 'Inter-Regular',
+  bodyMedium: 'Inter-Medium',
+  bodySemiBold: 'Inter-SemiBold',
+  bodyBold: 'Inter-Bold',
+  bodyExtraBold: 'Inter-ExtraBold',
+
+  // Monospace
+  mono: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+};
+
+export const fonts = FONTS;
+
 export const GRADIENTS = {
   theme: ['#470B24', '#D4A373', '#FFEDD5'],
   purple: ['#470B24', '#D4A373', '#FFEDD5'],
@@ -347,6 +367,8 @@ export const theme = {
   borderRadius: RADIUS,
   fontSize,
   fontWeight,
+  FONTS,
+  fonts: FONTS,
   shadows,
   glassCard,
   blur,

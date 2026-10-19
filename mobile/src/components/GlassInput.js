@@ -16,7 +16,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../context/ThemeContext';
-import { COLORS, RADIUS, SPACING } from '../constants/theme';
+import { COLORS, FONTS, RADIUS, SPACING } from '../constants/theme';
 
 /**
  * @typedef {Object} GlassInputProps
@@ -182,10 +182,7 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     fontSize: 15,
     paddingVertical: 0,
-    fontFamily: Platform.select({
-      ios: 'System',
-      android: 'Roboto',
-    }),
+    fontFamily: FONTS.body,
   },
   clearButton: {
     padding: SPACING.xs,

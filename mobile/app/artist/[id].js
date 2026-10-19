@@ -1,5 +1,5 @@
-// app/artist/[id].js
-import React, { useState, useEffect } from 'react';
+// mobile/app/artist/[id].js
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
   Pressable,
   Platform,
-  Modal,
+  Alert,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -19,7 +19,7 @@ import Toast from 'react-native-toast-message';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../src/context/ThemeContext';
-import { COLORS } from '../../src/constants/theme';
+import { FONTS } from '../../src/constants/theme';
 import { ApiService } from '../../src/services/api';
 import { StorageService } from '../../src/services/storage';
 import {
@@ -31,6 +31,7 @@ import {
   GrooveAppBar,
   PlaylistPickerModal,
 } from '../../src/components';
+import GrooveLogo from '../../src/components/GrooveLogo';
 
 function formatFollowers(num) {
   if (!num) return '1M';
@@ -47,8 +48,6 @@ function formatDuration(ms) {
   return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 }
 
-const PAGE_SIZE = 12;
-
 export default function ArtistDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
@@ -58,15 +57,9 @@ export default function ArtistDetailScreen() {
   const [artist, setArtist] = useState(null);
   const [topTracks, setTopTracks] = useState([]);
   const [albums, setAlbums] = useState([]);
-  const [allReleases, setAllReleases] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState(false);
   const [expandedHeroDesc, setExpandedHeroDesc] = useState(false);
-
-  // Full Discography Modal state
-  const [showFullDiscography, setShowFullDiscography] = useState(false);
-  const [discographyTab, setDiscographyTab] = useState('all');
-  const [discographyPage, setDiscographyPage] = useState(1);
 
   // Modals state
   const [showGrooveLinkModal, setShowGrooveLinkModal] = useState(false);
@@ -75,19 +68,54 @@ export default function ArtistDetailScreen() {
   const [selectedTrackForPlaylist, setSelectedTrackForPlaylist] = useState(null);
   const [modalItemTarget, setModalItemTarget] = useState(null);
 
-  const filteredReleases = React.useMemo(() => {
-    if (!allReleases) return [];
-    if (discographyTab === 'all') return allReleases;
-    if (discographyTab === 'album') return allReleases.filter((r) => r.typeCategory === 'album');
-    if (discographyTab === 'single_ep') return allReleases.filter((r) => r.typeCategory === 'single' || r.typeCategory === 'ep');
-    if (discographyTab === 'compilation') return allReleases.filter((r) => r.typeCategory === 'compilation');
-    if (discographyTab === 'live') return allReleases.filter((r) => r.typeCategory === 'live');
-    return allReleases;
-  }, [allReleases, discographyTab]);
+  // Filter strictly for studio albums in reverse chronological order (matching web app)
+  const studioAlbums = useMemo(() => {
+    if (!albums || !albums.length) return [];
+    const filtered = albums.filter((alb) => {
+      const pType = (alb.primaryType || alb.typeCategory || 'album').toLowerCase();
+      const sTypes = alb.secondaryTypes || [];
+      const isComp = sTypes.some(s => (s || '').toLowerCase().includes('compilation')) || (alb.title || alb.name || '').toLowerCase().includes('compilation');
+      const isLive = sTypes.some(s => (s || '').toLowerCase().includes('live')) || (alb.title || alb.name || '').toLowerCase().includes('live');
+      const isRemix = sTypes.some(s => (s || '').toLowerCase().includes('remix'));
+      const isEp = pType === 'ep' || (alb.title || alb.name || '').toLowerCase().includes(' ep');
+      const isSingle = pType === 'single';
+      return !isComp && !isLive && !isRemix && !isEp && !isSingle;
+    });
 
-  const pagedReleases = React.useMemo(() => {
-    return filteredReleases.slice(0, discographyPage * PAGE_SIZE);
-  }, [filteredReleases, discographyPage]);
+    return [...filtered].sort((a, b) => {
+      const ya = a.releaseYear || (a.releaseDate ? new Date(a.releaseDate).getFullYear() : 0);
+      const yb = b.releaseYear || (b.releaseDate ? new Date(b.releaseDate).getFullYear() : 0);
+      if (ya !== yb) return yb - ya;
+      return (b.releaseDate || '').localeCompare(a.releaseDate || '');
+    });
+  }, [albums]);
+
+  // Clean Genre Filter: Discard hashtags, numbers, catalog tags
+  const validGenres = useMemo(() => {
+    const rawList = artist?.genres || artist?.tags || [];
+    const valid = [];
+    const seen = new Set();
+    for (const t of rawList) {
+      const raw = typeof t === 'string' ? t : (t?.name || '');
+      if (!raw) continue;
+      const clean = raw.trim();
+      const lower = clean.toLowerCase();
+      if (lower.includes('#') || /^\d/.test(lower) || /^#?\d{2,4}s?$/i.test(lower) || lower.length < 3) continue;
+
+      const ignored = new Set([
+        'album', 'albums', 'ep', 'single', 'singles', 'lp', 'cd', 'vinyl', 'audio',
+        'favorite', 'favourites', 'favorites', 'favourite', 'seen live',
+        'owned', 'wishlist', 'my collection', 'all time favorite', 'classic'
+      ]);
+      if (ignored.has(lower)) continue;
+
+      if (!seen.has(lower)) {
+        seen.add(lower);
+        valid.push(clean.split(/[\s-]+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' '));
+      }
+    }
+    return valid.slice(0, 6);
+  }, [artist?.genres, artist?.tags]);
 
   useEffect(() => {
     let mounted = true;
@@ -103,7 +131,6 @@ export default function ArtistDetailScreen() {
           setArtist(artistData);
           setTopTracks(artistData?.topTracks || []);
           setAlbums(artistData?.albums || []);
-          setAllReleases(artistData?.allReleases || []);
           setSaved(isSaved);
         }
       } catch (err) {
@@ -139,7 +166,7 @@ export default function ArtistDetailScreen() {
         id: actualId,
         name: artistName,
         title: artistName,
-        image: artist.coverArt || artist.image,
+        image: artist.coverArt || artist.image || artist.images?.[0]?.url,
         followers: artist.followers,
         type: 'artist',
       });
@@ -152,25 +179,22 @@ export default function ArtistDetailScreen() {
     }
   };
 
-  const openItemInGrooveLink = (item, type = 'track') => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setModalItemTarget({ ...item, type });
-    setShowGrooveLinkModal(true);
-  };
-
   const openTrackOptions = (trackItem) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const trackTitle = trackItem.title || trackItem.name || 'Track';
+    const trackName = trackItem.title || trackItem.name || 'Track';
+
     Alert.alert(
-      trackTitle,
-      trackItem.artist || artist?.name || 'Artist',
+      trackName,
+      artistName,
       [
         {
           text: 'Add to Playlist',
           onPress: () => {
             setSelectedTrackForPlaylist({
               ...trackItem,
-              artist: artist?.name || 'Artist',
+              image: trackItem.coverArt || avatarUrl,
+              coverArt: trackItem.coverArt || avatarUrl,
+              artist: artistName,
             });
             setShowPlaylistPickerModal(true);
           },
@@ -178,13 +202,14 @@ export default function ArtistDetailScreen() {
         {
           text: 'Open in GrooveLink',
           onPress: () => {
-            openItemInGrooveLink(trackItem, 'track');
+            setModalItemTarget(trackItem);
+            setShowGrooveLinkModal(true);
           },
         },
         {
           text: 'Share via GrooveCard',
           onPress: () => {
-            setModalItemTarget({ ...trackItem, type: 'track' });
+            setModalItemTarget(trackItem);
             setShowGrooveCardModal(true);
           },
         },
@@ -195,32 +220,35 @@ export default function ArtistDetailScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.safeArea}>
-        <GrooveLoader fullScreen text="Loading Artist Profile..." />
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.bg }]}>
+        <GrooveLoader fullScreen text="Loading Artist..." />
       </SafeAreaView>
     );
   }
 
   const artistName = artist?.name || artist?.title || 'Unknown Artist';
-  const avatarUrl = artist?.coverArt || artist?.image || 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=800&auto=format&fit=crop&q=80';
-  const genres = artist?.genres || ['Rock', 'Classic Rock'];
+  const avatarUrl = artist?.coverArt || artist?.image || artist?.images?.[0]?.url || 'https://placehold.co/600x600/17020B/E8A87C?text=Artist';
   const followersCount = formatFollowers(artist?.followers || 15000000);
-  const popularityScore = artist?.popularity || 90;
+  const popularityScore = artist?.popularity || 85;
+
+  const shareTitle = `${artistName} on GrooveEstrella`;
+  const shareMessage = `Explore "${artistName}" on GrooveEstrella! 🎙️`;
+  const shareUrl = `https://grooveestrella.com/artist/${id}`;
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.bg }]} edges={['left', 'right']}>
-      {/* Dynamic Ambient Artist Picture Gradient Backdrop */}
+      {/* Dynamic Ambient Blur Backdrop */}
       <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
         <Image
           source={{ uri: avatarUrl }}
-          style={[StyleSheet.absoluteFillObject, { opacity: isDark ? 0.72 : 0.88 }]}
-          blurRadius={Platform.OS === 'ios' ? 24 : 14}
+          style={[StyleSheet.absoluteFillObject, { opacity: isDark ? 0.68 : 0.82 }]}
+          blurRadius={Platform.OS === 'ios' ? 26 : 16}
           resizeMode="cover"
         />
         <LinearGradient
           colors={[
-            'rgba(0, 0, 0, 0.3)',
-            isDark ? 'rgba(23, 2, 11, 0.5)' : 'rgba(250, 244, 235, 0.5)',
+            'rgba(0, 0, 0, 0.45)',
+            isDark ? 'rgba(23, 2, 11, 0.65)' : 'rgba(250, 244, 235, 0.65)',
             colors.bg,
           ]}
           locations={[0, 0.45, 0.95]}
@@ -228,398 +256,260 @@ export default function ArtistDetailScreen() {
         />
       </View>
 
-      {/* Top Apple Music Style Unified App Bar */}
+      {/* Floating Pill Top Bar (Back + Logo/Wordmark + Native Share) */}
       <GrooveAppBar
+        variant="pill"
         title={artistName}
-        subtitle="Artist Profile"
-        saved={saved}
-        onToggleSave={handleToggleSave}
-        onShare={() => {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-          setModalItemTarget(null);
-          setShowGrooveCardModal(true);
-        }}
-        onOpenLink={() => {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-          setModalItemTarget(null);
-          setShowGrooveLinkModal(true);
-        }}
+        shareData={{ title: shareTitle, message: shareMessage, url: shareUrl }}
       />
 
       <ScrollView
         contentContainerStyle={[
           styles.scrollContent,
           {
-            paddingTop: (Platform.OS === 'ios' ? Math.max(insets.top, 44) : Math.max(insets.top, 24)) + 58,
-            paddingBottom: insets.bottom + 36,
+            paddingTop: (Platform.OS === 'ios' ? Math.max(insets.top, 44) : Math.max(insets.top, 24)) + 60,
+            paddingBottom: insets.bottom + 48,
           },
         ]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Hero Card Container (Matches web app Artist Card - Image 3) */}
-        <Animated.View entering={FadeInDown.duration(400)} style={[styles.heroCard, { backgroundColor: colors.cardBg, borderColor: colors.border }]}>
+        {/* Centered Apple Music Style Hero */}
+        <Animated.View entering={FadeInDown.duration(400)} style={styles.heroCenterContainer}>
           {/* Circular Artist Avatar */}
-          <View style={[styles.avatarWrapper, { borderColor: colors.border }]}>
+          <View style={styles.avatarWrapper}>
             <Image source={{ uri: avatarUrl }} style={styles.avatarImage} resizeMode="cover" />
           </View>
 
-          {/* Artist Metadata */}
-          <View style={styles.metaContent}>
-            {/* Category Label */}
-            <View style={[styles.categoryBadgeRow, { backgroundColor: isDark ? 'rgba(181, 190, 221, 0.15)' : 'rgba(71, 11, 36, 0.08)', borderColor: colors.border, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 }]}>
-              <Ionicons name="people" size={13} color={colors.accent} />
-              <Text style={[styles.categoryBadgeText, { color: colors.accent }]}>ARTIST PROFILE</Text>
-            </View>
-
-            {/* Artist Name */}
+          {/* Artist Name */}
+          <View style={styles.titleRow}>
             <Text style={[styles.artistNameText, { color: colors.text }]}>{artistName}</Text>
-
-            {/* Genre Pills */}
-            {genres.length > 0 && (
-              <View style={styles.genresRow}>
-                {genres.map((g, idx) => (
-                  <View key={idx} style={[styles.genrePill, { backgroundColor: isDark ? 'rgba(181, 190, 221, 0.15)' : 'rgba(71, 11, 36, 0.06)', borderColor: colors.border }]}>
-                    <Text style={[styles.genrePillText, { color: colors.accent, fontWeight: '700' }]}>{g}</Text>
-                  </View>
-                ))}
-              </View>
-            )}
-
-            {/* Meta Row: Followers + Score */}
-            <View style={styles.metaRow}>
-              <View style={styles.metaItem}>
-                <Ionicons name="people-outline" size={14} color={colors.textSecondary} />
-                <Text style={[styles.metaItemText, { color: colors.textSecondary }]}>{followersCount} followers</Text>
-              </View>
-              <Text style={[styles.metaDot, { color: colors.textSecondary }]}>•</Text>
-              <View style={styles.metaItem}>
-                <Ionicons name="trophy-outline" size={14} color={colors.textSecondary} />
-                <Text style={[styles.metaItemText, { color: colors.textSecondary }]}>Score: {popularityScore}</Text>
-              </View>
-            </View>
-
-            {/* Circular Groove Score RatingPieChart */}
-            <View style={styles.ratingRow}>
-              <RatingPieChart rating={artist?.rating || { value: popularityScore / 20 }} />
-            </View>
-
-            {/* Collapsible Lore Overview */}
-            {artist?.description ? (
-              <View style={styles.overviewSection}>
-                <Text
-                  style={[
-                    styles.overviewText,
-                    !expandedHeroDesc && styles.overviewTextClamped,
-                  ]}
-                >
-                  {artist.description}
-                </Text>
-                {artist.description.length > 100 && (
-                  <TouchableOpacity
-                    onPress={() => setExpandedHeroDesc(!expandedHeroDesc)}
-                    style={styles.readMoreBtn}
-                  >
-                    <Text style={[styles.readMoreText, { color: colors.accent }]}>
-                      {expandedHeroDesc ? 'Show less' : 'Read full overview'}
-                    </Text>
-                    <Ionicons
-                      name={expandedHeroDesc ? 'chevron-up' : 'chevron-down'}
-                      size={12}
-                      color={colors.accent}
-                    />
-                  </TouchableOpacity>
-                )}
-              </View>
-            ) : null}
-
-            {/* "Open GrooveLink" Pill Button */}
-            <View style={styles.grooveLinkSection}>
-              <TouchableOpacity
-                style={[
-                  styles.grooveLinkBtn,
-                  {
-                    backgroundColor: isDark ? 'rgba(232, 168, 124, 0.15)' : 'rgba(154, 74, 47, 0.12)',
-                    borderColor: isDark ? 'rgba(232, 168, 124, 0.3)' : 'rgba(154, 74, 47, 0.25)',
-                  },
-                ]}
-                activeOpacity={0.8}
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  setModalItemTarget(null);
-                  setShowGrooveLinkModal(true);
-                }}
-              >
-                <Ionicons name="link" size={15} color={colors.accent} style={{ marginRight: 6 }} />
-                <Text style={[styles.grooveLinkBtnText, { color: colors.accent }]}>Open GrooveLink</Text>
-                <Ionicons name="chevron-forward" size={14} color={colors.accent} style={{ marginLeft: 4 }} />
-              </TouchableOpacity>
-            </View>
           </View>
-        </Animated.View>
 
-        {/* Studio Albums Section (Strictly Studio Albums, Descending Date Format) */}
-        {albums.length > 0 && (
-          <View style={styles.discographySection}>
-            <View style={styles.sectionHeader}>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Ionicons name="disc-outline" size={16} color={colors.accent} style={{ marginRight: 6 }} />
-                <Text style={[styles.sectionTitle, { color: colors.text }]}>Studio Albums</Text>
-              </View>
-              {allReleases.length > 0 && (
+          {/* Clean Genre Pills */}
+          {validGenres.length > 0 && (
+            <View style={styles.genresRow}>
+              {validGenres.map((g, idx) => (
+                <View key={idx} style={[styles.genrePill, { backgroundColor: 'rgba(255, 255, 255, 0.08)', borderColor: 'rgba(255, 255, 255, 0.12)' }]}>
+                  <Text style={[styles.genrePillText, { color: colors.accent }]}>{g}</Text>
+                </View>
+              ))}
+            </View>
+          )}
+
+          {/* Meta: Country · Followers · Score */}
+          <Text style={[styles.metaSubtitle, { color: colors.textSecondary }]}>
+            {artist?.country ? `${artist.country} · ` : ''}{followersCount} followers · Score: {popularityScore}
+          </Text>
+
+          {/* Rating Pie Chart */}
+          <View style={styles.ratingRow}>
+            <RatingPieChart rating={artist?.rating || { value: popularityScore / 20 }} />
+          </View>
+
+          {/* Action Row: Sparkles (GrooveCard) | Open GrooveLink | Follow/Bookmark */}
+          <View style={styles.actionRow}>
+            <TouchableOpacity
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setModalItemTarget(null);
+                setShowGrooveCardModal(true);
+              }}
+              style={styles.circleActionBtn}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="sparkles" size={19} color="#FFF2DF" />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setModalItemTarget(null);
+                setShowGrooveLinkModal(true);
+              }}
+              style={[styles.grooveLinkPillBtn, { backgroundColor: colors.accent }]}
+              activeOpacity={0.85}
+            >
+              <GrooveLogo size={16} color="#17020B" style={{ marginRight: 6 }} />
+              <Text style={styles.grooveLinkPillText}>Open GrooveLink</Text>
+              <Ionicons name="chevron-forward" size={14} color="#17020B" style={{ marginLeft: 2 }} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={handleToggleSave}
+              style={[
+                styles.circleActionBtn,
+                saved && { backgroundColor: colors.accent, borderColor: colors.accent },
+              ]}
+              activeOpacity={0.8}
+            >
+              <Ionicons
+                name={saved ? 'checkmark' : 'add'}
+                size={22}
+                color={saved ? '#17020B' : '#FFF2DF'}
+              />
+            </TouchableOpacity>
+          </View>
+
+          {/* Overview & Lore */}
+          {artist?.description ? (
+            <View style={styles.overviewSection}>
+              <Text
+                style={[
+                  styles.overviewText,
+                  { color: colors.textSecondary },
+                  !expandedHeroDesc && styles.overviewTextClamped,
+                ]}
+              >
+                {artist.description}
+              </Text>
+              {artist.description.length > 80 && (
                 <TouchableOpacity
-                  onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    router.push(`/artist/${id}/discography`);
-                  }}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  style={{ flexDirection: 'row', alignItems: 'center' }}
+                  onPress={() => setExpandedHeroDesc(!expandedHeroDesc)}
+                  style={styles.readMoreBtn}
                 >
-                  <Text style={[styles.seeAllText, { color: colors.accent }]}>See All ({allReleases.length})</Text>
-                  <Ionicons name="chevron-forward" size={12} color={colors.accent} style={{ marginLeft: 2 }} />
+                  <Text style={[styles.readMoreText, { color: colors.accent }]}>
+                    {expandedHeroDesc ? 'LESS' : 'MORE'}
+                  </Text>
                 </TouchableOpacity>
               )}
             </View>
+          ) : null}
+        </Animated.View>
 
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.albumsScroll}>
-              {albums.map((album, idx) => {
-                const albTitle = album.title || album.name;
-                const albCover = album.coverArt || album.image || avatarUrl;
-                const albYear = album.releaseYear || 'Album';
+        {/* Top Songs List */}
+        {topTracks.length > 0 && (
+          <View style={styles.sectionBlock}>
+            <View style={[styles.sectionHeaderRow, { borderBottomColor: colors.border }]}>
+              <Text style={[styles.sectionTitleText, { color: colors.text }]}>Top Songs</Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
+            </View>
+
+            <View style={styles.trackList}>
+              {topTracks.map((track, index) => {
+                const trackTitle = track.title || track.name;
+                const albumTitle = track.album?.name || track.album || artistName;
+                const releaseYear = track.releaseYear || (track.releaseDate ? new Date(track.releaseDate).getFullYear() : null);
+                const coverImg = track.url || track.coverArt || avatarUrl;
+                const isExplicit = Boolean(track.explicit);
+                const dur = formatDuration(track.duration || track.duration_ms);
 
                 return (
                   <TouchableOpacity
-                    key={album.id || idx}
-                    style={[styles.albumGridCard, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}
-                    activeOpacity={0.8}
+                    key={`${track.id || 'track'}-${index}`}
                     onPress={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                      router.push(`/album/${album.id || encodeURIComponent(albTitle)}`);
+                      if (track.id) router.push(`/track/${track.id}`);
                     }}
+                    activeOpacity={0.7}
+                    style={[styles.trackRow, { borderBottomColor: 'rgba(255, 255, 255, 0.08)' }]}
                   >
-                    <Image source={{ uri: albCover }} style={styles.albumGridCover} />
-                    <Text style={[styles.albumGridTitle, { color: colors.text }]} numberOfLines={1}>
-                      {albTitle}
+                    <Image source={{ uri: coverImg }} style={styles.trackThumb} resizeMode="cover" />
+
+                    <View style={styles.trackCenter}>
+                      <View style={styles.trackTitleRow}>
+                        <Text style={[styles.trackTitle, { color: colors.text }]} numberOfLines={1}>
+                          {trackTitle}
+                        </Text>
+                        {isExplicit && (
+                          <View style={styles.trackExplicitBadge}>
+                            <Text style={styles.trackExplicitBadgeText}>E</Text>
+                          </View>
+                        )}
+                      </View>
+                      <Text style={[styles.trackSubtitle, { color: colors.textSecondary }]} numberOfLines={1}>
+                        {albumTitle}{releaseYear ? ` (${releaseYear})` : ''}
+                      </Text>
+                    </View>
+
+                    <Text style={[styles.trackDuration, { color: colors.textSecondary }]}>
+                      {dur}
                     </Text>
-                    <Text style={[styles.albumGridYear, { color: colors.textSecondary }]}>{albYear}</Text>
+
+                    <TouchableOpacity
+                      onPress={() => openTrackOptions(track)}
+                      style={styles.moreBtn}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <Ionicons name="ellipsis-horizontal" size={18} color={colors.textSecondary} />
+                    </TouchableOpacity>
                   </TouchableOpacity>
                 );
               })}
-            </ScrollView>
+            </View>
           </View>
         )}
 
-        {/* Popular Tracks Section (Top Hit Songs) */}
-        {topTracks.length > 0 && (
-          <View style={[styles.sectionCard, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
-            <View style={styles.sectionHeader}>
-              <Ionicons name="musical-notes-outline" size={16} color={colors.accent} style={{ marginRight: 6 }} />
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>Top Hit Songs</Text>
+        {/* Studio Albums Grid (Reverse Chronological) */}
+        {studioAlbums.length > 0 && (
+          <View style={styles.sectionBlock}>
+            <View style={[styles.sectionHeaderRow, { borderBottomColor: colors.border }]}>
+              <Text style={[styles.sectionTitleText, { color: colors.text }]}>Studio Albums</Text>
+              <Text style={[styles.sectionCountText, { color: colors.accent }]}>
+                {studioAlbums.length} albums
+              </Text>
             </View>
 
-            {topTracks.slice(0, 8).map((track, idx) => {
-              const trackTitle = track.title || track.name;
-              const trackDur = formatDuration(track.duration || track.duration_ms);
-              const trackCover = track.coverArt || track.image || avatarUrl;
+            <View style={styles.albumsGrid}>
+              {studioAlbums.map((alb, index) => {
+                const albId = alb.id;
+                const albTitle = alb.title || alb.name;
+                const albCover = alb.coverArt || alb.image || alb.images?.[0]?.url || avatarUrl;
+                const albYear = alb.releaseYear || (alb.releaseDate ? new Date(alb.releaseDate).getFullYear() : null);
 
-              return (
-                <TouchableOpacity
-                  key={track.id || idx}
-                  style={[styles.popularTrackRow, { borderBottomColor: colors.border }]}
-                  activeOpacity={0.7}
-                  onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    router.push(`/track/${track.id || encodeURIComponent(trackTitle)}`);
-                  }}
-                >
-                  <Text style={[styles.popularTrackIndex, { color: colors.textSecondary }]}>{idx + 1}</Text>
-                  <Image source={{ uri: trackCover }} style={styles.popularTrackThumb} />
-                  <View style={styles.popularTrackInfo}>
-                    <Text style={[styles.popularTrackTitle, { color: colors.text }]} numberOfLines={1}>
-                      {trackTitle}
-                    </Text>
-                    <Text style={[styles.popularTrackAlbum, { color: colors.textSecondary }]} numberOfLines={1}>
-                      {track.album || artistName}
-                    </Text>
-                  </View>
-                  <Text style={[styles.popularTrackDur, { color: colors.textSecondary }]}>{trackDur}</Text>
+                return (
                   <TouchableOpacity
-                    style={[
-                      styles.popularTrackLinkBtn,
-                      { backgroundColor: isDark ? 'rgba(232, 168, 124, 0.15)' : 'rgba(154, 74, 47, 0.12)' },
-                    ]}
-                    hitSlop={8}
-                    onPress={(e) => {
-                      e.stopPropagation();
-                      openTrackOptions(track);
+                    key={`${albId}-${index}`}
+                    onPress={() => {
+                      if (albId) router.push(`/album/${albId}`);
                     }}
+                    style={styles.albumGridCard}
+                    activeOpacity={0.8}
                   >
-                    <Ionicons name="ellipsis-horizontal" size={15} color={colors.accent} />
+                    <View style={[styles.albumCoverContainer, { borderColor: colors.border }]}>
+                      <Image source={{ uri: albCover }} style={styles.albumCoverImg} resizeMode="cover" />
+                    </View>
+                    <Text style={[styles.albumGridTitle, { color: colors.text }]} numberOfLines={1}>
+                      {albTitle}
+                    </Text>
+                    <Text style={[styles.albumGridYear, { color: colors.textSecondary }]}>
+                      {albYear || 'Album'}
+                    </Text>
                   </TouchableOpacity>
-                </TouchableOpacity>
-              );
-            })}
+                );
+              })}
+            </View>
           </View>
         )}
 
-        {/* Reviews, Descriptions, Lore, Community Tags (Matches web app) */}
+        {/* Music Lore & Reviews Section */}
         <MusicLoreAndReviews
-          id={artist?.id || id}
-          type="artist"
-          title={artistName}
-          artist={artistName}
-          description={artist?.description}
-          tags={artist?.tags || []}
-          rating={artist?.rating}
+          entityType="artist"
+          entityId={String(artist?.id || id)}
+          entityTitle={artistName}
+          entityArtist={artistName}
+          entityImage={avatarUrl}
         />
       </ScrollView>
 
-      {/* In-Place Liquid Glass GrooveLink Routing Modal */}
+      {/* GrooveLink Modal */}
       <GrooveLinkModal
         visible={showGrooveLinkModal}
-        onClose={() => {
-          setShowGrooveLinkModal(false);
-          setModalItemTarget(null);
-        }}
-        title={modalItemTarget ? (modalItemTarget.title || modalItemTarget.name) : artistName}
-        artist={artistName}
-        album={modalItemTarget?.album || ''}
-        imageUrl={modalItemTarget ? (modalItemTarget.coverArt || modalItemTarget.image) : avatarUrl}
-        type={modalItemTarget ? modalItemTarget.type : 'artist'}
-        itemId={modalItemTarget ? (modalItemTarget.id || modalItemTarget.name) : (artist?.id || id)}
-        onOpenGrooveCard={() => {
-          setShowGrooveLinkModal(false);
-          setTimeout(() => setShowGrooveCardModal(true), 250);
-        }}
+        onClose={() => setShowGrooveLinkModal(false)}
+        target={modalItemTarget || { ...artist, type: 'artist' }}
       />
 
-      {/* Apple Music Inspired GrooveCard Composer Modal */}
+      {/* GrooveCard Modal */}
       <GrooveCardModal
         visible={showGrooveCardModal}
         onClose={() => setShowGrooveCardModal(false)}
-        title={modalItemTarget ? (modalItemTarget.title || modalItemTarget.name) : artistName}
-        artist={artistName}
-        album={modalItemTarget?.album || ''}
-        imageUrl={modalItemTarget ? (modalItemTarget.coverArt || modalItemTarget.image) : avatarUrl}
-        releaseDate=""
-        type={modalItemTarget ? modalItemTarget.type : 'artist'}
-        itemId={modalItemTarget ? (modalItemTarget.id || modalItemTarget.name) : (artist?.id || id)}
+        item={modalItemTarget || { ...artist, type: 'artist' }}
       />
 
-      {/* Universal Playlist Picker Modal */}
+      {/* Playlist Picker Modal */}
       <PlaylistPickerModal
         visible={showPlaylistPickerModal}
-        onClose={() => {
-          setShowPlaylistPickerModal(false);
-          setSelectedTrackForPlaylist(null);
-        }}
+        onClose={() => setShowPlaylistPickerModal(false)}
         track={selectedTrackForPlaylist}
       />
-
-      {/* Full Discography Grouped & Paged Modal */}
-      <Modal
-        visible={showFullDiscography}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setShowFullDiscography(false)}
-      >
-        <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.bg }]}>
-          {/* Modal Header */}
-          <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-            <TouchableOpacity
-              onPress={() => setShowFullDiscography(false)}
-              style={styles.modalCloseBtn}
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-            >
-              <Ionicons name="close" size={24} color={colors.text} />
-            </TouchableOpacity>
-            <View style={{ flex: 1, alignItems: 'center' }}>
-              <Text style={[styles.modalHeaderTitle, { color: colors.text }]} numberOfLines={1}>{artistName}</Text>
-              <Text style={[styles.modalHeaderSubtitle, { color: colors.textSecondary }]}>All Discography Releases ({filteredReleases.length})</Text>
-            </View>
-            <View style={{ width: 40 }} />
-          </View>
-
-          {/* Group Filter Tabs */}
-          <View style={styles.filterTabsWrapper}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterTabsRow}>
-              {[
-                { id: 'all', label: `All (${allReleases.length})` },
-                { id: 'album', label: `Studio Albums (${albums.length})` },
-                { id: 'single_ep', label: 'Singles & EPs' },
-                { id: 'compilation', label: 'Compilations' },
-                { id: 'live', label: 'Live' },
-              ].map((tab) => (
-                <TouchableOpacity
-                  key={tab.id}
-                  style={[
-                    styles.filterTabPill,
-                    { backgroundColor: colors.surface, borderColor: colors.border },
-                    discographyTab === tab.id && { backgroundColor: colors.accent, borderColor: colors.borderActive },
-                  ]}
-                  onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    setDiscographyTab(tab.id);
-                    setDiscographyPage(1);
-                  }}
-                >
-                  <Text
-                    style={[
-                      styles.filterTabPillText,
-                      { color: colors.textSecondary },
-                      discographyTab === tab.id && { color: colors.bg, fontWeight: '800' },
-                    ]}
-                  >
-                    {tab.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-
-          {/* Paginated Grid of Releases */}
-          <ScrollView contentContainerStyle={styles.pagedGridContent} showsVerticalScrollIndicator={false}>
-            <View style={styles.pagedGrid}>
-              {pagedReleases.map((item, idx) => (
-                <TouchableOpacity
-                  key={item.id || idx}
-                  style={[styles.pagedGridItem, { backgroundColor: colors.cardBg, borderColor: colors.border }]}
-                  activeOpacity={0.8}
-                  onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    setShowFullDiscography(false);
-                    router.push(`/album/${item.id || encodeURIComponent(item.title)}`);
-                  }}
-                >
-                  <Image source={{ uri: item.coverArt || avatarUrl }} style={[styles.pagedItemCover, { backgroundColor: colors.surface }]} />
-                  <Text style={[styles.pagedItemTitle, { color: colors.text }]} numberOfLines={1}>{item.title}</Text>
-                  <View style={styles.pagedItemMetaRow}>
-                    <Text style={[styles.pagedItemYear, { color: colors.textSecondary }]}>{item.releaseYear || item.releaseDate || 'Release'}</Text>
-                    <View style={[styles.pagedItemTypeBadge, { backgroundColor: colors.surface }]}>
-                      <Text style={[styles.pagedItemTypeBadgeText, { color: colors.accent }]}>{item.primaryType || 'Album'}</Text>
-                    </View>
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            {/* Pagination Controls */}
-            {pagedReleases.length < filteredReleases.length && (
-              <TouchableOpacity
-                style={[styles.loadMoreBtn, { backgroundColor: colors.cardBg, borderColor: colors.border }]}
-                activeOpacity={0.8}
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  setDiscographyPage((p) => p + 1);
-                }}
-              >
-                <Text style={[styles.loadMoreBtnText, { color: colors.accent }]}>
-                  Load More ({pagedReleases.length} of {filteredReleases.length})
-                </Text>
-              </TouchableOpacity>
-            )}
-          </ScrollView>
-        </SafeAreaView>
-      </Modal>
     </SafeAreaView>
   );
 }
@@ -627,453 +517,270 @@ export default function ArtistDetailScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#10141F',
-  },
-  backdropContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 380,
-    overflow: 'hidden',
-    zIndex: 0,
-  },
-  backdropImage: {
-    width: '100%',
-    height: '100%',
-    opacity: 0.18,
-  },
-  backdropOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#10141F',
-    opacity: 0.7,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    zIndex: 20,
-  },
-  headerRightActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  circleBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(16, 20, 31, 0.7)',
-    borderWidth: 1,
-    borderColor: 'rgba(232, 168, 124, 0.25)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  circleBtnActive: {
-    backgroundColor: '#D4A373',
-    borderColor: '#E8A87C',
   },
   scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 40,
-    zIndex: 10,
+    paddingHorizontal: 20,
   },
-  heroCard: {
-    backgroundColor: 'rgba(16, 20, 31, 0.65)',
-    borderWidth: 1,
-    borderColor: 'rgba(232, 168, 124, 0.2)',
-    borderRadius: 28,
-    padding: 20,
+  heroCenterContainer: {
     alignItems: 'center',
-    marginBottom: 20,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.4,
-        shadowRadius: 20,
-      },
-      android: {
-        elevation: 6,
-      },
-    }),
+    textAlign: 'center',
+    marginBottom: 28,
   },
   avatarWrapper: {
-    width: 170,
-    height: 170,
-    borderRadius: 85,
+    width: 200,
+    height: 200,
+    borderRadius: 100,
     overflow: 'hidden',
+    backgroundColor: 'rgba(71, 11, 36, 0.4)',
     borderWidth: 3,
-    borderColor: 'rgba(232, 168, 124, 0.35)',
-    backgroundColor: '#10141F',
-    marginBottom: 16,
-    shadowColor: '#D4A373',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 15,
-    elevation: 8,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000000',
+        shadowOffset: { width: 0, height: 16 },
+        shadowOpacity: 0.6,
+        shadowRadius: 28,
+      },
+      android: {
+        elevation: 16,
+      },
+    }),
   },
   avatarImage: {
     width: '100%',
     height: '100%',
   },
-  metaContent: {
-    width: '100%',
-    alignItems: 'center',
-  },
-  categoryBadgeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 8,
-  },
-  categoryBadgeText: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: '#D4A373',
-    letterSpacing: 1.5,
+  titleRow: {
+    marginTop: 18,
+    paddingHorizontal: 12,
   },
   artistNameText: {
     fontSize: 26,
-    fontWeight: '900',
-    color: '#FFFFFF',
+    fontWeight: '800',
+    fontFamily: FONTS.display,
     textAlign: 'center',
-    marginBottom: 10,
-    letterSpacing: -0.5,
+    letterSpacing: -0.4,
   },
   genresRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
     gap: 6,
-    marginBottom: 12,
+    marginTop: 8,
   },
   genrePill: {
-    backgroundColor: 'rgba(232, 168, 124, 0.12)',
-    borderWidth: 1,
-    borderColor: 'rgba(232, 168, 124, 0.25)',
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 12,
+    borderRadius: 9999,
+    borderWidth: 1,
   },
   genrePillText: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#D4A373',
-    textTransform: 'uppercase',
+    fontFamily: FONTS.display,
     letterSpacing: 0.5,
   },
-  metaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 14,
-  },
-  metaItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  metaItemText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#8992A5',
-    textTransform: 'uppercase',
-  },
-  metaDot: {
-    color: '#8992A5',
-    fontSize: 12,
+  metaSubtitle: {
+    fontSize: 13,
+    fontWeight: '500',
+    fontFamily: FONTS.body,
+    marginTop: 6,
+    opacity: 0.75,
   },
   ratingRow: {
-    marginBottom: 14,
-    width: '100%',
+    marginTop: 8,
+  },
+  actionRow: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    marginTop: 18,
+  },
+  circleActionBtn: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.35,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 6,
+      },
+    }),
+  },
+  grooveLinkPillBtn: {
+    height: 46,
+    paddingHorizontal: 22,
+    borderRadius: 23,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.4,
+        shadowRadius: 12,
+      },
+      android: {
+        elevation: 8,
+      },
+    }),
+  },
+  grooveLinkPillText: {
+    fontSize: 13,
+    fontWeight: '800',
+    fontFamily: FONTS.display,
+    color: '#17020B',
+    letterSpacing: 0.2,
   },
   overviewSection: {
+    marginTop: 18,
     width: '100%',
-    marginVertical: 10,
-    paddingHorizontal: 8,
+    paddingHorizontal: 4,
   },
   overviewText: {
-    fontSize: 12,
-    color: '#8992A5',
-    lineHeight: 18,
+    fontSize: 13,
+    lineHeight: 19,
+    fontFamily: FONTS.body,
     textAlign: 'left',
   },
   overviewTextClamped: {
-    maxHeight: 36,
+    maxHeight: 40,
     overflow: 'hidden',
   },
   readMoreBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
     marginTop: 4,
+    alignSelf: 'flex-start',
   },
   readMoreText: {
     fontSize: 11,
-    fontWeight: '700',
-    color: '#D4A373',
-  },
-  grooveLinkSection: {
-    width: '100%',
-    alignItems: 'center',
-    marginTop: 14,
-  },
-  grooveLinkBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 9,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    backgroundColor: 'rgba(232, 168, 124, 0.12)',
-    borderWidth: 1,
-    borderColor: 'rgba(232, 168, 124, 0.3)',
-  },
-  grooveLinkBtnText: {
-    fontSize: 11,
     fontWeight: '800',
-    color: '#F4F7FF',
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
+    fontFamily: FONTS.display,
+    letterSpacing: 1,
   },
-  sectionCard: {
-    backgroundColor: 'rgba(16, 20, 31, 0.5)',
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
-    padding: 16,
-    marginBottom: 20,
+  sectionBlock: {
+    marginBottom: 28,
   },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 14,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#FFFFFF',
-  },
-  sectionBadgeText: {
-    marginLeft: 'auto',
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#8992A5',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  popularTrackRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.04)',
-  },
-  popularTrackIndex: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#8992A5',
-    width: 22,
-  },
-  popularTrackThumb: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
-    marginRight: 10,
-  },
-  popularTrackInfo: {
-    flex: 1,
-    marginRight: 10,
-  },
-  popularTrackTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    marginBottom: 2,
-  },
-  popularTrackAlbum: {
-    fontSize: 11,
-    color: '#8992A5',
-  },
-  popularTrackDur: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#8992A5',
-    marginRight: 10,
-  },
-  popularTrackLinkBtn: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: 'rgba(232, 168, 124, 0.15)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  discographySection: {
-    marginBottom: 20,
-  },
-  albumsScroll: {
-    gap: 12,
-    paddingRight: 16,
-  },
-  albumGridCard: {
-    width: 140,
-    backgroundColor: 'rgba(16, 20, 31, 0.6)',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    padding: 10,
-  },
-  albumGridCover: {
-    width: 120,
-    height: 120,
-    borderRadius: 12,
-    marginBottom: 8,
-  },
-  albumGridTitle: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    marginBottom: 2,
-  },
-  albumGridYear: {
-    fontSize: 10,
-    color: '#8992A5',
-    fontWeight: '500',
-  },
-  seeAllText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#D4A373',
-    letterSpacing: 0.2,
-  },
-  modalHeader: {
+  sectionHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingBottom: 8,
+    marginBottom: 10,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
   },
-  modalCloseBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+  sectionTitleText: {
+    fontSize: 16,
+    fontWeight: '800',
+    fontFamily: FONTS.display,
+  },
+  sectionCountText: {
+    fontSize: 11,
+    fontWeight: '700',
+    fontFamily: FONTS.bodyBold,
+  },
+  trackList: {
+    flexDirection: 'column',
+  },
+  trackRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+    borderBottomWidth: 1,
+  },
+  trackThumb: {
+    width: 42,
+    height: 42,
+    borderRadius: 8,
+    marginRight: 10,
+  },
+  trackCenter: {
+    flex: 1,
+    minWidth: 0,
+    marginRight: 10,
+  },
+  trackTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  trackTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    fontFamily: FONTS.displaySemiBold,
+    flexShrink: 1,
+  },
+  trackExplicitBadge: {
+    width: 14,
+    height: 14,
+    borderRadius: 3,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  modalHeaderTitle: {
-    fontSize: 15,
+  trackExplicitBadgeText: {
+    fontSize: 8,
     fontWeight: '800',
-    color: '#FFFFFF',
-    letterSpacing: -0.3,
+    fontFamily: FONTS.display,
+    color: '#FFF2DF',
   },
-  modalHeaderSubtitle: {
+  trackSubtitle: {
     fontSize: 11,
-    color: '#8992A5',
+    fontFamily: FONTS.body,
     marginTop: 2,
   },
-  filterTabsWrapper: {
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.06)',
+  trackDuration: {
+    fontSize: 11,
+    fontFamily: FONTS.mono,
+    marginRight: 10,
   },
-  filterTabsRow: {
-    paddingHorizontal: 16,
-    gap: 8,
+  moreBtn: {
+    padding: 4,
   },
-  filterTabPill: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  filterTabPillActive: {
-    backgroundColor: 'rgba(232, 168, 124, 0.25)',
-    borderColor: '#D4A373',
-  },
-  filterTabPillText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#8992A5',
-  },
-  filterTabPillTextActive: {
-    color: '#FFFFFF',
-    fontWeight: '800',
-  },
-  pagedGridContent: {
-    padding: 16,
-    paddingBottom: 40,
-  },
-  pagedGrid: {
+  albumsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
     justifyContent: 'space-between',
   },
-  pagedGridItem: {
+  albumGridCard: {
     width: '48%',
-    backgroundColor: 'rgba(16, 20, 31, 0.6)',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    padding: 10,
+    marginBottom: 8,
   },
-  pagedItemCover: {
+  albumCoverContainer: {
     width: '100%',
     aspectRatio: 1,
-    borderRadius: 12,
-    marginBottom: 8,
-    backgroundColor: '#10141F',
-  },
-  pagedItemTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    marginBottom: 4,
-  },
-  pagedItemMetaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  pagedItemYear: {
-    fontSize: 10,
-    color: '#8992A5',
-  },
-  pagedItemTypeBadge: {
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  pagedItemTypeBadgeText: {
-    fontSize: 9,
-    fontWeight: '700',
-    color: '#D4A373',
-    textTransform: 'uppercase',
-  },
-  loadMoreBtn: {
-    marginTop: 20,
-    paddingVertical: 14,
-    borderRadius: 14,
-    backgroundColor: 'rgba(232, 168, 124, 0.15)',
+    borderRadius: 16,
+    overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(232, 168, 124, 0.3)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    marginBottom: 6,
+    backgroundColor: 'rgba(71, 11, 36, 0.4)',
   },
-  loadMoreBtnText: {
+  albumCoverImg: {
+    width: '100%',
+    height: '100%',
+  },
+  albumGridTitle: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#D4A373',
+    fontFamily: FONTS.displaySemiBold,
+  },
+  albumGridYear: {
+    fontSize: 11,
+    fontFamily: FONTS.body,
+    marginTop: 1,
+    opacity: 0.7,
   },
 });

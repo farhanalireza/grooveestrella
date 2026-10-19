@@ -15,7 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
 import { useTheme } from '../../src/context/ThemeContext';
-import { COLORS } from '../../src/constants/theme';
+import { COLORS, FONTS } from '../../src/constants/theme';
 import { ApiService } from '../../src/services/api';
 import GlassCard from '../../src/components/GlassCard';
 import LiquidPill from '../../src/components/LiquidPill';
@@ -268,6 +268,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 14,
+    fontFamily: FONTS.bodyMedium,
     fontWeight: '500',
     paddingVertical: 10,
   },
@@ -303,12 +304,14 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 18,
     fontWeight: '800',
+    fontFamily: FONTS.display,
     marginTop: 16,
     marginBottom: 8,
     textAlign: 'center',
   },
   emptyDesc: {
     fontSize: 13,
+    fontFamily: FONTS.body,
     textAlign: 'center',
     lineHeight: 20,
   },
@@ -320,6 +323,7 @@ const styles = StyleSheet.create({
   suggestTitle: {
     fontSize: 11,
     fontWeight: '800',
+    fontFamily: FONTS.display,
     color: '#8992A5',
     letterSpacing: 1.5,
     marginBottom: 14,
@@ -343,6 +347,7 @@ const styles = StyleSheet.create({
   suggestChipText: {
     fontSize: 12,
     fontWeight: '600',
+    fontFamily: FONTS.bodySemiBold,
     color: '#F4F7FF',
   },
 });

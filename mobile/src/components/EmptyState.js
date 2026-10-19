@@ -15,7 +15,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import GlassCard from './GlassCard';
-import { COLORS, RADIUS, SPACING } from '../constants/theme';
+import { COLORS, FONTS, RADIUS, SPACING } from '../constants/theme';
 import { useTheme } from '../context/ThemeContext';
 
 const SPRING_CONFIG = {
@@ -169,7 +169,7 @@ const styles = StyleSheet.create({
   title: {
     color: COLORS.text,
     fontSize: 18,
-    fontWeight: '700',
+    fontFamily: FONTS.displayBold,
     textAlign: 'center',
     marginBottom: SPACING.sm,
     letterSpacing: 0.3,
@@ -177,6 +177,7 @@ const styles = StyleSheet.create({
   description: {
     color: COLORS.textSecondary,
     fontSize: 14,
+    fontFamily: FONTS.body,
     lineHeight: 20,
     textAlign: 'center',
     maxWidth: 280,
@@ -206,7 +207,7 @@ const styles = StyleSheet.create({
   btnText: {
     color: COLORS.white,
     fontSize: 15,
-    fontWeight: '700',
+    fontFamily: FONTS.displayBold,
     letterSpacing: 0.2,
   },
 });

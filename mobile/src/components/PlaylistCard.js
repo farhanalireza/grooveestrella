@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { useTheme } from '../context/ThemeContext';
-import { COLORS } from '../constants/theme';
+import { COLORS, FONTS } from '../constants/theme';
 import PlaylistCover from './PlaylistCover';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -126,6 +126,7 @@ const styles = StyleSheet.create({
   badgeText: {
     fontSize: 10,
     fontWeight: '700',
+    fontFamily: FONTS.mono,
   },
   info: {
     flexDirection: 'row',
@@ -136,10 +137,12 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 13,
     fontWeight: '700',
+    fontFamily: FONTS.displaySemiBold,
     marginBottom: 2,
   },
   desc: {
     fontSize: 11,
+    fontFamily: FONTS.body,
   },
   deleteButton: {
     padding: 6,

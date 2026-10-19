@@ -7,7 +7,7 @@ import * as Haptics from 'expo-haptics';
 import Toast from 'react-native-toast-message';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { useTheme } from '../context/ThemeContext';
-import { COLORS } from '../constants/theme';
+import { COLORS, FONTS } from '../constants/theme';
 import { StorageService } from '../services/storage';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -244,14 +244,17 @@ const styles = StyleSheet.create({
   yearText: {
     fontSize: 10,
     fontWeight: '700',
+    fontFamily: FONTS.mono,
   },
   title: {
     fontSize: 13,
     fontWeight: '700',
+    fontFamily: FONTS.displaySemiBold,
     marginBottom: 2,
   },
   artist: {
     fontSize: 11,
+    fontFamily: FONTS.body,
   },
   // List
   listContainer: {
@@ -275,10 +278,12 @@ const styles = StyleSheet.create({
   listTitle: {
     fontSize: 14,
     fontWeight: '700',
+    fontFamily: FONTS.displaySemiBold,
     marginBottom: 3,
   },
   listArtist: {
     fontSize: 12,
+    fontFamily: FONTS.body,
   },
   actions: {
     flexDirection: 'row',

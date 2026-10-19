@@ -12,7 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Toast from 'react-native-toast-message';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { COLORS } from '../constants/theme';
+import { COLORS, FONTS } from '../constants/theme';
 import { useTheme } from '../context/ThemeContext';
 
 export default function MusicLoreAndReviews({
@@ -406,14 +406,14 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 11,
-    fontWeight: '800',
+    fontFamily: FONTS.displayBold,
     color: '#8992A5',
     letterSpacing: 1,
   },
   tagCountHeader: {
     fontSize: 10,
+    fontFamily: FONTS.bodyMedium,
     color: '#8992A5',
-    fontWeight: '600',
   },
   tagChipsWrap: {
     flexDirection: 'row',
@@ -433,12 +433,12 @@ const styles = StyleSheet.create({
   },
   tagChipText: {
     fontSize: 11,
-    fontWeight: '700',
+    fontFamily: FONTS.bodySemiBold,
     color: '#D4A373',
   },
   tagChipCount: {
     fontSize: 9,
-    fontWeight: '800',
+    fontFamily: FONTS.bodyBold,
     color: '#8992A5',
     backgroundColor: 'rgba(255, 255, 255, 0.08)',
     paddingHorizontal: 5,
@@ -447,12 +447,13 @@ const styles = StyleSheet.create({
   },
   loreTitle: {
     fontSize: 16,
-    fontWeight: '800',
+    fontFamily: FONTS.displayBold,
     color: '#F4F7FF',
     marginBottom: 8,
   },
   loreBody: {
     fontSize: 13,
+    fontFamily: FONTS.body,
     color: '#8992A5',
     lineHeight: 20,
   },
@@ -465,7 +466,7 @@ const styles = StyleSheet.create({
   },
   expandBtnText: {
     fontSize: 11,
-    fontWeight: '700',
+    fontFamily: FONTS.displayBold,
     color: '#D4A373',
   },
   writeReviewBtn: {
@@ -479,7 +480,7 @@ const styles = StyleSheet.create({
   },
   writeReviewBtnText: {
     fontSize: 10,
-    fontWeight: '800',
+    fontFamily: FONTS.displayBold,
     color: '#FFF',
     letterSpacing: 0.6,
   },
@@ -494,7 +495,7 @@ const styles = StyleSheet.create({
   },
   ratingSubLabel: {
     fontSize: 9,
-    fontWeight: '800',
+    fontFamily: FONTS.displayBold,
     color: '#8992A5',
     letterSpacing: 1.5,
   },
@@ -506,13 +507,13 @@ const styles = StyleSheet.create({
   },
   largeScoreText: {
     fontSize: 36,
-    fontWeight: '900',
+    fontFamily: FONTS.displayBold,
     color: '#F4F7FF',
     fontVariant: ['tabular-nums'],
   },
   maxScoreText: {
     fontSize: 14,
-    fontWeight: '700',
+    fontFamily: FONTS.displayBold,
     color: '#8992A5',
   },
   starsRow: {
@@ -521,8 +522,8 @@ const styles = StyleSheet.create({
   },
   voteCountText: {
     fontSize: 11,
+    fontFamily: FONTS.bodyMedium,
     color: 'rgba(137, 146, 165, 0.8)',
-    fontWeight: '500',
   },
   distributionChart: {
     width: '90%',
@@ -533,7 +534,7 @@ const styles = StyleSheet.create({
   },
   distribTitle: {
     fontSize: 9,
-    fontWeight: '800',
+    fontFamily: FONTS.displayBold,
     color: '#8992A5',
     letterSpacing: 1,
     marginBottom: 8,
@@ -548,8 +549,8 @@ const styles = StyleSheet.create({
   distribStarLabel: {
     width: 20,
     fontSize: 11,
+    fontFamily: FONTS.displayBold,
     color: '#8992A5',
-    fontWeight: '700',
   },
   distribTrack: {
     flex: 1,
@@ -565,6 +566,7 @@ const styles = StyleSheet.create({
   distribPercentText: {
     width: 30,
     fontSize: 10,
+    fontFamily: FONTS.bodyMedium,
     color: '#8992A5',
     textAlign: 'right',
     fontVariant: ['tabular-nums'],
@@ -594,7 +596,7 @@ const styles = StyleSheet.create({
   },
   reviewAuthor: {
     fontSize: 12,
-    fontWeight: '700',
+    fontFamily: FONTS.bodyBold,
     color: '#F4F7FF',
   },
   curatorBadge: {
@@ -608,7 +610,7 @@ const styles = StyleSheet.create({
   },
   curatorBadgeText: {
     fontSize: 9,
-    fontWeight: '700',
+    fontFamily: FONTS.bodySemiBold,
     color: '#D4A373',
   },
   miniStarsRow: {
@@ -618,11 +620,13 @@ const styles = StyleSheet.create({
   },
   reviewDate: {
     fontSize: 10,
+    fontFamily: FONTS.body,
     color: 'rgba(137, 146, 165, 0.7)',
     marginLeft: 4,
   },
   reviewText: {
     fontSize: 12,
+    fontFamily: FONTS.body,
     color: 'rgba(244, 247, 255, 0.85)',
     lineHeight: 18,
     fontStyle: 'italic',
@@ -651,11 +655,12 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 16,
-    fontWeight: '800',
+    fontFamily: FONTS.displayBold,
     color: '#F4F7FF',
   },
   modalItemTitle: {
     fontSize: 12,
+    fontFamily: FONTS.body,
     color: '#8992A5',
     marginBottom: 14,
   },
@@ -672,6 +677,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     color: '#FFF',
     fontSize: 13,
+    fontFamily: FONTS.body,
     marginBottom: 10,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.08)',
@@ -683,6 +689,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     color: '#FFF',
     fontSize: 13,
+    fontFamily: FONTS.body,
     height: 90,
     textAlignVertical: 'top',
     marginBottom: 16,
@@ -697,7 +704,7 @@ const styles = StyleSheet.create({
   },
   submitReviewBtnText: {
     fontSize: 13,
-    fontWeight: '700',
+    fontFamily: FONTS.displayBold,
     color: '#FFF',
   },
 });

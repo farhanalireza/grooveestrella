@@ -14,6 +14,7 @@ import * as Haptics from 'expo-haptics';
 import * as Clipboard from 'expo-clipboard';
 import Toast from 'react-native-toast-message';
 import { useTheme } from '../context/ThemeContext';
+import { FONTS } from '../constants/theme';
 import {
   getPlaylistExportString,
   sharePlaylistFile,
@@ -27,7 +28,7 @@ const FORMATS = [
     ext: '.m3u',
     desc: 'Standard music player & streaming playlist format with song metadata',
     icon: 'disc-outline',
-    color: '#00F0FF',
+    color: '#E8A87C',
   },
   {
     id: 'm3u8',
@@ -274,15 +275,18 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 16,
     fontWeight: '700',
+    fontFamily: FONTS.displaySemiBold,
     letterSpacing: -0.3,
   },
   subtitle: {
     fontSize: 11,
+    fontFamily: FONTS.body,
     marginTop: 2,
   },
   sectionLabel: {
     fontSize: 10,
     fontWeight: '800',
+    fontFamily: FONTS.display,
     letterSpacing: 1,
     marginTop: 14,
     marginBottom: 8,
@@ -316,6 +320,7 @@ const styles = StyleSheet.create({
   formatName: {
     fontSize: 13,
     fontWeight: '700',
+    fontFamily: FONTS.displaySemiBold,
   },
   badge: {
     paddingHorizontal: 5,
@@ -324,12 +329,13 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     fontSize: 9,
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    fontFamily: FONTS.mono,
     fontWeight: '700',
   },
   formatDesc: {
     fontSize: 10,
     lineHeight: 14,
+    fontFamily: FONTS.body,
     marginTop: 3,
   },
   radioCircle: {
@@ -357,9 +363,10 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   primaryButtonText: {
-    color: '#000',
+    color: '#17020B',
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '800',
+    fontFamily: FONTS.display,
   },
   secondaryButton: {
     flexDirection: 'row',
@@ -374,5 +381,6 @@ const styles = StyleSheet.create({
   secondaryButtonText: {
     fontSize: 13,
     fontWeight: '600',
+    fontFamily: FONTS.bodySemiBold,
   },
 });

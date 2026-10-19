@@ -23,7 +23,7 @@ import {
 } from '../utils/cardExport';
 import GrooveLogo from './GrooveLogo';
 import { useTheme } from '../context/ThemeContext';
-import { COLORS } from '../constants/theme';
+import { COLORS, FONTS } from '../constants/theme';
 
 const THEMES = [
   { id: 'obsidian', label: 'Obsidian Dusk', colors: ['#0A0A0C', '#121216', '#050507'], border: 'rgba(255, 255, 255, 0.12)' },
@@ -424,11 +424,12 @@ const styles = StyleSheet.create({
   },
   sheetTitle: {
     fontSize: 18,
-    fontWeight: '900',
+    fontFamily: FONTS.displayBold,
     color: '#F4F7FF',
   },
   sheetSubtitle: {
     fontSize: 12,
+    fontFamily: FONTS.body,
     color: '#8992A5',
     marginTop: 2,
   },
@@ -472,7 +473,7 @@ const styles = StyleSheet.create({
   },
   cardLogoText: {
     fontSize: 10,
-    fontWeight: '900',
+    fontFamily: FONTS.displayBold,
     letterSpacing: 2,
     color: '#8992A5',
   },
@@ -486,7 +487,7 @@ const styles = StyleSheet.create({
   },
   musicLayerBadgeText: {
     fontSize: 9,
-    fontWeight: '800',
+    fontFamily: FONTS.displayBold,
     color: 'rgba(255, 255, 255, 0.9)',
     letterSpacing: 1,
   },
@@ -508,19 +509,20 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontSize: 16,
-    fontWeight: '800',
+    fontFamily: FONTS.displayBold,
     color: '#FFFFFF',
     marginBottom: 4,
     lineHeight: 20,
   },
   cardArtist: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: FONTS.bodySemiBold,
     color: '#8992A5',
     marginBottom: 4,
   },
   cardAlbum: {
     fontSize: 11,
+    fontFamily: FONTS.body,
     color: 'rgba(137, 146, 165, 0.8)',
     fontStyle: 'italic',
     marginBottom: 6,
@@ -537,7 +539,7 @@ const styles = StyleSheet.create({
   },
   yearText: {
     fontSize: 10,
-    fontWeight: '600',
+    fontFamily: FONTS.bodySemiBold,
     color: '#8992A5',
   },
   qrContainer: {
@@ -585,7 +587,7 @@ const styles = StyleSheet.create({
   },
   customLabel: {
     fontSize: 11,
-    fontWeight: '800',
+    fontFamily: FONTS.displayBold,
     color: '#8992A5',
     letterSpacing: 1.5,
     marginBottom: 10,
@@ -614,8 +616,8 @@ const styles = StyleSheet.create({
   },
   themeOptionText: {
     fontSize: 12,
+    fontFamily: FONTS.bodyMedium,
     color: '#8992A5',
-    fontWeight: '600',
   },
   qrColorRow: {
     flexDirection: 'row',
@@ -657,7 +659,7 @@ const styles = StyleSheet.create({
   },
   toggleBtnText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: FONTS.bodySemiBold,
   },
   footerRow: {
     flexDirection: 'row',
@@ -678,7 +680,7 @@ const styles = StyleSheet.create({
   },
   actionBtnText: {
     fontSize: 13,
-    fontWeight: '700',
+    fontFamily: FONTS.displayBold,
   },
   actionBtnPrimary: {
     flex: 1,
@@ -692,7 +694,7 @@ const styles = StyleSheet.create({
   },
   actionBtnPrimaryText: {
     fontSize: 13,
-    fontWeight: '800',
+    fontFamily: FONTS.displayBold,
     color: '#FFFFFF',
   },
   fullQrOverlay: {
@@ -712,7 +714,7 @@ const styles = StyleSheet.create({
   },
   fullQrTitle: {
     fontSize: 16,
-    fontWeight: '900',
+    fontFamily: FONTS.displayBold,
     textTransform: 'uppercase',
     letterSpacing: 2,
     marginBottom: 16,
@@ -754,6 +756,7 @@ const styles = StyleSheet.create({
   },
   fullQrSubtitle: {
     fontSize: 12,
+    fontFamily: FONTS.body,
     textAlign: 'center',
     lineHeight: 18,
     marginBottom: 20,
@@ -766,7 +769,7 @@ const styles = StyleSheet.create({
   },
   fullQrCloseText: {
     fontSize: 13,
-    fontWeight: '800',
+    fontFamily: FONTS.displayBold,
     color: '#FFFFFF',
   },
 });

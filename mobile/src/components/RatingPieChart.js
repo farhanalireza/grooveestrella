@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
-import { COLORS } from '../constants/theme';
+import { COLORS, FONTS } from '../constants/theme';
 import { useTheme } from '../context/ThemeContext';
 
 export default function RatingPieChart({ rating, size = 'md', style = {} }) {
@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
   },
   scoreText: {
     fontSize: 12,
-    fontWeight: '900',
+    fontFamily: FONTS.displayBold,
     fontVariant: ['tabular-nums'],
   },
   textWrapper: {
@@ -130,14 +130,14 @@ const styles = StyleSheet.create({
   },
   grooveScoreLabel: {
     fontSize: 10,
-    fontWeight: '800',
+    fontFamily: FONTS.displayBold,
     color: '#8992A5',
     letterSpacing: 0.8,
   },
   scoreRatioText: {
     fontSize: 9,
     color: 'rgba(137, 146, 165, 0.7)',
-    fontWeight: '600',
+    fontFamily: FONTS.bodySemiBold,
     fontVariant: ['tabular-nums'],
   },
   statusRow: {
@@ -153,6 +153,6 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: 11,
-    fontWeight: '700',
+    fontFamily: FONTS.bodySemiBold,
   },
 });

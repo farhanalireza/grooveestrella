@@ -18,7 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Toast from 'react-native-toast-message';
 import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
-import { COLORS } from '../../src/constants/theme';
+import { COLORS, FONTS } from '../../src/constants/theme';
 import { useTheme } from '../../src/context/ThemeContext';
 import { StorageService } from '../../src/services/storage';
 import GlassCard from '../../src/components/GlassCard';
@@ -465,6 +465,7 @@ const styles = StyleSheet.create({
   titleText: {
     fontSize: 22,
     fontWeight: '800',
+    fontFamily: FONTS.display,
     color: COLORS.text,
   },
   statsGrid: {
@@ -486,12 +487,14 @@ const styles = StyleSheet.create({
   statLabel: {
     fontSize: 9,
     fontWeight: '800',
+    fontFamily: FONTS.display,
     color: COLORS.textSecondary,
     letterSpacing: 0.8,
   },
   statNumber: {
     fontSize: 20,
     fontWeight: '900',
+    fontFamily: FONTS.display,
     color: COLORS.text,
   },
   tabsRow: {
@@ -520,6 +523,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 13,
     fontWeight: '800',
+    fontFamily: FONTS.display,
   },
   importPlBtn: {
     flexDirection: 'row',
@@ -534,6 +538,7 @@ const styles = StyleSheet.create({
   importPlText: {
     fontSize: 13,
     fontWeight: '700',
+    fontFamily: FONTS.displaySemiBold,
   },
   emptyContainer: {
     alignItems: 'center',
@@ -544,12 +549,14 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 17,
     fontWeight: '800',
+    fontFamily: FONTS.display,
     color: COLORS.text,
     marginTop: 14,
     marginBottom: 6,
   },
   emptyDesc: {
     fontSize: 13,
+    fontFamily: FONTS.body,
     color: COLORS.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
@@ -567,6 +574,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 13,
     fontWeight: '700',
+    fontFamily: FONTS.displaySemiBold,
   },
   // Modal
   modalOverlay: {
@@ -594,11 +602,13 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 17,
     fontWeight: '800',
+    fontFamily: FONTS.display,
     color: COLORS.text,
   },
   inputLabel: {
     fontSize: 10,
     fontWeight: '800',
+    fontFamily: FONTS.display,
     color: COLORS.textSecondary,
     letterSpacing: 1,
     marginBottom: 6,
@@ -612,6 +622,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     color: COLORS.text,
     fontSize: 14,
+    fontFamily: FONTS.body,
     marginBottom: 14,
   },
   modalInputArea: {
@@ -634,6 +645,7 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     fontSize: 13,
     fontWeight: '700',
+    fontFamily: FONTS.bodySemiBold,
   },
   modalSaveBtn: {
     borderRadius: 12,
@@ -648,5 +660,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 13,
     fontWeight: '800',
+    fontFamily: FONTS.display,
   },
 });

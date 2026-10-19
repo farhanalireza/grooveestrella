@@ -1,6 +1,6 @@
 // mobile/src/components/PlaylistCover.js
 import React, { useMemo } from 'react';
-import { View, Text, Image, StyleSheet } from 'react-native';
+import { View, Text, Image, StyleSheet, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 export function extractPlaylistCovers(tracks = []) {
@@ -131,6 +131,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 18,
     fontWeight: '900',
+    fontFamily: 'SpaceGrotesk-Bold',
     textAlign: 'center',
     letterSpacing: -0.3,
     textShadowColor: 'rgba(0,0,0,0.5)',
@@ -142,8 +143,8 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.75)',
     fontSize: 9,
     fontWeight: '800',
+    fontFamily: 'SpaceGrotesk-SemiBold',
     letterSpacing: 1.5,
     marginTop: 6,
-    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
   },
 });

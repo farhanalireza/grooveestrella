@@ -15,7 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Toast from 'react-native-toast-message';
 import { useTheme } from '../context/ThemeContext';
-import { COLORS } from '../constants/theme';
+import { COLORS, FONTS } from '../constants/theme';
 import { StorageService } from '../services/storage';
 import PlaylistCover from './PlaylistCover';
 
@@ -378,10 +378,11 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 16,
-    fontWeight: '800',
+    fontFamily: FONTS.displayBold,
   },
   trackName: {
     fontSize: 12,
+    fontFamily: FONTS.bodyMedium,
     marginTop: 2,
   },
   closeBtn: {
@@ -421,10 +422,11 @@ const styles = StyleSheet.create({
   },
   plTitle: {
     fontSize: 14,
-    fontWeight: '700',
+    fontFamily: FONTS.displayBold,
   },
   plSubtitle: {
     fontSize: 11,
+    fontFamily: FONTS.body,
     marginTop: 2,
   },
   emptyContainer: {
@@ -433,6 +435,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 12,
+    fontFamily: FONTS.body,
     textAlign: 'center',
     lineHeight: 18,
   },
@@ -441,7 +444,7 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     fontSize: 12,
-    fontWeight: '700',
+    fontFamily: FONTS.displayBold,
     marginBottom: 6,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -452,10 +455,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 14,
+    fontFamily: FONTS.body,
   },
   textArea: {
     height: 72,
     textAlignVertical: 'top',
+    fontFamily: FONTS.body,
   },
   formBtnRow: {
     flexDirection: 'row',
@@ -471,7 +476,7 @@ const styles = StyleSheet.create({
   },
   cancelBtnText: {
     fontSize: 13,
-    fontWeight: '700',
+    fontFamily: FONTS.displayBold,
   },
   submitBtn: {
     flex: 2,
@@ -482,7 +487,7 @@ const styles = StyleSheet.create({
   },
   submitBtnText: {
     fontSize: 13,
-    fontWeight: '800',
+    fontFamily: FONTS.displayBold,
     color: '#000',
   },
 });

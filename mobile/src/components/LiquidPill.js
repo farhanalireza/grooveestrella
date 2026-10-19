@@ -9,7 +9,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
-import { COLORS } from '../constants/theme';
+import { COLORS, FONTS } from '../constants/theme';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -147,17 +147,17 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 12,
-    fontWeight: '700',
+    fontFamily: FONTS.displayMedium,
     letterSpacing: 0.5,
   },
   labelActive: {
-    fontWeight: '800',
+    fontFamily: FONTS.displayBold,
   },
   labelInactive: {},
   countBadge: {
     marginLeft: 6,
     fontSize: 10,
-    fontWeight: '700',
+    fontFamily: FONTS.bodyBold,
     paddingHorizontal: 6,
     paddingVertical: 1,
     borderRadius: 8,
