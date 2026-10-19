@@ -5,37 +5,61 @@ import ArtistDetailClient from './ArtistDetailClient';
 export async function generateMetadata({ params }) {
   const { id } = await params;
   let artist = null;
+
   try {
     artist = await Promise.race([
       fetchMusicBrainzArtistServer(id),
-      new Promise((res) => setTimeout(() => res(null), 1200)),
+      new Promise((res) => setTimeout(() => res(null), 6000)),
     ]);
+
+    if (!artist && id) {
+      const searchRes = await Promise.race([
+        searchMusicBrainzArtistsServer(decodeURIComponent(id), 1),
+        new Promise((res) => setTimeout(() => res([]), 3500)),
+      ]);
+      if (searchRes && searchRes.length > 0) {
+        artist = await fetchMusicBrainzArtistServer(searchRes[0].id);
+      }
+    }
   } catch (_) {}
 
-  if (!artist) {
-    return {
-      title: 'Artist | GrooveEstrella',
-      description: 'Explore artist discography, top tracks, and share artist cards with custom designs on GrooveEstrella.',
-    };
-  }
+  const artistName = (artist?.name || decodeURIComponent(id || 'Artist')).replace(/[-_]/g, ' ').trim();
+  const genresStr = artist?.genres?.slice(0, 3).join(', ');
+  const descDisplay = genresStr
+    ? `Explore ${artistName} on GrooveEstrella • ${genresStr}. View discography, top tracks, pressings & create custom GrooveCards.`
+    : `Explore ${artistName} on GrooveEstrella. View discography, top tracks, pressings & create custom GrooveCards.`;
 
-  const coverUrl = artist.images?.[0]?.url || artist.coverArt || 'https://placehold.co/600x600/10141F/60A5FA?text=Artist';
+  const rawCover = artist?.images?.[0]?.url || artist?.coverArt || artist?.url;
+  const coverUrl = (rawCover && typeof rawCover === 'string' && rawCover.startsWith('http'))
+    ? rawCover
+    : 'https://grooveestrella.com/icon-512.png';
+
+  const canonicalUrl = `https://grooveestrella.com/artist/${encodeURIComponent(id)}`;
 
   return {
-    title: `${artist.name} | GrooveEstrella`,
-    description: `Explore "${artist.name}" on GrooveEstrella. View discography, top tracks, and share artist cards with custom designs.`,
+    title: `${artistName} | GrooveEstrella`,
+    description: descDisplay,
     openGraph: {
-      title: artist.name,
-      description: `Genres: ${artist.genres?.join(', ') || 'Music'}`,
-      images: [{ url: coverUrl, width: 640, height: 640 }],
+      title: `${artistName} on GrooveEstrella`,
+      description: descDisplay,
+      url: canonicalUrl,
+      siteName: 'GrooveEstrella',
+      images: [
+        {
+          url: coverUrl,
+          width: 640,
+          height: 640,
+          alt: artistName,
+        },
+      ],
       type: 'profile',
     },
     twitter: {
       card: 'summary_large_image',
-      title: artist.name,
-      description: `Discover ${artist.name} on GrooveEstrella`,
+      title: `${artistName} on GrooveEstrella`,
+      description: descDisplay,
       images: [coverUrl],
-    }
+    },
   };
 }
 

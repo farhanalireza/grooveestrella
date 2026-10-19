@@ -7,42 +7,69 @@ export async function generateMetadata({ params }) {
   const cleanId = typeof id === 'string' ? id.trim() : '';
   const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cleanId);
   let track = null;
+
   try {
     if (isUUID) {
       track = await Promise.race([
         fetchMusicBrainzTrackServer(cleanId),
-        new Promise((res) => setTimeout(() => res(null), 1200)),
+        new Promise((res) => setTimeout(() => res(null), 6000)),
+      ]);
+    }
+
+    if (!track && cleanId && !cleanId.startsWith('local-')) {
+      track = await Promise.race([
+        searchMusicBrainzTrackServer(decodeURIComponent(cleanId)),
+        new Promise((res) => setTimeout(() => res(null), 4000)),
       ]);
     }
   } catch (_) {}
 
-  if (!track) {
-    return {
-      title: 'Track | GrooveEstrella',
-      description: 'Discover tracks, explore MusicBrainz metadata, and stream across platforms on GrooveEstrella.',
-    };
-  }
+  const trackTitle = (track?.title || track?.name || decodeURIComponent(cleanId || 'Track')).replace(/[-_]/g, ' ').trim();
+  const artistsName = (
+    Array.isArray(track?.artists)
+      ? track.artists.map((a) => (typeof a === 'object' ? a.name : a)).join(', ')
+      : typeof track?.artist === 'string'
+      ? track.artist
+      : ''
+  ).trim();
 
-  const artistsName = Array.isArray(track.artists)
-    ? track.artists.map(a => a.name).join(', ')
-    : (track.artist || 'Unknown Artist');
-  const coverUrl = track.album?.images?.[0]?.url || track.coverArt || 'https://placehold.co/600x600/10141F/60A5FA?text=No+Cover';
+  const albumName = track?.album?.name || track?.album;
+  const titleDisplay = artistsName ? `${trackTitle} by ${artistsName}` : trackTitle;
+  const descDisplay = artistsName
+    ? `Listen to "${trackTitle}" by ${artistsName}${albumName ? ` from the album "${albumName}"` : ''} on GrooveEstrella. Explore lore, credits, and universal streaming links.`
+    : `Explore "${trackTitle}" on GrooveEstrella with smart streaming links across Spotify, Apple Music & YouTube.`;
+
+  const rawCover = track?.album?.images?.[0]?.url || track?.coverArt || track?.url;
+  const coverUrl = (rawCover && typeof rawCover === 'string' && rawCover.startsWith('http'))
+    ? rawCover
+    : 'https://grooveestrella.com/icon-512.png';
+
+  const canonicalUrl = `https://grooveestrella.com/track/${encodeURIComponent(cleanId)}`;
 
   return {
-    title: `${track.title || track.name} by ${artistsName} | GrooveEstrella`,
-    description: `Discover "${track.title || track.name}" by ${artistsName} on GrooveEstrella. Explore MusicBrainz metadata, create GrooveCards, and stream across platforms.`,
+    title: `${titleDisplay} | GrooveEstrella`,
+    description: descDisplay,
     openGraph: {
-      title: track.title || track.name,
-      description: `Artist: ${artistsName} | Album: ${track.album?.name || track.album}`,
-      images: [{ url: coverUrl, width: 640, height: 640 }],
+      title: titleDisplay,
+      description: descDisplay,
+      url: canonicalUrl,
+      siteName: 'GrooveEstrella',
+      images: [
+        {
+          url: coverUrl,
+          width: 640,
+          height: 640,
+          alt: trackTitle,
+        },
+      ],
       type: 'music.song',
     },
     twitter: {
       card: 'summary_large_image',
-      title: track.title || track.name,
-      description: `Discover ${track.title || track.name} by ${artistsName}`,
+      title: titleDisplay,
+      description: descDisplay,
       images: [coverUrl],
-    }
+    },
   };
 }
 

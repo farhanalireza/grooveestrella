@@ -24,10 +24,36 @@ export const viewport = {
   userScalable: false,
 };
 
+const siteUrl = process.env.NEXT_PUBLIC_APP_URL || 
+  (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : 
+  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://grooveestrella.com'));
+
 export const metadata = {
-  title: "GrooveEstrella | Open Music Discovery & Social Sharing",
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: "GrooveEstrella | Open Music Discovery & Social Sharing",
+    template: "%s | GrooveEstrella",
+  },
   description:
-    "Discover curated tracks, albums, and artists powered by MusicBrainz & Cover Art Archive. Create custom GrooveCards, scan QR codes, and share music seamlessly across platforms.",
+    "Discover curated tracks, albums, pressings, and artists powered by MusicBrainz & Cover Art Archive. Create custom GrooveCards, scan QR codes, and share music seamlessly across platforms.",
+  openGraph: {
+    siteName: "GrooveEstrella",
+    type: "website",
+    locale: "en_US",
+    images: [
+      {
+        url: "/icon-512.png",
+        width: 512,
+        height: 512,
+        alt: "GrooveEstrella",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    site: "@GrooveEstrella",
+    images: ["/icon-512.png"],
+  },
   manifest: "/manifest.json",
   icons: {
     icon: [

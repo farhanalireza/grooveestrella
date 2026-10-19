@@ -19,31 +19,36 @@ export async function generateMetadata({ params }) {
   try {
     metadata = await Promise.race([
       getTrackMetadata(platform, type, id),
-      new Promise((res) => setTimeout(() => res(null), 1200)),
+      new Promise((res) => setTimeout(() => res(null), 5000)),
     ]);
   } catch (_) {}
 
-  if (!metadata) {
-    return {
-      title: 'GrooveLink | Universal Music Link',
-      description: 'Open and share music across Spotify, Apple Music, YouTube Music, TIDAL, and Deezer.',
-    };
-  }
-
   const capitalizedType = type.charAt(0).toUpperCase() + type.slice(1);
-  const titleText = `${metadata.title} - ${metadata.artist}`;
+  const title = (metadata?.title || decodeURIComponent(id || 'Music')).replace(/[-_]/g, ' ').trim();
+  const artist = (metadata?.artist || '').trim();
+  const titleText = artist ? `${title} - ${artist}` : title;
+  const descText = `Open and share this ${type} "${title}" ${artist ? `by ${artist} ` : ''}across Spotify, Apple Music, YouTube Music, TIDAL, Deezer and more via GrooveLink.`;
+  const rawCover = metadata?.coverArt;
+  const coverUrl = (rawCover && typeof rawCover === 'string' && rawCover.startsWith('http'))
+    ? rawCover
+    : 'https://grooveestrella.com/icon-512.png';
+
+  const canonicalUrl = `https://grooveestrella.com/s/${encodeURIComponent(platform)}/${slug ? slug.map(encodeURIComponent).join('/') : ''}`;
+
   return {
     title: `${titleText} | Universal Music ${capitalizedType}`,
-    description: `Open and share this ${type} "${metadata.title}" by ${metadata.artist} across Spotify, Apple Music, YouTube Music, TIDAL, Deezer and more.`,
+    description: descText,
     openGraph: {
       title: titleText,
-      description: `Access this ${type} on your preferred streaming service instantly via GrooveLink.`,
+      description: descText,
+      url: canonicalUrl,
+      siteName: 'GrooveEstrella',
       images: [
         {
-          url: metadata.coverArt,
-          width: 500,
-          height: 500,
-          alt: `${metadata.title} cover art`,
+          url: coverUrl,
+          width: 640,
+          height: 640,
+          alt: `${title} cover art`,
         },
       ],
       type: type === 'track' ? 'music.song' : type === 'album' ? 'music.album' : 'profile',
@@ -51,8 +56,8 @@ export async function generateMetadata({ params }) {
     twitter: {
       card: 'summary_large_image',
       title: titleText,
-      description: `Access this ${type} on your preferred streaming service instantly.`,
-      images: [metadata.coverArt],
+      description: descText,
+      images: [coverUrl],
     },
   };
 }
@@ -70,7 +75,13 @@ export default async function UniversalLinkPage({ params }) {
   }
 
   if (id) {
-    redirect(`/${type}/${encodeURIComponent(id)}?groovelink=true`);
+    if (type === 'track') {
+      redirect(`/track/${encodeURIComponent(id)}?groovelink=true`);
+    } else if (type === 'album') {
+      redirect(`/album/${encodeURIComponent(id)}?groovelink=true`);
+    } else if (type === 'artist') {
+      redirect(`/artist/${encodeURIComponent(id)}?groovelink=true`);
+    }
   }
 
   redirect('/');

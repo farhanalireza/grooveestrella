@@ -5,41 +5,71 @@ import AlbumDetailClient from './AlbumDetailClient';
 export async function generateMetadata({ params }) {
   const { id } = await params;
   let album = null;
+
   try {
     const data = await Promise.race([
       fetchMusicBrainzAlbumServer(id),
-      new Promise((res) => setTimeout(() => res(null), 1200)),
+      new Promise((res) => setTimeout(() => res(null), 6000)),
     ]);
     album = data?.album;
+
+    if (!album && id) {
+      const searchRes = await Promise.race([
+        searchMusicBrainzAlbumsServer(decodeURIComponent(id), 1),
+        new Promise((res) => setTimeout(() => res([]), 3500)),
+      ]);
+      if (searchRes && searchRes.length > 0) {
+        const found = await fetchMusicBrainzAlbumServer(searchRes[0].id);
+        album = found.album;
+      }
+    }
   } catch (_) {}
 
-  if (!album) {
-    return {
-      title: 'Album | GrooveEstrella',
-      description: 'Discover albums, explore tracklists, and stream across platforms on GrooveEstrella.',
-    };
-  }
+  const cleanName = (album?.name || album?.title || decodeURIComponent(id || 'Album')).replace(/[-_]/g, ' ').trim();
+  const artistsName = (
+    Array.isArray(album?.artists)
+      ? album.artists.map((a) => (typeof a === 'object' ? a.name : a)).join(', ')
+      : typeof album?.artist === 'string'
+      ? album.artist
+      : ''
+  ).trim();
 
-  const artistsName = Array.isArray(album.artists)
-    ? album.artists.map(a => a.name).join(', ')
-    : (album.artist || 'Various Artists');
-  const coverUrl = album.images?.[0]?.url || album.coverArt || 'https://placehold.co/600x600/10141F/60A5FA?text=No+Cover';
+  const titleDisplay = artistsName ? `${cleanName} by ${artistsName}` : cleanName;
+  const descDisplay = artistsName
+    ? `Explore "${cleanName}" by ${artistsName} on GrooveEstrella • ${album?.total_tracks ? `${album.total_tracks} tracks, ` : ''}editions, pressings, and universal streaming links.`
+    : `Explore the album "${cleanName}" on GrooveEstrella. View pressings, tracks, and stream across platforms.`;
+
+  const rawCover = album?.images?.[0]?.url || album?.coverArt || album?.url;
+  const coverUrl = (rawCover && typeof rawCover === 'string' && rawCover.startsWith('http'))
+    ? rawCover
+    : 'https://grooveestrella.com/icon-512.png';
+
+  const canonicalUrl = `https://grooveestrella.com/album/${encodeURIComponent(id)}`;
 
   return {
-    title: `${album.name || album.title} by ${artistsName} | GrooveEstrella`,
-    description: `Discover the album "${album.name || album.title}" by ${artistsName} on GrooveEstrella. Explore tracks and stream across platforms.`,
+    title: `${titleDisplay} | GrooveEstrella`,
+    description: descDisplay,
     openGraph: {
-      title: album.name || album.title,
-      description: `Artist: ${artistsName} • ${album.total_tracks || 0} tracks`,
-      images: [{ url: coverUrl, width: 640, height: 640 }],
+      title: titleDisplay,
+      description: descDisplay,
+      url: canonicalUrl,
+      siteName: 'GrooveEstrella',
+      images: [
+        {
+          url: coverUrl,
+          width: 640,
+          height: 640,
+          alt: cleanName,
+        },
+      ],
       type: 'music.album',
     },
     twitter: {
       card: 'summary_large_image',
-      title: album.name || album.title,
-      description: `Album: ${album.name || album.title} by ${artistsName}`,
+      title: titleDisplay,
+      description: descDisplay,
       images: [coverUrl],
-    }
+    },
   };
 }
 

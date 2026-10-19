@@ -9,6 +9,17 @@ export async function generateMetadata({ params }) {
     return {
       title: 'Custom Playlist | GrooveEstrella',
       description: 'Your custom playlist collection on GrooveEstrella.',
+      openGraph: {
+        title: 'Custom Playlist | GrooveEstrella',
+        description: 'Listen and explore custom playlists on GrooveEstrella.',
+        siteName: 'GrooveEstrella',
+        images: [{ url: 'https://grooveestrella.com/icon-512.png', width: 512, height: 512, alt: 'Custom Playlist' }],
+      },
+      twitter: {
+        card: 'summary_large_image',
+        title: 'Custom Playlist | GrooveEstrella',
+        images: ['https://grooveestrella.com/icon-512.png'],
+      }
     };
   }
 
@@ -16,33 +27,35 @@ export async function generateMetadata({ params }) {
   try {
     playlist = await Promise.race([
       fetchSpotifyDataServer('playlist', id),
-      new Promise((res) => setTimeout(() => res(null), 1200)),
+      new Promise((res) => setTimeout(() => res(null), 5000)),
     ]);
   } catch (_) {}
 
-  if (!playlist) {
-    return {
-      title: 'Playlist | GrooveEstrella',
-      description: 'Open and explore playlists on GrooveEstrella.',
-    };
-  }
+  const playlistName = (playlist?.name || decodeURIComponent(id || 'Playlist')).trim();
+  const ownerName = playlist?.owner?.display_name || 'Spotify';
+  const rawCover = playlist?.images?.[0]?.url;
+  const coverUrl = (rawCover && typeof rawCover === 'string' && rawCover.startsWith('http'))
+    ? rawCover
+    : 'https://grooveestrella.com/icon-512.png';
 
-  const ownerName = playlist.owner?.display_name || 'Spotify User';
-  const coverUrl = playlist.images?.[0]?.url || 'https://placehold.co/600x600?text=No+Cover';
+  const descDisplay = `Open and explore "${playlistName}" on GrooveEstrella by ${ownerName}${playlist?.tracks?.total ? ` • ${playlist.tracks.total} tracks` : ''}.`;
+  const canonicalUrl = `https://grooveestrella.com/playlist/${encodeURIComponent(id)}`;
 
   return {
-    title: `${playlist.name} by ${ownerName} | GrooveEstrella`,
-    description: `Open and explore "${playlist.name}" on GrooveEstrella. Discover tracks, customize GrooveCards, and stream on top services.`,
+    title: `${playlistName} by ${ownerName} | GrooveEstrella`,
+    description: descDisplay,
     openGraph: {
-      title: playlist.name,
-      description: `Created by: ${ownerName} • ${playlist.tracks?.total} tracks`,
-      images: [{ url: coverUrl, width: 640, height: 640 }],
+      title: playlistName,
+      description: descDisplay,
+      url: canonicalUrl,
+      siteName: 'GrooveEstrella',
+      images: [{ url: coverUrl, width: 640, height: 640, alt: playlistName }],
       type: 'music.playlist',
     },
     twitter: {
       card: 'summary_large_image',
-      title: playlist.name,
-      description: `Playlist: ${playlist.name} by ${ownerName}`,
+      title: playlistName,
+      description: descDisplay,
       images: [coverUrl],
     }
   };
