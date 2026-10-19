@@ -2,6 +2,8 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import axios from 'axios';
 import SearchComp from '@/Components/Search';
 import useDebouncedSearch from '@/hooks/useDebouncedSearch';
 import { ArtistCard } from '@/Components/CardComponents/ArtistsCard';
@@ -11,6 +13,7 @@ import { PlaylistCard } from '@/Components/CardComponents/PlaylistsCard';
 import GrooveLoader from '@/Components/GrooveLoader';
 
 export default function SearchPage() {
+    const router = useRouter();
     const [searchResults, setSearchResults] = useState([]);
     const [searchTerm, setSearchTerm] = useState("");
     const [loading, setLoading] = useState(false);
@@ -24,17 +27,45 @@ export default function SearchPage() {
             const query = params.get("q") || "";
             const type = params.get("type") || "track";
             if (query) {
+                if (query.startsWith("http://") || query.startsWith("https://")) {
+                    setLoading(true);
+                    axios.post("/api/convert", { url: query })
+                        .then((res) => {
+                            if (res.data?.success && res.data?.redirectUrl) {
+                                router.replace(res.data.redirectUrl);
+                            }
+                        })
+                        .catch(() => {
+                            setSearchTerm(query);
+                            setSearchType(type);
+                            debouncedSearch(query, type);
+                        });
+                    return;
+                }
                 setSearchTerm(query);
                 setSearchType(type);
             }
         }
-    }, []);
+    }, [router]);
 
     function handleSearchChange(query, type) {
         setSearchTerm(query);
         setSearchType(type);
         if (query.trim() === "") {
             setSearchResults([]);
+            return;
+        }
+        if (query.trim().startsWith("http://") || query.trim().startsWith("https://")) {
+            setLoading(true);
+            axios.post("/api/convert", { url: query.trim() })
+                .then((res) => {
+                    if (res.data?.success && res.data?.redirectUrl) {
+                        router.push(res.data.redirectUrl);
+                    }
+                })
+                .catch(() => {
+                    debouncedSearch(query, type);
+                });
             return;
         }
         debouncedSearch(query, type);

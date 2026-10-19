@@ -4,6 +4,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import axios from "axios";
 import { 
   X, 
   Copy, 
@@ -238,6 +239,44 @@ export default function GrooveLinkModal({ isOpen, onClose, item, onOpenGrooveCar
     return links;
   }, [item, title, artistsString, itemType, itemId]);
 
+  // Dynamic direct link resolution via iTunes API, Spotify, etc.
+  const [directLinks, setDirectLinks] = useState({});
+  const [directFlags, setDirectFlags] = useState({});
+
+  useEffect(() => {
+    if (!isOpen || !item) return;
+
+    let isMounted = true;
+    axios.get("/api/groovelink/resolve", {
+      params: {
+        title,
+        artist: artistsString,
+        type: itemType,
+        mbid: itemId,
+      },
+      timeout: 6000,
+    }).then((res) => {
+      if (isMounted && res.data?.success && res.data?.links) {
+        setDirectLinks(res.data.links);
+        setDirectFlags(res.data.isDirect || {});
+      }
+    }).catch((err) => {
+      console.warn("GrooveLink background direct link resolution failed:", err.message);
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isOpen, item, title, artistsString, itemType, itemId]);
+
+  // Combine initial fallback links with verified direct links
+  const effectiveLinks = useMemo(() => {
+    return {
+      ...platformLinks,
+      ...directLinks,
+    };
+  }, [platformLinks, directLinks]);
+
   // Canonical share URL pointing directly to this item
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const shareUrl = itemId ? `${origin}/${itemType}/${itemId}` : (typeof window !== "undefined" ? window.location.href.split("?")[0] : "");
@@ -415,8 +454,8 @@ export default function GrooveLinkModal({ isOpen, onClose, item, onOpenGrooveCar
                 </span>
 
                 <div className="grid grid-cols-1 gap-2">
-                  {Object.keys(platformLinks).map((platformKey) => {
-                    const url = platformLinks[platformKey];
+                  {Object.keys(effectiveLinks).map((platformKey) => {
+                    const url = effectiveLinks[platformKey];
                     const meta = platformMeta[platformKey] || {
                       name: platformKey,
                       textColor: "text-[var(--theme-muted)]",
@@ -425,6 +464,12 @@ export default function GrooveLinkModal({ isOpen, onClose, item, onOpenGrooveCar
                       icon: <Music className="w-5 h-5" />
                     };
                     const isPreferred = preferredPlatform === platformKey;
+                    const isDirectLink = Boolean(
+                      directFlags[platformKey] ||
+                      (platformKey === "spotify" && (item.spoURL || item.external_urls?.spotify)) ||
+                      (platformKey === "youtube" && item.YTURL && item.YTURL.includes("watch?v=")) ||
+                      (platformKey === "musicbrainz")
+                    );
 
                     return (
                       <div
@@ -436,9 +481,16 @@ export default function GrooveLinkModal({ isOpen, onClose, item, onOpenGrooveCar
                             {meta.icon}
                           </div>
                           <div className="flex flex-col min-w-0">
-                            <span className="text-xs sm:text-sm font-semibold text-[var(--theme-fg)] truncate">
-                              {meta.name}
-                            </span>
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <span className="text-xs sm:text-sm font-semibold text-[var(--theme-fg)] truncate">
+                                {meta.name}
+                              </span>
+                              {isDirectLink && (
+                                <span className="text-[9px] font-black px-1.5 py-0.2 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 uppercase tracking-wider shrink-0" title="Verified direct streaming link">
+                                  Direct
+                                </span>
+                              )}
+                            </div>
                             <button
                               onClick={() => selectPlatformPreference(platformKey)}
                               className="text-[10px] text-[var(--theme-muted)] hover:text-[var(--theme-accent)] text-left transition cursor-pointer"

@@ -1,6 +1,6 @@
 // src/app/s/[platform]/[id]/page.jsx
 import { redirect } from 'next/navigation';
-import { getTrackMetadata } from '@/lib/musicProviders';
+import { fetchPlatformEntity, matchToMusicBrainz } from '@/lib/groovelinkResolver';
 
 // Generate dynamic metadata for SEO and rich previews in social apps
 export async function generateMetadata({ params }) {
@@ -8,8 +8,8 @@ export async function generateMetadata({ params }) {
   let metadata = null;
   try {
     metadata = await Promise.race([
-      getTrackMetadata(platform, id),
-      new Promise((res) => setTimeout(() => res(null), 5000)),
+      fetchPlatformEntity({ platform, type: 'track', id }),
+      new Promise((res) => setTimeout(() => res(null), 4000)),
     ]);
   } catch (_) {}
 
@@ -52,9 +52,26 @@ export async function generateMetadata({ params }) {
 }
 
 export default async function UniversalLinkPage({ params }) {
-  const { id } = await params;
-  if (id) {
+  const { platform, id } = await params;
+  if (!id) redirect('/');
+
+  // If already MusicBrainz ID (UUID format)
+  if (platform === 'musicbrainz' || /^[0-9a-fA-F-]{36}$/.test(id)) {
     redirect(`/track/${encodeURIComponent(id)}?groovelink=true`);
   }
-  redirect('/');
+
+  // Resolve external ID to MusicBrainz via word-by-word matching
+  try {
+    const entity = await fetchPlatformEntity({ platform, type: 'track', id });
+    if (entity) {
+      const match = await matchToMusicBrainz(entity);
+      if (match?.redirectUrl) {
+        redirect(match.redirectUrl);
+      }
+    }
+  } catch (err) {
+    console.warn('Universal link resolution error:', err.message);
+  }
+
+  redirect(`/search?q=${encodeURIComponent(id)}`);
 }
