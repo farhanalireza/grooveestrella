@@ -1,25 +1,16 @@
 // src/app/artist/[id]/page.jsx
 import { fetchMusicBrainzArtistServer, searchMusicBrainzArtistsServer } from '@/lib/musicbrainzServer';
-import { lookupItunesArtist } from '@/lib/itunesSearch';
 import ArtistDetailClient from './ArtistDetailClient';
 
 export async function generateMetadata({ params }) {
   const { id } = await params;
-  const cleanId = typeof id === 'string' ? id.trim() : '';
-  const isItunes = /^\d+$/.test(cleanId) || cleanId.startsWith('itunes:');
   let artist = null;
 
   try {
-    if (isItunes) {
-      artist = await lookupItunesArtist(cleanId);
-    }
-
-    if (!artist) {
-      artist = await Promise.race([
-        fetchMusicBrainzArtistServer(id),
-        new Promise((res) => setTimeout(() => res(null), 6000)),
-      ]);
-    }
+    artist = await Promise.race([
+      fetchMusicBrainzArtistServer(id),
+      new Promise((res) => setTimeout(() => res(null), 6000)),
+    ]);
 
     if (!artist && id) {
       const searchRes = await Promise.race([
@@ -29,10 +20,6 @@ export async function generateMetadata({ params }) {
       if (searchRes && searchRes.length > 0) {
         artist = await fetchMusicBrainzArtistServer(searchRes[0].id);
       }
-    }
-
-    if (!artist && !isItunes) {
-      artist = await lookupItunesArtist(cleanId);
     }
   } catch (_) {}
 
@@ -78,27 +65,12 @@ export async function generateMetadata({ params }) {
 
 export default async function Page({ params }) {
   const { id } = await params;
-  const cleanId = typeof id === 'string' ? id.trim() : '';
-  const isItunes = /^\d+$/.test(cleanId) || cleanId.startsWith('itunes:');
-  let artistData = null;
-
-  if (isItunes) {
-    artistData = await lookupItunesArtist(cleanId);
-  }
-
-  if (!artistData) {
-    artistData = await fetchMusicBrainzArtistServer(id);
-  }
-
+  let artistData = await fetchMusicBrainzArtistServer(id);
   if (!artistData) {
     const searchRes = await searchMusicBrainzArtistsServer(decodeURIComponent(id), 1);
     if (searchRes.length > 0) {
       artistData = await fetchMusicBrainzArtistServer(searchRes[0].id);
     }
-  }
-
-  if (!artistData && !isItunes) {
-    artistData = await lookupItunesArtist(cleanId);
   }
 
   return (
