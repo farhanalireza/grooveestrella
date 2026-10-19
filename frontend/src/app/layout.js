@@ -17,7 +17,11 @@ const inter = Inter({
 });
 
 export const viewport = {
-  themeColor: "#470B24",
+  themeColor: "#17020B",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export const metadata = {
@@ -25,6 +29,17 @@ export const metadata = {
   description:
     "Discover curated tracks, albums, and artists powered by MusicBrainz & Cover Art Archive. Create custom GrooveCards, scan QR codes, and share music seamlessly across platforms.",
   manifest: "/manifest.json",
+  icons: {
+    icon: [
+      { url: "/in.svg", type: "image/svg+xml" },
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+      { url: "/favicon.ico" },
+    ],
+    apple: [
+      { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+    ],
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",

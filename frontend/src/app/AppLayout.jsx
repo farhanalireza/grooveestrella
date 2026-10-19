@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import AppBar from '@/Components/AppBar';
 import GrooveLoader from '@/Components/GrooveLoader';
 import PlaylistPickerModal from '@/Components/PlaylistPickerModal';
+import PWAInstallPrompt from '@/Components/PWAInstallPrompt';
 
 export default function AppLayout({ children }) {
   const [mounted, setMounted] = useState(false);
@@ -22,7 +23,12 @@ export default function AppLayout({ children }) {
       <div className="flex-1 w-full lg:pt-16 pb-28 lg:pb-0">
         {children}
       </div>
-      {mounted && <PlaylistPickerModal />}
+      {mounted && (
+        <>
+          <PlaylistPickerModal />
+          <PWAInstallPrompt />
+        </>
+      )}
     </div>
   );
 }

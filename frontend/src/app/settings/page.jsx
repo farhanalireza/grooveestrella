@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { 
   Shield, Volume2, Check, Music, Trash2, 
   ListMusic, Disc, Users, AlertTriangle, ArrowLeft,
-  Sun, Moon, Palette
+  Sun, Moon, Palette, Smartphone, Download
 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from '@/lib/toast';
@@ -17,6 +17,7 @@ export default function SettingsPage() {
   const { theme, isDark, setTheme } = useTheme();
   const [preferredPlatform, setPreferredPlatform] = useState("none");
   const [showVinylSides, setShowVinylSides] = useState(true);
+  const [isStandalone, setIsStandalone] = useState(false);
   const [counts, setCounts] = useState({
     songs: 0,
     albums: 0,
@@ -49,6 +50,13 @@ export default function SettingsPage() {
   ];
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      const standalone = 
+        window.matchMedia("(display-mode: standalone)").matches || 
+        window.navigator.standalone === true || 
+        document.referrer.includes("android-app://");
+      setIsStandalone(standalone);
+    }
     const saved = localStorage.getItem("preferred_music_platform");
     if (saved) {
       setPreferredPlatform(saved);
@@ -246,7 +254,51 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* SECTION 1: GROOVELINKS PREFERENCES */}
+        {/* SECTION 2: APP INSTALLATION (PWA) */}
+        <div className="border-t border-[var(--theme-border)] pt-8 space-y-4">
+          <div className="flex items-center gap-2">
+            <Smartphone className="w-5 h-5 text-[var(--theme-accent)]" />
+            <h2 className="text-lg font-bold text-[var(--theme-fg)]">App Installation (PWA)</h2>
+          </div>
+          <p className="text-xs text-[var(--theme-muted)] max-w-lg">
+            Install GrooveEstrella onto your mobile home screen or desktop for a fullscreen player, faster loading, and offline access.
+          </p>
+
+          <div className="bg-[var(--theme-card)]/60 border border-[var(--theme-border)] rounded-2xl p-4 flex items-center justify-between gap-4 flex-wrap sm:flex-nowrap">
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <div className="w-11 h-11 rounded-2xl p-1.5 bg-[var(--theme-surface)] border border-[var(--theme-border)] flex items-center justify-center shrink-0 shadow-sm">
+                <img src="/in.svg" alt="GrooveEstrella" className="w-full h-full object-contain" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h3 className="text-sm font-bold text-[var(--theme-fg)] truncate">
+                  {isStandalone ? "GrooveEstrella Installed" : "Install GrooveEstrella App"}
+                </h3>
+                <p className="text-xs text-[var(--theme-muted)] truncate">
+                  {isStandalone ? "Active in standalone PWA mode" : "Tap to add to Home Screen on mobile or desktop"}
+                </p>
+              </div>
+            </div>
+
+            {isStandalone ? (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--theme-surface)] text-[var(--theme-accent)] text-xs font-bold border border-[var(--theme-border)] shrink-0">
+                <Check className="w-3.5 h-3.5" />
+                <span>Installed</span>
+              </span>
+            ) : (
+              <button
+                onClick={() => {
+                  window.dispatchEvent(new Event('open-pwa-install'));
+                }}
+                className="px-4 py-2 rounded-full bg-[var(--theme-accent)] hover:opacity-90 active:scale-95 text-[var(--theme-accent-fg)] text-xs font-bold transition shadow-sm cursor-pointer shrink-0 flex items-center gap-1.5"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Install App</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* SECTION 3: GROOVELINKS PREFERENCES */}
         <div className="border-t border-[var(--theme-border)] pt-8 space-y-4">
           <div className="flex items-center gap-2">
             <Volume2 className="w-5 h-5 text-[var(--theme-accent)]" />
