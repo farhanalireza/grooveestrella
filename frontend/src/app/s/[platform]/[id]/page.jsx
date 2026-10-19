@@ -20,9 +20,9 @@ export async function generateMetadata({ params }) {
   const rawCover = metadata?.coverArt;
   const coverUrl = (rawCover && typeof rawCover === 'string' && rawCover.startsWith('http'))
     ? rawCover
-    : 'https://grooveestrella.com/icon-512.png';
+    : 'https://groove.amplecen.com/icon-512.png';
 
-  const canonicalUrl = `https://grooveestrella.com/s/${encodeURIComponent(platform)}/${encodeURIComponent(id)}`;
+  const canonicalUrl = `https://groove.amplecen.com/s/${encodeURIComponent(platform)}/${encodeURIComponent(id)}`;
 
   return {
     title: `${titleText} | Universal Music Link`,

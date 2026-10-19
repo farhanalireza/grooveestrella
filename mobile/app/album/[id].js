@@ -363,7 +363,7 @@ export default function AlbumDetailScreen() {
 
   const shareTitle = `${albumTitle} by ${albumArtist}`;
   const shareMessage = `Check out "${albumTitle}" by ${albumArtist} on GrooveEstrella! 💿`;
-  const shareUrl = `https://grooveestrella.com/album/${id}`;
+  const shareUrl = `https://groove.amplecen.com/album/${id}`;
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.bg }]} edges={['left', 'right']}>

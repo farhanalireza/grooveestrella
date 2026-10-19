@@ -31,9 +31,9 @@ export async function generateMetadata({ params }) {
   const rawCover = metadata?.coverArt;
   const coverUrl = (rawCover && typeof rawCover === 'string' && rawCover.startsWith('http'))
     ? rawCover
-    : 'https://grooveestrella.com/icon-512.png';
+    : 'https://groove.amplecen.com/icon-512.png';
 
-  const canonicalUrl = `https://grooveestrella.com/s/${encodeURIComponent(platform)}/${slug ? slug.map(encodeURIComponent).join('/') : ''}`;
+  const canonicalUrl = `https://groove.amplecen.com/s/${encodeURIComponent(platform)}/${slug ? slug.map(encodeURIComponent).join('/') : ''}`;
 
   return {
     title: `${titleText} | Universal Music ${capitalizedType}`,

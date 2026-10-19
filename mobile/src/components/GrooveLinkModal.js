@@ -180,9 +180,9 @@ export default function GrooveLinkModal({
 
   const universalUrl = useMemo(() => {
     if (effectiveId) {
-      return `https://grooveestrella.com/${effectiveType}/${effectiveId}?groovelink=true`;
+      return `https://groove.amplecen.com/${effectiveType}/${effectiveId}?groovelink=true`;
     }
-    return `https://grooveestrella.com/${effectiveType}/${encodeURIComponent(effectiveTitle)}?groovelink=true`;
+    return `https://groove.amplecen.com/${effectiveType}/${encodeURIComponent(effectiveTitle)}?groovelink=true`;
   }, [effectiveId, effectiveType, effectiveTitle]);
 
   const handleOpenUrl = async (platformId, url) => {

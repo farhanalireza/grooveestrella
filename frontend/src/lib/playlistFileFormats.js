@@ -40,7 +40,7 @@ export function generateM3U(playlist, tracks, isM3U8 = false) {
     "#EXTM3U",
     `#PLAYLIST:${playlist?.name || "GrooveEstrella Playlist"}`,
     `#EXTGENRE:${playlist?.genre || "Curated Music"}`,
-    `#EXTREM:Exported from GrooveEstrella (https://grooveestrella.com)`,
+    `#EXTREM:Exported from GrooveEstrella (https://groove.amplecen.com)`,
     ""
   ];
 
@@ -111,7 +111,7 @@ export function generateTXT(playlist, tracks) {
     `CURATOR:  ${owner}`,
     `TRACKS:   ${trackList.length} songs`,
     `EXPORTED: ${new Date().toLocaleDateString()}`,
-    `SOURCE:   GrooveEstrella (https://grooveestrella.com)`,
+    `SOURCE:   GrooveEstrella (https://groove.amplecen.com)`,
     `============================================================`,
     ""
   ];

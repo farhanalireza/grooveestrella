@@ -1,15 +1,21 @@
 // src/app/track/[id]/page.jsx
 import { fetchMusicBrainzTrackServer, searchMusicBrainzTrackServer } from '@/lib/musicbrainzServer';
+import { lookupItunesTrack } from '@/lib/itunesSearch';
 import TrackDetailClient from './TrackDetailClient';
 
 export async function generateMetadata({ params }) {
   const { id } = await params;
   const cleanId = typeof id === 'string' ? id.trim() : '';
   const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cleanId);
+  const isItunes = /^\d+$/.test(cleanId) || cleanId.startsWith('itunes:');
   let track = null;
 
   try {
-    if (isUUID) {
+    if (isItunes) {
+      track = await lookupItunesTrack(cleanId);
+    }
+
+    if (!track && isUUID) {
       track = await Promise.race([
         fetchMusicBrainzTrackServer(cleanId),
         new Promise((res) => setTimeout(() => res(null), 6000)),
@@ -21,6 +27,10 @@ export async function generateMetadata({ params }) {
         searchMusicBrainzTrackServer(decodeURIComponent(cleanId)),
         new Promise((res) => setTimeout(() => res(null), 4000)),
       ]);
+    }
+
+    if (!track && !isItunes) {
+      track = await lookupItunesTrack(cleanId);
     }
   } catch (_) {}
 
@@ -42,9 +52,9 @@ export async function generateMetadata({ params }) {
   const rawCover = track?.album?.images?.[0]?.url || track?.coverArt || track?.url;
   const coverUrl = (rawCover && typeof rawCover === 'string' && rawCover.startsWith('http'))
     ? rawCover
-    : 'https://grooveestrella.com/icon-512.png';
+    : 'https://groove.amplecen.com/icon-512.png';
 
-  const canonicalUrl = `https://grooveestrella.com/track/${encodeURIComponent(cleanId)}`;
+  const canonicalUrl = `https://groove.amplecen.com/track/${encodeURIComponent(cleanId)}`;
 
   return {
     title: `${titleDisplay} | GrooveEstrella`,
@@ -77,9 +87,23 @@ export default async function Page({ params }) {
   const { id } = await params;
   const cleanId = typeof id === 'string' ? id.trim() : '';
   const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cleanId);
-  let initialData = isUUID ? await fetchMusicBrainzTrackServer(cleanId) : null;
+  const isItunes = /^\d+$/.test(cleanId) || cleanId.startsWith('itunes:');
+  let initialData = null;
+
+  if (isItunes) {
+    initialData = await lookupItunesTrack(cleanId);
+  }
+
+  if (!initialData && isUUID) {
+    initialData = await fetchMusicBrainzTrackServer(cleanId);
+  }
+
   if (!initialData && cleanId && !cleanId.startsWith('local-')) {
     initialData = await searchMusicBrainzTrackServer(decodeURIComponent(cleanId));
+  }
+
+  if (!initialData && !isItunes) {
+    initialData = await lookupItunesTrack(cleanId);
   }
 
   return <TrackDetailClient id={id} initialData={initialData} />;

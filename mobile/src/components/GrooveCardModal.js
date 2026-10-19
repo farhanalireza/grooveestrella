@@ -173,9 +173,9 @@ export default function GrooveCardModal({
   // Universal Groove routing link matching web app
   const universalUrl = useMemo(() => {
     if (effectiveId) {
-      return `https://grooveestrella.com/${effectiveType}/${effectiveId}?groovelink=true`;
+      return `https://groove.amplecen.com/${effectiveType}/${effectiveId}?groovelink=true`;
     }
-    return `https://grooveestrella.com/${effectiveType}/${encodeURIComponent(effectiveTitle)}?groovelink=true`;
+    return `https://groove.amplecen.com/${effectiveType}/${encodeURIComponent(effectiveTitle)}?groovelink=true`;
   }, [effectiveId, effectiveType, effectiveTitle]);
 
   const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(

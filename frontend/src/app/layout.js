@@ -26,7 +26,7 @@ export const viewport = {
 
 const siteUrl = process.env.NEXT_PUBLIC_APP_URL || 
   (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : 
-  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://grooveestrella.com'));
+  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://groove.amplecen.com'));
 
 export const metadata = {
   metadataBase: new URL(siteUrl),

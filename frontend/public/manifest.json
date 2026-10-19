@@ -1,7 +1,7 @@
 {
   "id": "/",
   "name": "GrooveEstrella",
-  "short_name": "GrooveEstrella",
+  "short_name": "gEstrella",
   "description": "Discover curated tracks, albums, pressings, and artists with smart streaming links & GrooveCards.",
   "start_url": "/",
   "scope": "/",

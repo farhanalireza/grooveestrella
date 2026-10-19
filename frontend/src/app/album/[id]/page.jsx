@@ -1,17 +1,27 @@
 // src/app/album/[id]/page.jsx
 import { fetchMusicBrainzAlbumServer, searchMusicBrainzAlbumsServer } from '@/lib/musicbrainzServer';
+import { lookupItunesAlbum } from '@/lib/itunesSearch';
 import AlbumDetailClient from './AlbumDetailClient';
 
 export async function generateMetadata({ params }) {
   const { id } = await params;
+  const cleanId = typeof id === 'string' ? id.trim() : '';
+  const isItunes = /^\d+$/.test(cleanId) || cleanId.startsWith('itunes:');
   let album = null;
 
   try {
-    const data = await Promise.race([
-      fetchMusicBrainzAlbumServer(id),
-      new Promise((res) => setTimeout(() => res(null), 6000)),
-    ]);
-    album = data?.album;
+    if (isItunes) {
+      const itunesData = await lookupItunesAlbum(cleanId);
+      album = itunesData?.album;
+    }
+
+    if (!album) {
+      const data = await Promise.race([
+        fetchMusicBrainzAlbumServer(id),
+        new Promise((res) => setTimeout(() => res(null), 6000)),
+      ]);
+      album = data?.album;
+    }
 
     if (!album && id) {
       const searchRes = await Promise.race([
@@ -22,6 +32,11 @@ export async function generateMetadata({ params }) {
         const found = await fetchMusicBrainzAlbumServer(searchRes[0].id);
         album = found.album;
       }
+    }
+
+    if (!album && !isItunes) {
+      const itunesData = await lookupItunesAlbum(cleanId);
+      album = itunesData?.album;
     }
   } catch (_) {}
 
@@ -42,9 +57,9 @@ export async function generateMetadata({ params }) {
   const rawCover = album?.images?.[0]?.url || album?.coverArt || album?.url;
   const coverUrl = (rawCover && typeof rawCover === 'string' && rawCover.startsWith('http'))
     ? rawCover
-    : 'https://grooveestrella.com/icon-512.png';
+    : 'https://groove.amplecen.com/icon-512.png';
 
-  const canonicalUrl = `https://grooveestrella.com/album/${encodeURIComponent(id)}`;
+  const canonicalUrl = `https://groove.amplecen.com/album/${encodeURIComponent(id)}`;
 
   return {
     title: `${titleDisplay} | GrooveEstrella`,
@@ -75,7 +90,23 @@ export async function generateMetadata({ params }) {
 
 export default async function Page({ params }) {
   const { id } = await params;
-  let { album, tracks } = await fetchMusicBrainzAlbumServer(id);
+  const cleanId = typeof id === 'string' ? id.trim() : '';
+  const isItunes = /^\d+$/.test(cleanId) || cleanId.startsWith('itunes:');
+  let album = null;
+  let tracks = [];
+
+  if (isItunes) {
+    const itunesData = await lookupItunesAlbum(cleanId);
+    album = itunesData?.album;
+    tracks = itunesData?.tracks || [];
+  }
+
+  if (!album) {
+    const mbData = await fetchMusicBrainzAlbumServer(id);
+    album = mbData?.album;
+    tracks = mbData?.tracks || [];
+  }
+
   if (!album) {
     const searchRes = await searchMusicBrainzAlbumsServer(decodeURIComponent(id), 1);
     if (searchRes.length > 0) {
@@ -83,6 +114,12 @@ export default async function Page({ params }) {
       album = found.album;
       tracks = found.tracks;
     }
+  }
+
+  if (!album && !isItunes) {
+    const itunesData = await lookupItunesAlbum(cleanId);
+    album = itunesData?.album;
+    tracks = itunesData?.tracks || [];
   }
 
   return <AlbumDetailClient id={id} initialAlbum={album} initialTracks={tracks} />;

@@ -229,16 +229,119 @@ export function generateStreamingLinks(title, artist) {
 }
 
 /**
- * Searches MusicBrainz catalog with Popularity Promotion to ensure legendary
- * mainstream releases (Pink Floyd, David Bowie, Michael Jackson, Queen, etc.) appear first
+ * Catalog Search Provider Toggle:
+ * Set to 'itunes' to test Apple iTunes Search API.
+ * Set to 'musicbrainz' to revert back to MusicBrainz immediately.
+ */
+export const SEARCH_PROVIDER = 'itunes';
+
+/**
+ * Searches MusicBrainz or iTunes catalog based on SEARCH_PROVIDER toggle
  */
 export const searchCatalog = async (query = '', type = 'track', limit = 20) => {
   const cleanQuery = (query || '').trim();
   if (!cleanQuery) return [];
 
-  const cacheKey = `search_${type}_${cleanQuery.toLowerCase()}_${limit}`;
+  const cacheKey = `search_${type}_${cleanQuery.toLowerCase()}_${limit}_${SEARCH_PROVIDER}`;
   const cached = getCached(cacheKey);
   if (cached) return cached;
+
+  if (SEARCH_PROVIDER === 'itunes') {
+    try {
+      const itunesEntity = type === 'album' ? 'album' : type === 'artist' ? 'musicArtist' : 'song';
+      const itunesUrl = `https://itunes.apple.com/search?term=${encodeURIComponent(cleanQuery)}&media=music&entity=${itunesEntity}&limit=${limit}`;
+      const itunesRes = await axios.get(itunesUrl, { timeout: 4500 });
+      const items = itunesRes.data?.results || [];
+
+      if (items.length > 0) {
+        if (type === 'album') {
+          const results = items.map((item) => {
+            const rawArt = item.artworkUrl100 || '';
+            const coverUrl = rawArt ? rawArt.replace(/\/(\d+)x(\d+)bb\./, '/600x600bb.') : 'https://placehold.co/600x600/17020B/E8A87C?text=Album';
+            const releaseYear = item.releaseDate ? new Date(item.releaseDate).getFullYear() : null;
+            return {
+              id: String(item.collectionId),
+              title: item.collectionName,
+              name: item.collectionName,
+              artist: item.artistName || 'Various Artists',
+              artists: [{ name: item.artistName || 'Various Artists', id: String(item.artistId || '') }],
+              image: coverUrl,
+              coverArt: coverUrl,
+              url: coverUrl,
+              releaseDate: item.releaseDate || null,
+              releaseYear: releaseYear,
+              type: 'album',
+              primaryType: item.collectionType || 'Album',
+              trackURI: `itunes:album:${item.collectionId}`,
+              popularity: 88,
+              rating: { value: 4.7 },
+            };
+          });
+          setCached(cacheKey, results);
+          return results;
+        }
+
+        if (type === 'artist') {
+          const results = await Promise.all(
+            items.map(async (art) => {
+              const photoUrl = await resolveArtistImage(art.artistName, art.artistId);
+              return {
+                id: String(art.artistId),
+                title: art.artistName,
+                name: art.artistName,
+                artist: art.artistName,
+                country: 'Global',
+                type: 'artist',
+                genres: [art.primaryGenreName].filter(Boolean),
+                image: photoUrl,
+                coverArt: photoUrl,
+                url: photoUrl,
+                followers: 120000,
+                popularity: 88,
+                rating: { value: 4.8 },
+                trackURI: `itunes:artist:${art.artistId}`,
+              };
+            })
+          );
+          setCached(cacheKey, results);
+          return results;
+        }
+
+        // Default: Track
+        const results = items.map((item) => {
+          const rawArt = item.artworkUrl100 || '';
+          const coverUrl = rawArt ? rawArt.replace(/\/(\d+)x(\d+)bb\./, '/600x600bb.') : 'https://placehold.co/600x600/17020B/E8A87C?text=Track';
+          const releaseYear = item.releaseDate ? new Date(item.releaseDate).getFullYear() : null;
+          return {
+            id: String(item.trackId),
+            trackId: String(item.trackId),
+            title: item.trackName,
+            name: item.trackName,
+            artist: item.artistName || 'Unknown Artist',
+            artists: [{ name: item.artistName || 'Unknown Artist', id: String(item.artistId || '') }],
+            album: item.collectionName || item.trackName,
+            albumId: String(item.collectionId || ''),
+            image: coverUrl,
+            coverArt: coverUrl,
+            url: coverUrl,
+            releaseDate: item.releaseDate || null,
+            releaseYear: releaseYear,
+            duration: item.trackTimeMillis || 240000,
+            duration_ms: item.trackTimeMillis || 240000,
+            genres: [item.primaryGenreName].filter(Boolean),
+            popularity: 88,
+            rating: { value: 4.7 },
+            trackURI: `itunes:track:${item.trackId}`,
+            type: 'track',
+          };
+        });
+        setCached(cacheKey, results);
+        return results;
+      }
+    } catch (itunesErr) {
+      console.warn('iTunes search failed, falling back to MusicBrainz:', itunesErr.message);
+    }
+  }
 
   try {
     // -------------------------------------------------------------
@@ -415,6 +518,72 @@ export const fetchAlbum = async (id, targetReleaseId = null) => {
   const cacheKey = targetReleaseId ? `album_${cleanId}_${targetReleaseId}` : `album_${cleanId}`;
   const cached = getCached(cacheKey);
   if (cached && cached.tracks && cached.tracks.length > 0) return cached;
+
+  // 0. iTunes numeric or URI lookup
+  if (/^\d+$/.test(cleanId) || cleanId.startsWith('itunes:')) {
+    try {
+      const itunesId = cleanId.replace(/^itunes:album:/i, '');
+      const itunesRes = await axios.get(`https://itunes.apple.com/lookup?id=${itunesId}&entity=song`, { timeout: 4500 });
+      const items = itunesRes.data?.results || [];
+      if (items.length > 0) {
+        const col = items.find((i) => i.wrapperType === 'collection') || items[0];
+        const rawSongs = items.filter((i) => i.wrapperType === 'track');
+        const rawArt = col.artworkUrl100 || '';
+        const coverUrl = rawArt ? rawArt.replace(/\/(\d+)x(\d+)bb\./, '/600x600bb.') : 'https://placehold.co/600x600/17020B/E8A87C?text=Album';
+        const artistCredit = col.artistName || 'Various Artists';
+        const artistsList = [{ name: artistCredit, id: String(col.artistId || '') }];
+        const releaseYear = col.releaseDate ? new Date(col.releaseDate).getFullYear() : null;
+
+        const tracks = rawSongs.map((song, idx) => ({
+          id: String(song.trackId || `${itunesId}-${idx + 1}`),
+          trackId: String(song.trackId || `${itunesId}-${idx + 1}`),
+          title: song.trackName,
+          name: song.trackName,
+          pos: song.trackNumber || (idx + 1),
+          trackNumber: song.trackNumber || (idx + 1),
+          disc: song.discNumber || 1,
+          duration: song.trackTimeMillis || 0,
+          duration_ms: song.trackTimeMillis || 0,
+          artist: song.artistName || artistCredit,
+          artists: [{ name: song.artistName || artistCredit, id: String(song.artistId || '') }],
+          trackURI: `itunes:track:${song.trackId || ''}`,
+          type: 'track',
+        }));
+
+        const totalDurationMs = tracks.reduce((acc, t) => acc + (t.duration_ms || 0), 0);
+
+        const albumObj = {
+          id: cleanId,
+          name: col.collectionName,
+          title: col.collectionName,
+          artist: artistCredit,
+          artists: artistsList,
+          image: coverUrl,
+          coverArt: coverUrl,
+          url: coverUrl,
+          releaseDate: col.releaseDate || 'Unknown',
+          releaseYear: releaseYear,
+          originalReleaseDate: col.releaseDate || 'Unknown',
+          originalReleaseYear: releaseYear,
+          total_tracks: tracks.length || col.trackCount || 0,
+          totalDurationMs: totalDurationMs,
+          genres: [col.primaryGenreName].filter(Boolean),
+          tags: [col.primaryGenreName].filter(Boolean),
+          allTags: col.primaryGenreName ? [{ label: col.primaryGenreName, count: 10 }] : [],
+          description: `"${col.collectionName}" is an acclaimed album by ${artistCredit}, released in ${releaseYear || 'recent years'}.`,
+          rating: { value: 4.8, votesCount: 50 },
+          editions: [{ id: cleanId, title: col.collectionName, date: col.releaseDate || '', country: col.country || 'Global', label: col.copyright || 'Digital Release' }],
+          tracks: tracks,
+          type: 'album',
+        };
+
+        setCached(cacheKey, albumObj);
+        return albumObj;
+      }
+    } catch (itunesErr) {
+      console.warn('iTunes album lookup error:', itunesErr.message);
+    }
+  }
 
   try {
     let rgData = null;
@@ -657,6 +826,52 @@ export const fetchTrack = async (id) => {
   const cached = getCached(cacheKey);
   if (cached) return cached;
 
+  // 0. iTunes numeric or URI lookup
+  if (/^\d+$/.test(cleanId) || cleanId.startsWith('itunes:')) {
+    try {
+      const itunesId = cleanId.replace(/^itunes:track:/i, '');
+      const itunesRes = await axios.get(`https://itunes.apple.com/lookup?id=${itunesId}`, { timeout: 4500 });
+      const item = itunesRes.data?.results?.[0];
+      if (item) {
+        const rawArt = item.artworkUrl100 || '';
+        const coverUrl = rawArt ? rawArt.replace(/\/(\d+)x(\d+)bb\./, '/600x600bb.') : 'https://placehold.co/600x600/17020B/E8A87C?text=Track';
+        const artistCredit = item.artistName || 'Unknown Artist';
+        const artistsList = [{ name: artistCredit, id: String(item.artistId || '') }];
+        const releaseYear = item.releaseDate ? new Date(item.releaseDate).getFullYear() : null;
+
+        const trackData = {
+          id: cleanId,
+          trackId: cleanId,
+          name: item.trackName,
+          title: item.trackName,
+          artist: artistCredit,
+          artists: artistsList,
+          album: item.collectionName || item.trackName,
+          albumId: String(item.collectionId || ''),
+          image: coverUrl,
+          coverArt: coverUrl,
+          url: coverUrl,
+          releaseDate: item.releaseDate || null,
+          releaseYear: releaseYear,
+          duration: item.trackTimeMillis || 240000,
+          duration_ms: item.trackTimeMillis || 240000,
+          genres: [item.primaryGenreName].filter(Boolean),
+          tags: item.primaryGenreName ? [{ label: item.primaryGenreName, count: 10 }] : [],
+          description: `"${item.trackName}" is a celebrated recording by ${artistCredit}, featured on the album "${item.collectionName || item.trackName}".`,
+          rating: { value: 4.8, votesCount: 50 },
+          popularity: 88,
+          platformLinks: generateStreamingLinks(item.trackName, artistCredit),
+          type: 'track',
+        };
+
+        setCached(cacheKey, trackData);
+        return trackData;
+      }
+    } catch (itunesErr) {
+      console.warn('iTunes track lookup error:', itunesErr.message);
+    }
+  }
+
   try {
     const response = await rateLimitedGet(`${MUSICBRAINZ_BASE}/recording/${cleanId}`, {
       inc: 'artists+releases+release-groups+ratings+tags+url-rels+annotation',
@@ -747,6 +962,75 @@ export const fetchArtist = async (id) => {
   const cacheKey = `artist_${cleanId}`;
   const cached = getCached(cacheKey);
   if (cached) return cached;
+
+  // 0. iTunes numeric or URI lookup
+  if (/^\d+$/.test(cleanId) || cleanId.startsWith('itunes:')) {
+    try {
+      const itunesId = cleanId.replace(/^itunes:artist:/i, '');
+      const [songsRes, albumsRes] = await Promise.all([
+        axios.get(`https://itunes.apple.com/lookup?id=${itunesId}&entity=song&limit=15`, { timeout: 4500 }).catch(() => null),
+        axios.get(`https://itunes.apple.com/lookup?id=${itunesId}&entity=album&limit=25`, { timeout: 4500 }).catch(() => null),
+      ]);
+      const songsData = songsRes?.data?.results || [];
+      const albumsData = albumsRes?.data?.results || [];
+      const art = songsData[0] || albumsData[0];
+      if (art) {
+        const artistName = art.artistName || 'Artist';
+        const coverUrl = await resolveArtistImage(artistName, itunesId);
+
+        const topTracks = songsData.filter((i) => i.wrapperType === 'track').map((t, idx) => ({
+          id: String(t.trackId),
+          title: t.trackName,
+          name: t.trackName,
+          pos: idx + 1,
+          duration: t.trackTimeMillis || 240000,
+          duration_ms: t.trackTimeMillis || 240000,
+          image: t.artworkUrl100 ? t.artworkUrl100.replace(/\/(\d+)x(\d+)bb\./, '/600x600bb.') : coverUrl,
+          album: t.collectionName || '',
+          albumId: String(t.collectionId || ''),
+          artist: artistName,
+          type: 'track',
+        }));
+
+        const albums = albumsData.filter((i) => i.wrapperType === 'collection').map((a) => ({
+          id: String(a.collectionId),
+          title: a.collectionName,
+          name: a.collectionName,
+          image: a.artworkUrl100 ? a.artworkUrl100.replace(/\/(\d+)x(\d+)bb\./, '/600x600bb.') : coverUrl,
+          type: 'album',
+          primaryType: a.collectionType || 'Album',
+          releaseDate: a.releaseDate,
+          releaseYear: a.releaseDate ? new Date(a.releaseDate).getFullYear() : null,
+          artist: artistName,
+        }));
+
+        const artistObj = {
+          id: cleanId,
+          name: artistName,
+          title: artistName,
+          artist: artistName,
+          country: 'Global',
+          type: 'artist',
+          genres: [art.primaryGenreName].filter(Boolean),
+          image: coverUrl,
+          coverArt: coverUrl,
+          url: coverUrl,
+          followers: 150000,
+          popularity: 88,
+          rating: { value: 4.8, votesCount: 50 },
+          topTracks: topTracks,
+          albums: albums,
+          discography: { albums: albums, singles: [], compilations: [], live: [] },
+          description: `${artistName} is a celebrated recording artist${art.primaryGenreName ? ` in ${art.primaryGenreName}` : ''}.`,
+        };
+
+        setCached(cacheKey, artistObj);
+        return artistObj;
+      }
+    } catch (itunesErr) {
+      console.warn('iTunes artist lookup error:', itunesErr.message);
+    }
+  }
 
   try {
     const artistRes = await rateLimitedGet(`${MUSICBRAINZ_BASE}/artist/${cleanId}`, {

@@ -13,12 +13,12 @@ export async function generateMetadata({ params }) {
         title: 'Custom Playlist | GrooveEstrella',
         description: 'Listen and explore custom playlists on GrooveEstrella.',
         siteName: 'GrooveEstrella',
-        images: [{ url: 'https://grooveestrella.com/icon-512.png', width: 512, height: 512, alt: 'Custom Playlist' }],
+        images: [{ url: 'https://groove.amplecen.com/icon-512.png', width: 512, height: 512, alt: 'Custom Playlist' }],
       },
       twitter: {
         card: 'summary_large_image',
         title: 'Custom Playlist | GrooveEstrella',
-        images: ['https://grooveestrella.com/icon-512.png'],
+        images: ['https://groove.amplecen.com/icon-512.png'],
       }
     };
   }
@@ -36,10 +36,10 @@ export async function generateMetadata({ params }) {
   const rawCover = playlist?.images?.[0]?.url;
   const coverUrl = (rawCover && typeof rawCover === 'string' && rawCover.startsWith('http'))
     ? rawCover
-    : 'https://grooveestrella.com/icon-512.png';
+    : 'https://groove.amplecen.com/icon-512.png';
 
   const descDisplay = `Open and explore "${playlistName}" on GrooveEstrella by ${ownerName}${playlist?.tracks?.total ? ` • ${playlist.tracks.total} tracks` : ''}.`;
-  const canonicalUrl = `https://grooveestrella.com/playlist/${encodeURIComponent(id)}`;
+  const canonicalUrl = `https://groove.amplecen.com/playlist/${encodeURIComponent(id)}`;
 
   return {
     title: `${playlistName} by ${ownerName} | GrooveEstrella`,

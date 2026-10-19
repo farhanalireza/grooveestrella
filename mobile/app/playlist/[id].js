@@ -271,7 +271,7 @@ export default function PlaylistDetailScreen() {
 
   const shareTitle = `${playlistTitle} on GrooveEstrella`;
   const shareMessage = `Explore "${playlistTitle}" on GrooveEstrella! 🎧`;
-  const shareUrl = `https://grooveestrella.com/playlist/${id}`;
+  const shareUrl = `https://groove.amplecen.com/playlist/${id}`;
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.bg }]} edges={['left', 'right']}>

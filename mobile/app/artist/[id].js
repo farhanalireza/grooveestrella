@@ -245,7 +245,7 @@ export default function ArtistDetailScreen() {
 
   const shareTitle = `${artistName} on GrooveEstrella`;
   const shareMessage = `Explore "${artistName}" on GrooveEstrella! 🎙️`;
-  const shareUrl = `https://grooveestrella.com/artist/${id}`;
+  const shareUrl = `https://groove.amplecen.com/artist/${id}`;
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.bg }]} edges={['left', 'right']}>

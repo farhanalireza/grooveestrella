@@ -166,7 +166,7 @@ export default function TrackDetailScreen() {
   const durationText = msToMmSs(track?.duration_ms || track?.duration);
   const releaseYear = track?.releaseYear || (track?.releaseDate ? new Date(track.releaseDate).getFullYear() : 'Track');
   const popularityScore = track?.popularity || 85;
-  const canonicalUrl = `https://grooveestrella.com/track/${id}`;
+  const canonicalUrl = `https://groove.amplecen.com/track/${id}`;
   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&color=${(colors.accent || '#E8A87C').replace('#', '')}&bgcolor=${(colors.bg || '#17020B').replace('#', '')}&ecc=H&data=${encodeURIComponent(canonicalUrl)}`;
 
   const artistsList = Array.isArray(track?.artists)

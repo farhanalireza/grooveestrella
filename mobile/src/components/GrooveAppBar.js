@@ -71,8 +71,8 @@ export default function GrooveAppBar({
           title: shareData.title || 'GrooveEstrella',
           message: Platform.OS === 'ios'
             ? (shareData.message || 'Check out this music on GrooveEstrella!')
-            : `${shareData.message || 'Check out this music on GrooveEstrella!'}\n${shareData.url || 'https://grooveestrella.com'}`,
-          url: shareData.url || 'https://grooveestrella.com',
+            : `${shareData.message || 'Check out this music on GrooveEstrella!'}\n${shareData.url || 'https://groove.amplecen.com'}`,
+          url: shareData.url || 'https://groove.amplecen.com',
         });
       } catch (err) {
         // dismissed or canceled
