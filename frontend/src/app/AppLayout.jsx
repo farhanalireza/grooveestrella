@@ -6,6 +6,7 @@ import AppBar from '@/Components/AppBar';
 import GrooveLoader from '@/Components/GrooveLoader';
 import PlaylistPickerModal from '@/Components/PlaylistPickerModal';
 import PWAInstallPrompt from '@/Components/PWAInstallPrompt';
+import OnboardingModal from '@/Components/OnboardingModal';
 
 export default function AppLayout({ children }) {
   const [mounted, setMounted] = useState(false);
@@ -27,6 +28,7 @@ export default function AppLayout({ children }) {
         <>
           <PlaylistPickerModal />
           <PWAInstallPrompt />
+          <OnboardingModal />
         </>
       )}
     </div>

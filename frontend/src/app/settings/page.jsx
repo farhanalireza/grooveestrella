@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { 
   Shield, Volume2, Check, Music, Trash2, 
   ListMusic, Disc, Users, AlertTriangle, ArrowLeft,
-  Sun, Moon, Palette, Smartphone, Download
+  Sun, Moon, Palette, Smartphone, Download, Sparkles, ArrowRight
 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from '@/lib/toast';
@@ -154,6 +154,32 @@ export default function SettingsPage() {
             <h1 className="text-2xl font-extrabold tracking-tight text-[var(--theme-fg)]">Settings</h1>
             <p className="text-xs text-[var(--theme-muted)]">Configure preferences and manage locally saved data.</p>
           </div>
+        </div>
+
+        {/* SECTION: MUSIC TASTE & ONBOARDING */}
+        <div className="space-y-4 bg-[var(--theme-card)]/60 border border-[var(--theme-border)] rounded-2xl p-4 sm:p-5">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-[var(--theme-accent)]" />
+            <h2 className="text-base font-bold text-[var(--theme-fg)]">Music Taste & Onboarding</h2>
+          </div>
+          <p className="text-xs text-[var(--theme-muted)] leading-relaxed">
+            Personalize your identity, reroll your explorer name, pick favorite genres, and choose your preferred player anytime.
+          </p>
+          <button
+            onClick={() => window.dispatchEvent(new CustomEvent('open-onboarding'))}
+            className="w-full p-3.5 rounded-xl border border-[var(--theme-accent)]/30 bg-[var(--theme-surface)] hover:border-[var(--theme-accent)] text-[var(--theme-fg)] transition-all duration-200 active:scale-98 cursor-pointer shadow-sm flex items-center justify-between group"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-[var(--theme-accent)]/15 border border-[var(--theme-accent)]/30 flex items-center justify-center text-[var(--theme-accent)] group-hover:scale-105 transition-transform shrink-0">
+                <Sparkles size={18} />
+              </div>
+              <div className="text-left">
+                <h3 className="text-xs sm:text-sm font-bold text-[var(--theme-fg)]">Retake Music Taste Setup</h3>
+                <p className="text-[11px] text-[var(--theme-muted)]">Reroll explorer handle, choose artists, and set streaming vibe.</p>
+              </div>
+            </div>
+            <ArrowRight size={16} className="text-[var(--theme-accent)] group-hover:translate-x-1 transition-transform shrink-0 ml-2" />
+          </button>
         </div>
 
         {/* SECTION 0: APPEARANCE & THEME */}

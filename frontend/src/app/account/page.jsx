@@ -23,6 +23,7 @@ const AVAILABLE_GENRES = [
 function UserDashboardContent() {
   const router = useRouter();
   const [userName, setUserName] = useState('');
+  const [userAvatar, setUserAvatar] = useState('');
   const [isEditingName, setIsEditingName] = useState(false);
   const [tempName, setTempName] = useState('');
   const [activeTab, setActiveTab] = useState('tracks'); // tracks | albums | artists | playlists | reviews | genres
@@ -40,6 +41,7 @@ function UserDashboardContent() {
     const currentName = getOrSetUserName();
     setUserName(currentName);
     setTempName(currentName);
+    setUserAvatar(localStorage.getItem('userAvatar') || '');
 
     try {
       setFavoriteGenres(JSON.parse(localStorage.getItem('favoriteGenres') || '[]'));
@@ -102,6 +104,8 @@ function UserDashboardContent() {
 
   useEffect(() => {
     loadData();
+    window.addEventListener('groove-profile-updated', loadData);
+    return () => window.removeEventListener('groove-profile-updated', loadData);
   }, []);
 
   // Roll a new random Adj + Noun combo
@@ -218,7 +222,7 @@ function UserDashboardContent() {
             {/* User Avatar */}
             <div className='relative flex-shrink-0'>
               <div className='w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-gradient-to-tr from-[var(--theme-plum)] to-[var(--theme-accent)] flex items-center justify-center text-4xl font-black text-[var(--theme-fg)] shadow-md border-2 border-[var(--theme-border)]'>
-                {firstLetter}
+                {userAvatar ? <span className="text-4xl sm:text-5xl">{userAvatar}</span> : firstLetter}
               </div>
               <div className='absolute -bottom-1 -right-1 bg-[var(--theme-accent-bg)] p-2 rounded-full shadow-md text-[var(--theme-accent-fg)]'>
                 <User className='w-4 h-4' />
@@ -266,7 +270,7 @@ function UserDashboardContent() {
                     <h1 className='text-2xl sm:text-4xl font-extrabold text-[var(--theme-fg)] tracking-tight'>
                       {userName}
                     </h1>
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1.5 flex-wrap justify-center sm:justify-start">
                       <button
                         onClick={() => setIsEditingName(true)}
                         className="p-2 rounded-xl bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] text-[var(--theme-muted)] hover:text-[var(--theme-fg)] border border-[var(--theme-border)] transition cursor-pointer"
@@ -281,6 +285,14 @@ function UserDashboardContent() {
                       >
                         <Dice5 size={14} />
                         <span className="hidden sm:inline">Roll Name</span>
+                      </button>
+                      <button
+                        onClick={() => window.dispatchEvent(new CustomEvent('open-onboarding'))}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[var(--theme-accent)]/15 hover:bg-[var(--theme-accent)]/25 text-[var(--theme-accent)] border border-[var(--theme-accent)]/30 text-xs font-bold transition active:scale-95 cursor-pointer shadow-sm"
+                        title="Tune music taste & preferences"
+                      >
+                        <Sparkles size={14} />
+                        <span>Tune Taste</span>
                       </button>
                     </div>
                   </div>
