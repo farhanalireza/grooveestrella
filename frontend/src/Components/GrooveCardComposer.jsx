@@ -4,8 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
     X, 
     Download, 
-    Share2, 
-    Music2
+    Share2 
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { createPortal } from 'react-dom';
@@ -307,7 +306,7 @@ export default function GrooveCardComposer({
                                 {/* Card Header: Type Badge */}
                                 <div className="w-full flex justify-between items-center mb-2.5 sm:mb-4">
                                     <div className="flex items-center gap-1.5">
-                                        <Music2 size={12} className="text-[#8992A5]" />
+                                        <img src="/in.svg" alt="Groove" className="w-3.5 h-3.5 object-contain shrink-0" crossOrigin="anonymous" />
                                         <span className="text-[9px] sm:text-[10px] tracking-[0.2em] font-extrabold uppercase text-[#8992A5]">GrooveCard</span>
                                     </div>
                                     <span className="text-[8px] sm:text-[9px] font-bold px-1.5 sm:px-2 py-0.5 rounded bg-white/5 border border-white/10 text-white/90">
