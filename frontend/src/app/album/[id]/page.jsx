@@ -4,19 +4,19 @@ import AlbumDetailClient from './AlbumDetailClient';
 
 export async function generateMetadata({ params }) {
   const { id } = await params;
-  let { album } = await fetchMusicBrainzAlbumServer(id);
-  if (!album) {
-    const searchRes = await searchMusicBrainzAlbumsServer(decodeURIComponent(id), 1);
-    if (searchRes.length > 0) {
-      const found = await fetchMusicBrainzAlbumServer(searchRes[0].id);
-      album = found.album;
-    }
-  }
+  let album = null;
+  try {
+    const data = await Promise.race([
+      fetchMusicBrainzAlbumServer(id),
+      new Promise((res) => setTimeout(() => res(null), 1200)),
+    ]);
+    album = data?.album;
+  } catch (_) {}
 
   if (!album) {
     return {
-      title: 'Album Not Found | GrooveEstrella',
-      description: 'The requested album could not be found on GrooveEstrella.',
+      title: 'Album | GrooveEstrella',
+      description: 'Discover albums, explore tracklists, and stream across platforms on GrooveEstrella.',
     };
   }
 

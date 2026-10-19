@@ -4,8 +4,8 @@ import { getMoodSuggestions } from '../../lib/chatAPI';
 import { getSpotifyToken, fetchSpotifyData } from '../../hooks/useSpotify';
 import { TrackCard } from '../CardComponents/TracksCard';
 
-const sentAudio = new Audio('/audio/message-send.wav');
-const receiveAudio = new Audio('/audio/message-receive.mp3');
+const getSentAudio = () => typeof window !== 'undefined' ? new Audio('/audio/message-send.wav') : null;
+const getReceiveAudio = () => typeof window !== 'undefined' ? new Audio('/audio/message-receive.mp3') : null;
 
 const MusicChatbot = () => {
 
@@ -59,7 +59,10 @@ const MusicChatbot = () => {
         setIsLoading(true);
 
         // Play sent sound
-        try { sentAudio.currentTime = 0; sentAudio.play(); } catch (e) { }
+        try { 
+            const a = getSentAudio();
+            if (a) { a.currentTime = 0; a.play(); }
+        } catch (e) { }
 
         try {
             const data = await getMoodSuggestions(messageText.trim());
@@ -88,7 +91,10 @@ const MusicChatbot = () => {
             setRecommendedSongs(data.recommended_songs || []);
 
             // Play receive sound
-            try { receiveAudio.currentTime = 0; receiveAudio.play(); } catch (e) {
+            try { 
+                const a = getReceiveAudio();
+                if (a) { a.currentTime = 0; a.play(); }
+            } catch (e) {
                 console.log(e);
             }
         } catch (error) {
@@ -104,7 +110,10 @@ const MusicChatbot = () => {
             setRecommendedSongs(fallbackResponse.songs);
 
             // Play receive sound
-            try { receiveAudio.currentTime = 0; receiveAudio.play(); } catch (e) {
+            try { 
+                const a = getReceiveAudio();
+                if (a) { a.currentTime = 0; a.play(); }
+            } catch (e) {
                 console.log(e);
             }
         } finally {

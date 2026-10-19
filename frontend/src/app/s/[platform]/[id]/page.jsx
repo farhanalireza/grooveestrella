@@ -5,12 +5,18 @@ import { getTrackMetadata } from '@/lib/musicProviders';
 // Generate dynamic metadata for SEO and rich previews in social apps
 export async function generateMetadata({ params }) {
   const { platform, id } = await params;
-  const metadata = await getTrackMetadata(platform, id);
+  let metadata = null;
+  try {
+    metadata = await Promise.race([
+      getTrackMetadata(platform, id),
+      new Promise((res) => setTimeout(() => res(null), 1200)),
+    ]);
+  } catch (_) {}
 
   if (!metadata) {
     return {
-      title: 'Track Not Found | GrooveLink',
-      description: 'The requested music track could not be resolved.',
+      title: 'GrooveLink | Universal Music Link',
+      description: 'Open and share music across Spotify, Apple Music, YouTube Music, TIDAL, and Deezer.',
     };
   }
 

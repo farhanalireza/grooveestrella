@@ -4,13 +4,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
     X, 
     Download, 
-    Copy, 
-    Check, 
     Share2, 
     Music2
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { createPortal } from 'react-dom';
+import { toast } from '@/lib/toast';
 
 export default function GrooveCardComposer({
     isOpen,
@@ -29,7 +28,6 @@ export default function GrooveCardComposer({
     genres = [],
 }) {
     const cardRef = useRef(null);
-    const [copied, setCopied] = useState(false);
     const [isGenerating, setIsGenerating] = useState(false);
     
     // Customization states
@@ -98,21 +96,9 @@ export default function GrooveCardComposer({
 
     const qrApi = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(shareUrl)}&color=${qrColor}&bgcolor=ffffff&ecc=H&format=png`;
 
-    // Copy Link to clipboard
-    const handleCopyLink = async () => {
-        try {
-            await navigator.clipboard.writeText(shareUrl);
-            setCopied(true);
-            setTimeout(() => setCopied(false), 2000);
-        } catch (err) {
-            console.error('Failed to copy link:', err);
-        }
-    };
-
-    // Download Card as high-res PNG image with mobile share support
-    const handleDownloadCard = async () => {
-        if (!cardRef.current) return;
-        setIsGenerating(true);
+    // Generate high-resolution card PNG representation
+    const generateCardImage = async () => {
+        if (!cardRef.current) return null;
         const disabledSheets = [];
         try {
             // Temporarily disable cross-origin stylesheets that trigger SecurityError
@@ -137,14 +123,11 @@ export default function GrooveCardComposer({
                         try {
                             sheet.disabled = true;
                             disabledSheets.push(sheet);
-                        } catch (err) {
-                            // ignore
-                        }
+                        } catch (err) {}
                     }
                 }
             }
 
-            // Generate the data URL image representation of the element
             const dataUrl = await toPng(cardRef.current, {
                 quality: 1.0,
                 pixelRatio: 3, // Premium quality printing
@@ -159,24 +142,61 @@ export default function GrooveCardComposer({
             });
 
             const fileName = `groovecard_${(title || 'music').replace(/[^a-z0-9]/gi, '_').toLowerCase()}.png`;
+            return { dataUrl, fileName };
+        } finally {
+            disabledSheets.forEach(node => {
+                node.disabled = false;
+            });
+        }
+    };
 
-            // Mobile devices (iOS Safari / Android): try Web Share API with file first for native photo save
-            if (navigator.canShare) {
+    // Share Card specifically as an image file (Web Share API) or download fallback
+    const handleShareCard = async () => {
+        setIsGenerating(true);
+        try {
+            const result = await generateCardImage();
+            if (!result) return;
+            const { dataUrl, fileName } = result;
+
+            const res = await fetch(dataUrl);
+            const blob = await res.blob();
+            const file = new File([blob], fileName, { type: 'image/png' });
+
+            if (typeof navigator !== 'undefined' && navigator.canShare && navigator.canShare({ files: [file] })) {
                 try {
-                    const res = await fetch(dataUrl);
-                    const blob = await res.blob();
-                    const file = new File([blob], fileName, { type: 'image/png' });
-                    if (navigator.canShare({ files: [file] })) {
-                        await navigator.share({
-                            files: [file],
-                            title: `${title} - GrooveCard`,
-                        });
-                        return;
-                    }
+                    await navigator.share({
+                        files: [file],
+                        title: `${title} - GrooveCard`,
+                    });
+                    return;
                 } catch (shareErr) {
                     if (shareErr.name === 'AbortError') return;
                 }
             }
+
+            // Fallback for devices without file sharing support: download the card image directly
+            const link = document.createElement('a');
+            link.download = fileName;
+            link.href = dataUrl;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            toast.success('Card image saved! 🎨');
+        } catch (error) {
+            console.error('Error sharing card image:', error);
+            toast.error('Failed to export card image.');
+        } finally {
+            setIsGenerating(false);
+        }
+    };
+
+    // Download Card strictly as PNG image file
+    const handleDownloadCard = async () => {
+        setIsGenerating(true);
+        try {
+            const result = await generateCardImage();
+            if (!result) return;
+            const { dataUrl, fileName } = result;
 
             const link = document.createElement('a');
             link.download = fileName;
@@ -184,13 +204,11 @@ export default function GrooveCardComposer({
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
+            toast.success('Card downloaded! 🎨');
         } catch (error) {
-            console.error('Error generating card image:', error);
-            alert('Failed to generate high-quality image. Try copying the link instead!');
+            console.error('Error downloading card image:', error);
+            toast.error('Failed to download card image.');
         } finally {
-            disabledSheets.forEach(node => {
-                node.disabled = false;
-            });
             setIsGenerating(false);
         }
     };
@@ -210,32 +228,6 @@ export default function GrooveCardComposer({
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [isOpen, qrFullScreen, onClose]);
-
-    // Native Web Share
-    const handleNativeShare = async () => {
-        if (navigator.share) {
-            try {
-                await navigator.share({
-                    title: `${title} - Groove`,
-                    text: `Open "${title}" in Groove!`,
-                    url: shareUrl
-                });
-            } catch (err) {
-                console.warn('Native share cancelled or failed:', err);
-            }
-        }
-    };
-
-    // Social shares
-    const handleShareTwitter = () => {
-        const text = `🎵 Open "${title}" in Groove!`;
-        window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(shareUrl)}`, '_blank');
-    };
-
-    const handleShareWhatsApp = () => {
-        const text = `🎵 Open "${title}" in Groove!\n${shareUrl}`;
-        window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
-    };
 
     // Prevent backdrop scroll
     useEffect(() => {
@@ -472,80 +464,21 @@ export default function GrooveCardComposer({
                             <div className="hidden md:block space-y-4 pt-2">
                                 <div className="grid grid-cols-2 gap-2 sm:gap-3">
                                     <button
-                                        onClick={handleDownloadCard}
+                                        onClick={handleShareCard}
                                         disabled={isGenerating}
                                         className="flex items-center justify-center gap-1.5 sm:gap-2 py-2.5 sm:py-3 px-3 sm:px-4 bg-[var(--theme-accent)] hover:opacity-90 active:scale-95 text-[var(--theme-bg)] font-bold rounded-xl sm:rounded-2xl transition-all shadow-lg disabled:opacity-50 text-xs sm:text-sm cursor-pointer"
                                     >
+                                        <Share2 size={15} />
+                                        <span>{isGenerating ? 'Exporting...' : 'Share Card'}</span>
+                                    </button>
+
+                                    <button
+                                        onClick={handleDownloadCard}
+                                        disabled={isGenerating}
+                                        className="flex items-center justify-center gap-1.5 sm:gap-2 py-2.5 sm:py-3 px-3 sm:px-4 bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] active:scale-95 text-[var(--theme-fg)] font-bold rounded-xl sm:rounded-2xl transition-all border border-[var(--theme-border)] text-xs sm:text-sm cursor-pointer disabled:opacity-50"
+                                    >
                                         <Download size={15} />
-                                        <span>{isGenerating ? 'Exporting...' : 'Download'}</span>
-                                    </button>
-
-                                    <button
-                                        onClick={handleCopyLink}
-                                        className="flex items-center justify-center gap-1.5 sm:gap-2 py-2.5 sm:py-3 px-3 sm:px-4 bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] active:scale-95 text-[var(--theme-fg)] font-bold rounded-xl sm:rounded-2xl transition-all border border-[var(--theme-border)] text-xs sm:text-sm cursor-pointer"
-                                    >
-                                        {copied ? (
-                                            <>
-                                                <Check className="text-green-400" size={15} />
-                                                <span className="text-green-400">Copied!</span>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Copy size={15} />
-                                                <span>Copy Link</span>
-                                            </>
-                                        )}
-                                    </button>
-                                </div>
-
-                                {/* Native / Social Share Grid */}
-                                <div className="space-y-2">
-                                    <div className="text-[11px] sm:text-xs uppercase tracking-wider text-[var(--theme-muted)] font-bold">
-                                        Direct Share
-                                    </div>
-                                    <div className="flex gap-2">
-                                        {typeof navigator !== "undefined" && navigator.share && (
-                                            <button
-                                                onClick={handleNativeShare}
-                                                className="p-2 sm:p-2.5 bg-[var(--theme-accent)] hover:opacity-90 text-[var(--theme-bg)] rounded-xl transition-all flex-1 flex items-center justify-center gap-1.5 sm:gap-2 font-bold text-xs cursor-pointer"
-                                            >
-                                                <Share2 size={13} />
-                                                <span>Share</span>
-                                            </button>
-                                        )}
-                                        <button
-                                            onClick={handleShareTwitter}
-                                            className="p-2 sm:p-2.5 bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] text-[var(--theme-fg)] rounded-xl transition-all flex items-center justify-center flex-1 font-bold text-xs border border-[var(--theme-border)] cursor-pointer"
-                                        >
-                                            Twitter
-                                        </button>
-                                        <button
-                                            onClick={handleShareWhatsApp}
-                                            className="p-2 sm:p-2.5 bg-green-600/20 hover:bg-green-600/30 text-green-400 rounded-xl transition-all flex items-center justify-center flex-1 font-bold text-xs border border-green-500/10 cursor-pointer"
-                                        >
-                                            WhatsApp
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Social Shares for Mobile (Twitter / WhatsApp in scroll view) */}
-                            <div className="md:hidden space-y-2 pt-1 pb-2">
-                                <div className="text-[11px] uppercase tracking-wider text-[var(--theme-muted)] font-bold">
-                                    Social Share
-                                </div>
-                                <div className="flex gap-2">
-                                    <button
-                                        onClick={handleShareTwitter}
-                                        className="p-2.5 bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] text-[var(--theme-fg)] rounded-xl transition-all flex items-center justify-center flex-1 font-bold text-xs border border-[var(--theme-border)] cursor-pointer"
-                                    >
-                                        Twitter
-                                    </button>
-                                    <button
-                                        onClick={handleShareWhatsApp}
-                                        className="p-2.5 bg-green-600/20 hover:bg-green-600/30 text-green-400 rounded-xl transition-all flex items-center justify-center flex-1 font-bold text-xs border border-green-500/10 cursor-pointer"
-                                    >
-                                        WhatsApp
+                                        <span>Download PNG</span>
                                     </button>
                                 </div>
                             </div>
@@ -555,39 +488,21 @@ export default function GrooveCardComposer({
                     {/* Mobile Sticky Action Footer */}
                     <div className="md:hidden flex items-center gap-2 p-3 border-t border-[var(--theme-border)] bg-[var(--theme-surface)]/95 backdrop-blur-md shrink-0 z-20">
                         <button
-                            onClick={handleDownloadCard}
+                            onClick={handleShareCard}
                             disabled={isGenerating}
                             className="flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 bg-[var(--theme-accent)] hover:opacity-90 active:scale-95 text-[var(--theme-bg)] font-bold rounded-xl transition-all shadow-md disabled:opacity-50 text-xs cursor-pointer"
                         >
-                            <Download size={14} />
-                            <span>{isGenerating ? 'Exporting...' : 'Download'}</span>
+                            <Share2 size={14} />
+                            <span>{isGenerating ? 'Exporting...' : 'Share Card'}</span>
                         </button>
                         <button
-                            onClick={handleCopyLink}
-                            className="flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] active:scale-95 text-[var(--theme-fg)] font-bold rounded-xl transition-all border border-[var(--theme-border)] text-xs cursor-pointer"
+                            onClick={handleDownloadCard}
+                            disabled={isGenerating}
+                            className="flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] active:scale-95 text-[var(--theme-fg)] font-bold rounded-xl transition-all border border-[var(--theme-border)] text-xs cursor-pointer disabled:opacity-50"
                         >
-                            {copied ? (
-                                <>
-                                    <Check className="text-green-400" size={14} />
-                                    <span className="text-green-400">Copied!</span>
-                                </>
-                            ) : (
-                                <>
-                                    <Copy size={14} />
-                                    <span>Copy Link</span>
-                                </>
-                            )}
+                            <Download size={14} />
+                            <span>Download PNG</span>
                         </button>
-                        {typeof navigator !== 'undefined' && navigator.share && (
-                            <button
-                                onClick={handleNativeShare}
-                                className="p-2.5 bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] text-[var(--theme-accent)] rounded-xl border border-[var(--theme-border)] transition-all flex items-center justify-center cursor-pointer shadow-sm"
-                                aria-label="Share"
-                                title="Share"
-                            >
-                                <Share2 size={15} />
-                            </button>
-                        )}
                     </div>
                 </motion.div>
             </motion.div>

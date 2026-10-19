@@ -23,6 +23,7 @@ import MusicLoreAndReviews from "@/Components/MusicLoreAndReviews";
 import RatingPieChart from "@/Components/RatingPieChart";
 import GrooveLoader from "@/Components/GrooveLoader";
 import { toast } from "@/lib/toast";
+import { shareLink } from "@/lib/shareHelper";
 
 export default function TrackDetailClient({ id, initialData }) {
     const router = useRouter();
@@ -130,35 +131,12 @@ export default function TrackDetailClient({ id, initialData }) {
     const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&color=000000&bgcolor=ffffff&ecc=H&data=${encodeURIComponent(currentUrl)}`;
 
     const handleNativeShare = async () => {
-        const trackName = track?.name || track?.title || 'Track';
-        const artistsStr = artistsList.map(a => a.name).join(', ');
-        const shareTitle = `${trackName} - ${artistsStr} on GrooveEstrella`;
-        const shareText = `Check out "${trackName}" by ${artistsStr} on GrooveEstrella! 🎵`;
-        const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
-
-        if (typeof navigator !== 'undefined' && navigator.share) {
-            try {
-                await navigator.share({
-                    title: shareTitle,
-                    text: shareText,
-                    url: shareUrl,
-                });
-                return;
-            } catch (err) {
-                if (err.name === 'AbortError') return;
-            }
-        }
-
-        if (typeof navigator !== 'undefined' && navigator.clipboard) {
-            try {
-                await navigator.clipboard.writeText(`${shareTitle}\n${shareUrl}`);
-                toast.success('Track link copied to clipboard! 📋');
-            } catch (_) {
-                toast.info(shareUrl);
-            }
-        } else {
-            toast.info(shareUrl);
-        }
+        await shareLink({
+            name: track?.name || track?.title,
+            artists: artistsList,
+            type: "track",
+            id: track?.id || track?.trackId || id,
+        });
     };
 
     const durationMs = track?.duration_ms || track?.durationMs || track?.duration;
@@ -261,11 +239,11 @@ export default function TrackDetailClient({ id, initialData }) {
                 />
             </div>
 
-            {/* Top Bar for Mobile (compact pill with blurred bg, back button, logo + wordmark, and share) */}
-            <header className="sm:hidden relative z-20 w-full max-w-xs mx-auto flex items-center justify-between px-2.5 py-1.5 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 shadow-2xl mb-6">
+            {/* Top Bar for Mobile */}
+            <header className="sm:hidden relative z-20 w-full max-w-xs mx-auto flex items-center justify-between px-2.5 py-1.5 rounded-full bg-[var(--theme-card)]/80 backdrop-blur-xl border border-[var(--theme-border)] shadow-2xl mb-6">
                 <button 
                     onClick={handleBack}
-                    className="w-9 h-9 rounded-full aspect-square shrink-0 bg-white/10 hover:bg-white/20 active:scale-95 text-white flex items-center justify-center transition border border-white/10 cursor-pointer"
+                    className="w-9 h-9 rounded-full aspect-square shrink-0 bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] active:scale-95 text-[var(--theme-fg)] flex items-center justify-center transition border border-[var(--theme-border)] cursor-pointer"
                     title="Go Back"
                 >
                     <ArrowLeft size={16} />
@@ -274,27 +252,27 @@ export default function TrackDetailClient({ id, initialData }) {
                 {/* App Logo & Word Mark */}
                 <div 
                     onClick={() => router.push("/")}
-                    className="flex items-center gap-1.5 px-2 py-1 rounded-full hover:bg-white/10 active:scale-95 transition cursor-pointer select-none"
+                    className="flex items-center gap-1.5 px-2 py-1 rounded-full hover:bg-[var(--theme-surface)] active:scale-95 transition cursor-pointer select-none"
                     title="GrooveEstrella Home"
                 >
                     <img src="/in.svg" alt="GrooveEstrella" className="w-5 h-5 object-contain shrink-0" />
-                    <span className="text-xs font-bold text-white tracking-tight font-display">GrooveEstrella</span>
+                    <span className="text-xs font-bold text-[var(--theme-fg)] tracking-tight font-display">GrooveEstrella</span>
                 </div>
 
                 <button 
                     onClick={handleNativeShare}
-                    className="w-9 h-9 rounded-full aspect-square shrink-0 bg-white/10 hover:bg-white/20 active:scale-95 text-white flex items-center justify-center transition border border-white/10 cursor-pointer"
+                    className="w-9 h-9 rounded-full aspect-square shrink-0 bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] active:scale-95 text-[var(--theme-fg)] flex items-center justify-center transition border border-[var(--theme-border)] cursor-pointer"
                     title="Share Track"
                 >
                     <Share2 size={16} />
                 </button>
             </header>
 
-            {/* Top Navigation for Desktop / PC (isolated buttons on left and right, no top bar needed) */}
+            {/* Top Navigation for Desktop / PC */}
             <header className="hidden sm:flex relative z-20 w-full items-center justify-between mb-8 px-2 md:px-6">
                 <button 
                     onClick={handleBack}
-                    className="w-11 h-11 rounded-full aspect-square shrink-0 bg-black/35 hover:bg-black/55 active:scale-95 text-white flex items-center justify-center transition backdrop-blur-md cursor-pointer border border-white/15 shadow-lg"
+                    className="w-11 h-11 rounded-full aspect-square shrink-0 bg-[var(--theme-card)]/80 hover:bg-[var(--theme-surface)] active:scale-95 text-[var(--theme-fg)] flex items-center justify-center transition backdrop-blur-md cursor-pointer border border-[var(--theme-border)] shadow-lg"
                     title="Go Back"
                 >
                     <ArrowLeft size={18} />
@@ -302,7 +280,7 @@ export default function TrackDetailClient({ id, initialData }) {
 
                 <button 
                     onClick={handleNativeShare}
-                    className="w-11 h-11 rounded-full aspect-square shrink-0 bg-black/35 hover:bg-black/55 active:scale-95 text-white flex items-center justify-center transition backdrop-blur-md cursor-pointer border border-white/15 shadow-lg"
+                    className="w-11 h-11 rounded-full aspect-square shrink-0 bg-[var(--theme-card)]/80 hover:bg-[var(--theme-surface)] active:scale-95 text-[var(--theme-fg)] flex items-center justify-center transition backdrop-blur-md cursor-pointer border border-[var(--theme-border)] shadow-lg"
                     title="Share Track"
                 >
                     <Share2 size={18} />
@@ -312,7 +290,7 @@ export default function TrackDetailClient({ id, initialData }) {
             {/* Centered Apple Music Style Hero */}
             <div className="relative z-10 w-full max-w-xl mx-auto flex flex-col items-center text-center px-4 mb-8">
                 {/* Square Track Artwork */}
-                <div className="w-56 h-56 sm:w-64 sm:h-64 md:w-72 md:h-72 aspect-square rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl bg-[var(--theme-surface)] ring-1 ring-white/10 group relative">
+                <div className="w-56 h-56 sm:w-64 sm:h-64 md:w-72 md:h-72 aspect-square rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl bg-[var(--theme-surface)] ring-1 ring-[var(--theme-border)] group relative">
                     <img 
                         src={coverUrl} 
                         alt={track.name || track.title} 
@@ -323,11 +301,11 @@ export default function TrackDetailClient({ id, initialData }) {
 
                 {/* Track Title with Explicit [E] badge */}
                 <div className="mt-5 sm:mt-6 flex items-center justify-center gap-2 flex-wrap">
-                    <h1 className="text-2xl sm:text-3xl md:text-4xl font-black leading-tight text-white tracking-tight">
+                    <h1 className="text-2xl sm:text-3xl md:text-4xl font-black leading-tight text-[var(--theme-fg)] tracking-tight">
                         {track.name || track.title}
                     </h1>
                     {track.explicit && (
-                        <span className="inline-flex items-center justify-center w-4 h-4 rounded-[3px] text-[10px] font-bold bg-white/20 text-white/90 shrink-0 select-none">
+                        <span className="inline-flex items-center justify-center w-4 h-4 rounded-[3px] text-[10px] font-bold bg-[var(--theme-muted)]/20 text-[var(--theme-fg)]/90 shrink-0 select-none">
                             E
                         </span>
                     )}
@@ -338,7 +316,7 @@ export default function TrackDetailClient({ id, initialData }) {
                     {artistsList.map((a, i) => (
                         <span
                             key={`${a.id || 'artist'}-${i}`}
-                            className="text-base sm:text-lg font-semibold text-white/90 hover:text-[var(--theme-accent)] transition cursor-pointer"
+                            className="text-base sm:text-lg font-semibold text-[var(--theme-fg)]/90 hover:text-[var(--theme-accent)] transition cursor-pointer"
                             onClick={() => a.id && router.push(`/artist/${a.id}`)}
                         >
                             {a.name}{i < artistsList.length - 1 && ', '}
@@ -350,7 +328,7 @@ export default function TrackDetailClient({ id, initialData }) {
                 {(track.album?.name || track.album) && (
                     <div className="mt-0.5">
                         <span 
-                            className="text-xs sm:text-sm text-white/70 hover:text-[var(--theme-accent)] transition cursor-pointer font-medium"
+                            className="text-xs sm:text-sm text-[var(--theme-muted)] hover:text-[var(--theme-accent)] transition cursor-pointer font-medium"
                             onClick={() => track.album?.id && router.push(`/album/${track.album.id}`)}
                         >
                             {track.album?.name || track.album}
@@ -359,7 +337,7 @@ export default function TrackDetailClient({ id, initialData }) {
                 )}
 
                 {/* Subtitle: Genre · Year · Duration */}
-                <p className="text-xs sm:text-sm text-white/60 font-medium mt-1">
+                <p className="text-xs sm:text-sm text-[var(--theme-muted)] font-medium mt-1">
                     {displayGenre ? `${displayGenre} · ` : ""}{releaseYear || "Track"}
                     {formattedDuration && ` · ${formattedDuration}`}
                 </p>
@@ -369,10 +347,10 @@ export default function TrackDetailClient({ id, initialData }) {
                     {/* Create GrooveCard Button */}
                     <button
                         onClick={() => setIsGrooveCardOpen(true)}
-                        className="w-12 h-12 rounded-full aspect-square shrink-0 bg-white/10 hover:bg-white/20 active:scale-95 text-white flex items-center justify-center transition-all duration-200 backdrop-blur-md cursor-pointer shadow-lg border border-white/15 group"
+                        className="w-12 h-12 rounded-full aspect-square shrink-0 bg-[var(--theme-card)]/80 hover:bg-[var(--theme-surface)] active:scale-95 text-[var(--theme-fg)] flex items-center justify-center transition-all duration-200 backdrop-blur-md cursor-pointer shadow-lg border border-[var(--theme-border)] group"
                         title="Create GrooveCard"
                     >
-                        <Sparkles size={20} className="text-white group-hover:text-[var(--theme-accent)] transition-colors" />
+                        <Sparkles size={20} className="text-[var(--theme-fg)] group-hover:text-[var(--theme-accent)] transition-colors" />
                     </button>
 
                     {/* Prominent Open GrooveLink Pill Button */}
@@ -389,16 +367,16 @@ export default function TrackDetailClient({ id, initialData }) {
                     {/* Add to Playlist Button */}
                     <button
                         onClick={handleAddToPlaylist}
-                        className="w-12 h-12 rounded-full aspect-square shrink-0 bg-white/10 hover:bg-white/20 active:scale-95 text-white flex items-center justify-center transition-all duration-200 backdrop-blur-md cursor-pointer shadow-lg border border-white/15 group"
+                        className="w-12 h-12 rounded-full aspect-square shrink-0 bg-[var(--theme-card)]/80 hover:bg-[var(--theme-surface)] active:scale-95 text-[var(--theme-fg)] flex items-center justify-center transition-all duration-200 backdrop-blur-md cursor-pointer shadow-lg border border-[var(--theme-border)] group"
                         title="Add to Playlist"
                     >
-                        <ListPlus size={20} className="text-white group-hover:text-[var(--theme-accent)] transition-colors" />
+                        <ListPlus size={20} className="text-[var(--theme-fg)] group-hover:text-[var(--theme-accent)] transition-colors" />
                     </button>
 
                     {/* Bookmark / Library Button */}
                     <button
                         onClick={toggleSave}
-                        className="w-12 h-12 rounded-full aspect-square shrink-0 bg-white/10 hover:bg-white/20 active:scale-95 text-white flex items-center justify-center transition-all duration-200 backdrop-blur-md cursor-pointer shadow-lg border border-white/15"
+                        className="w-12 h-12 rounded-full aspect-square shrink-0 bg-[var(--theme-card)]/80 hover:bg-[var(--theme-surface)] active:scale-95 text-[var(--theme-fg)] flex items-center justify-center transition-all duration-200 backdrop-blur-md cursor-pointer shadow-lg border border-[var(--theme-border)]"
                         title={saved ? "Remove from Library" : "Add to Library"}
                     >
                         {saved ? <Check size={20} className="text-[var(--theme-accent)]" /> : <Plus size={20} />}
@@ -410,7 +388,7 @@ export default function TrackDetailClient({ id, initialData }) {
                         className={`w-12 h-12 rounded-full aspect-square shrink-0 transition-all duration-200 backdrop-blur-md cursor-pointer shadow-lg border flex items-center justify-center ${
                             showQR
                                 ? "bg-[var(--theme-accent)] text-[var(--theme-accent-fg)] border-[var(--theme-accent)] scale-105"
-                                : "bg-white/10 hover:bg-white/20 text-white border-white/15"
+                                : "bg-[var(--theme-card)]/80 hover:bg-[var(--theme-surface)] text-[var(--theme-fg)] border-[var(--theme-border)]"
                         }`}
                         title="Toggle QR Code"
                     >
@@ -420,24 +398,24 @@ export default function TrackDetailClient({ id, initialData }) {
 
                 {/* Score & Rating Pie Chart */}
                 <div className="mt-5 flex items-center justify-center gap-3">
-                    <div className="px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/15 flex items-center gap-2">
+                    <div className="px-3 py-1.5 rounded-full bg-[var(--theme-card)]/80 backdrop-blur-md border border-[var(--theme-border)] flex items-center gap-2">
                         <Award size={14} className="text-[var(--theme-accent)]" />
-                        <span className="text-xs font-bold text-white">Score: {track.popularity || 85}</span>
+                        <span className="text-xs font-bold text-[var(--theme-fg)]">Score: {track.popularity || 85}</span>
                     </div>
                     <RatingPieChart rating={track.rating || { value: (track.popularity ? (track.popularity / 20) : 4.5) }} />
                 </div>
 
                 {/* Description / Editorial Notes / Lore */}
                 {track.description && (
-                    <div className="mt-6 w-full text-left text-xs sm:text-sm text-white/80 leading-relaxed font-body">
-                        <strong className="font-extrabold text-white mr-1.5">Overview & Lore</strong>
+                    <div className="mt-6 w-full text-left text-xs sm:text-sm text-[var(--theme-muted)] leading-relaxed font-body">
+                        <strong className="font-extrabold text-[var(--theme-fg)] mr-1.5">Overview & Lore</strong>
                         <span className={!expandedHeroDesc ? "line-clamp-2" : ""}>
                             {track.description}
                         </span>
                         {track.description.length > 80 && (
                             <button
                                 onClick={() => setExpandedHeroDesc(!expandedHeroDesc)}
-                                className="font-black text-white hover:underline uppercase text-xs ml-1 tracking-wider cursor-pointer inline"
+                                className="font-black text-[var(--theme-accent)] hover:underline uppercase text-xs ml-1 tracking-wider cursor-pointer inline"
                             >
                                 {expandedHeroDesc ? "LESS" : "MORE"}
                             </button>
@@ -501,6 +479,9 @@ export default function TrackDetailClient({ id, initialData }) {
                     title={track.name || track.title}
                     artist={artistsList.map(a => a.name).join(', ')}
                     description={track.description}
+                    primaryGenre={track.primaryGenre || displayGenre}
+                    genres={track.genres || []}
+                    categorizedTags={track.categorizedTags || null}
                     tags={track.tags || track.genres || []}
                     allTags={track.allTags || []}
                     rating={track.rating}

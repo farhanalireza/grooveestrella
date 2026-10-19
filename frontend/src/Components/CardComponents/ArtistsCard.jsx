@@ -1,7 +1,7 @@
 // src/Components/CardComponents/ArtistsCard.jsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useTransition } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { MoreVertical, Bookmark, BookmarkCheck, Share2, Copy } from "lucide-react";
@@ -24,6 +24,7 @@ export const ArtistCard = ({
 }) => {
   const router = useRouter();
   const [saved, setSaved] = useState(false);
+  const [isPending, startTransition] = useTransition();
   const artistName = artist || title || "Artist";
 
   useEffect(() => {
@@ -33,7 +34,11 @@ export const ArtistCard = ({
   }, [id]);
 
   const handleCardClick = () => {
-    if (id) router.push(`/artist/${id}`);
+    if (id && !isPending) {
+      startTransition(() => {
+        router.push(`/artist/${id}`);
+      });
+    }
   };
 
   const toggleSave = (e) => {
@@ -137,7 +142,7 @@ export const ArtistCard = ({
           viewport={{ once: true }}
           whileTap={{ scale: 0.98 }}
           onClick={handleCardClick}
-          className={`${isAlwaysList ? "flex" : "flex md:hidden"} items-center justify-between gap-3 p-2.5 sm:p-3 rounded-2xl bg-[var(--theme-card)]/80 backdrop-blur-xl border border-[var(--theme-border)] hover:border-[var(--theme-accent)]/40 hover:bg-[var(--theme-surface)] transition-all duration-300 cursor-pointer w-full select-none shadow-md ${className}`}
+          className={`${isAlwaysList ? "flex" : "flex md:hidden"} items-center justify-between gap-3 p-2.5 sm:p-3 rounded-2xl bg-[var(--theme-card)]/80 backdrop-blur-xl border border-[var(--theme-border)] hover:border-[var(--theme-accent)]/40 hover:bg-[var(--theme-surface)] transition-all duration-300 w-full select-none shadow-md ${isPending ? 'opacity-70 pointer-events-none cursor-wait' : 'cursor-pointer'} ${className}`}
         >
           <div className="flex items-center gap-3 min-w-0">
             <div className="relative w-12 h-12 rounded-full overflow-hidden bg-[var(--theme-surface)] ring-1 ring-[var(--theme-border)] shrink-0">
@@ -149,6 +154,11 @@ export const ArtistCard = ({
                   e.currentTarget.src = "https://placehold.co/200x200/17020B/E8A87C?text=Artist";
                 }}
               />
+              {isPending && (
+                <div className="absolute inset-0 bg-black/50 flex items-center justify-center animate-fade-in">
+                  <div className="w-5 h-5 rounded-full border-2 border-[var(--theme-accent)] border-t-transparent animate-spin" />
+                </div>
+              )}
             </div>
             <h3 className="text-sm font-bold text-[var(--theme-fg)] truncate hover:text-[var(--theme-accent)] transition-colors" title={artistName}>
               {artistName}
@@ -167,7 +177,7 @@ export const ArtistCard = ({
           whileHover={{ y: -4 }}
           whileTap={{ scale: 0.98 }}
           onClick={handleCardClick}
-          className={`${isAlwaysGrid ? "flex" : "hidden md:flex"} group relative w-full bg-[var(--theme-card)]/80 backdrop-blur-xl border border-[var(--theme-border)] hover:border-[var(--theme-accent)]/40 rounded-2xl sm:rounded-3xl p-4 sm:p-5 transition-all duration-300 cursor-pointer flex-col items-center justify-center gap-3 shadow-md hover:shadow-xl select-none ${className}`}
+          className={`${isAlwaysGrid ? "flex" : "hidden md:flex"} group relative w-full bg-[var(--theme-card)]/80 backdrop-blur-xl border border-[var(--theme-border)] hover:border-[var(--theme-accent)]/40 rounded-2xl sm:rounded-3xl p-4 sm:p-5 transition-all duration-300 flex-col items-center justify-center gap-3 shadow-md hover:shadow-xl select-none ${isPending ? 'opacity-70 scale-[0.98] pointer-events-none cursor-wait' : 'cursor-pointer'} ${className}`}
         >
           {/* 100% Clear Avatar Photo */}
           <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden bg-[var(--theme-surface)] ring-2 ring-[var(--theme-border)] group-hover:ring-[var(--theme-accent)]/50 shadow-md transition-all duration-500">
@@ -179,6 +189,11 @@ export const ArtistCard = ({
                 e.currentTarget.src = "https://placehold.co/300x300/17020B/E8A87C?text=Artist";
               }}
             />
+            {isPending && (
+              <div className="absolute inset-0 bg-black/50 backdrop-blur-[1px] flex items-center justify-center animate-fade-in">
+                <div className="w-7 h-7 rounded-full border-2 border-[var(--theme-accent)] border-t-transparent animate-spin" />
+              </div>
+            )}
           </div>
 
           {/* Name & Actions Row below Avatar */}

@@ -1,7 +1,7 @@
 // src/Components/MusicLoreAndReviews.jsx
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { 
   Star, ExternalLink, Tag, BookOpen, MessageSquare, 
   Send, ThumbsUp, Sparkles, CheckCircle2, ChevronDown, ChevronUp, Globe
@@ -14,6 +14,9 @@ export default function MusicLoreAndReviews({
   title = "",
   artist = "",
   description = null,
+  primaryGenre = null,
+  genres = [],
+  categorizedTags = null,
   tags = [],
   allTags = [],
   rating = null,
@@ -100,21 +103,65 @@ export default function MusicLoreAndReviews({
   const averageScore = rating?.value ? Number(rating.value).toFixed(1) : "4.8";
   const votesCount = rating?.votesCount || (rating?.votes_count) || (reviews.length * 14 + 7);
 
-  // Format tags list: prioritize allTags with counts or tags strings, filtering out pure year tags (#1973, 1973)
-  const rawTags = (allTags && allTags.length > 0)
-    ? allTags
-    : (tags || []).map(t => ({ name: t, count: 1 }));
+  // Derive categorized sections
+  const resolvedCategorized = useMemo(() => {
+    if (categorizedTags && (categorizedTags.genres?.length || categorizedTags.styles?.length || categorizedTags.themes?.length || categorizedTags.eras?.length)) {
+      return categorizedTags;
+    }
 
-  const displayTags = rawTags.filter(t => {
-    const raw = typeof t === "string" ? t : (t?.name || "");
-    const clean = raw.trim().toLowerCase();
-    if (!clean) return false;
-    // Discard pure year tags and numeric tags
-    if (/^#?\d{2,4}s?$/i.test(clean)) return false;
-    if (clean.includes("#") && /^\d+$/.test(clean.replace(/#/g, ""))) return false;
-    if (/^\d+$/.test(clean)) return false;
-    return true;
-  });
+    const genreList = Array.isArray(genres) ? genres : [];
+    const rawList = (allTags && allTags.length > 0) ? allTags : (tags || []).map((t) => ({ name: t, count: 1 }));
+
+    const genreItems = genreList.map((g) => {
+      const name = typeof g === 'string' ? g : g?.name;
+      const count = (typeof g === 'object' && g.count) || null;
+      return { name, count };
+    }).filter((g) => g.name);
+
+    const styles = [];
+    const themes = [];
+    const eras = [];
+    const others = [];
+
+    const genreNames = new Set(genreItems.map((g) => g.name.toLowerCase()));
+
+    for (const t of rawList) {
+      const raw = typeof t === 'string' ? t : t?.name;
+      if (!raw) continue;
+      const clean = raw.trim();
+      const lower = clean.toLowerCase();
+      const count = (typeof t === 'object' && t.count) || null;
+
+      if (genreNames.has(lower)) continue;
+
+      if (/^#?\d{2,4}s?$/i.test(clean) || /^\d{4}$/.test(clean)) {
+        eras.push({ name: clean.replace(/^#/, ''), count });
+      } else if (/concept|masterpiece|soundtrack|audiophile|acoustic|live|instrumental|vocal|guitar|bass|solo|melanchol|dark|psychedelic|trippy|philosoph|space|lyric/i.test(lower)) {
+        themes.push({ name: clean.replace(/^#/, ''), count });
+      } else if (/rock|pop|jazz|metal|folk|blues|wave|punk|electronic|ambient|reggae|disco|funk|soul|indie|alternative|prog|hop|rap|dance|r&b|techno|house|trance|country/i.test(lower)) {
+        styles.push({ name: clean.replace(/^#/, ''), count });
+      } else {
+        const ignored = new Set(['album', 'albums', 'ep', 'single', 'singles', 'lp', 'cd', 'vinyl', 'owned', 'wishlist']);
+        if (!ignored.has(lower)) {
+          others.push({ name: clean.replace(/^#/, ''), count });
+        }
+      }
+    }
+
+    return {
+      genres: genreItems,
+      styles,
+      themes,
+      eras,
+      others,
+    };
+  }, [categorizedTags, genres, tags, allTags]);
+
+  const hasAnyTags = resolvedCategorized.genres.length > 0 ||
+    resolvedCategorized.styles.length > 0 ||
+    resolvedCategorized.themes.length > 0 ||
+    resolvedCategorized.eras.length > 0 ||
+    resolvedCategorized.others.length > 0;
 
   // Separate editorial / review external links
   const reviewLinks = (externalLinks || []).filter(l => l.category === "review");
@@ -123,40 +170,141 @@ export default function MusicLoreAndReviews({
 
   return (
     <div className="relative z-10 w-full mt-12 space-y-10">
-      {/* 1. All Tags & Community Genres Section */}
-      {displayTags.length > 0 && (
-        <section className="bg-[var(--theme-card)]/75 backdrop-blur-xl border border-[var(--theme-border)] rounded-3xl p-6 sm:p-8 shadow-xl">
-          <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+      {/* 1. Categorized Genres & Musical Lore Section */}
+      {hasAnyTags && (
+        <section className="bg-[var(--theme-card)]/75 backdrop-blur-xl border border-[var(--theme-border)] rounded-3xl p-6 sm:p-8 shadow-xl space-y-6">
+          <div className="flex items-center justify-between flex-wrap gap-2 border-b border-[var(--theme-border)] pb-4">
             <div className="flex items-center gap-2.5 text-xs font-bold text-[var(--theme-accent)] uppercase tracking-widest">
               <Tag size={16} />
-              <span>All Community Tags & Musical Styles</span>
+              <span>Genres, Styles & Music Lore</span>
             </div>
-            <span className="text-xs text-[var(--theme-muted)] font-semibold px-2.5 py-0.5 rounded-full bg-[var(--theme-surface)] border border-[var(--theme-border)]">
-              {displayTags.length} tags cataloged
-            </span>
+            {primaryGenre && (
+              <span className="text-xs text-[var(--theme-accent)] font-semibold px-3 py-1 rounded-full bg-[var(--theme-accent)]/10 border border-[var(--theme-accent)]/20">
+                Primary: {primaryGenre}
+              </span>
+            )}
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            {displayTags.map((t, idx) => {
-              const rawName = typeof t === "string" ? t : t.name;
-              const cleanName = (rawName || "").replace(/^#+/, "").trim();
-              const count = typeof t === "object" ? t.count : null;
-              if (!cleanName) return null;
-              return (
-                <span
-                  key={idx}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--theme-surface)] border border-[var(--theme-border)] text-[var(--theme-accent)] hover:border-[var(--theme-accent)] text-xs font-medium transition cursor-default group"
-                >
-                  <span>#{cleanName}</span>
-                  {count > 1 && (
-                    <span className="text-[10px] text-[var(--theme-muted)] bg-[var(--theme-card)] px-1.5 py-0.2 rounded-full">
-                      {count}
-                    </span>
-                  )}
-                </span>
-              );
-            })}
-          </div>
+          {/* Official Curated Genres */}
+          {resolvedCategorized.genres.length > 0 && (
+            <div className="space-y-2.5">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--theme-fg)]/70 flex items-center gap-1.5">
+                <Sparkles size={13} className="text-[var(--theme-accent)]" />
+                <span>Primary Genres</span>
+              </span>
+              <div className="flex flex-wrap gap-2">
+                {resolvedCategorized.genres.map((g, idx) => (
+                  <span
+                    key={`genre-${idx}`}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--theme-accent)]/15 border border-[var(--theme-accent)]/30 text-[var(--theme-fg)] font-semibold text-xs transition shadow-sm hover:border-[var(--theme-accent)]"
+                  >
+                    <span>{g.name}</span>
+                    {g.count > 1 && (
+                      <span className="text-[10px] text-[var(--theme-accent)] bg-black/20 dark:bg-white/10 px-1.5 py-0.2 rounded-full font-mono">
+                        {g.count}
+                      </span>
+                    )}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Styles & Subgenres */}
+          {resolvedCategorized.styles.length > 0 && (
+            <div className="space-y-2.5">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--theme-fg)]/60">
+                Styles & Subgenres
+              </span>
+              <div className="flex flex-wrap gap-2">
+                {resolvedCategorized.styles.map((s, idx) => (
+                  <span
+                    key={`style-${idx}`}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--theme-surface)] border border-[var(--theme-border)] text-[var(--theme-fg)]/90 text-xs font-medium hover:border-[var(--theme-accent)] transition"
+                  >
+                    <span>#{s.name}</span>
+                    {s.count > 1 && (
+                      <span className="text-[10px] text-[var(--theme-muted)] bg-[var(--theme-card)] px-1.5 py-0.2 rounded-full font-mono">
+                        {s.count}
+                      </span>
+                    )}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Themes & Moods */}
+          {resolvedCategorized.themes.length > 0 && (
+            <div className="space-y-2.5">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--theme-fg)]/60">
+                Themes & Moods
+              </span>
+              <div className="flex flex-wrap gap-2">
+                {resolvedCategorized.themes.map((th, idx) => (
+                  <span
+                    key={`theme-${idx}`}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--theme-surface)] border border-[var(--theme-border)] text-amber-300/90 text-xs font-medium hover:border-amber-400 transition"
+                  >
+                    <span>#{th.name}</span>
+                    {th.count > 1 && (
+                      <span className="text-[10px] text-amber-200/70 bg-[var(--theme-card)] px-1.5 py-0.2 rounded-full font-mono">
+                        {th.count}
+                      </span>
+                    )}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Eras & Timeline */}
+          {resolvedCategorized.eras.length > 0 && (
+            <div className="space-y-2.5">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--theme-fg)]/60">
+                Era & Timeline
+              </span>
+              <div className="flex flex-wrap gap-2">
+                {resolvedCategorized.eras.map((er, idx) => (
+                  <span
+                    key={`era-${idx}`}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--theme-surface)] border border-[var(--theme-border)] text-sky-300/90 text-xs font-medium hover:border-sky-400 transition"
+                  >
+                    <span>{er.name}</span>
+                    {er.count > 1 && (
+                      <span className="text-[10px] text-sky-200/70 bg-[var(--theme-card)] px-1.5 py-0.2 rounded-full font-mono">
+                        {er.count}
+                      </span>
+                    )}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Community Folksonomy */}
+          {resolvedCategorized.others.length > 0 && (
+            <div className="space-y-2.5">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--theme-fg)]/60">
+                Community Folksonomy
+              </span>
+              <div className="flex flex-wrap gap-2">
+                {resolvedCategorized.others.slice(0, 16).map((ot, idx) => (
+                  <span
+                    key={`other-${idx}`}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[var(--theme-surface)]/60 border border-[var(--theme-border)] text-[var(--theme-muted)] text-xs transition"
+                  >
+                    <span>#{ot.name}</span>
+                    {ot.count > 1 && (
+                      <span className="text-[10px] text-[var(--theme-muted)] font-mono">
+                        ({ot.count})
+                      </span>
+                    )}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </section>
       )}
 

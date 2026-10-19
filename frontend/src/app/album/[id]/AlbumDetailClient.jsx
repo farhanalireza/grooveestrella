@@ -15,10 +15,12 @@ import {
 import { AlbumTrackCard } from "@/Components/CardComponents/SmallTracksCard";
 import GrooveLinkModal from "@/Components/GrooveLinkModal";
 import GrooveCardComposer from "@/Components/GrooveCardComposer";
+import AlbumEditionsDrawer from "@/Components/AlbumEditionsDrawer";
 import MusicLoreAndReviews from "@/Components/MusicLoreAndReviews";
 import RatingPieChart from "@/Components/RatingPieChart";
 import GrooveLoader from "@/Components/GrooveLoader";
 import { toast } from "@/lib/toast";
+import { shareLink } from "@/lib/shareHelper";
 
 export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
     const router = useRouter();
@@ -29,10 +31,30 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
     const [loadingTracks, setLoadingTracks] = useState(false);
     const [expandedHeroDesc, setExpandedHeroDesc] = useState(false);
     const [selectedReleaseId, setSelectedReleaseId] = useState(initialAlbum?.selectedReleaseId || null);
+    const [isEditionsDrawerOpen, setIsEditionsDrawerOpen] = useState(false);
     const [isGrooveLinkOpen, setIsGrooveLinkOpen] = useState(false);
     const [isGrooveCardOpen, setIsGrooveCardOpen] = useState(false);
     const [selectedTrackForGrooveLink, setSelectedTrackForGrooveLink] = useState(null);
     const [selectedTrackForGrooveCard, setSelectedTrackForGrooveCard] = useState(null);
+    const [showVinylSides, setShowVinylSides] = useState(true);
+
+    useEffect(() => {
+        if (typeof window !== "undefined") {
+            const savedPref = localStorage.getItem("groove_show_vinyl_sides");
+            if (savedPref !== null) {
+                setShowVinylSides(savedPref === "true");
+            }
+        }
+    }, []);
+
+    const toggleVinylSides = () => {
+        const nextVal = !showVinylSides;
+        setShowVinylSides(nextVal);
+        if (typeof window !== "undefined") {
+            localStorage.setItem("groove_show_vinyl_sides", String(nextVal));
+        }
+        toast.info(nextVal ? "Vinyl side dividers enabled" : "Vinyl side dividers disabled");
+    };
 
     useEffect(() => {
         if (typeof window !== "undefined") {
@@ -68,7 +90,8 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
                     setTracks(data.tracks);
                 }
                 const labelYear = data.album?.releaseYear || data.album?.releaseDate || 'Selected';
-                toast.success(`Switched edition: ${labelYear} (${data.tracks?.length || 0} tracks) 💿`);
+                const editionName = data.album?.activeEdition?.editionName || labelYear;
+                toast.success(`Switched to: ${editionName} (${data.tracks?.length || 0} tracks) 💿`);
             } else {
                 toast.error("Could not load selected edition");
                 setSelectedReleaseId(prevReleaseId);
@@ -81,58 +104,6 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
             setLoadingTracks(false);
         }
     };
-
-    // Group variations into clear, meaningful eras
-    const groupedVariations = useMemo(() => {
-        if (!album?.variations || !album.variations.length) return [];
-
-        const originalYear = album.originalReleaseYear || (album.variations.find(v => v.isOriginal)?.year) || album.releaseYear;
-        const eraMap = new Map();
-
-        album.variations.forEach((v) => {
-            let eraKey = "other";
-            let eraName = "Other Editions";
-            let order = 99;
-
-            if (v.isOriginal || (originalYear && v.year === originalYear)) {
-                eraKey = "original";
-                eraName = `★ Original Release (${originalYear || 'Classic'})`;
-                order = 1;
-            } else if (v.year && v.year < 1980) {
-                eraKey = "1970s";
-                eraName = "1970s Pressings";
-                order = 2;
-            } else if (v.year && v.year < 1990) {
-                eraKey = "1980s";
-                eraName = "Early CD & Masters (1980s)";
-                order = 3;
-            } else if (v.year && v.year < 2000) {
-                eraKey = "1990s";
-                eraName = "Remasters & Bonus Tracks (1990s)";
-                order = 4;
-            } else if (v.year && v.year < 2010) {
-                eraKey = "2000s";
-                eraName = "2000s Reissues & Digital";
-                order = 5;
-            } else {
-                eraKey = "modern";
-                eraName = "Anniversary & Modern Remasters (2010+)";
-                order = 6;
-            }
-
-            if (!eraMap.has(eraKey)) {
-                eraMap.set(eraKey, {
-                    key: eraKey,
-                    name: eraName,
-                    order: order,
-                    items: [],
-                });
-            }
-            eraMap.get(eraKey).items.push(v);
-        });
-
-        return Array.from(eraMap.values()).sort((a, b) => a.order - b.order);
-    }, [album?.variations, album?.originalReleaseYear, album?.releaseYear]);
 
     useEffect(() => {
         if (!id && !album) return;
@@ -172,35 +143,12 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
     };
 
     const handleNativeShare = async () => {
-        const albumName = album?.name || album?.title || 'Album';
-        const artistsStr = (Array.isArray(album?.artists) ? album.artists : [{ name: album?.artist || 'Various Artists' }]).map(a => a.name).join(', ');
-        const shareTitle = `${albumName} by ${artistsStr}`;
-        const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
-        const shareText = `Check out "${albumName}" by ${artistsStr} on GrooveEstrella! 💿\n${shareUrl}`;
-
-        if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
-            try {
-                await navigator.share({
-                    title: shareTitle,
-                    text: shareText,
-                    url: shareUrl,
-                });
-                return;
-            } catch (err) {
-                if (err.name === 'AbortError') return;
-            }
-        }
-
-        if (typeof navigator !== 'undefined' && navigator.clipboard) {
-            try {
-                await navigator.clipboard.writeText(`${shareTitle}\n${shareUrl}`);
-                toast.success('Album link copied to clipboard! 📋');
-            } catch (_) {
-                toast.info(shareUrl);
-            }
-        } else {
-            toast.info(shareUrl);
-        }
+        await shareLink({
+            name: album?.name || album?.title,
+            artists: album?.artists || album?.artist,
+            type: "album",
+            id: album?.id || id,
+        });
     };
 
     // Client-side fallback fetch only if initial SSR props were empty
@@ -280,6 +228,7 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
     };
 
     // Filter out numeric tags, year tags (e.g. #1973, 1973, 70s), and non-musical catalog metadata
+    // Preserves short genres like Pop, Rap, Rock, R&B, EDM, Dub, Emo, Ska
     const validGenres = useMemo(() => {
         const rawList = album?.genres || album?.tags || [];
         const valid = [];
@@ -290,38 +239,51 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
             const clean = raw.trim();
             const lower = clean.toLowerCase();
             // Discard hashtags or numeric/year tags like #1973, 1973, 70s, #70s, 1980s
-            if (lower.includes("#")) continue;
-            if (/^\d/.test(lower)) continue;
-            if (/^#?\d{2,4}s?$/i.test(lower)) continue;
-            if (lower.length < 3) continue;
+            if (lower.includes("#") && /^\d+$/.test(lower.replace(/#/g, ""))) continue;
+            if (/^\d+$/.test(clean)) continue;
+            if (/^#?\d{2,4}s?$/i.test(clean)) continue;
+            if (/^\d{1,2}\s*(st|nd|rd|th)?\s*(century|anniversary)/i.test(lower)) continue;
 
             const ignored = new Set([
                 "album", "albums", "ep", "single", "singles", "lp", "cd", "vinyl", "audio",
                 "favorite", "favourites", "favorites", "favourite", "seen live",
-                "owned", "wishlist", "my collection", "all time favorite", "classic"
+                "owned", "wishlist", "my collection", "all time favorite", "classic", "masterpiece"
             ]);
             if (ignored.has(lower)) continue;
 
             if (!seen.has(lower)) {
                 seen.add(lower);
-                const formatted = clean
-                    .split(/[\s-]+/)
-                    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-                    .join(" ");
+                let formatted = clean;
+                if (/^r&b$/i.test(clean)) formatted = "R&B";
+                else if (/^edm$/i.test(clean)) formatted = "EDM";
+                else if (/^idm$/i.test(clean)) formatted = "IDM";
+                else if (/^k-?pop$/i.test(clean)) formatted = "K-Pop";
+                else if (/^j-?pop$/i.test(clean)) formatted = "J-Pop";
+                else if (/^lo-?fi$/i.test(clean)) formatted = "Lo-Fi";
+                else if (/^hip-?hop$/i.test(clean)) formatted = "Hip Hop";
+                else {
+                    formatted = clean
+                        .split(/[\s-]+/)
+                        .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+                        .join(" ");
+                }
                 valid.push(formatted);
             }
         }
         return valid;
     }, [album?.genres, album?.tags]);
 
-    const displayGenre = validGenres.length > 0 ? validGenres[0] : null;
+    // Hero genre display: First official curated genre -> first fallback genre
+    const displayGenre = album?.primaryGenre || album?.genres?.[0] || validGenres[0] || null;
     const releaseYear = album?.releaseYear || (album?.releaseDate ? new Date(album.releaseDate).getFullYear() : null);
 
-    // Group tracks into distinct discs (Disc 1, Disc 2, Disc 3, etc.)
-    const discGroups = useMemo(() => {
+    // Group tracks into distinct Discs and Sides:
+    // - If album has > 1 disc, show Disc headers; if only 1 disc, do NOT show Disc header
+    // - If disc/album has multiple sides (e.g. Side A, Side B), break sections into Sides
+    const trackSections = useMemo(() => {
         if (!tracks || tracks.length === 0) return [];
 
-        const groups = new Map();
+        const discMap = new Map();
         let currentDisc = 1;
         let lastPos = 0;
 
@@ -339,17 +301,66 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
                 lastPos = Number(track.pos) || (idx + 1);
             }
 
-            if (!groups.has(discNum)) {
-                groups.set(discNum, {
+            if (!discMap.has(discNum)) {
+                discMap.set(discNum, {
                     discNumber: discNum,
-                    title: track.discTitle ? `Disc ${discNum}: ${track.discTitle}` : `Disc ${discNum}`,
+                    discTitle: track.discTitle ? `Disc ${discNum}: ${track.discTitle}` : `Disc ${discNum}`,
+                    discFormat: track.discFormat || 'Disc',
                     tracks: [],
                 });
             }
-            groups.get(discNum).tracks.push(track);
+            discMap.get(discNum).tracks.push(track);
         });
 
-        return Array.from(groups.values()).sort((a, b) => a.discNumber - b.discNumber);
+        const sortedDiscs = Array.from(discMap.values()).sort((a, b) => a.discNumber - b.discNumber);
+        const hasMultipleDiscs = sortedDiscs.length > 1;
+
+        return sortedDiscs.map((disc) => {
+            const sideMap = new Map();
+
+            disc.tracks.forEach((track) => {
+                const sideKey = track.side || 'default';
+                if (!sideMap.has(sideKey)) {
+                    sideMap.set(sideKey, {
+                        side: track.side || null,
+                        sideLabel: track.side ? `Side ${track.side}` : null,
+                        tracks: [],
+                    });
+                }
+                sideMap.get(sideKey).tracks.push(track);
+            });
+
+            const sideGroupsRaw = Array.from(sideMap.values());
+            const hasMultipleSides = sideGroupsRaw.length > 1 && sideGroupsRaw.some((s) => s.side !== null);
+            const sideGroups = (hasMultipleSides && showVinylSides)
+                ? sideGroupsRaw
+                : [{ side: null, sideLabel: null, tracks: disc.tracks }];
+
+            const discDurationMs = disc.tracks.reduce((acc, t) => acc + (t.duration || t.duration_ms || 0), 0);
+
+            return {
+                discNumber: disc.discNumber,
+                discTitle: disc.discTitle,
+                discFormat: disc.discFormat,
+                showDiscHeader: hasMultipleDiscs,
+                durationMs: discDurationMs,
+                tracksCount: disc.tracks.length,
+                sides: sideGroups.map((s) => {
+                    const sideDurationMs = s.tracks.reduce((acc, t) => acc + (t.duration || t.duration_ms || 0), 0);
+                    return {
+                        side: s.side,
+                        sideLabel: s.sideLabel,
+                        showSideHeader: hasMultipleSides && showVinylSides,
+                        durationMs: sideDurationMs,
+                        tracks: s.tracks,
+                    };
+                }),
+            };
+        });
+    }, [tracks, showVinylSides]);
+
+    const hasAnySides = useMemo(() => {
+        return tracks && tracks.some((t) => t.side);
     }, [tracks]);
 
     return (
@@ -357,20 +368,20 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
             {/* Full Screen Dynamic Ambient Art-Cover Gradient Backdrop */}
             <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
                 <div 
-                    className="absolute inset-0 bg-cover bg-center scale-110 blur-2xl opacity-80 dark:opacity-65 saturate-150 contrast-110 transition-all duration-700"
+                    className="absolute inset-0 bg-cover bg-center scale-110 blur-2xl opacity-75 dark:opacity-60 saturate-150 contrast-110 transition-all duration-700"
                     style={{ backgroundImage: `url(${coverUrl})` }}
                 />
-                <div className="absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-black/25 via-transparent to-transparent" />
+                <div className="absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-black/10 dark:from-black/25 via-transparent to-transparent" />
                 <div 
-                    className="absolute inset-0 bg-gradient-to-b from-transparent via-[var(--theme-bg)]/50 to-[var(--theme-bg)]"
+                    className="absolute inset-0 bg-gradient-to-b from-transparent via-[var(--theme-bg)]/60 to-[var(--theme-bg)]"
                 />
             </div>
 
-            {/* Top Bar for Mobile (compact pill with blurred bg, back button, logo + wordmark, and share) */}
-            <header className="sm:hidden relative z-20 w-full max-w-xs mx-auto flex items-center justify-between px-2.5 py-1.5 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 shadow-2xl mb-6">
+            {/* Top Bar for Mobile */}
+            <header className="sm:hidden relative z-20 w-full max-w-xs mx-auto flex items-center justify-between px-2.5 py-1.5 rounded-full bg-[var(--theme-card)]/80 backdrop-blur-xl border border-[var(--theme-border)] shadow-2xl mb-6">
                 <button 
                     onClick={handleBack}
-                    className="w-9 h-9 rounded-full aspect-square shrink-0 bg-white/10 hover:bg-white/20 active:scale-95 text-white flex items-center justify-center transition border border-white/10 cursor-pointer"
+                    className="w-9 h-9 rounded-full aspect-square shrink-0 bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] active:scale-95 text-[var(--theme-fg)] flex items-center justify-center transition border border-[var(--theme-border)] cursor-pointer"
                     title="Go Back"
                 >
                     <ArrowLeft size={16} />
@@ -379,27 +390,27 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
                 {/* App Logo & Word Mark */}
                 <div 
                     onClick={() => router.push("/")}
-                    className="flex items-center gap-1.5 px-2 py-1 rounded-full hover:bg-white/10 active:scale-95 transition cursor-pointer select-none"
+                    className="flex items-center gap-1.5 px-2 py-1 rounded-full hover:bg-[var(--theme-surface)] active:scale-95 transition cursor-pointer select-none"
                     title="GrooveEstrella Home"
                 >
                     <img src="/in.svg" alt="GrooveEstrella" className="w-5 h-5 object-contain shrink-0" />
-                    <span className="text-xs font-bold text-white tracking-tight font-display">GrooveEstrella</span>
+                    <span className="text-xs font-bold text-[var(--theme-fg)] tracking-tight font-display">GrooveEstrella</span>
                 </div>
 
                 <button 
                     onClick={handleNativeShare}
-                    className="w-9 h-9 rounded-full aspect-square shrink-0 bg-white/10 hover:bg-white/20 active:scale-95 text-white flex items-center justify-center transition border border-white/10 cursor-pointer"
+                    className="w-9 h-9 rounded-full aspect-square shrink-0 bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] active:scale-95 text-[var(--theme-fg)] flex items-center justify-center transition border border-[var(--theme-border)] cursor-pointer"
                     title="Share Album"
                 >
                     <Share2 size={16} />
                 </button>
             </header>
 
-            {/* Top Navigation for Desktop / PC (isolated buttons on left and right, no top bar needed) */}
+            {/* Top Navigation for Desktop / PC */}
             <header className="hidden sm:flex relative z-20 w-full items-center justify-between mb-8 px-2 md:px-6">
                 <button 
                     onClick={handleBack}
-                    className="w-11 h-11 rounded-full aspect-square shrink-0 bg-black/35 hover:bg-black/55 active:scale-95 text-white flex items-center justify-center transition backdrop-blur-md cursor-pointer border border-white/15 shadow-lg"
+                    className="w-11 h-11 rounded-full aspect-square shrink-0 bg-[var(--theme-card)]/80 hover:bg-[var(--theme-surface)] active:scale-95 text-[var(--theme-fg)] flex items-center justify-center transition backdrop-blur-md cursor-pointer border border-[var(--theme-border)] shadow-lg"
                     title="Go Back"
                 >
                     <ArrowLeft size={18} />
@@ -407,7 +418,7 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
 
                 <button 
                     onClick={handleNativeShare}
-                    className="w-11 h-11 rounded-full aspect-square shrink-0 bg-black/35 hover:bg-black/55 active:scale-95 text-white flex items-center justify-center transition backdrop-blur-md cursor-pointer border border-white/15 shadow-lg"
+                    className="w-11 h-11 rounded-full aspect-square shrink-0 bg-[var(--theme-card)]/80 hover:bg-[var(--theme-surface)] active:scale-95 text-[var(--theme-fg)] flex items-center justify-center transition backdrop-blur-md cursor-pointer border border-[var(--theme-border)] shadow-lg"
                     title="Share Album"
                 >
                     <Share2 size={18} />
@@ -417,7 +428,7 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
             {/* Centered Apple Music Style Hero (Matching Image 3) */}
             <div className="relative z-10 w-full max-w-xl mx-auto flex flex-col items-center text-center px-4 mb-8">
                 {/* Square Album Cover */}
-                <div className="w-56 h-56 sm:w-64 sm:h-64 md:w-72 md:h-72 aspect-square rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl bg-[var(--theme-surface)] ring-1 ring-white/10 group relative">
+                <div className="w-56 h-56 sm:w-64 sm:h-64 md:w-72 md:h-72 aspect-square rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl bg-[var(--theme-surface)] ring-1 ring-[var(--theme-border)] group relative">
                     <img 
                         src={coverUrl} 
                         alt={album.name || album.title} 
@@ -428,10 +439,10 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
 
                 {/* Album Title with Explicit [E] badge */}
                 <div className="mt-5 sm:mt-6 flex items-center justify-center gap-2 flex-wrap">
-                    <h1 className="text-2xl sm:text-3xl md:text-4xl font-black leading-tight text-white tracking-tight">
+                    <h1 className="text-2xl sm:text-3xl md:text-4xl font-black leading-tight text-[var(--theme-fg)] tracking-tight">
                         {album.name || album.title}
                     </h1>
-                    <span className="inline-flex items-center justify-center w-4 h-4 rounded-[3px] text-[10px] font-bold bg-white/20 text-white/90 shrink-0 select-none">
+                    <span className="inline-flex items-center justify-center w-4 h-4 rounded-[3px] text-[10px] font-bold bg-[var(--theme-muted)]/20 text-[var(--theme-fg)]/90 shrink-0 select-none">
                         E
                     </span>
                 </div>
@@ -441,7 +452,7 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
                     {artistsList.map((a, i) => (
                         <span
                             key={`${a.id || 'artist'}-${i}`}
-                            className="text-base sm:text-lg font-semibold text-white/90 hover:text-[var(--theme-accent)] transition cursor-pointer"
+                            className="text-base sm:text-lg font-semibold text-[var(--theme-fg)]/90 hover:text-[var(--theme-accent)] transition cursor-pointer"
                             onClick={() => a.id && router.push(`/artist/${a.id}`)}
                         >
                             {a.name}{i < artistsList.length - 1 && ', '}
@@ -450,32 +461,64 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
                 </div>
 
                 {/* Subtitle: Genre · Year */}
-                <p className="text-xs sm:text-sm text-white/60 font-medium mt-1">
+                <p className="text-xs sm:text-sm text-[var(--theme-muted)] font-medium mt-1">
                     {displayGenre ? `${displayGenre} · ` : ""}{releaseYear || "Album"}
                 </p>
 
-                {/* Multi-Disc Info: No. of Discs · Combined Timing */}
-                {discGroups.length > 1 && (
-                    <p className="text-xs sm:text-sm text-white/50 font-medium mt-0.5 flex items-center justify-center gap-1.5">
-                        <span>{discGroups.length} Discs</span>
-                        {formattedTotalTime && (
+                {/* Always show timing below Genre · Year; show Discs count only when trackSections.length > 1 */}
+                {formattedTotalTime && (
+                    <p className="text-xs sm:text-sm text-[var(--theme-muted)] font-medium mt-0.5 flex items-center justify-center gap-1.5 flex-wrap">
+                        {trackSections.length > 1 && (
                             <>
-                                <span>·</span>
-                                <span>{formattedTotalTime}</span>
+                                <span>{trackSections.length} Discs</span>
+                                <span>•</span>
                             </>
                         )}
+                        <span>{tracks.length} songs</span>
+                        <span>•</span>
+                        <span>{formattedTotalTime}</span>
                     </p>
                 )}
 
-                {/* Centered Action Controls Row: GrooveCard, Open GrooveLink, Bookmark */}
+                {/* Editions & Pressings Trigger Pill */}
+                {album.editions && album.editions.length > 1 && (
+                    <button
+                        onClick={() => setIsEditionsDrawerOpen(true)}
+                        className="mt-2.5 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[var(--theme-card)]/80 hover:bg-[var(--theme-surface)] active:scale-95 text-[var(--theme-fg)] text-xs font-semibold backdrop-blur-md border border-[var(--theme-border)] transition-all shadow-md cursor-pointer group"
+                        title="Explore alternative pressings, remasters, and box sets"
+                    >
+                        <Layers size={14} className="text-[var(--theme-accent)] group-hover:rotate-12 transition-transform duration-300" />
+                        <span>{album.editions.length} Editions & Pressings</span>
+                        <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-[var(--theme-surface)] text-[var(--theme-muted)] font-mono">
+                            {album.releaseYear || 'Active'}
+                        </span>
+                        <ChevronRight size={13} className="text-[var(--theme-muted)] group-hover:translate-x-0.5 transition-transform" />
+                    </button>
+                )}
+
+                {/* Centered Action Controls Row: Editions, GrooveCard, Open GrooveLink, Bookmark */}
                 <div className="mt-6 flex items-center justify-center gap-3 sm:gap-4 max-w-full">
+                    {/* Browse Editions Button */}
+                    {album.editions && album.editions.length > 1 && (
+                        <button
+                            onClick={() => setIsEditionsDrawerOpen(true)}
+                            className="w-12 h-12 rounded-full aspect-square shrink-0 bg-[var(--theme-card)]/80 hover:bg-[var(--theme-surface)] active:scale-95 text-[var(--theme-fg)] flex items-center justify-center transition-all duration-200 backdrop-blur-md cursor-pointer shadow-lg border border-[var(--theme-border)] group relative"
+                            title={`Browse ${album.editions.length} Editions & Pressings`}
+                        >
+                            <Layers size={20} className="text-[var(--theme-fg)] group-hover:text-[var(--theme-accent)] transition-colors" />
+                            <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-[var(--theme-accent)] text-[var(--theme-accent-fg)] text-[10px] font-black flex items-center justify-center shadow">
+                                {album.editions.length}
+                            </span>
+                        </button>
+                    )}
+
                     {/* Create GrooveCard Button */}
                     <button
                         onClick={() => setIsGrooveCardOpen(true)}
-                        className="w-12 h-12 rounded-full aspect-square shrink-0 bg-white/10 hover:bg-white/20 active:scale-95 text-white flex items-center justify-center transition-all duration-200 backdrop-blur-md cursor-pointer shadow-lg border border-white/15 group"
+                        className="w-12 h-12 rounded-full aspect-square shrink-0 bg-[var(--theme-card)]/80 hover:bg-[var(--theme-surface)] active:scale-95 text-[var(--theme-fg)] flex items-center justify-center transition-all duration-200 backdrop-blur-md cursor-pointer shadow-lg border border-[var(--theme-border)] group"
                         title="Create GrooveCard"
                     >
-                        <Sparkles size={20} className="text-white group-hover:text-[var(--theme-accent)] transition-colors" />
+                        <Sparkles size={20} className="text-[var(--theme-fg)] group-hover:text-[var(--theme-accent)] transition-colors" />
                     </button>
 
                     {/* Prominent Open GrooveLink Pill Button */}
@@ -492,7 +535,7 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
                     {/* Bookmark / Plus Button */}
                     <button
                         onClick={toggleSave}
-                        className="w-12 h-12 rounded-full aspect-square shrink-0 bg-white/10 hover:bg-white/20 active:scale-95 text-white flex items-center justify-center transition-all duration-200 backdrop-blur-md cursor-pointer shadow-lg border border-white/15"
+                        className="w-12 h-12 rounded-full aspect-square shrink-0 bg-[var(--theme-card)]/80 hover:bg-[var(--theme-surface)] active:scale-95 text-[var(--theme-fg)] flex items-center justify-center transition-all duration-200 backdrop-blur-md cursor-pointer shadow-lg border border-[var(--theme-border)]"
                         title={saved ? "Remove from Library" : "Add to Library"}
                     >
                         {saved ? <Check size={20} className="text-[var(--theme-accent)]" /> : <Plus size={20} />}
@@ -501,15 +544,15 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
 
                 {/* Description / Editorial Notes (Matching Image 3) */}
                 {album.description && (
-                    <div className="mt-6 w-full text-left text-xs sm:text-sm text-white/80 leading-relaxed font-body">
-                        <strong className="font-extrabold text-white mr-1.5">Editor's Notes</strong>
+                    <div className="mt-6 w-full text-left text-xs sm:text-sm text-[var(--theme-muted)] leading-relaxed font-body">
+                        <strong className="font-extrabold text-[var(--theme-fg)] mr-1.5">Editor's Notes</strong>
                         <span className={!expandedHeroDesc ? "line-clamp-2" : ""}>
                             {album.description}
                         </span>
                         {album.description.length > 80 && (
                             <button
                                 onClick={() => setExpandedHeroDesc(!expandedHeroDesc)}
-                                className="font-black text-white hover:underline uppercase text-xs ml-1 tracking-wider cursor-pointer inline"
+                                className="font-black text-[var(--theme-accent)] hover:underline uppercase text-xs ml-1 tracking-wider cursor-pointer inline"
                             >
                                 {expandedHeroDesc ? "LESS" : "MORE"}
                             </button>
@@ -520,91 +563,33 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
 
             {/* Tracks Section */}
             <div className="relative z-10 border-t border-[var(--theme-border)] pt-8 mb-12">
-                {/* Grouped Editions & Variations Switcher Bar (Pressing / Versions) */}
-                {groupedVariations.length > 0 && (
-                    <div className="mb-6 p-4 rounded-2xl bg-[var(--theme-card)]/80 border border-[var(--theme-border)] backdrop-blur-xl space-y-3">
-                        <div className="flex items-center justify-between flex-wrap gap-2">
-                            <div className="flex items-center gap-2 text-xs font-bold text-[var(--theme-accent)] uppercase tracking-wider">
-                                <Layers size={14} />
-                                <span>Editions & Variations ({album.variations?.length || 0} pressings across {groupedVariations.length} eras)</span>
-                            </div>
-                            <span className="text-[11px] text-[var(--theme-muted)]">
-                                {loadingTracks ? (
-                                    <span className="text-[var(--theme-accent)] font-bold animate-pulse inline-flex items-center gap-1.5">
-                                        <span className="w-2 h-2 rounded-full bg-[var(--theme-accent)] animate-ping inline-block" />
-                                        Switching edition...
-                                    </span>
-                                ) : (
-                                    <>Active: <strong className="text-[var(--theme-fg)]">{album.releaseDate || 'Default'}</strong> • {tracks.length} tracks</>
-                                )}
-                            </span>
-                        </div>
+                {/* Header row with Tracklist title and Vinyl Sides toggle */}
+                <div className="flex items-center justify-between mb-5 px-1">
+                    <h2 className="text-xl sm:text-2xl font-extrabold text-[var(--theme-fg)] tracking-tight">
+                        Tracks
+                    </h2>
 
-                        {/* Top Level: Group / Era Selector */}
-                        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin scrollbar-thumb-[var(--theme-border)]">
-                            {groupedVariations.map((group, groupIdx) => {
-                                const isGroupActive = group.items.some(
-                                    item => (selectedReleaseId === item.id) || (!selectedReleaseId && item.isOriginal)
-                                );
-                                return (
-                                    <button
-                                        key={`${group.key}-${groupIdx}`}
-                                        disabled={loadingTracks}
-                                        onClick={() => {
-                                            const firstItem = group.items[0];
-                                            if (firstItem) handleSwitchEdition(firstItem.id);
-                                        }}
-                                        className={`flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs transition cursor-pointer flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed ${
-                                            isGroupActive
-                                                ? "bg-[var(--theme-accent)] text-[var(--theme-bg)] font-bold shadow-md ring-1 ring-[var(--theme-accent)]"
-                                                : "bg-[var(--theme-surface)] border border-[var(--theme-border)] text-[var(--theme-muted)] hover:text-[var(--theme-fg)] hover:border-[var(--theme-accent)]/50"
-                                        }`}
-                                    >
-                                        <span>{group.name}</span>
-                                        <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
-                                            isGroupActive ? "bg-[var(--theme-bg)]/20 text-[var(--theme-bg)]" : "bg-[var(--theme-card)] text-[var(--theme-muted)]"
-                                        }`}>
-                                            {group.items.length}
-                                        </span>
-                                    </button>
-                                );
-                            })}
-                        </div>
+                    {hasAnySides && (
+                        <button
+                            onClick={toggleVinylSides}
+                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold tracking-wide uppercase transition cursor-pointer border ${
+                                showVinylSides 
+                                    ? 'bg-[var(--theme-card)] border-[var(--theme-accent)] text-[var(--theme-accent)] shadow-sm' 
+                                    : 'bg-[var(--theme-surface)] border-[var(--theme-border)] text-[var(--theme-muted)] hover:text-[var(--theme-fg)]'
+                            }`}
+                            title="Toggle vinyl side grouping (Side A, Side B, etc.)"
+                        >
+                            <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: showVinylSides ? 'var(--theme-accent)' : 'var(--theme-muted)' }} />
+                            <span>Sides: {showVinylSides ? 'On' : 'Off'}</span>
+                        </button>
+                    )}
+                </div>
 
-                        {/* Sub Level: Pressings in the Active Group */}
-                        {(() => {
-                            const activeGroup = groupedVariations.find(group => 
-                                group.items.some(item => (selectedReleaseId === item.id) || (!selectedReleaseId && item.isOriginal))
-                            ) || groupedVariations[0];
-
-                            if (!activeGroup || activeGroup.items.length <= 1) return null;
-
-                            return (
-                                <div className="pt-2.5 border-t border-[var(--theme-border)] flex items-center gap-2 overflow-x-auto text-xs pb-1 scrollbar-thin scrollbar-thumb-[var(--theme-border)]">
-                                    <span className="text-[10px] uppercase font-bold text-[var(--theme-muted)] tracking-wider shrink-0">
-                                        Regional Pressings:
-                                    </span>
-                                    {activeGroup.items.map((item, itemIdx) => {
-                                        const isSelected = (selectedReleaseId === item.id) || (!selectedReleaseId && item.isOriginal);
-                                        return (
-                                            <button
-                                                key={`${item.id}-${itemIdx}`}
-                                                disabled={loadingTracks}
-                                                onClick={() => handleSwitchEdition(item.id)}
-                                                className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition cursor-pointer flex items-center gap-1 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed ${
-                                                    isSelected
-                                                        ? "bg-[var(--theme-accent)]/20 text-[var(--theme-accent)] border border-[var(--theme-accent)]/40 font-bold"
-                                                        : "bg-[var(--theme-surface)] text-[var(--theme-muted)] hover:text-[var(--theme-fg)] border border-transparent hover:border-[var(--theme-border)]"
-                                                }`}
-                                            >
-                                                <span>{item.country || 'Global'}</span>
-                                                {item.year && <span className="text-[9px] opacity-70 font-mono">({item.year})</span>}
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            );
-                        })()}
+                {/* Switching edition banner */}
+                {loadingTracks && (
+                    <div className="mb-6 p-3.5 rounded-2xl bg-[var(--theme-card)]/80 border border-[var(--theme-border)] backdrop-blur-xl flex items-center justify-center gap-2.5 text-xs font-semibold text-[var(--theme-accent)] animate-pulse">
+                        <span className="w-3 h-3 rounded-full border-2 border-[var(--theme-accent)] border-t-transparent animate-spin" />
+                        <span>Switching edition and loading tracklist...</span>
                     </div>
                 )}
 
@@ -613,193 +598,216 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
                         <GrooveLoader size={56} />
                     </div>
                 ) : (
-                    <div className="space-y-10">
-                        {discGroups.map((discGroup) => {
-                            const discDurationMs = discGroup.tracks.reduce((acc, t) => acc + (t.duration || t.duration_ms || 0), 0);
-                            const discFormattedTime = formatTotalDuration(discDurationMs);
+                    <div className="space-y-6">
+                        {trackSections.map((discSection) => {
+                            const discFormattedTime = formatTotalDuration(discSection.durationMs);
 
                             return (
-                                <div key={`disc-group-${discGroup.discNumber}`} className="space-y-3">
-                                    {/* Disc Header (Disc 1, Disc 2, Disc 3, etc.) */}
-                                    <div className="flex items-center justify-between px-1 border-b border-white/10 pb-2">
-                                        <h2 className="text-base sm:text-lg font-bold text-white tracking-tight flex items-center gap-2">
-                                            <span>{discGroup.title}</span>
-                                            {discGroups.length > 1 && (
-                                                <span className="text-[10px] font-semibold text-[var(--theme-accent)] px-2 py-0.5 rounded-full bg-white/5 border border-white/10">
-                                                    {discGroup.tracks.length} songs
+                                <div key={`disc-group-${discSection.discNumber}`} className="space-y-2">
+                                    {/* Disc Header (Disc 1, Disc 2, Disc 3, etc.) - ONLY if > 1 disc */}
+                                    {discSection.showDiscHeader && (
+                                        <div className="flex items-center justify-between px-1 border-b border-[var(--theme-border)] pb-2 mb-2">
+                                            <h3 className="text-sm sm:text-base font-bold text-[var(--theme-fg)] tracking-tight flex items-center gap-2">
+                                                <Disc size={16} className="text-[var(--theme-accent)]" />
+                                                <span>{discSection.discTitle}</span>
+                                                <span className="text-[10px] font-semibold text-[var(--theme-accent)] px-2 py-0.5 rounded-full bg-[var(--theme-card)] border border-[var(--theme-border)]">
+                                                    {discSection.tracksCount} songs
+                                                </span>
+                                            </h3>
+                                            {discFormattedTime && (
+                                                <span className="text-xs text-[var(--theme-muted)] font-medium flex items-center gap-1.5">
+                                                    <Clock size={12} className="text-[var(--theme-accent)]" />
+                                                    <span>{discFormattedTime}</span>
                                                 </span>
                                             )}
-                                        </h2>
-                                        {discFormattedTime && (
-                                            <span className="text-xs text-white/50 font-medium flex items-center gap-1.5">
-                                                <Clock size={13} className="text-[var(--theme-accent)]" />
-                                                <span>{discFormattedTime}</span>
-                                            </span>
-                                        )}
-                                    </div>
+                                        </div>
+                                    )}
 
-                                    {/* Tracklist for this Disc */}
-                                    <div className="flex flex-col">
-                                        {discGroup.tracks.map((track, index) => {
-                                            const trackArtists = Array.isArray(track.artists) ? track.artists : Array.isArray(track.artist) ? track.artist : artistsList;
-                                            const trackTitle = track.title || track.name;
-                                            const artistsStr = trackArtists.map(a => a.name).join(', ');
-                                            const isExplicit = track.explicit || false;
-                                            const formattedDuration = typeof (track.duration || track.duration_ms) === 'number' && (track.duration || track.duration_ms) > 0
-                                                ? `${Math.floor((track.duration || track.duration_ms) / 60000)}:${Math.floor(((track.duration || track.duration_ms) % 60000) / 1000).toString().padStart(2, '0')}`
-                                                : null;
+                                    {/* Sides inside this Disc */}
+                                    {discSection.sides.map((sideSection, sideIdx) => {
+                                        const sideFormattedTime = formatTotalDuration(sideSection.durationMs);
 
-                                            return (
-                                                <div 
-                                                    key={`${track.id || track.trackID || 'track'}-${discGroup.discNumber}-${index}`}
-                                                    className="flex items-center justify-between py-2.5 sm:py-3 px-2 sm:px-3 hover:bg-white/5 rounded-xl transition duration-150 border-b border-white/10 last:border-b-0 group cursor-pointer"
-                                                    onClick={() => (track.id || track.trackID) && router.push(`/track/${track.id || track.trackID}`)}
-                                                >
-                                                    <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
-                                                        <span className="w-7 text-center text-xs sm:text-sm font-semibold text-white/50 group-hover:text-white shrink-0">
-                                                            {track.trackNumber || track.pos || index + 1}
+                                        return (
+                                            <div key={`side-${discSection.discNumber}-${sideSection.side || sideIdx}`} className="space-y-1">
+                                                {/* Side Header: ONLY if disc has multiple sides AND user has sides enabled */}
+                                                {sideSection.showSideHeader && (
+                                                    <div className="flex items-center gap-3 py-2 my-1.5">
+                                                        <div className="h-px bg-[var(--theme-border)] flex-1" />
+                                                        <span className="text-[11px] font-extrabold uppercase tracking-wider text-[var(--theme-muted)] px-3 py-0.5 rounded-full bg-[var(--theme-surface)] border border-[var(--theme-border)] shrink-0 flex items-center gap-1.5 shadow-sm">
+                                                            <span>{sideSection.sideLabel || `Side ${sideIdx + 1}`}</span>
+                                                            {sideFormattedTime && <span>· {sideFormattedTime}</span>}
                                                         </span>
-
-                                                        <div className="flex flex-col min-w-0 flex-1">
-                                                            <div className="flex items-center gap-1.5 min-w-0">
-                                                                <span className="font-semibold text-sm sm:text-base text-white group-hover:text-[var(--theme-accent)] transition-colors truncate">
-                                                                    {trackTitle}
-                                                                </span>
-                                                                {isExplicit && (
-                                                                    <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-[3px] text-[9px] font-bold bg-white/20 text-white/90 shrink-0 select-none">
-                                                                        E
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                            {artistsStr && artistsStr !== (album.name || album.title) && (
-                                                                <span className="text-xs text-white/50 truncate block mt-0.5">
-                                                                    {artistsStr}
-                                                                </span>
-                                                            )}
-                                                        </div>
+                                                        <div className="h-px bg-[var(--theme-border)] flex-1" />
                                                     </div>
+                                                )}
 
-                                                    <div className="flex items-center gap-3 shrink-0 ml-3" onClick={(e) => e.stopPropagation()}>
-                                                        {formattedDuration && (
-                                                            <span className="text-xs text-white/50 font-mono font-medium">
-                                                                {formattedDuration}
-                                                            </span>
-                                                        )}
+                                                {/* Tracklist for this Side */}
+                                                <div className="flex flex-col">
+                                                    {sideSection.tracks.map((track, index) => {
+                                                        const trackArtists = Array.isArray(track.artists) ? track.artists : Array.isArray(track.artist) ? track.artist : artistsList;
+                                                        const trackTitle = track.title || track.name;
+                                                        const artistsStr = trackArtists.map(a => a.name).join(', ');
+                                                        const isExplicit = track.explicit || false;
+                                                        const formattedDuration = typeof (track.duration || track.duration_ms) === 'number' && (track.duration || track.duration_ms) > 0
+                                                            ? `${Math.floor((track.duration || track.duration_ms) / 60000)}:${Math.floor(((track.duration || track.duration_ms) % 60000) / 1000).toString().padStart(2, '0')}`
+                                                            : null;
 
-                                                        <DropdownMenu>
-                                                            <DropdownMenuTrigger asChild>
-                                                                <button 
-                                                                    className="p-1.5 rounded-lg hover:bg-white/10 text-white/50 hover:text-white transition cursor-pointer"
-                                                                    title="More options"
-                                                                >
-                                                                    <MoreHorizontal size={18} />
-                                                                </button>
-                                                            </DropdownMenuTrigger>
-                                                            <DropdownMenuContent 
-                                                                className="bg-[var(--theme-card)] backdrop-blur-2xl text-[var(--theme-fg)] min-w-[200px] rounded-2xl p-2 border border-[var(--theme-border)] shadow-2xl z-[9999]"
-                                                                align="end"
-                                                                sideOffset={8}
+                                                        return (
+                                                            <div 
+                                                                key={`${track.id || track.trackID || 'track'}-${discSection.discNumber}-${sideSection.side || 'side'}-${index}`}
+                                                                className="flex items-center justify-between py-2.5 sm:py-3 px-2 sm:px-3 hover:bg-[var(--theme-card)]/50 rounded-xl transition duration-150 border-b border-[var(--theme-border)]/40 last:border-b-0 group cursor-pointer"
+                                                                onClick={() => (track.id || track.trackID) && router.push(`/track/${track.id || track.trackID}`)}
                                                             >
-                                                                <DropdownMenuItem
-                                                                    onClick={() => setSelectedTrackForGrooveLink({
-                                                                        id: track.id || track.trackID,
-                                                                        type: 'track',
-                                                                        name: trackTitle,
-                                                                        title: trackTitle,
-                                                                        artist: trackArtists,
-                                                                        album: album.name || album.title,
-                                                                        imageUrl: coverUrl,
-                                                                        coverArt: coverUrl,
-                                                                        popularity: 85,
-                                                                        explicit: isExplicit,
-                                                                        genres: album.genres || [],
-                                                                        spotifyUrl: track.spoURL,
-                                                                        youtubeUrl: track.YTURL
-                                                                    })}
-                                                                    className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold hover:bg-[var(--theme-surface)] rounded-xl cursor-pointer"
-                                                                >
-                                                                    <img src="/in.svg" alt="GrooveLink" className="w-4 h-4 object-contain" />
-                                                                    <span>Open GrooveLink</span>
-                                                                </DropdownMenuItem>
-                                                                <DropdownMenuItem
-                                                                    onClick={() => setSelectedTrackForGrooveCard({
-                                                                        id: track.id || track.trackID,
-                                                                        title: trackTitle,
-                                                                        artist: trackArtists,
-                                                                        imageUrl: coverUrl,
-                                                                        album: album.name || album.title,
-                                                                        explicit: isExplicit,
-                                                                        genres: album.genres || []
-                                                                    })}
-                                                                    className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold hover:bg-[var(--theme-surface)] rounded-xl cursor-pointer"
-                                                                >
-                                                                    <Bookmark size={15} className="text-[var(--theme-accent)]" />
-                                                                    <span>Create GrooveCard</span>
-                                                                </DropdownMenuItem>
-                                                                <DropdownMenuItem
-                                                                    onClick={() => {
-                                                                        window.dispatchEvent(new CustomEvent('open-playlist-picker', {
-                                                                            detail: {
-                                                                                track: {
+                                                                <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
+                                                                    <span className="w-7 text-center text-xs sm:text-sm font-semibold text-[var(--theme-muted)] group-hover:text-[var(--theme-fg)] shrink-0 font-mono">
+                                                                        {track.trackNumber || track.pos || index + 1}
+                                                                    </span>
+
+                                                                    <div className="flex flex-col min-w-0 flex-1">
+                                                                        <div className="flex items-center gap-1.5 min-w-0">
+                                                                            <span className="font-semibold text-sm sm:text-base text-[var(--theme-fg)] group-hover:text-[var(--theme-accent)] transition-colors truncate">
+                                                                                {trackTitle}
+                                                                            </span>
+                                                                            {isExplicit && (
+                                                                                <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-[3px] text-[9px] font-bold bg-[var(--theme-muted)]/20 text-[var(--theme-fg)]/90 shrink-0 select-none">
+                                                                                    E
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
+                                                                        {artistsStr && artistsStr !== (album.name || album.title) && (
+                                                                            <span className="text-xs text-[var(--theme-muted)] truncate block mt-0.5">
+                                                                                {artistsStr}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+
+                                                                <div className="flex items-center gap-3 shrink-0 ml-3" onClick={(e) => e.stopPropagation()}>
+                                                                    {formattedDuration && (
+                                                                        <span className="text-xs text-[var(--theme-muted)] font-mono font-medium">
+                                                                            {formattedDuration}
+                                                                        </span>
+                                                                    )}
+
+                                                                    <DropdownMenu>
+                                                                        <DropdownMenuTrigger asChild>
+                                                                            <button 
+                                                                                className="p-1.5 rounded-lg hover:bg-[var(--theme-card)] text-[var(--theme-muted)] hover:text-[var(--theme-fg)] transition cursor-pointer"
+                                                                                title="More options"
+                                                                            >
+                                                                                <MoreHorizontal size={18} />
+                                                                            </button>
+                                                                        </DropdownMenuTrigger>
+                                                                        <DropdownMenuContent 
+                                                                            className="bg-[var(--theme-card)] backdrop-blur-2xl text-[var(--theme-fg)] min-w-[200px] rounded-2xl p-2 border border-[var(--theme-border)] shadow-2xl z-[9999]"
+                                                                            align="end"
+                                                                            sideOffset={8}
+                                                                        >
+                                                                            <DropdownMenuItem
+                                                                                onClick={() => setSelectedTrackForGrooveLink({
                                                                                     id: track.id || track.trackID,
+                                                                                    type: 'track',
                                                                                     name: trackTitle,
                                                                                     title: trackTitle,
-                                                                                    artists: trackArtists,
-                                                                                    duration_ms: track.duration || track.duration_ms,
-                                                                                    album: {
-                                                                                        id: album.id || id,
-                                                                                        name: album.name || album.title,
-                                                                                        images: [{ url: coverUrl }]
-                                                                                    },
-                                                                                    spoURL: track.spoURL,
-                                                                                    YTURL: track.YTURL
-                                                                                }
-                                                                            }
-                                                                        }));
-                                                                    }}
-                                                                    className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold hover:bg-[var(--theme-surface)] rounded-xl cursor-pointer"
-                                                                >
-                                                                    <ListPlus size={15} />
-                                                                    <span>Add to Playlist</span>
-                                                                </DropdownMenuItem>
-                                                                <DropdownMenuSeparator className="my-1 bg-[var(--theme-border)]" />
-                                                                {track.spoURL && (
-                                                                    <DropdownMenuItem
-                                                                        onClick={() => window.open(track.spoURL, "_blank")}
-                                                                        className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold hover:bg-[var(--theme-surface)] rounded-xl cursor-pointer text-[#1DB954]"
-                                                                    >
-                                                                        <Play size={14} fill="currentColor" />
-                                                                        <span>Play on Spotify</span>
-                                                                    </DropdownMenuItem>
-                                                                )}
-                                                                {track.YTURL && (
-                                                                    <DropdownMenuItem
-                                                                        onClick={() => window.open(track.YTURL, "_blank")}
-                                                                        className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold hover:bg-[var(--theme-surface)] rounded-xl cursor-pointer text-[#FF0000]"
-                                                                    >
-                                                                        <Play size={14} fill="currentColor" />
-                                                                        <span>Play on YouTube</span>
-                                                                    </DropdownMenuItem>
-                                                                )}
-                                                                <DropdownMenuItem
-                                                                    onClick={() => {
-                                                                        if (typeof navigator !== "undefined") {
-                                                                            navigator.clipboard.writeText(`${window.location.origin}/track/${track.id || track.trackID}`);
-                                                                            toast.success("Track link copied! 📋");
-                                                                        }
-                                                                    }}
-                                                                    className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold hover:bg-[var(--theme-surface)] rounded-xl cursor-pointer"
-                                                                >
-                                                                    <Copy size={14} />
-                                                                    <span>Copy Link</span>
-                                                                </DropdownMenuItem>
-                                                            </DropdownMenuContent>
-                                                        </DropdownMenu>
-                                                    </div>
+                                                                                    artist: trackArtists,
+                                                                                    album: album.name || album.title,
+                                                                                    imageUrl: coverUrl,
+                                                                                    coverArt: coverUrl,
+                                                                                    popularity: 85,
+                                                                                    explicit: isExplicit,
+                                                                                    genres: album.genres || [],
+                                                                                    spotifyUrl: track.spoURL,
+                                                                                    youtubeUrl: track.YTURL
+                                                                                })}
+                                                                                className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold hover:bg-[var(--theme-surface)] rounded-xl cursor-pointer"
+                                                                            >
+                                                                                <img src="/in.svg" alt="GrooveLink" className="w-4 h-4 object-contain" />
+                                                                                <span>Open GrooveLink</span>
+                                                                            </DropdownMenuItem>
+                                                                            <DropdownMenuItem
+                                                                                onClick={() => setSelectedTrackForGrooveCard({
+                                                                                    id: track.id || track.trackID,
+                                                                                    title: trackTitle,
+                                                                                    artist: trackArtists,
+                                                                                    imageUrl: coverUrl,
+                                                                                    album: album.name || album.title,
+                                                                                    explicit: isExplicit,
+                                                                                    genres: album.genres || []
+                                                                                })}
+                                                                                className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold hover:bg-[var(--theme-surface)] rounded-xl cursor-pointer"
+                                                                            >
+                                                                                <Sparkles size={15} className="text-[var(--theme-accent)]" />
+                                                                                <span>Create GrooveCard</span>
+                                                                            </DropdownMenuItem>
+                                                                            <DropdownMenuItem
+                                                                                onClick={() => {
+                                                                                    window.dispatchEvent(new CustomEvent('open-playlist-picker', {
+                                                                                        detail: {
+                                                                                            track: {
+                                                                                                id: track.id || track.trackID,
+                                                                                                name: trackTitle,
+                                                                                                title: trackTitle,
+                                                                                                artists: trackArtists,
+                                                                                                duration_ms: track.duration || track.duration_ms,
+                                                                                                album: {
+                                                                                                    id: album.id || id,
+                                                                                                    name: album.name || album.title,
+                                                                                                    images: [{ url: coverUrl }]
+                                                                                                },
+                                                                                                spoURL: track.spoURL,
+                                                                                                YTURL: track.YTURL
+                                                                                            }
+                                                                                        }
+                                                                                    }));
+                                                                                }}
+                                                                                className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold hover:bg-[var(--theme-surface)] rounded-xl cursor-pointer"
+                                                                            >
+                                                                                <ListPlus size={15} />
+                                                                                <span>Add to Playlist</span>
+                                                                            </DropdownMenuItem>
+                                                                            <DropdownMenuSeparator className="my-1 bg-[var(--theme-border)]" />
+                                                                            {track.spoURL && (
+                                                                                <DropdownMenuItem
+                                                                                    onClick={() => window.open(track.spoURL, "_blank")}
+                                                                                    className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold hover:bg-[var(--theme-surface)] rounded-xl cursor-pointer text-[#1DB954]"
+                                                                                >
+                                                                                    <Play size={14} fill="currentColor" />
+                                                                                    <span>Play on Spotify</span>
+                                                                                </DropdownMenuItem>
+                                                                            )}
+                                                                            {track.YTURL && (
+                                                                                <DropdownMenuItem
+                                                                                    onClick={() => window.open(track.YTURL, "_blank")}
+                                                                                    className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold hover:bg-[var(--theme-surface)] rounded-xl cursor-pointer text-[#FF0000]"
+                                                                                >
+                                                                                    <Play size={14} fill="currentColor" />
+                                                                                    <span>Play on YouTube</span>
+                                                                                </DropdownMenuItem>
+                                                                            )}
+                                                                            <DropdownMenuItem
+                                                                                onClick={() => {
+                                                                                    shareLink({
+                                                                                        name: trackTitle,
+                                                                                        artists: trackArtists,
+                                                                                        type: "track",
+                                                                                        id: track.id || track.trackID,
+                                                                                    });
+                                                                                }}
+                                                                                className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold hover:bg-[var(--theme-surface)] rounded-xl cursor-pointer"
+                                                                            >
+                                                                                <Share2 size={14} />
+                                                                                <span>Share Track Link</span>
+                                                                            </DropdownMenuItem>
+                                                                        </DropdownMenuContent>
+                                                                    </DropdownMenu>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
                                                 </div>
-                                            );
-                                        })}
-                                    </div>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             );
                         })}
@@ -807,13 +815,16 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
                 )}
             </div>
 
-            {/* Reviews, Descriptions, Lore, All Tags & External Links */}
+            {/* Reviews, Descriptions, Lore, Categorized Tags & External Links */}
             <MusicLoreAndReviews
                 id={album.id || id}
                 type="album"
                 title={album.name || album.title}
                 artist={artistsList.map(a => a.name).join(', ')}
                 description={album.description}
+                primaryGenre={displayGenre}
+                genres={album.genres || []}
+                categorizedTags={album.categorizedTags || null}
                 tags={album.tags || album.genres || []}
                 allTags={album.allTags || []}
                 rating={album.rating}
@@ -897,6 +908,18 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
                     genres={selectedTrackForGrooveCard.genres || album.genres || []}
                 />
             )}
+
+            {/* Album Editions & Pressings Drawer */}
+            <AlbumEditionsDrawer
+                isOpen={isEditionsDrawerOpen}
+                onClose={() => setIsEditionsDrawerOpen(false)}
+                editions={album.editions || []}
+                selectedReleaseId={selectedReleaseId}
+                onSwitchEdition={handleSwitchEdition}
+                loadingTracks={loadingTracks}
+                albumName={album.name || album.title}
+                albumCoverUrl={coverUrl}
+            />
         </div>
     );
 }

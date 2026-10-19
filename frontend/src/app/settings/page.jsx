@@ -16,6 +16,7 @@ export default function SettingsPage() {
   const router = useRouter();
   const { theme, isDark, setTheme } = useTheme();
   const [preferredPlatform, setPreferredPlatform] = useState("none");
+  const [showVinylSides, setShowVinylSides] = useState(true);
   const [counts, setCounts] = useState({
     songs: 0,
     albums: 0,
@@ -52,8 +53,19 @@ export default function SettingsPage() {
     if (saved) {
       setPreferredPlatform(saved);
     }
+    const savedSides = localStorage.getItem("groove_show_vinyl_sides");
+    if (savedSides !== null) {
+      setShowVinylSides(savedSides === "true");
+    }
     updateCounts();
   }, []);
+
+  const handleToggleVinylSides = () => {
+    const nextVal = !showVinylSides;
+    setShowVinylSides(nextVal);
+    localStorage.setItem("groove_show_vinyl_sides", String(nextVal));
+    toast.info(nextVal ? "Vinyl side dividers enabled" : "Vinyl side dividers disabled");
+  };
 
   const updateCounts = () => {
     const songs = JSON.parse(localStorage.getItem("savedSongs")) || [];
@@ -143,31 +155,30 @@ export default function SettingsPage() {
             <h2 className="text-lg font-bold text-[var(--theme-fg)]">Appearance & Theme</h2>
           </div>
           <p className="text-xs text-[var(--theme-muted)] max-w-lg">
-            Unified theme with Burgundy Wine, Warm Cream, Peach-Copper (Dark) and Terracotta-Copper (Light).
+            Select your preferred display theme for GrooveEstrella.
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
             {/* Dark Theme Card */}
             <button
               onClick={() => handleSelectTheme('dark')}
-              className={`flex items-start justify-between p-4 rounded-2xl border text-left transition-all duration-300 cursor-pointer ${
+              className={`flex items-center justify-between p-4 rounded-2xl border text-left transition-all duration-300 cursor-pointer ${
                 isDark
-                  ? "bg-[#17020B] border-[#E8A87C] text-[#FFF2DF] shadow-lg shadow-[#17020B]/40 ring-1 ring-[#E8A87C]/50"
-                  : "bg-[var(--theme-card)] border-[var(--theme-border)] text-[var(--theme-fg)] hover:border-[var(--theme-accent)]"
+                  ? "bg-[var(--theme-card)] border-[var(--theme-accent)] text-[var(--theme-fg)] shadow-lg ring-1 ring-[var(--theme-accent)]/50"
+                  : "bg-[var(--theme-card)]/60 border-[var(--theme-border)] text-[var(--theme-fg)]/80 hover:border-[var(--theme-accent)]/50"
               }`}
             >
-              <div>
-                <div className="flex items-center gap-2 mb-1.5">
-                  <div className="w-6 h-6 rounded-full bg-[#17020B] border border-[#E8A87C] flex items-center justify-center">
-                    <Moon size={12} className="text-[#FFF2DF]" />
-                  </div>
-                  <h3 className="text-sm font-bold">Dark Theme</h3>
+              <div className="flex items-center gap-3">
+                <div className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors ${isDark ? "bg-[var(--theme-accent)] text-[var(--theme-accent-fg)]" : "bg-[var(--theme-surface)] text-[var(--theme-muted)]"}`}>
+                  <Moon size={16} />
                 </div>
-                <p className="text-[11px] opacity-80">Background: #17020B • Foreground: #FFF2DF</p>
-                <p className="text-[10px] text-[#E8A87C] font-semibold mt-1">Accent: #E8A87C (Peach)</p>
+                <div>
+                  <h3 className="text-sm font-bold text-[var(--theme-fg)]">Dark Mode</h3>
+                  <p className="text-xs text-[var(--theme-muted)]">Warm dark aesthetic</p>
+                </div>
               </div>
               {isDark && (
-                <div className="w-5 h-5 rounded-full bg-[#E8A87C] text-[#17020B] flex items-center justify-center shrink-0">
+                <div className="w-5 h-5 rounded-full bg-[var(--theme-accent)] text-[var(--theme-accent-fg)] flex items-center justify-center shrink-0">
                   <Check className="w-3.5 h-3.5" />
                 </div>
               )}
@@ -176,40 +187,62 @@ export default function SettingsPage() {
             {/* Light Theme Card */}
             <button
               onClick={() => handleSelectTheme('light')}
-              className={`flex items-start justify-between p-4 rounded-2xl border text-left transition-all duration-300 cursor-pointer ${
+              className={`flex items-center justify-between p-4 rounded-2xl border text-left transition-all duration-300 cursor-pointer ${
                 !isDark
-                  ? "bg-[#FAF4EB] border-[#9A4A2F] text-[#1A0A10] shadow-lg shadow-[#FAF4EB]/40 ring-1 ring-[#9A4A2F]/50"
-                  : "bg-[var(--theme-card)] border-[var(--theme-border)] text-[var(--theme-fg)] hover:border-[var(--theme-accent)]"
+                  ? "bg-[var(--theme-card)] border-[var(--theme-accent)] text-[var(--theme-fg)] shadow-lg ring-1 ring-[var(--theme-accent)]/50"
+                  : "bg-[var(--theme-card)]/60 border-[var(--theme-border)] text-[var(--theme-fg)]/80 hover:border-[var(--theme-accent)]/50"
               }`}
             >
-              <div>
-                <div className="flex items-center gap-2 mb-1.5">
-                  <div className="w-6 h-6 rounded-full bg-[#FAF4EB] border border-[#9A4A2F] flex items-center justify-center">
-                    <Sun size={12} className="text-[#9A4A2F]" />
-                  </div>
-                  <h3 className="text-sm font-bold">Light Theme</h3>
+              <div className="flex items-center gap-3">
+                <div className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors ${!isDark ? "bg-[var(--theme-accent)] text-[var(--theme-accent-fg)]" : "bg-[var(--theme-surface)] text-[var(--theme-muted)]"}`}>
+                  <Sun size={16} />
                 </div>
-                <p className="text-[11px] opacity-80">Background: #FAF4EB • Foreground: #1A0A10</p>
-                <p className="text-[10px] text-[#9A4A2F] font-semibold mt-1">Accent: #9A4A2F (Terracotta)</p>
+                <div>
+                  <h3 className="text-sm font-bold text-[var(--theme-fg)]">Light Mode</h3>
+                  <p className="text-xs text-[var(--theme-muted)]">Clean bright aesthetic</p>
+                </div>
               </div>
               {!isDark && (
-                <div className="w-5 h-5 rounded-full bg-[#9A4A2F] text-[#FAF4EB] flex items-center justify-center shrink-0">
+                <div className="w-5 h-5 rounded-full bg-[var(--theme-accent)] text-[var(--theme-accent-fg)] flex items-center justify-center shrink-0">
                   <Check className="w-3.5 h-3.5" />
                 </div>
               )}
             </button>
           </div>
+        </div>
 
-          {/* Theme Gradient Preview */}
-          <div className="p-3.5 rounded-2xl bg-[var(--theme-card)] border border-[var(--theme-border)] space-y-2 mt-2">
-            <div className="flex items-center justify-between text-xs">
-              <span className="font-bold text-[var(--theme-fg)]">Theme Gradient</span>
-              <span className="text-[11px] font-mono text-[var(--theme-muted)]">Active Theme Palette</span>
+        {/* SECTION 1: ALBUM & TRACKLIST PREFERENCES */}
+        <div className="border-t border-[var(--theme-border)] pt-8 space-y-4">
+          <div className="flex items-center gap-2">
+            <Disc className="w-5 h-5 text-[var(--theme-accent)]" />
+            <h2 className="text-lg font-bold text-[var(--theme-fg)]">Tracklist Preferences</h2>
+          </div>
+          <p className="text-xs text-[var(--theme-muted)] max-w-lg">
+            Customize how album tracklists and physical media structures are displayed.
+          </p>
+
+          <div className="bg-[var(--theme-card)]/60 border border-[var(--theme-border)] rounded-2xl p-4 flex items-center justify-between gap-4">
+            <div className="space-y-0.5">
+              <h3 className="text-sm font-bold text-[var(--theme-fg)]">Vinyl Sides Sectioning</h3>
+              <p className="text-xs text-[var(--theme-muted)] max-w-md">
+                Group album tracks into Side A, Side B, etc. for vinyl and multi-sided pressings. When disabled, tracks are presented as a continuous disc tracklist.
+              </p>
             </div>
-            <div 
-              className="h-3 w-full rounded-full shadow-inner"
-              style={{ background: 'var(--theme-gradient)' }}
-            />
+            <button
+              onClick={handleToggleVinylSides}
+              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                showVinylSides ? 'bg-[var(--theme-accent)]' : 'bg-[var(--theme-border)]'
+              }`}
+              role="switch"
+              aria-checked={showVinylSides}
+              title={showVinylSides ? "Disable vinyl side dividers" : "Enable vinyl side dividers"}
+            >
+              <span
+                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                  showVinylSides ? 'translate-x-5' : 'translate-x-0'
+                }`}
+              />
+            </button>
           </div>
         </div>
 

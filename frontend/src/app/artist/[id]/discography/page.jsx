@@ -4,18 +4,18 @@ import ArtistDiscographyClient from './ArtistDiscographyClient';
 
 export async function generateMetadata({ params }) {
   const { id } = await params;
-  let artist = await fetchMusicBrainzArtistServer(id);
-  if (!artist) {
-    const searchRes = await searchMusicBrainzArtistsServer(decodeURIComponent(id), 1);
-    if (searchRes.length > 0) {
-      artist = await fetchMusicBrainzArtistServer(searchRes[0].id);
-    }
-  }
+  let artist = null;
+  try {
+    artist = await Promise.race([
+      fetchMusicBrainzArtistServer(id),
+      new Promise((res) => setTimeout(() => res(null), 1200)),
+    ]);
+  } catch (_) {}
 
   if (!artist) {
     return {
-      title: 'Discography Not Found | GrooveEstrella',
-      description: 'The requested artist discography could not be found.',
+      title: 'Discography | GrooveEstrella',
+      description: 'Browse artist discography and all releases on GrooveEstrella.',
     };
   }
 

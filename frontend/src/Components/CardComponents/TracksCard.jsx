@@ -1,7 +1,7 @@
 // src/Components/CardComponents/TracksCard.jsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useTransition } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { MoreVertical, Bookmark, BookmarkCheck, Share2, Copy, ListMusic } from "lucide-react";
@@ -27,6 +27,7 @@ export const TrackCard = ({
 }) => {
   const router = useRouter();
   const [saved, setSaved] = useState(false);
+  const [isPending, startTransition] = useTransition();
   const actualId = trackId || id;
   const albumTitle = album || (typeof artist === 'string' ? artist : Array.isArray(artist) ? artist.map(a => a.name).join(', ') : '') || '';
   const artistName = Array.isArray(artist) ? artist.map(a => a.name).join(', ') : (artist || '');
@@ -38,7 +39,11 @@ export const TrackCard = ({
   }, [actualId]);
 
   const handleCardClick = () => {
-    if (actualId) router.push(`/track/${actualId}`);
+    if (actualId && !isPending) {
+      startTransition(() => {
+        router.push(`/track/${actualId}`);
+      });
+    }
   };
 
   const toggleSave = (e) => {
@@ -166,7 +171,7 @@ export const TrackCard = ({
           viewport={{ once: true }}
           whileTap={{ scale: 0.98 }}
           onClick={handleCardClick}
-          className={`${isAlwaysList ? "flex" : "flex md:hidden"} items-center justify-between gap-3 p-2.5 sm:p-3 rounded-2xl bg-[var(--theme-card)]/80 backdrop-blur-xl border border-[var(--theme-border)] hover:border-[var(--theme-accent)]/40 hover:bg-[var(--theme-card)] transition-all duration-300 cursor-pointer w-full select-none shadow-md ${className}`}
+          className={`${isAlwaysList ? "flex" : "flex md:hidden"} items-center justify-between gap-3 p-2.5 sm:p-3 rounded-2xl bg-[var(--theme-card)]/80 backdrop-blur-xl border border-[var(--theme-border)] hover:border-[var(--theme-accent)]/40 hover:bg-[var(--theme-card)] transition-all duration-300 w-full select-none shadow-md ${isPending ? 'opacity-70 pointer-events-none cursor-wait' : 'cursor-pointer'} ${className}`}
         >
           <div className="flex items-center gap-3 min-w-0">
             <div className="relative w-12 h-12 rounded-xl overflow-hidden bg-[var(--theme-surface)] ring-1 ring-[var(--theme-border)] shrink-0">
@@ -178,6 +183,11 @@ export const TrackCard = ({
                   e.currentTarget.src = "https://placehold.co/200x200/17020B/E8A87C?text=Track";
                 }}
               />
+              {isPending && (
+                <div className="absolute inset-0 bg-black/50 flex items-center justify-center animate-fade-in">
+                  <div className="w-5 h-5 rounded-full border-2 border-[var(--theme-accent)] border-t-transparent animate-spin" />
+                </div>
+              )}
             </div>
             <div className="min-w-0 flex flex-col justify-center">
               <h3 className="text-sm font-bold text-[var(--theme-fg)] truncate hover:text-[var(--theme-accent)] transition-colors" title={title}>
@@ -203,7 +213,7 @@ export const TrackCard = ({
           whileHover={{ y: -4 }}
           whileTap={{ scale: 0.98 }}
           onClick={handleCardClick}
-          className={`${isAlwaysGrid ? "flex" : "hidden md:flex"} group relative w-full bg-[var(--theme-card)]/80 backdrop-blur-xl border border-[var(--theme-border)] hover:border-[var(--theme-accent)]/40 rounded-2xl sm:rounded-3xl p-3 sm:p-3.5 transition-all duration-300 cursor-pointer flex-col gap-2.5 shadow-md hover:shadow-xl select-none ${className}`}
+          className={`${isAlwaysGrid ? "flex" : "hidden md:flex"} group relative w-full bg-[var(--theme-card)]/80 backdrop-blur-xl border border-[var(--theme-border)] hover:border-[var(--theme-accent)]/40 rounded-2xl sm:rounded-3xl p-3 sm:p-3.5 transition-all duration-300 flex-col gap-2.5 shadow-md hover:shadow-xl select-none ${isPending ? 'opacity-70 scale-[0.98] pointer-events-none cursor-wait' : 'cursor-pointer'} ${className}`}
         >
           {/* 100% Clear Cover Image */}
           <div className="relative aspect-square w-full rounded-xl sm:rounded-2xl overflow-hidden bg-[var(--theme-surface)] ring-1 ring-[var(--theme-border)] shadow-sm">
@@ -215,6 +225,11 @@ export const TrackCard = ({
                 e.currentTarget.src = "https://placehold.co/400x400/17020B/E8A87C?text=Track";
               }}
             />
+            {isPending && (
+              <div className="absolute inset-0 bg-black/50 backdrop-blur-[1px] flex items-center justify-center animate-fade-in">
+                <div className="w-8 h-8 rounded-full border-2 border-[var(--theme-accent)] border-t-transparent animate-spin" />
+              </div>
+            )}
           </div>
 
           {/* Details & Actions Row below Cover */}

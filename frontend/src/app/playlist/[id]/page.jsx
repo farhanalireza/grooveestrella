@@ -12,12 +12,18 @@ export async function generateMetadata({ params }) {
     };
   }
 
-  const playlist = await fetchSpotifyDataServer('playlist', id);
+  let playlist = null;
+  try {
+    playlist = await Promise.race([
+      fetchSpotifyDataServer('playlist', id),
+      new Promise((res) => setTimeout(() => res(null), 1200)),
+    ]);
+  } catch (_) {}
 
   if (!playlist) {
     return {
-      title: 'Playlist Not Found | GrooveEstrella',
-      description: 'The requested playlist could not be found on GrooveEstrella.',
+      title: 'Playlist | GrooveEstrella',
+      description: 'Open and explore playlists on GrooveEstrella.',
     };
   }
 

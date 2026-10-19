@@ -20,6 +20,7 @@ import {
   CheckCircle2
 } from "lucide-react";
 import { toast } from "@/lib/toast";
+import { shareLink, getShareData } from "@/lib/shareHelper";
 import { generatePlatformLinks } from "@/lib/musicProviders";
 import GrooveCardComposer from "./GrooveCardComposer";
 
@@ -237,38 +238,41 @@ export default function GrooveLinkModal({ isOpen, onClose, item, onOpenGrooveCar
     return links;
   }, [item, title, artistsString, itemType, itemId]);
 
-  // Generate share URL pointing to this item with ?groovelink=true
-  const shareUrl = typeof window !== "undefined"
-    ? `${window.location.origin}/${itemType}/${itemId}?groovelink=true`
-    : `/${itemType}/${itemId}?groovelink=true`;
+  // Canonical share URL pointing directly to this item
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const shareUrl = itemId ? `${origin}/${itemType}/${itemId}` : (typeof window !== "undefined" ? window.location.href.split("?")[0] : "");
 
   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=350x350&color=000000&bgcolor=ffffff&ecc=H&data=${encodeURIComponent(shareUrl)}`;
 
-  const handleCopyLink = () => {
+  const handleCopyLink = async () => {
+    const { fullText } = getShareData({
+      name: title,
+      title: title,
+      artist: artistsString,
+      type: itemType,
+      id: itemId,
+    });
     if (typeof window !== "undefined" && navigator.clipboard) {
-      navigator.clipboard.writeText(shareUrl);
-      setCopied(true);
-      toast.success("GrooveLink copied to clipboard!");
-      setTimeout(() => setCopied(false), 2000);
+      try {
+        await navigator.clipboard.writeText(fullText);
+        setCopied(true);
+        toast.success("Link copied to clipboard! 📋");
+        setTimeout(() => setCopied(false), 2000);
+      } catch (_) {
+        toast.info(shareUrl);
+      }
     }
   };
 
   const handleNativeShare = async () => {
-    if (typeof navigator !== "undefined" && navigator.share) {
-      try {
-        await navigator.share({
-          title: `${title} - ${artistsString}`,
-          text: `Listen to "${title}" on your favorite streaming platform via GrooveLink:`,
-          url: shareUrl,
-        });
-      } catch (err) {
-        if (err.name !== "AbortError") {
-          handleCopyLink();
-        }
-      }
-    } else {
-      handleCopyLink();
-    }
+    await shareLink({
+      name: title,
+      title: title,
+      artist: artistsString,
+      artists: item.artists || item.artist,
+      type: itemType,
+      id: itemId,
+    });
   };
 
   const selectPlatformPreference = (platform) => {
@@ -522,35 +526,28 @@ export default function GrooveLinkModal({ isOpen, onClose, item, onOpenGrooveCar
 
             {/* Modal Bottom Footer Actions */}
             <div className="p-3 sm:p-4 border-t border-[var(--theme-border)] bg-[var(--theme-surface)]/90 backdrop-blur-md flex items-center justify-between gap-2 sm:gap-3 flex-wrap">
-              {/* Copy / Share Button */}
+              {/* Share / Copy Link Button */}
               <div className="flex items-center gap-1.5 flex-1 min-w-[120px]">
                 <button
-                  onClick={handleCopyLink}
+                  onClick={handleNativeShare}
                   className="w-full inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-card)] hover:border-[var(--theme-accent)] text-[var(--theme-fg)] text-xs font-bold transition-all duration-200 active:scale-95 cursor-pointer shadow-sm"
-                  title="Copy universal GrooveLink to clipboard"
+                  title="Share GrooveLink"
                 >
-                  {copied ? (
-                    <>
-                      <Check size={15} className="text-[var(--theme-accent)]" />
-                      <span className="text-[var(--theme-accent)]">Copied!</span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy size={15} />
-                      <span>Copy Link</span>
-                    </>
-                  )}
+                  <Share2 size={15} />
+                  <span>Share Link</span>
                 </button>
 
-                {canShare && (
-                  <button
-                    onClick={handleNativeShare}
-                    className="p-2.5 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-card)] hover:border-[var(--theme-accent)] text-[var(--theme-fg)] transition-all duration-200 active:scale-95 cursor-pointer shadow-sm flex items-center justify-center"
-                    title="Share via device share sheet"
-                  >
-                    <Share2 size={15} />
-                  </button>
-                )}
+                <button
+                  onClick={handleCopyLink}
+                  className="p-2.5 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-card)] hover:border-[var(--theme-accent)] text-[var(--theme-fg)] transition-all duration-200 active:scale-95 cursor-pointer shadow-sm flex items-center justify-center"
+                  title="Copy link to clipboard"
+                >
+                  {copied ? (
+                    <Check size={15} className="text-[var(--theme-accent)]" />
+                  ) : (
+                    <Copy size={15} />
+                  )}
+                </button>
               </div>
 
               {/* GrooveCard Button: opens GrooveCard and closes GrooveLink modal */}

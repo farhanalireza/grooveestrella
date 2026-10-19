@@ -4,7 +4,7 @@
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Bookmark, BookmarkCheck, Users, Award, Music, ChevronRight, MoreHorizontal, Play, Share2, Copy, ListPlus } from "lucide-react";
+import { ArrowLeft, Bookmark, BookmarkCheck, Users, Award, Music, ChevronRight, MoreHorizontal, Play, Share2, ListPlus, Sparkles } from "lucide-react";
 import {
     DropdownMenu,
     DropdownMenuTrigger,
@@ -14,13 +14,13 @@ import {
 } from "@/Components/ui/dropdown-menu";
 import { TrackCard } from "@/Components/CardComponents/TracksCard";
 import { AlbumCard } from "@/Components/CardComponents/AlbumsCard";
-import { ShareArtistComponent } from "@/Components/ArtistShareComponent";
 import GrooveLinkModal from "@/Components/GrooveLinkModal";
 import GrooveCardComposer from "@/Components/GrooveCardComposer";
 import MusicLoreAndReviews from "@/Components/MusicLoreAndReviews";
 import RatingPieChart from "@/Components/RatingPieChart";
 import GrooveLoader from "@/Components/GrooveLoader";
 import { toast } from "@/lib/toast";
+import { shareLink } from "@/lib/shareHelper";
 
 export default function ArtistDetailClient({ id, initialArtist, initialTopTracks, initialAlbums }) {
     const router = useRouter();
@@ -187,8 +187,17 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
         }
     };
 
+    const handleNativeShare = async () => {
+        await shareLink({
+            name: artist.name,
+            artist: artist.name,
+            type: "artist",
+            id: artist.id || id,
+        });
+    };
+
     return (
-        <div className="relative min-h-screen bg-[var(--theme-bg)] text-[var(--theme-fg)] p-4 pb-32 sm:p-6 md:pl-20 md:pr-20 lg:pl-40 lg:pr-40 pt-12 overflow-hidden transition-colors duration-300">
+        <div className="relative min-h-screen bg-[var(--theme-bg)] text-[var(--theme-fg)] p-4 pb-32 sm:p-6 md:pl-20 md:pr-20 lg:pl-40 lg:pr-40 pt-5 sm:pt-8 overflow-hidden transition-colors duration-300">
             {/* Full Screen Dynamic Ambient Artist Picture Gradient Backdrop */}
             <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
                 <div 
@@ -201,45 +210,53 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
                 />
             </div>
 
-            {/* Back Button */}
-            <button 
-                onClick={handleBack}
-                className="absolute top-6 left-5 sm:top-8 sm:left-6 lg:left-16 z-20 p-2.5 rounded-full bg-[var(--theme-card)]/90 backdrop-blur-md border border-[var(--theme-border)] text-[var(--theme-fg)] hover:border-[var(--theme-accent)] transition shadow-lg cursor-pointer"
-                title="Go Back"
-            >
-                <ArrowLeft size={18} />
-            </button>
-
-            {/* Actions overlay */}
-            <div className="absolute top-6 right-5 sm:top-8 sm:right-6 lg:right-16 z-20 flex items-center gap-2.5">
-                <button
-                    onClick={() => setIsGrooveLinkOpen(true)}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-full bg-[var(--theme-card)]/90 backdrop-blur-md border border-[var(--theme-border)] text-[var(--theme-fg)] hover:border-[var(--theme-accent)] hover:text-[var(--theme-accent)] transition-all duration-300 shadow-md cursor-pointer hover:scale-105 active:scale-95 text-xs font-bold"
-                    title="Open GrooveLink"
-                >
-                    <img src="/in.svg" alt="GrooveLink" className="w-4 h-4 object-contain" />
-                    <span className="hidden sm:inline">GrooveLink</span>
-                </button>
-                <ShareArtistComponent 
-                    artistId={artist.id} 
-                    artistName={artist.name} 
-                    followers={artist.followers?.total} 
-                    popularity={artist.popularity} 
-                    imageUrl={coverUrl} 
-                    genres={genres}
-                />
+            {/* Top Bar for Mobile */}
+            <header className="sm:hidden relative z-20 w-full max-w-xs mx-auto flex items-center justify-between px-2.5 py-1.5 rounded-full bg-[var(--theme-card)]/80 backdrop-blur-xl border border-[var(--theme-border)] shadow-2xl mb-6">
                 <button 
-                    onClick={toggleSave} 
-                    className={`p-2.5 rounded-full backdrop-blur-md transition-all duration-300 shadow-md cursor-pointer ${
-                        saved 
-                            ? "bg-[var(--theme-accent)] text-[var(--theme-accent-fg)] scale-105 shadow-md" 
-                            : "bg-[var(--theme-card)]/90 border border-[var(--theme-border)] text-[var(--theme-fg)] hover:bg-[var(--theme-surface)] hover:border-[var(--theme-accent)]"
-                    }`}
-                    title={saved ? "Remove Bookmark" : "Bookmark Artist"}
+                    onClick={handleBack}
+                    className="w-9 h-9 rounded-full aspect-square shrink-0 bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] active:scale-95 text-[var(--theme-fg)] flex items-center justify-center transition border border-[var(--theme-border)] cursor-pointer"
+                    title="Go Back"
                 >
-                    {saved ? <BookmarkCheck size={18} /> : <Bookmark size={18} />}
+                    <ArrowLeft size={16} />
                 </button>
-            </div>
+
+                {/* App Logo & Word Mark */}
+                <div 
+                    onClick={() => router.push("/")}
+                    className="flex items-center gap-1.5 px-2 py-1 rounded-full hover:bg-[var(--theme-surface)] active:scale-95 transition cursor-pointer select-none"
+                    title="GrooveEstrella Home"
+                >
+                    <img src="/in.svg" alt="GrooveEstrella" className="w-5 h-5 object-contain shrink-0" />
+                    <span className="text-xs font-bold text-[var(--theme-fg)] tracking-tight font-display">GrooveEstrella</span>
+                </div>
+
+                <button 
+                    onClick={handleNativeShare}
+                    className="w-9 h-9 rounded-full aspect-square shrink-0 bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] active:scale-95 text-[var(--theme-fg)] flex items-center justify-center transition border border-[var(--theme-border)] cursor-pointer"
+                    title="Share Artist"
+                >
+                    <Share2 size={16} />
+                </button>
+            </header>
+
+            {/* Top Navigation for Desktop / PC */}
+            <header className="hidden sm:flex relative z-20 w-full items-center justify-between mb-8 px-2 md:px-6">
+                <button 
+                    onClick={handleBack}
+                    className="w-11 h-11 rounded-full aspect-square shrink-0 bg-[var(--theme-card)]/80 hover:bg-[var(--theme-surface)] active:scale-95 text-[var(--theme-fg)] flex items-center justify-center transition backdrop-blur-md cursor-pointer border border-[var(--theme-border)] shadow-lg"
+                    title="Go Back"
+                >
+                    <ArrowLeft size={18} />
+                </button>
+
+                <button 
+                    onClick={handleNativeShare}
+                    className="w-11 h-11 rounded-full aspect-square shrink-0 bg-[var(--theme-card)]/80 hover:bg-[var(--theme-surface)] active:scale-95 text-[var(--theme-fg)] flex items-center justify-center transition backdrop-blur-md cursor-pointer border border-[var(--theme-border)] shadow-lg"
+                    title="Share Artist"
+                >
+                    <Share2 size={18} />
+                </button>
+            </header>
 
             {/* Artist Info Glassmorphic Card Container */}
             <div className="relative z-10 mt-14 sm:mt-6 w-full bg-transparent sm:bg-[var(--theme-card)]/80 sm:backdrop-blur-xl border-0 sm:border border-transparent sm:border-[var(--theme-border)] rounded-none sm:rounded-3xl p-2 sm:p-8 flex flex-col md:flex-row items-center gap-8 sm:gap-12 sm:shadow-2xl mb-6 sm:mb-10">
@@ -305,14 +322,35 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
                         </div>
                     )}
 
-                    <div className="mt-4 w-full flex flex-col sm:flex-row items-center justify-center md:justify-start gap-3">
-                        <button 
-                            onClick={() => setIsGrooveLinkOpen(true)}
-                            className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-[var(--theme-border)] bg-[var(--theme-surface)] hover:border-[var(--theme-accent)] text-[var(--theme-fg)] text-xs font-bold uppercase tracking-wider transition-all duration-300 shadow-md cursor-pointer"
+                    {/* Action Controls Row: GrooveCard, Open GrooveLink, Bookmark */}
+                    <div className="mt-6 flex items-center justify-center md:justify-start gap-3 sm:gap-4 max-w-full">
+                        {/* Create GrooveCard Button */}
+                        <button
+                            onClick={() => setIsGrooveCardOpen(true)}
+                            className="w-12 h-12 rounded-full aspect-square shrink-0 bg-[var(--theme-card)]/80 hover:bg-[var(--theme-surface)] active:scale-95 text-[var(--theme-fg)] flex items-center justify-center transition-all duration-200 backdrop-blur-md cursor-pointer shadow-lg border border-[var(--theme-border)] group"
+                            title="Create GrooveCard"
                         >
-                            <img src="/in.svg" alt="GrooveLink" className="w-4 h-4 object-contain" />
-                            <span>Open GrooveLink</span>
-                            <ChevronRight className="w-3 h-3 text-[var(--theme-accent)]" />
+                            <Sparkles size={20} className="text-[var(--theme-fg)] group-hover:text-[var(--theme-accent)] transition-colors" />
+                        </button>
+
+                        {/* Prominent Open GrooveLink Pill Button */}
+                        <button
+                            onClick={() => setIsGrooveLinkOpen(true)}
+                            className="h-12 px-6 sm:px-8 rounded-full bg-[var(--theme-accent)] hover:opacity-95 active:scale-95 text-[var(--theme-accent-fg)] font-black text-xs sm:text-sm tracking-wide flex items-center justify-center gap-2 transition-all duration-200 shadow-xl cursor-pointer shrink-0 whitespace-nowrap"
+                            title="Open GrooveLink"
+                        >
+                            <img src="/in.svg" alt="GrooveLink" className="w-4 h-4 object-contain brightness-0 invert shrink-0" />
+                            <span className="whitespace-nowrap">Open GrooveLink</span>
+                            <ChevronRight size={15} className="shrink-0" />
+                        </button>
+
+                        {/* Bookmark Button */}
+                        <button
+                            onClick={toggleSave}
+                            className="w-12 h-12 rounded-full aspect-square shrink-0 bg-[var(--theme-card)]/80 hover:bg-[var(--theme-surface)] active:scale-95 text-[var(--theme-fg)] flex items-center justify-center transition-all duration-200 backdrop-blur-md cursor-pointer shadow-lg border border-[var(--theme-border)]"
+                            title={saved ? "Remove from Library" : "Add to Library"}
+                        >
+                            {saved ? <BookmarkCheck size={20} className="text-[var(--theme-accent)]" /> : <Bookmark size={20} />}
                         </button>
                     </div>
                 </div>
@@ -420,7 +458,7 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
                                                     })}
                                                     className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold hover:bg-[var(--theme-surface)] rounded-xl cursor-pointer"
                                                 >
-                                                    <Share2 size={15} className="text-[var(--theme-accent)]" />
+                                                    <Sparkles size={15} className="text-[var(--theme-accent)]" />
                                                     <span>Create GrooveCard</span>
                                                 </DropdownMenuItem>
                                                 <DropdownMenuItem
@@ -469,15 +507,18 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
                                                 )}
                                                 <DropdownMenuItem
                                                     onClick={() => {
-                                                        if (typeof navigator !== "undefined") {
-                                                            navigator.clipboard.writeText(`${window.location.origin}/track/${track.id || track.trackId}`);
-                                                            toast.success("Track link copied! 📋");
-                                                        }
+                                                        shareLink({
+                                                            name: trackTitle,
+                                                            title: trackTitle,
+                                                            artist: trackArtists,
+                                                            type: 'track',
+                                                            id: track.id || track.trackId,
+                                                        });
                                                     }}
                                                     className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold hover:bg-[var(--theme-surface)] rounded-xl cursor-pointer"
                                                 >
-                                                    <Copy size={14} />
-                                                    <span>Copy Link</span>
+                                                    <Share2 size={14} />
+                                                    <span>Share Track Link</span>
                                                 </DropdownMenuItem>
                                             </DropdownMenuContent>
                                         </DropdownMenu>
@@ -558,6 +599,9 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
                 title={artist.name}
                 artist={artist.name}
                 description={artist.description}
+                primaryGenre={genres[0] || null}
+                genres={artist.genres || genres || []}
+                categorizedTags={artist.categorizedTags || null}
                 tags={artist.tags || artist.genres || []}
                 allTags={artist.allTags || []}
                 rating={artist.rating}
@@ -587,6 +631,20 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
                     spotifyUrl: artist.external_urls?.spotify || artist.spoURL,
                     youtubeUrl: artist.YTURL
                 }}
+            />
+
+            {/* Artist GrooveCard Composer Modal */}
+            <GrooveCardComposer
+                isOpen={isGrooveCardOpen}
+                onClose={() => setIsGrooveCardOpen(false)}
+                itemId={artist.id || id}
+                title={artist.name}
+                artist={artist.name}
+                imageUrl={coverUrl}
+                popularity={artist.popularity || 85}
+                explicit={false}
+                type="artist"
+                genres={genres}
             />
 
             {/* Track Specific GrooveLink Modal */}

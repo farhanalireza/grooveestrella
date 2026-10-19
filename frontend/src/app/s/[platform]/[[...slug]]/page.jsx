@@ -15,12 +15,18 @@ export async function generateMetadata({ params }) {
     id = slug[1];
   }
 
-  const metadata = await getTrackMetadata(platform, type, id);
+  let metadata = null;
+  try {
+    metadata = await Promise.race([
+      getTrackMetadata(platform, type, id),
+      new Promise((res) => setTimeout(() => res(null), 1200)),
+    ]);
+  } catch (_) {}
 
   if (!metadata) {
     return {
-      title: 'Music Item Not Found | GrooveLink',
-      description: 'The requested music item could not be resolved.',
+      title: 'GrooveLink | Universal Music Link',
+      description: 'Open and share music across Spotify, Apple Music, YouTube Music, TIDAL, and Deezer.',
     };
   }
 

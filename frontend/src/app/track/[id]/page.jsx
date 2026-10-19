@@ -6,15 +6,20 @@ export async function generateMetadata({ params }) {
   const { id } = await params;
   const cleanId = typeof id === 'string' ? id.trim() : '';
   const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cleanId);
-  let track = isUUID ? await fetchMusicBrainzTrackServer(cleanId) : null;
-  if (!track && cleanId && !cleanId.startsWith('local-')) {
-    track = await searchMusicBrainzTrackServer(decodeURIComponent(cleanId));
-  }
+  let track = null;
+  try {
+    if (isUUID) {
+      track = await Promise.race([
+        fetchMusicBrainzTrackServer(cleanId),
+        new Promise((res) => setTimeout(() => res(null), 1200)),
+      ]);
+    }
+  } catch (_) {}
 
   if (!track) {
     return {
-      title: 'Track Not Found | GrooveEstrella',
-      description: 'The requested track could not be found on GrooveEstrella.',
+      title: 'Track | GrooveEstrella',
+      description: 'Discover tracks, explore MusicBrainz metadata, and stream across platforms on GrooveEstrella.',
     };
   }
 

@@ -1,7 +1,7 @@
 // src/Components/CardComponents/AlbumsCard.jsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useTransition } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { MoreVertical, Bookmark, BookmarkCheck, Share2, Copy } from "lucide-react";
@@ -27,6 +27,7 @@ export const AlbumCard = ({
 }) => {
   const router = useRouter();
   const [saved, setSaved] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
     if (!id) return;
@@ -51,7 +52,11 @@ export const AlbumCard = ({
     : artistName || formattedYear || null;
 
   const handleCardClick = () => {
-    if (id) router.push(`/album/${id}`);
+    if (id && !isPending) {
+      startTransition(() => {
+        router.push(`/album/${id}`);
+      });
+    }
   };
 
   const toggleSave = (e) => {
@@ -104,7 +109,7 @@ export const AlbumCard = ({
       whileHover={{ y: -4 }}
       whileTap={{ scale: 0.98 }}
       onClick={handleCardClick}
-      className={`group relative w-full bg-[var(--theme-card)]/80 backdrop-blur-xl border border-[var(--theme-border)] hover:border-[var(--theme-accent)]/40 rounded-2xl sm:rounded-3xl p-3 sm:p-3.5 transition-all duration-300 cursor-pointer flex flex-col gap-2.5 shadow-md hover:shadow-xl select-none ${className}`}
+      className={`group relative w-full bg-[var(--theme-card)]/80 backdrop-blur-xl border border-[var(--theme-border)] hover:border-[var(--theme-accent)]/40 rounded-2xl sm:rounded-3xl p-3 sm:p-3.5 transition-all duration-300 flex flex-col gap-2.5 shadow-md hover:shadow-xl select-none ${isPending ? 'opacity-70 scale-[0.98] pointer-events-none cursor-wait' : 'cursor-pointer'} ${className}`}
     >
       {/* 100% Clear & Unobstructed Cover Art */}
       <div className="relative aspect-square w-full rounded-xl sm:rounded-2xl overflow-hidden bg-[var(--theme-surface)] ring-1 ring-[var(--theme-border)] shadow-sm">
@@ -116,6 +121,11 @@ export const AlbumCard = ({
             e.currentTarget.src = "https://placehold.co/400x400/17020B/E8A87C?text=Album";
           }}
         />
+        {isPending && (
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px] flex items-center justify-center animate-fade-in">
+            <div className="w-8 h-8 rounded-full border-2 border-[var(--theme-accent)] border-t-transparent animate-spin" />
+          </div>
+        )}
       </div>
 
       {/* Details Row: Title, Artist • Year, and Three Dots Action */}

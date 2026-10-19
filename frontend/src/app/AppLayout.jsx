@@ -15,14 +15,6 @@ export default function AppLayout({ children }) {
     setMounted(true);
   }, []);
 
-  if (!mounted) {
-    return (
-      <div className="min-h-screen bg-[var(--theme-bg)] flex items-center justify-center text-[var(--theme-fg)] font-sans">
-        <GrooveLoader size={64} fullScreen={true} />
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-[var(--theme-bg)] text-[var(--theme-fg)] font-sans flex flex-col transition-colors duration-300">
       <AppBar selectedSection={section} setSection={setSection} />
@@ -30,7 +22,7 @@ export default function AppLayout({ children }) {
       <div className="flex-1 w-full lg:pt-16 pb-28 lg:pb-0">
         {children}
       </div>
-      <PlaylistPickerModal />
+      {mounted && <PlaylistPickerModal />}
     </div>
   );
 }
