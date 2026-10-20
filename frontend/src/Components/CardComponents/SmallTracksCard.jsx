@@ -1,6 +1,6 @@
 // src/Components/CardComponents/SmallTracksCard.jsx
 import { Bookmark, BookmarkCheck, EllipsisVertical, Link as LinkIcon, Music as MusicIcon, ListMusic } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "@/lib/toast";
 import {
@@ -46,6 +46,24 @@ export const AlbumTrackCard = ({
 }) => {
     const router = useRouter();
     const [saved, setSaved] = useState(false);
+    const [isPending, startTransition] = useTransition();
+    const [navigatingTarget, setNavigatingTarget] = useState(null);
+
+    const handleOpenTrack = () => {
+        if (!trackID || isPending) return;
+        setNavigatingTarget('track');
+        startTransition(() => {
+            router.push(`/track/${trackID}`);
+        });
+    };
+
+    const handleOpenArtist = (artistId) => {
+        if (!artistId || isPending) return;
+        setNavigatingTarget(`artist-${artistId}`);
+        startTransition(() => {
+            router.push(`/artist/${artistId}`);
+        });
+    };
 
     useEffect(() => {
         const savedSongs = JSON.parse(localStorage.getItem("savedSongs")) || [];
@@ -86,28 +104,40 @@ export const AlbumTrackCard = ({
         : duration;
 
     return (
-        <div className="group flex items-center justify-between p-3.5 bg-[var(--theme-card)]/80 backdrop-blur-md border border-[var(--theme-border)] hover:border-[var(--theme-accent)]/50 rounded-2xl transition-all duration-300 w-full min-w-0 relative">
+        <div className={`group flex items-center justify-between p-3.5 bg-[var(--theme-card)]/80 backdrop-blur-md border border-[var(--theme-border)] hover:border-[var(--theme-accent)]/50 rounded-2xl transition-all duration-300 w-full min-w-0 relative ${
+            isPending ? 'opacity-80' : ''
+        }`}>
             <div className="flex items-center gap-4 min-w-0 flex-1">
                 <div className="flex-shrink-0 w-6 flex items-center justify-center">
-                    <span className="text-[var(--theme-muted)] group-hover:text-[var(--theme-accent)] font-bold text-sm transition-colors">{pos + 1}</span>
+                    {isPending && navigatingTarget === 'track' ? (
+                        <div className="w-3.5 h-3.5 rounded-full border-2 border-[var(--theme-accent)] border-t-transparent animate-spin" />
+                    ) : (
+                        <span className="text-[var(--theme-muted)] group-hover:text-[var(--theme-accent)] font-bold text-sm transition-colors">{pos + 1}</span>
+                    )}
                 </div>
 
                 <div className="flex flex-col gap-0.5 min-w-0 flex-1">
                     <h3 
-                        className="text-sm font-bold text-[var(--theme-fg)] truncate cursor-pointer hover:text-[var(--theme-accent)] transition-colors"
+                        className="text-sm font-bold text-[var(--theme-fg)] truncate cursor-pointer hover:text-[var(--theme-accent)] transition-colors inline-flex items-center gap-1.5"
                         title={title}
-                        onClick={() => router.push(`/track/${trackID}`)}
+                        onClick={handleOpenTrack}
                     >
-                        {title}
+                        <span>{title}</span>
+                        {isPending && navigatingTarget === 'track' && (
+                            <span className="text-[10px] text-[var(--theme-accent)] font-mono font-medium animate-pulse">Loading...</span>
+                        )}
                     </h3>
                     <div className="text-xs text-[var(--theme-muted)] truncate">
                         {artist?.map((a, i) => (
                             <span 
                                 key={a.id || i} 
-                                className="hover:underline cursor-pointer hover:text-[var(--theme-accent)] transition-colors"
-                                onClick={() => a.id && router.push(`/artist/${a.id}`)}
+                                className="hover:underline cursor-pointer hover:text-[var(--theme-accent)] transition-colors inline-flex items-center gap-1"
+                                onClick={() => a.id && handleOpenArtist(a.id)}
                             >
-                                {a.name}{i < artist.length - 1 && ", "}
+                                <span>{a.name}{i < artist.length - 1 && ", "}</span>
+                                {isPending && navigatingTarget === `artist-${a.id}` && (
+                                    <span className="w-2.5 h-2.5 rounded-full border-2 border-[var(--theme-accent)] border-t-transparent animate-spin" />
+                                )}
                             </span>
                         ))}
                     </div>
@@ -597,6 +627,24 @@ export const SmallTrackCardWithCover = ({
 }) => {
     const router = useRouter();
     const [saved, setSaved] = useState(false);
+    const [isPending, startTransition] = useTransition();
+    const [navigatingTarget, setNavigatingTarget] = useState(null);
+
+    const handleOpenTrack = () => {
+        if (!trackID || isPending) return;
+        setNavigatingTarget('track');
+        startTransition(() => {
+            router.push(`/track/${trackID}`);
+        });
+    };
+
+    const handleOpenArtist = (artistId) => {
+        if (!artistId || isPending) return;
+        setNavigatingTarget(`artist-${artistId}`);
+        startTransition(() => {
+            router.push(`/artist/${artistId}`);
+        });
+    };
 
     useEffect(() => {
         const savedSongs = JSON.parse(localStorage.getItem("savedSongs")) || [];
@@ -634,7 +682,9 @@ export const SmallTrackCardWithCover = ({
     const soundcloudURL = `https://soundcloud.com/search?q=${encodeURIComponent(title + ' ' + artistsQuery)}`;
 
     return (
-        <div className="group flex items-center justify-between p-3 bg-[var(--theme-card)]/80 backdrop-blur-md border border-[var(--theme-border)] hover:border-[var(--theme-accent)]/50 rounded-2xl transition-all duration-300 w-full min-w-0">
+        <div className={`group flex items-center justify-between p-3 bg-[var(--theme-card)]/80 backdrop-blur-md border border-[var(--theme-border)] hover:border-[var(--theme-accent)]/50 rounded-2xl transition-all duration-300 w-full min-w-0 ${
+            isPending ? 'opacity-85' : ''
+        }`}>
             <div className="flex items-center gap-4 min-w-0 flex-1">
                 {pos !== undefined && (
                     <div className="flex-shrink-0 w-6 flex items-center justify-center">
@@ -642,7 +692,10 @@ export const SmallTrackCardWithCover = ({
                     </div>
                 )}
 
-                <div className="flex-shrink-0 relative w-11 h-11 sm:w-12 sm:h-12 rounded-xl overflow-hidden bg-[var(--theme-surface)] border border-[var(--theme-border)]">
+                <div 
+                    onClick={handleOpenTrack}
+                    className="flex-shrink-0 relative w-11 h-11 sm:w-12 sm:h-12 rounded-xl overflow-hidden bg-[var(--theme-surface)] border border-[var(--theme-border)] cursor-pointer"
+                >
                     <img
                         src={coverImage || "https://placehold.co/200x200/17020B/E8A87C?text=Track"}
                         alt={title}
@@ -651,15 +704,23 @@ export const SmallTrackCardWithCover = ({
                             e.currentTarget.src = 'https://placehold.co/200x200/17020B/E8A87C?text=Track';
                         }}
                     />
+                    {isPending && navigatingTarget === 'track' && (
+                        <div className="absolute inset-0 bg-black/60 backdrop-blur-[1px] flex items-center justify-center animate-fade-in z-10">
+                            <div className="w-5 h-5 rounded-full border-2 border-[var(--theme-accent)] border-t-transparent animate-spin" />
+                        </div>
+                    )}
                 </div>
 
                 <div className="flex flex-col gap-0.5 min-w-0 flex-1">
                     <h3
-                        className="text-sm font-bold text-[var(--theme-fg)] truncate cursor-pointer hover:text-[var(--theme-accent)] transition-colors leading-tight"
+                        className="text-sm font-bold text-[var(--theme-fg)] truncate cursor-pointer hover:text-[var(--theme-accent)] transition-colors leading-tight inline-flex items-center gap-1.5"
                         title={title}
-                        onClick={() => router.push(`/track/${trackID}`)}
+                        onClick={handleOpenTrack}
                     >
-                        {title}
+                        <span>{title}</span>
+                        {isPending && navigatingTarget === 'track' && (
+                            <span className="text-[10px] text-[var(--theme-accent)] font-mono font-medium animate-pulse">Loading...</span>
+                        )}
                     </h3>
                     <div className="text-xs text-[var(--theme-muted)] truncate">
                         {subtitle ? (
@@ -668,10 +729,13 @@ export const SmallTrackCardWithCover = ({
                             artist?.map((a, i) => (
                                 <span 
                                     key={a.id || i}
-                                    className="hover:underline cursor-pointer hover:text-[var(--theme-accent)] transition-colors"
-                                    onClick={() => a.id && router.push(`/artist/${a.id}`)}
+                                    className="hover:underline cursor-pointer hover:text-[var(--theme-accent)] transition-colors inline-flex items-center gap-1"
+                                    onClick={() => a.id && handleOpenArtist(a.id)}
                                 >
-                                    {a.name}{i < artist.length - 1 && ", "}
+                                    <span>{a.name}{i < artist.length - 1 && ", "}</span>
+                                    {isPending && navigatingTarget === `artist-${a.id}` && (
+                                        <span className="w-2.5 h-2.5 rounded-full border-2 border-[var(--theme-accent)] border-t-transparent animate-spin" />
+                                    )}
                                 </span>
                             ))
                         )}

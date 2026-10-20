@@ -1,7 +1,7 @@
 // src/app/artist/[id]/ArtistDetailClient.jsx
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Bookmark, BookmarkCheck, Users, Award, Music, ChevronRight, MoreHorizontal, Play, Share2, ListPlus, Sparkles } from "lucide-react";
@@ -24,6 +24,9 @@ import { shareLink } from "@/lib/shareHelper";
 
 export default function ArtistDetailClient({ id, initialArtist, initialTopTracks, initialAlbums }) {
     const router = useRouter();
+    const [isPending, startTransition] = useTransition();
+    const [navigatingTrackId, setNavigatingTrackId] = useState(null);
+    const [navigatingAlbumId, setNavigatingAlbumId] = useState(null);
     const [artist, setArtist] = useState(initialArtist);
     const [topTracks, setTopTracks] = useState(initialTopTracks || []);
     const [albums, setAlbums] = useState(initialAlbums || []);
@@ -378,18 +381,34 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
                             return (
                                 <div 
                                     key={`${track.id || 'track'}-${index}`}
-                                    className="flex items-center justify-between py-2.5 sm:py-3 px-2 sm:px-3 hover:bg-[var(--theme-card)]/50 rounded-xl transition-all duration-200 border-b border-[var(--theme-border)]/40 last:border-b-0 group"
+                                    className={`flex items-center justify-between py-2.5 sm:py-3 px-2 sm:px-3 hover:bg-[var(--theme-card)]/50 rounded-xl transition-all duration-200 border-b border-[var(--theme-border)]/40 last:border-b-0 group ${
+                                        isPending && navigatingTrackId === track.id ? 'opacity-75 pointer-events-none cursor-wait' : ''
+                                    }`}
                                 >
                                     <div 
                                         className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1 cursor-pointer"
-                                        onClick={() => track.id && router.push(`/track/${track.id}`)}
+                                        onClick={() => {
+                                            if (track.id && !isPending) {
+                                                setNavigatingTrackId(track.id);
+                                                startTransition(() => {
+                                                    router.push(`/track/${track.id}`);
+                                                });
+                                            }
+                                        }}
                                     >
-                                        <img 
-                                            src={coverImg} 
-                                            alt={trackTitle}
-                                            className="w-11 h-11 sm:w-12 sm:h-12 rounded-lg object-cover bg-[var(--theme-card)] shadow-sm shrink-0 ring-1 ring-[var(--theme-border)]/50"
-                                            onError={(e) => { e.currentTarget.src = coverUrl; }}
-                                        />
+                                        <div className="relative w-11 h-11 sm:w-12 sm:h-12 rounded-lg overflow-hidden shrink-0 ring-1 ring-[var(--theme-border)]/50 bg-[var(--theme-card)]">
+                                            <img 
+                                                src={coverImg} 
+                                                alt={trackTitle}
+                                                className="w-full h-full object-cover"
+                                                onError={(e) => { e.currentTarget.src = coverUrl; }}
+                                            />
+                                            {isPending && navigatingTrackId === track.id && (
+                                                <div className="absolute inset-0 bg-black/60 backdrop-blur-[1px] flex items-center justify-center animate-fade-in z-10">
+                                                    <div className="w-5 h-5 rounded-full border-2 border-[var(--theme-accent)] border-t-transparent animate-spin" />
+                                                </div>
+                                            )}
+                                        </div>
                                         <div className="flex flex-col min-w-0 flex-1">
                                             <div className="flex items-center gap-1.5 min-w-0">
                                                 <span className="font-semibold text-sm sm:text-base text-[var(--theme-fg)] group-hover:text-[var(--theme-accent)] transition-colors truncate">
@@ -546,12 +565,22 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
                         {studioAlbums.map((album, index) => {
                             const albumCover = album.url || album.image || album.coverArt || coverUrl;
                             const albumYear = album.releaseYear || (album.releaseDate ? new Date(album.releaseDate).getFullYear() : null);
+                            const isAlbumNavigating = isPending && navigatingAlbumId === album.id;
 
                             return (
                                 <div 
                                     key={`${album.id || 'album'}-${index}`}
-                                    onClick={() => album.id && router.push(`/album/${album.id}`)}
-                                    className="group flex flex-col cursor-pointer"
+                                    onClick={() => {
+                                        if (album.id && !isPending) {
+                                            setNavigatingAlbumId(album.id);
+                                            startTransition(() => {
+                                                router.push(`/album/${album.id}`);
+                                            });
+                                        }
+                                    }}
+                                    className={`group flex flex-col ${
+                                        isAlbumNavigating ? 'opacity-75 pointer-events-none cursor-wait' : 'cursor-pointer'
+                                    }`}
                                 >
                                     <div className="aspect-square w-full rounded-2xl overflow-hidden bg-[var(--theme-card)] shadow-md group-hover:shadow-xl transition-all duration-300 relative ring-1 ring-[var(--theme-border)]">
                                         <img 
@@ -560,6 +589,12 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
                                             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                                             onError={(e) => { e.currentTarget.src = 'https://placehold.co/400x400/17020B/E8A87C?text=Album'; }}
                                         />
+                                        {isAlbumNavigating && (
+                                            <div className="absolute inset-0 bg-black/60 backdrop-blur-[1px] flex flex-col items-center justify-center gap-1.5 animate-fade-in z-20">
+                                                <div className="w-8 h-8 rounded-full border-2 border-[var(--theme-accent)] border-t-transparent animate-spin" />
+                                                <span className="text-[10px] font-bold text-white tracking-widest uppercase font-mono">Routing...</span>
+                                            </div>
+                                        )}
                                     </div>
                                     <div className="mt-2.5 flex items-center justify-between gap-1 min-w-0">
                                         <h3 className="text-sm font-bold text-[var(--theme-fg)] truncate group-hover:text-[var(--theme-accent)] transition-colors">

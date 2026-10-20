@@ -1,7 +1,7 @@
 // src/app/library/page.jsx
 "use client";
 
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import React, { useEffect, useState, useMemo, useCallback, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { 
@@ -16,6 +16,8 @@ import LibraryCoverImage, { FALLBACK_COVER_SVG } from '@/Components/LibraryCover
 
 export default function LibraryPage() {
   const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [navigatingId, setNavigatingId] = useState(null);
   const [activeTab, setActiveTab] = useState('songs');
   const [viewMode, setViewMode] = useState('slider'); // 'slider' | 'grid' | 'list'
   const [sliderIndex, setSliderIndex] = useState(0);
@@ -212,18 +214,69 @@ export default function LibraryPage() {
     return null;
   }, [activeTab]);
 
+  // Automatically self-heal and resolve missing cover portrait photography for saved artists
+  useEffect(() => {
+    if (!artists || artists.length === 0) return;
+    let isCancelled = false;
+
+    const resolveMissingArtistImages = async () => {
+      let changed = false;
+      const updated = [...artists];
+
+      for (let i = 0; i < updated.length; i++) {
+        const art = updated[i];
+        const valid = art.image && typeof art.image === 'string' && !art.image.includes('placehold.co') && !art.image.startsWith('data:');
+        if (!valid) {
+          const q = art.name || art.title || '';
+          if (!q) continue;
+          try {
+            const res = await fetch(`/api/search?q=${encodeURIComponent(q)}&type=artist&limit=1`);
+            if (res.ok) {
+              const data = await res.json();
+              const found = data.results?.[0];
+              if (found && (found.image || found.url)) {
+                updated[i] = {
+                  ...art,
+                  id: art.id || found.id,
+                  image: found.image || found.url,
+                  coverArt: found.image || found.url,
+                };
+                changed = true;
+              }
+            }
+          } catch (_) {}
+        }
+      }
+
+      if (changed && !isCancelled) {
+        setArtists(updated);
+        try {
+          localStorage.setItem('savedArtists', JSON.stringify(updated));
+        } catch (_) {}
+      }
+    };
+
+    resolveMissingArtistImages();
+    return () => { isCancelled = true; };
+  }, [artists.length]);
+
   const openItem = useCallback((item) => {
     if (!item) return;
-    if (activeTab === 'songs') {
-      const trackTarget = item.trackId || item.id;
-      if (trackTarget) router.push(`/track/${trackTarget}`);
-    } else if (activeTab === 'albums') {
-      if (item.id) router.push(`/album/${item.id}`);
-    } else if (activeTab === 'artists') {
-      if (item.id) router.push(`/artist/${item.id}`);
-    } else if (activeTab === 'playlists') {
-      if (item.id) router.push(`/playlist/${item.id}`);
-    }
+    const targetId = item.id || item.trackId || item.trackURI;
+    setNavigatingId(targetId);
+
+    startTransition(() => {
+      if (activeTab === 'songs') {
+        const trackTarget = item.trackId || item.id;
+        if (trackTarget) router.push(`/track/${trackTarget}`);
+      } else if (activeTab === 'albums') {
+        if (item.id) router.push(`/album/${item.id}`);
+      } else if (activeTab === 'artists') {
+        if (item.id) router.push(`/artist/${item.id}`);
+      } else if (activeTab === 'playlists') {
+        if (item.id) router.push(`/playlist/${item.id}`);
+      }
+    });
   }, [activeTab, router]);
 
   const deleteItem = useCallback((item) => {
@@ -407,91 +460,27 @@ export default function LibraryPage() {
                 getItemSubtitle={getItemSubtitle}
                 getItemMeta={getItemMeta}
                 getItemImage={getItemImage}
+                isNavigating={isPending}
+                navigatingId={navigatingId}
               />
             )}
 
             {/* VIEW MODE 2: GRID (Responsive layout with optimized images & shimmer loading) */}
             {viewMode === 'grid' && (
               <div className="flex flex-col gap-4 max-w-xl mx-auto w-full">
-                {currentList.map((item, idx) => (
-                  <div
-                    key={item.id || item.trackId || idx}
-                    className="group bg-[var(--theme-card)]/80 hover:bg-[var(--theme-card)] border border-[var(--theme-border)] hover:border-[var(--theme-accent)]/40 rounded-3xl p-4 sm:p-5 shadow-md transition duration-300 flex flex-col sm:flex-row items-center gap-4 sm:gap-5"
-                  >
-                    <div 
-                      onClick={() => openItem(item)}
-                      className="w-28 h-28 sm:w-32 sm:h-32 aspect-square rounded-2xl overflow-hidden border border-[var(--theme-border)] shrink-0 shadow-sm cursor-pointer"
+                {currentList.map((item, idx) => {
+                  const itemId = item.id || item.trackId || item.trackURI;
+                  const isItemNavigating = isPending && navigatingId === itemId;
+
+                  return (
+                    <div
+                      key={itemId || idx}
+                      className="group bg-[var(--theme-card)]/80 hover:bg-[var(--theme-card)] border border-[var(--theme-border)] hover:border-[var(--theme-accent)]/40 rounded-3xl p-4 sm:p-5 shadow-md transition duration-300 flex flex-col sm:flex-row items-center gap-4 sm:gap-5"
                     >
-                      {activeTab === 'playlists' && item.isCustom ? (
-                        <PlaylistCover 
-                          tracks={item.tracks?.items || []} 
-                          name={item.name} 
-                          defaultCover={item.image} 
-                        />
-                      ) : (
-                        <LibraryCoverImage
-                          src={getItemImage(item, 'medium')}
-                          alt={getItemTitle(item)}
-                          isCircle={activeTab === 'artists'}
-                          priority={idx < 4}
-                          className="w-full h-full"
-                        />
-                      )}
-                    </div>
-
-                    <div className="flex-1 min-w-0 text-center sm:text-left">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--theme-accent)] bg-[var(--theme-surface)] px-2 py-0.5 rounded-full border border-[var(--theme-border)]">
-                        {activeTab.slice(0, -1)}
-                      </span>
-                      <h3
+                      <div 
                         onClick={() => openItem(item)}
-                        className="text-base sm:text-lg font-bold text-[var(--theme-fg)] group-hover:text-[var(--theme-accent)] transition truncate mt-1.5 cursor-pointer"
+                        className="relative w-28 h-28 sm:w-32 sm:h-32 aspect-square rounded-2xl overflow-hidden border border-[var(--theme-border)] shrink-0 shadow-sm cursor-pointer"
                       >
-                        {getItemTitle(item)}
-                      </h3>
-                      <p className="text-xs sm:text-sm text-[var(--theme-muted)] truncate mt-0.5">
-                        {getItemSubtitle(item)}
-                      </p>
-                      {getItemMeta(item) && (
-                        <p className="text-[11px] text-[var(--theme-muted)] mt-1 font-mono">
-                          {getItemMeta(item)}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="flex sm:flex-col items-center justify-end gap-2 shrink-0 border-t sm:border-t-0 sm:border-l border-[var(--theme-border)] pt-3 sm:pt-0 sm:pl-4 w-full sm:w-auto">
-                      <button
-                        onClick={() => openItem(item)}
-                        className="flex-1 sm:flex-none px-4 py-2 bg-[var(--theme-accent)] text-[var(--theme-accent-fg)] font-bold text-xs rounded-full hover:opacity-90 transition cursor-pointer flex items-center justify-center gap-1 shadow-sm active:scale-95"
-                      >
-                        <span>{getActionLabel()}</span>
-                        <ArrowRight size={12} />
-                      </button>
-                      <button
-                        onClick={() => deleteItem(item)}
-                        className="p-2 text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 rounded-xl transition cursor-pointer active:scale-95"
-                        title="Remove from Library"
-                        aria-label="Remove item"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* VIEW MODE 3: LIST (Compact rows with low-res optimized images & instant render) */}
-            {viewMode === 'list' && (
-              <div className="flex flex-col gap-2 max-w-2xl mx-auto w-full">
-                {currentList.map((item, idx) => (
-                  <div
-                    key={item.id || item.trackId || idx}
-                    className="group bg-[var(--theme-card)]/50 hover:bg-[var(--theme-card)] border border-[var(--theme-border)] rounded-2xl p-2.5 sm:p-3 flex items-center justify-between gap-3 transition duration-150 cursor-pointer"
-                    onClick={() => openItem(item)}
-                  >
-                    <div className="flex items-center gap-3 min-w-0 flex-1">
-                      <div className="w-12 h-12 rounded-xl aspect-square overflow-hidden border border-[var(--theme-border)] shrink-0 shadow-sm">
                         {activeTab === 'playlists' && item.isCustom ? (
                           <PlaylistCover 
                             tracks={item.tracks?.items || []} 
@@ -500,43 +489,150 @@ export default function LibraryPage() {
                           />
                         ) : (
                           <LibraryCoverImage
-                            src={getItemImage(item, 'small')}
+                            src={getItemImage(item, 'medium')}
                             alt={getItemTitle(item)}
                             isCircle={activeTab === 'artists'}
-                            priority={idx < 8}
+                            priority={idx < 4}
                             className="w-full h-full"
                           />
                         )}
+                        {isItemNavigating && (
+                          <div className="absolute inset-0 bg-black/60 backdrop-blur-[1px] flex flex-col items-center justify-center gap-1.5 animate-fade-in z-20">
+                            <div className="w-7 h-7 rounded-full border-2 border-[var(--theme-accent)] border-t-transparent animate-spin" />
+                            <span className="text-[9px] font-bold text-white tracking-widest uppercase font-mono">Opening...</span>
+                          </div>
+                        )}
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <h4 className="text-sm font-bold text-[var(--theme-fg)] group-hover:text-[var(--theme-accent)] transition truncate">
+
+                      <div className="flex-1 min-w-0 text-center sm:text-left">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--theme-accent)] bg-[var(--theme-surface)] px-2 py-0.5 rounded-full border border-[var(--theme-border)]">
+                          {activeTab.slice(0, -1)}
+                        </span>
+                        <h3
+                          onClick={() => openItem(item)}
+                          className="text-base sm:text-lg font-bold text-[var(--theme-fg)] group-hover:text-[var(--theme-accent)] transition truncate mt-1.5 cursor-pointer"
+                        >
                           {getItemTitle(item)}
-                        </h4>
-                        <p className="text-xs text-[var(--theme-muted)] truncate">
+                        </h3>
+                        <p className="text-xs sm:text-sm text-[var(--theme-muted)] truncate mt-0.5">
                           {getItemSubtitle(item)}
                         </p>
+                        {getItemMeta(item) && (
+                          <p className="text-[11px] text-[var(--theme-muted)] mt-1 font-mono">
+                            {getItemMeta(item)}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="flex sm:flex-col items-center justify-end gap-2 shrink-0 border-t sm:border-t-0 sm:border-l border-[var(--theme-border)] pt-3 sm:pt-0 sm:pl-4 w-full sm:w-auto">
+                        <button
+                          onClick={() => openItem(item)}
+                          disabled={isPending}
+                          className="flex-1 sm:flex-none px-4 py-2 bg-[var(--theme-accent)] text-[var(--theme-accent-fg)] font-bold text-xs rounded-full hover:opacity-90 transition cursor-pointer flex items-center justify-center gap-1.5 shadow-sm active:scale-95 disabled:opacity-75 disabled:cursor-wait"
+                        >
+                          {isItemNavigating ? (
+                            <>
+                              <div className="w-3.5 h-3.5 rounded-full border-2 border-current border-t-transparent animate-spin" />
+                              <span>Opening...</span>
+                            </>
+                          ) : (
+                            <>
+                              <span>{getActionLabel()}</span>
+                              <ArrowRight size={12} />
+                            </>
+                          )}
+                        </button>
+                        <button
+                          onClick={() => deleteItem(item)}
+                          className="p-2 text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 rounded-xl transition cursor-pointer active:scale-95"
+                          title="Remove from Library"
+                          aria-label="Remove item"
+                        >
+                          <Trash2 size={14} />
+                        </button>
                       </div>
                     </div>
+                  );
+                })}
+              </div>
+            )}
 
-                    <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        onClick={() => openItem(item)}
-                        className="px-3 py-1.5 bg-[var(--theme-accent)] text-[var(--theme-accent-fg)] font-bold text-xs rounded-full hover:opacity-90 transition cursor-pointer flex items-center gap-1 shadow-sm active:scale-95"
-                      >
-                        <span>Open</span>
-                        <ArrowRight size={12} />
-                      </button>
-                      <button
-                        onClick={() => deleteItem(item)}
-                        className="p-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-xl transition cursor-pointer active:scale-95"
-                        title="Remove from Library"
-                        aria-label="Remove item"
-                      >
-                        <Trash2 size={14} />
-                      </button>
+            {/* VIEW MODE 3: LIST (Compact rows with low-res optimized images & instant render) */}
+            {viewMode === 'list' && (
+              <div className="flex flex-col gap-2 max-w-2xl mx-auto w-full">
+                {currentList.map((item, idx) => {
+                  const itemId = item.id || item.trackId || item.trackURI;
+                  const isItemNavigating = isPending && navigatingId === itemId;
+
+                  return (
+                    <div
+                      key={itemId || idx}
+                      className="group bg-[var(--theme-card)]/50 hover:bg-[var(--theme-card)] border border-[var(--theme-border)] rounded-2xl p-2.5 sm:p-3 flex items-center justify-between gap-3 transition duration-150 cursor-pointer"
+                      onClick={() => openItem(item)}
+                    >
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div className="relative w-12 h-12 rounded-xl aspect-square overflow-hidden border border-[var(--theme-border)] shrink-0 shadow-sm">
+                          {activeTab === 'playlists' && item.isCustom ? (
+                            <PlaylistCover 
+                              tracks={item.tracks?.items || []} 
+                              name={item.name} 
+                              defaultCover={item.image} 
+                            />
+                          ) : (
+                            <LibraryCoverImage
+                              src={getItemImage(item, 'small')}
+                              alt={getItemTitle(item)}
+                              isCircle={activeTab === 'artists'}
+                              priority={idx < 8}
+                              className="w-full h-full"
+                            />
+                          )}
+                          {isItemNavigating && (
+                            <div className="absolute inset-0 bg-black/60 backdrop-blur-[1px] flex items-center justify-center animate-fade-in z-20">
+                              <div className="w-5 h-5 rounded-full border-2 border-[var(--theme-accent)] border-t-transparent animate-spin" />
+                            </div>
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <h4 className="text-sm font-bold text-[var(--theme-fg)] group-hover:text-[var(--theme-accent)] transition truncate">
+                            {getItemTitle(item)}
+                          </h4>
+                          <p className="text-xs text-[var(--theme-muted)] truncate">
+                            {getItemSubtitle(item)}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          onClick={() => openItem(item)}
+                          disabled={isPending}
+                          className="px-3 py-1.5 bg-[var(--theme-accent)] text-[var(--theme-accent-fg)] font-bold text-xs rounded-full hover:opacity-90 transition cursor-pointer flex items-center gap-1.5 shadow-sm active:scale-95 disabled:opacity-75 disabled:cursor-wait"
+                        >
+                          {isItemNavigating ? (
+                            <>
+                              <div className="w-3 h-3 rounded-full border-2 border-current border-t-transparent animate-spin" />
+                              <span>Routing...</span>
+                            </>
+                          ) : (
+                            <>
+                              <span>Open</span>
+                              <ArrowRight size={12} />
+                            </>
+                          )}
+                        </button>
+                        <button
+                          onClick={() => deleteItem(item)}
+                          className="p-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-xl transition cursor-pointer active:scale-95"
+                          title="Remove from Library"
+                          aria-label="Remove item"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </>

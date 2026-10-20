@@ -1,7 +1,7 @@
 // src/app/track/[id]/TrackDetailClient.jsx
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { 
@@ -27,6 +27,9 @@ import { shareLink } from "@/lib/shareHelper";
 
 export default function TrackDetailClient({ id, initialData }) {
     const router = useRouter();
+    const [isPending, startTransition] = useTransition();
+    const [navigatingArtistId, setNavigatingArtistId] = useState(null);
+    const [navigatingAlbumId, setNavigatingAlbumId] = useState(null);
     const [track, setTrack] = useState(initialData);
     const [saved, setSaved] = useState(false);
     const [error, setError] = useState(null);
@@ -315,10 +318,20 @@ export default function TrackDetailClient({ id, initialData }) {
                     {artistsList.map((a, i) => (
                         <span
                             key={`${a.id || 'artist'}-${i}`}
-                            className="text-base sm:text-lg font-semibold text-[var(--theme-fg)]/90 hover:text-[var(--theme-accent)] transition cursor-pointer"
-                            onClick={() => a.id && router.push(`/artist/${a.id}`)}
+                            className="text-base sm:text-lg font-semibold text-[var(--theme-fg)]/90 hover:text-[var(--theme-accent)] transition cursor-pointer inline-flex items-center gap-1"
+                            onClick={() => {
+                                if (a.id && !isPending) {
+                                    setNavigatingArtistId(a.id);
+                                    startTransition(() => {
+                                        router.push(`/artist/${a.id}`);
+                                    });
+                                }
+                            }}
                         >
-                            {a.name}{i < artistsList.length - 1 && ', '}
+                            <span>{a.name}{i < artistsList.length - 1 && ', '}</span>
+                            {isPending && navigatingArtistId === a.id && (
+                                <span className="w-3 h-3 rounded-full border-2 border-[var(--theme-accent)] border-t-transparent animate-spin inline-block" />
+                            )}
                         </span>
                     ))}
                 </div>
@@ -327,10 +340,20 @@ export default function TrackDetailClient({ id, initialData }) {
                 {(track.album?.name || track.album) && (
                     <div className="mt-0.5">
                         <span 
-                            className="text-xs sm:text-sm text-[var(--theme-muted)] hover:text-[var(--theme-accent)] transition cursor-pointer font-medium"
-                            onClick={() => track.album?.id && router.push(`/album/${track.album.id}`)}
+                            className="text-xs sm:text-sm text-[var(--theme-muted)] hover:text-[var(--theme-accent)] transition cursor-pointer font-medium inline-flex items-center gap-1"
+                            onClick={() => {
+                                if (track.album?.id && !isPending) {
+                                    setNavigatingAlbumId(track.album.id);
+                                    startTransition(() => {
+                                        router.push(`/album/${track.album.id}`);
+                                    });
+                                }
+                            }}
                         >
-                            {track.album?.name || track.album}
+                            <span>{track.album?.name || track.album}</span>
+                            {isPending && navigatingAlbumId === track.album?.id && (
+                                <span className="w-2.5 h-2.5 rounded-full border-2 border-[var(--theme-accent)] border-t-transparent animate-spin inline-block" />
+                            )}
                         </span>
                     </div>
                 )}

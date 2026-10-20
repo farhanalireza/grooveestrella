@@ -1,7 +1,7 @@
 // src/app/album/[id]/AlbumDetailClient.jsx
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Bookmark, BookmarkCheck, Disc, ChevronRight, Clock, Layers, Sparkles, Plus, Check, MoreHorizontal, Copy, Play, Share2, ListPlus } from "lucide-react";
@@ -24,6 +24,9 @@ import { shareLink } from "@/lib/shareHelper";
 
 export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
     const router = useRouter();
+    const [isPending, startTransition] = useTransition();
+    const [navigatingTrackId, setNavigatingTrackId] = useState(null);
+    const [navigatingArtistId, setNavigatingArtistId] = useState(null);
     const [album, setAlbum] = useState(initialAlbum);
     const [tracks, setTracks] = useState(initialTracks || []);
     const [saved, setSaved] = useState(false);
@@ -480,10 +483,20 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
                     {artistsList.map((a, i) => (
                         <span
                             key={`${a.id || 'artist'}-${i}`}
-                            className="text-base sm:text-lg font-semibold text-[var(--theme-fg)]/90 hover:text-[var(--theme-accent)] transition cursor-pointer"
-                            onClick={() => a.id && router.push(`/artist/${a.id}`)}
+                            className="text-base sm:text-lg font-semibold text-[var(--theme-fg)]/90 hover:text-[var(--theme-accent)] transition cursor-pointer inline-flex items-center gap-1"
+                            onClick={() => {
+                                if (a.id && !isPending) {
+                                    setNavigatingArtistId(a.id);
+                                    startTransition(() => {
+                                        router.push(`/artist/${a.id}`);
+                                    });
+                                }
+                            }}
                         >
-                            {a.name}{i < artistsList.length - 1 && ', '}
+                            <span>{a.name}{i < artistsList.length - 1 && ', '}</span>
+                            {isPending && navigatingArtistId === a.id && (
+                                <span className="w-3 h-3 rounded-full border-2 border-[var(--theme-accent)] border-t-transparent animate-spin inline-block" />
+                            )}
                         </span>
                     ))}
                 </div>
@@ -669,12 +682,26 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
                                                         return (
                                                             <div 
                                                                 key={`${track.id || track.trackID || 'track'}-${discSection.discNumber}-${sideSection.side || 'side'}-${index}`}
-                                                                className="flex items-center justify-between py-2.5 sm:py-3 px-2 sm:px-3 hover:bg-[var(--theme-card)]/50 rounded-xl transition duration-150 border-b border-[var(--theme-border)]/40 last:border-b-0 group cursor-pointer"
-                                                                onClick={() => (track.id || track.trackID) && router.push(`/track/${track.id || track.trackID}`)}
+                                                                className={`flex items-center justify-between py-2.5 sm:py-3 px-2 sm:px-3 hover:bg-[var(--theme-card)]/50 rounded-xl transition duration-150 border-b border-[var(--theme-border)]/40 last:border-b-0 group ${
+                                                                    isPending && navigatingTrackId === (track.id || track.trackID) ? 'opacity-70 pointer-events-none cursor-wait' : 'cursor-pointer'
+                                                                }`}
+                                                                onClick={() => {
+                                                                    const tId = track.id || track.trackID;
+                                                                    if (tId && !isPending) {
+                                                                        setNavigatingTrackId(tId);
+                                                                        startTransition(() => {
+                                                                            router.push(`/track/${tId}`);
+                                                                        });
+                                                                    }
+                                                                }}
                                                             >
                                                                 <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
-                                                                    <span className="w-7 text-center text-xs sm:text-sm font-semibold text-[var(--theme-muted)] group-hover:text-[var(--theme-fg)] shrink-0 font-mono">
-                                                                        {track.trackNumber || track.pos || index + 1}
+                                                                    <span className="w-7 text-center text-xs sm:text-sm font-semibold text-[var(--theme-muted)] group-hover:text-[var(--theme-fg)] shrink-0 font-mono flex items-center justify-center">
+                                                                        {isPending && navigatingTrackId === (track.id || track.trackID) ? (
+                                                                            <span className="w-3.5 h-3.5 rounded-full border-2 border-[var(--theme-accent)] border-t-transparent animate-spin inline-block" />
+                                                                        ) : (
+                                                                            track.trackNumber || track.pos || index + 1
+                                                                        )}
                                                                     </span>
 
                                                                     <div className="flex flex-col min-w-0 flex-1">

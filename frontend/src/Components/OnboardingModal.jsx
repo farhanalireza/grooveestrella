@@ -24,58 +24,111 @@ import {
   Sliders,
   ExternalLink,
   CheckCircle2,
+  Star,
+  Sun,
+  Zap,
+  Mic,
+  Search,
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import { toast } from "@/lib/toast";
 import { generateRandomName } from "@/lib/nameGenerator";
-
-const AVATAR_OPTIONS = [
-  { id: "headphones", icon: "🎧", label: "Audiophile", bg: "from-amber-500/20 to-rose-500/20" },
-  { id: "vinyl", icon: "💿", label: "Vinyl Junkie", bg: "from-purple-500/20 to-blue-500/20" },
-  { id: "flame", icon: "🔥", label: "Trendsetter", bg: "from-orange-500/20 to-amber-500/20" },
-  { id: "cosmic", icon: "🌌", label: "Stargazer", bg: "from-indigo-500/20 to-cyan-500/20" },
-  { id: "cassette", icon: "📼", label: "Retro Head", bg: "from-emerald-500/20 to-teal-500/20" },
-  { id: "sax", icon: "🎷", label: "Soul Groover", bg: "from-pink-500/20 to-yellow-500/20" },
-];
+import UserAvatarIcon, { AVAILABLE_AVATARS } from "./UserAvatarIcon";
 
 const POPULAR_GENRES = [
-  { id: "Rock", label: "Rock", emoji: "🎸" },
-  { id: "Indie", label: "Indie", emoji: "🌿" },
-  { id: "Pop", label: "Pop", emoji: "🍬" },
-  { id: "Synthpop", label: "Synthpop", emoji: "🕹️" },
-  { id: "Electronic", label: "Electronic", emoji: "⚡" },
-  { id: "Hip Hop", label: "Hip Hop", emoji: "🎤" },
-  { id: "Jazz", label: "Jazz", emoji: "🎷" },
-  { id: "Classical", label: "Classical", emoji: "🎻" },
-  { id: "Alternative", label: "Alternative", emoji: "🌀" },
-  { id: "Metal", label: "Metal", emoji: "🤘" },
-  { id: "R&B", label: "R&B", emoji: "🎙️" },
-  { id: "Funk", label: "Funk", emoji: "🕺" },
-  { id: "Ambient", label: "Ambient", emoji: "🌌" },
-  { id: "Soul", label: "Soul", emoji: "🕯️" },
-  { id: "Disco", label: "Disco", emoji: "🪩" },
-  { id: "Punk", label: "Punk", emoji: "🧷" },
-  { id: "Blues", label: "Blues", emoji: "🎺" },
-  { id: "Folk", label: "Folk", emoji: "🪕" },
+  { id: "Rock", label: "Rock", icon: Flame },
+  { id: "Indie", label: "Indie", icon: Sparkles },
+  { id: "Pop", label: "Pop", icon: Star },
+  { id: "Synthpop", label: "Synthpop", icon: Radio },
+  { id: "Electronic", label: "Electronic", icon: Zap },
+  { id: "Hip Hop", label: "Hip Hop", icon: Mic },
+  { id: "Jazz", label: "Jazz", icon: Music },
+  { id: "Classical", label: "Classical", icon: Disc },
+  { id: "Alternative", label: "Alternative", icon: Compass },
+  { id: "Metal", label: "Metal", icon: Volume2 },
+  { id: "R&B", label: "R&B", icon: Heart },
+  { id: "Funk", label: "Funk", icon: Disc3 },
+  { id: "Ambient", label: "Ambient", icon: Headphones },
+  { id: "Soul", label: "Soul", icon: Sun },
+  { id: "Disco", label: "Disco", icon: Disc },
+  { id: "Punk", label: "Punk", icon: Zap },
+  { id: "Blues", label: "Blues", icon: Sliders },
+  { id: "Folk", label: "Folk", icon: Compass },
 ];
 
 const CURATED_ARTISTS = [
-  { name: "The Beatles", genre: "Classic Rock" },
-  { name: "David Bowie", genre: "Glam / Art Rock" },
-  { name: "Daft Punk", genre: "Electronic" },
-  { name: "Pink Floyd", genre: "Psychedelic Rock" },
-  { name: "Queen", genre: "Rock" },
-  { name: "Radiohead", genre: "Alternative" },
-  { name: "Michael Jackson", genre: "Pop / R&B" },
-  { name: "Kendrick Lamar", genre: "Hip Hop" },
-  { name: "Fleetwood Mac", genre: "Rock" },
-  { name: "Taylor Swift", genre: "Pop" },
-  { name: "Arctic Monkeys", genre: "Indie Rock" },
-  { name: "Led Zeppelin", genre: "Hard Rock" },
-  { name: "Lana Del Rey", genre: "Dream Pop" },
-  { name: "Miles Davis", genre: "Jazz" },
-  { name: "Tame Impala", genre: "Psychedelic Pop" },
-  { name: "Gorillaz", genre: "Alternative" },
+  {
+    id: "544fb460-1482-40e5-b4e8-f7246b976eed",
+    name: "David Bowie",
+    genre: "Glam / Art Rock",
+    image: "https://cdn-images.dzcdn.net/images/artist/8301a6a09a24f4bb35950c59717defa0/250x250-000000-80-0-0.jpg",
+  },
+  {
+    id: "056e4f3e-d505-4dad-8ec1-d04f521cbb56",
+    name: "Daft Punk",
+    genre: "Electronic",
+    image: "https://cdn-images.dzcdn.net/images/artist/638e69b9caaf9f9f3f8826febea7b543/250x250-000000-80-0-0.jpg",
+  },
+  {
+    id: "83d91898-7763-47d7-b03b-b92132375c47",
+    name: "Pink Floyd",
+    genre: "Psychedelic Rock",
+    image: "https://cdn-images.dzcdn.net/images/artist/d62a818a5de6455f17b6a992cf22b32f/250x250-000000-80-0-0.jpg",
+  },
+  {
+    id: "b10bbbfc-cf9e-42e0-be17-e2c3e1d2600d",
+    name: "The Beatles",
+    genre: "Classic Rock",
+    image: "https://cdn-images.dzcdn.net/images/artist/16925ed8f96eb621ecd56c2c8ba3da6e/250x250-000000-80-0-0.jpg",
+  },
+  {
+    id: "0383dadf-2a4e-4d10-a46a-e6e041da8eb3",
+    name: "Queen",
+    genre: "Rock",
+    image: "https://cdn-images.dzcdn.net/images/artist/a131ced363dd67249e6a9167164188cb/250x250-000000-80-0-0.jpg",
+  },
+  {
+    id: "a74b1b7f-71a5-4011-9441-d0b5e4122711",
+    name: "Radiohead",
+    genre: "Alternative",
+    image: "https://cdn-images.dzcdn.net/images/artist/0d58cfbc90f2e776608bcdc0c45a4711/250x250-000000-80-0-0.jpg",
+  },
+  {
+    id: "f27ec8db-af05-4f36-916e-3d57f91ecf5e",
+    name: "Michael Jackson",
+    genre: "Pop / R&B",
+    image: "https://cdn-images.dzcdn.net/images/artist/97fae13b2b30e4aec2e8c9e0c7839d92/250x250-000000-80-0-0.jpg",
+  },
+  {
+    id: "d5080c9b-1249-430f-ac8d-e6f451479d79",
+    name: "Kendrick Lamar",
+    genre: "Hip Hop",
+    image: "https://cdn-images.dzcdn.net/images/artist/be0a7c550567f4af0ed202d7235b74d6/250x250-000000-80-0-0.jpg",
+  },
+  {
+    id: "bd13909d-1c07-4291-8c4d-3c066fc03066",
+    name: "Fleetwood Mac",
+    genre: "Rock",
+    image: "https://cdn-images.dzcdn.net/images/artist/ef23278cf3a67a3ca8404ddaa38699d4/250x250-000000-80-0-0.jpg",
+  },
+  {
+    id: "20244d07-534f-4eff-b4d4-930878889970",
+    name: "Taylor Swift",
+    genre: "Pop",
+    image: "https://cdn-images.dzcdn.net/images/artist/cc2495870fe1a792ad0cdb05501ad5ec/250x250-000000-80-0-0.jpg",
+  },
+  {
+    id: "ada7a83c-e3e1-40f1-93f9-3e73dbc9298a",
+    name: "Arctic Monkeys",
+    genre: "Indie Rock",
+    image: "https://cdn-images.dzcdn.net/images/artist/6c03e4c7c36800897fd468633286db24/250x250-000000-80-0-0.jpg",
+  },
+  {
+    id: "678d88b2-13e0-40da-8004-24fa0466e6c6",
+    name: "Led Zeppelin",
+    genre: "Hard Rock",
+    image: "https://cdn-images.dzcdn.net/images/artist/2cf138b96a63da677ac6fb79846607c8/250x250-000000-80-0-0.jpg",
+  },
 ];
 
 const STREAMING_PLATFORMS = [
@@ -122,15 +175,17 @@ export default function OnboardingModal() {
 
   // Step 1: Identity
   const [name, setName] = useState("");
-  const [selectedAvatar, setSelectedAvatar] = useState(AVATAR_OPTIONS[0]);
+  const [selectedAvatar, setSelectedAvatar] = useState(AVAILABLE_AVATARS[0]);
 
   // Step 2: Genres
   const [selectedGenres, setSelectedGenres] = useState(["Rock", "Indie", "Electronic"]);
   const [customGenre, setCustomGenre] = useState("");
 
-  // Step 3: Artists
-  const [selectedArtists, setSelectedArtists] = useState(["David Bowie", "Daft Punk"]);
-  const [customArtist, setCustomArtist] = useState("");
+  // Step 3: Artists (stores rich objects: { id, name, genre, image })
+  const [selectedArtists, setSelectedArtists] = useState([CURATED_ARTISTS[0], CURATED_ARTISTS[1]]);
+  const [artistSearchQuery, setArtistSearchQuery] = useState("");
+  const [artistSearchResults, setArtistSearchResults] = useState([]);
+  const [isSearchingArtists, setIsSearchingArtists] = useState(false);
 
   // Step 4: Streaming & Habits
   const [preferredPlatform, setPreferredPlatform] = useState("spotify");
@@ -157,13 +212,41 @@ export default function OnboardingModal() {
       const savedGenres = JSON.parse(localStorage.getItem("favoriteGenres") || "[]");
       const savedArtistsList = JSON.parse(localStorage.getItem("savedArtists") || "[]");
       const savedPlatform = localStorage.getItem("preferred_music_platform") || "spotify";
+      const savedAvatarId = localStorage.getItem("userAvatar");
 
       if (savedName) setName(savedName);
       else setName(generateRandomName());
 
+      if (savedAvatarId) {
+        const foundAv = AVAILABLE_AVATARS.find((a) => a.id === savedAvatarId);
+        if (foundAv) setSelectedAvatar(foundAv);
+      }
+
       if (savedGenres.length > 0) setSelectedGenres(savedGenres);
       if (savedArtistsList.length > 0) {
-        setSelectedArtists(savedArtistsList.map((a) => (typeof a === "object" ? a.name : a)));
+        // Normalize items to rich objects
+        setSelectedArtists(
+          savedArtistsList.map((a) => {
+            if (typeof a === "object") {
+              const matched = CURATED_ARTISTS.find(
+                (c) => c.name.toLowerCase() === (a.name || a.title || "").toLowerCase()
+              );
+              return {
+                id: a.id || matched?.id || encodeURIComponent(a.name || a.title),
+                name: a.name || a.title,
+                image: a.image || a.url || matched?.image || "",
+                genre: a.genre || matched?.genre || "Artist",
+              };
+            }
+            const matched = CURATED_ARTISTS.find((c) => c.name.toLowerCase() === a.toLowerCase());
+            return {
+              id: matched?.id || encodeURIComponent(a),
+              name: a,
+              image: matched?.image || "",
+              genre: matched?.genre || "Artist",
+            };
+          })
+        );
       }
       setPreferredPlatform(savedPlatform);
 
@@ -198,21 +281,42 @@ export default function OnboardingModal() {
     setCustomGenre("");
   };
 
-  const toggleArtist = (artistName) => {
-    if (selectedArtists.includes(artistName)) {
-      setSelectedArtists(selectedArtists.filter((a) => a !== artistName));
+  const toggleArtist = (artistObj) => {
+    const exists = selectedArtists.some(
+      (a) => a.name.toLowerCase() === artistObj.name.toLowerCase() || (a.id && artistObj.id && a.id === artistObj.id)
+    );
+    if (exists) {
+      setSelectedArtists(
+        selectedArtists.filter(
+          (a) =>
+            a.name.toLowerCase() !== artistObj.name.toLowerCase() &&
+            (!artistObj.id || a.id !== artistObj.id)
+        )
+      );
     } else {
-      setSelectedArtists([...selectedArtists, artistName]);
+      setSelectedArtists([...selectedArtists, artistObj]);
     }
   };
 
-  const handleAddCustomArtist = () => {
-    const clean = customArtist.trim();
-    if (!clean) return;
-    if (!selectedArtists.includes(clean)) {
-      setSelectedArtists([...selectedArtists, clean]);
+  const handleSearchArtists = async (query) => {
+    setArtistSearchQuery(query);
+    const clean = query.trim();
+    if (!clean) {
+      setArtistSearchResults([]);
+      return;
     }
-    setCustomArtist("");
+
+    setIsSearchingArtists(true);
+    try {
+      const res = await fetch(`/api/search?q=${encodeURIComponent(clean)}&type=artist&limit=6`);
+      if (res.ok) {
+        const data = await res.json();
+        setArtistSearchResults(data.results || []);
+      }
+    } catch (_) {
+    } finally {
+      setIsSearchingArtists(false);
+    }
   };
 
   const handleNext = () => {
@@ -248,19 +352,28 @@ export default function OnboardingModal() {
     const finalName = name.trim() || generateRandomName();
 
     localStorage.setItem("userName", finalName);
-    localStorage.setItem("userAvatar", selectedAvatar.icon);
+    localStorage.setItem("userAvatar", selectedAvatar.id);
     localStorage.setItem("userAvatarLabel", selectedAvatar.label);
     localStorage.setItem("favoriteGenres", JSON.stringify(selectedGenres));
     localStorage.setItem("preferred_music_platform", preferredPlatform);
     localStorage.setItem("groove_listening_vibe", listeningVibe);
     localStorage.setItem("groove_show_vinyl_sides", String(showVinylSides));
 
-    // Save selected artists
-    const artistObjects = selectedArtists.map((a) => ({
-      name: a,
-      id: encodeURIComponent(a),
-      type: "artist",
-    }));
+    // Save selected artists with real ID and real Image so library always has authentic portraits
+    const artistObjects = selectedArtists.map((a) => {
+      const artName = a.name || a.title || "Artist";
+      const matched = CURATED_ARTISTS.find((c) => c.name.toLowerCase() === artName.toLowerCase());
+      return {
+        id: a.id || matched?.id || encodeURIComponent(artName),
+        name: artName,
+        title: artName,
+        artist: artName,
+        image: a.image || a.url || matched?.image || "",
+        coverArt: a.image || a.url || matched?.image || "",
+        type: "artist",
+        genre: a.genre || matched?.genre || "Artist",
+      };
+    });
     localStorage.setItem("savedArtists", JSON.stringify(artistObjects));
 
     // Mark completed
@@ -270,7 +383,7 @@ export default function OnboardingModal() {
     // Dispatch profile update event for live UI reactivity
     window.dispatchEvent(new CustomEvent("groove-profile-updated"));
 
-    toast.success(`Welcome to GrooveEstrella, ${finalName}! 🎵`);
+    toast.success(`Welcome to GrooveEstrella, ${finalName}!`);
     setIsOpen(false);
   };
 
@@ -285,67 +398,42 @@ export default function OnboardingModal() {
   if (!mounted || !isOpen) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[600] flex items-center justify-center p-3 sm:p-5 overflow-y-auto">
-      {/* Ambient Backdrop */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/85 backdrop-blur-xl"
-        onClick={() => {}}
-      />
-
-      {/* Main Glass Card Modal */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.94, y: 20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.94, y: 20 }}
-        transition={{ type: "spring", damping: 25, stiffness: 320 }}
-        className="relative w-full max-w-xl bg-[var(--theme-card)]/95 border border-[var(--theme-border)] rounded-3xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden z-10 font-sans"
-      >
-        {/* Top Liquid Progress Bar */}
-        <div className="relative w-full h-1.5 bg-[var(--theme-surface)]">
-          <motion.div
-            className="h-full bg-gradient-to-r from-[var(--theme-accent)] via-amber-400 to-[var(--theme-accent)]"
-            initial={{ width: "20%" }}
-            animate={{ width: `${(step / 5) * 100}%` }}
-            transition={{ duration: 0.3 }}
-          />
-        </div>
-
-        {/* Header Controls */}
-        <div className="px-5 py-4 border-b border-[var(--theme-border)] flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            {step > 1 && (
-              <button
-                onClick={handleBack}
-                className="p-1.5 rounded-full hover:bg-[var(--theme-surface)] text-[var(--theme-muted)] hover:text-[var(--theme-fg)] transition cursor-pointer"
-                title="Previous step"
-              >
-                <ArrowLeft size={16} />
-              </button>
-            )}
-            <div className="flex items-center gap-1.5">
-              <span className="text-[11px] font-extrabold tracking-wider uppercase text-[var(--theme-accent)]">
-                Step {step} of 5
+    <div className="fixed inset-0 z-[100000] flex items-center justify-center p-4 sm:p-6 bg-black/80 backdrop-blur-md">
+      <div className="relative w-full max-w-lg bg-[var(--theme-card)] border border-[var(--theme-border)] rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+        {/* Progress Bar & Header */}
+        <div className="p-5 pb-3 border-b border-[var(--theme-border)] bg-[var(--theme-surface)]/50">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-[var(--theme-accent)] animate-pulse" />
+              <span className="text-xs font-bold text-[var(--theme-fg)] tracking-wider uppercase font-mono">
+                Setup • Step {step} of 5
               </span>
             </div>
-          </div>
-
-          <div className="flex items-center gap-2">
             <button
               onClick={handleSkip}
-              className="text-xs text-[var(--theme-muted)] hover:text-[var(--theme-fg)] font-semibold transition cursor-pointer px-2 py-1"
+              className="text-xs font-semibold text-[var(--theme-muted)] hover:text-[var(--theme-fg)] transition cursor-pointer"
             >
-              Skip
+              Skip setup
             </button>
+          </div>
+
+          {/* Stepper bar */}
+          <div className="w-full bg-[var(--theme-surface)] h-1.5 rounded-full overflow-hidden flex">
+            {[1, 2, 3, 4, 5].map((s) => (
+              <div
+                key={s}
+                className={`flex-1 h-full transition-all duration-300 ${
+                  s <= step ? "bg-[var(--theme-accent)]" : "bg-[var(--theme-border)]/50"
+                } ${s > 1 ? "border-l border-[var(--theme-card)]" : ""}`}
+              />
+            ))}
           </div>
         </div>
 
-        {/* Content Body */}
-        <div className="flex-1 overflow-y-auto p-5 sm:p-7 space-y-6">
+        {/* Scrollable Body Content */}
+        <div className="p-6 overflow-y-auto flex-1">
           <AnimatePresence mode="wait">
-            {/* STEP 1: IDENTITY & NAME */}
+            {/* STEP 1: IDENTITY */}
             {step === 1 && (
               <motion.div
                 key="step1"
@@ -356,78 +444,70 @@ export default function OnboardingModal() {
               >
                 <div className="text-center space-y-1.5">
                   <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-[var(--theme-accent)]/15 border border-[var(--theme-accent)]/30 text-[var(--theme-accent)] mb-2 shadow-inner">
-                    <Sparkles size={24} />
+                    <UserAvatarIcon avatarId={selectedAvatar.id} className="w-6 h-6 text-[var(--theme-accent)]" />
                   </div>
                   <h2 className="text-xl sm:text-2xl font-black text-[var(--theme-fg)] font-display tracking-tight">
-                    Welcome to GrooveEstrella
+                    Welcome to the Music Layer
                   </h2>
                   <p className="text-xs sm:text-sm text-[var(--theme-muted)] max-w-sm mx-auto">
-                    Let's craft your music explorer identity. We rolled an aesthetic name for you!
+                    Claim your listener handle and pick your vinyl-inspired groove avatar.
                   </p>
                 </div>
 
-                {/* Live Identity Badge Preview */}
-                <div className="p-4 rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)]/80 flex items-center gap-4 shadow-sm">
-                  <div
-                    className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${selectedAvatar.bg} border border-[var(--theme-border)] flex items-center justify-center text-2xl shadow-inner shrink-0`}
-                  >
-                    {selectedAvatar.icon}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <span className="text-[10px] font-extrabold uppercase tracking-widest text-[var(--theme-accent)]">
-                      {selectedAvatar.label}
-                    </span>
-                    <h3 className="text-base sm:text-lg font-bold text-[var(--theme-fg)] truncate">
-                      {name || "Cosmic Groover"}
-                    </h3>
-                  </div>
-                </div>
-
-                {/* Name Generator & Custom Input */}
+                {/* Name Input with Roll Dice */}
                 <div className="space-y-2">
                   <label className="text-xs font-bold text-[var(--theme-muted)] uppercase tracking-wider">
-                    Explorer Handle
+                    Your Listener Handle
                   </label>
                   <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      placeholder="Enter a display name..."
-                      className="flex-1 bg-[var(--theme-surface)] border border-[var(--theme-border)] focus:border-[var(--theme-accent)] rounded-xl px-3.5 py-2.5 text-sm font-semibold text-[var(--theme-fg)] outline-none transition shadow-sm"
-                    />
+                    <div className="relative flex-1">
+                      <input
+                        type="text"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        placeholder="e.g. Velvet Groove"
+                        maxLength={30}
+                        className="w-full bg-[var(--theme-surface)] border border-[var(--theme-border)] focus:border-[var(--theme-accent)] focus:ring-1 focus:ring-[var(--theme-accent)] rounded-2xl px-4 py-3 text-sm font-bold text-[var(--theme-fg)] outline-none transition"
+                      />
+                    </div>
                     <button
-                      onClick={handleRollName}
                       type="button"
-                      className="h-10 px-3.5 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] hover:border-[var(--theme-accent)] text-[var(--theme-accent)] flex items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer shadow-sm text-xs font-bold shrink-0"
-                      title="Roll a new random aesthetic music name"
+                      onClick={handleRollName}
+                      className="h-11 px-3.5 rounded-2xl bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] border border-[var(--theme-border)] hover:border-[var(--theme-accent)] text-[var(--theme-fg)] transition flex items-center justify-center gap-1.5 text-xs font-bold active:scale-95 cursor-pointer shadow-sm"
+                      title="Roll a random vinyl adjective + noun name"
                     >
-                      <Dice5 size={16} />
-                      <span className="hidden sm:inline">Reroll</span>
+                      <Dice5 size={16} className="text-[var(--theme-accent)]" />
+                      <span>Roll</span>
                     </button>
                   </div>
+                  <p className="text-[11px] text-[var(--theme-muted)]">
+                    Pick a name or tap roll for a fun adjective + noun combination.
+                  </p>
                 </div>
 
-                {/* Avatar Picker */}
+                {/* Clean Vector Avatar Picker (Zero Emojis) */}
                 <div className="space-y-2">
                   <label className="text-xs font-bold text-[var(--theme-muted)] uppercase tracking-wider">
                     Choose Your Music Avatar
                   </label>
                   <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-                    {AVATAR_OPTIONS.map((av) => {
+                    {AVAILABLE_AVATARS.map((av) => {
                       const isSelected = selectedAvatar.id === av.id;
+                      const IconComp = av.icon;
                       return (
                         <button
                           key={av.id}
                           onClick={() => setSelectedAvatar(av)}
                           type="button"
-                          className={`p-2.5 rounded-2xl border text-center flex flex-col items-center gap-1 transition-all duration-200 cursor-pointer active:scale-95 ${
+                          className={`p-3 rounded-2xl border text-center flex flex-col items-center gap-1.5 transition-all duration-200 cursor-pointer active:scale-95 ${
                             isSelected
-                              ? "bg-[var(--theme-accent)]/15 border-[var(--theme-accent)] ring-1 ring-[var(--theme-accent)]/40 shadow-md"
-                              : "bg-[var(--theme-surface)] border-[var(--theme-border)] hover:border-[var(--theme-accent)]/50"
+                              ? "bg-[var(--theme-accent)]/15 border-[var(--theme-accent)] ring-1 ring-[var(--theme-accent)]/40 shadow-md text-[var(--theme-accent)]"
+                              : "bg-[var(--theme-surface)] border-[var(--theme-border)] text-[var(--theme-muted)] hover:text-[var(--theme-fg)] hover:border-[var(--theme-accent)]/50"
                           }`}
                         >
-                          <span className="text-2xl">{av.icon}</span>
+                          <div className={`w-9 h-9 rounded-xl flex items-center justify-center bg-gradient-to-br ${av.bg} shadow-inner`}>
+                            <IconComp className="w-5 h-5 text-[var(--theme-fg)]" />
+                          </div>
                           <span className="text-[10px] font-semibold text-[var(--theme-fg)] truncate max-w-full">
                             {av.label.split(" ")[0]}
                           </span>
@@ -439,7 +519,7 @@ export default function OnboardingModal() {
               </motion.div>
             )}
 
-            {/* STEP 2: FAVORITE GENRES */}
+            {/* STEP 2: FAVORITE GENRES (Clean Icons - Zero Emojis) */}
             {step === 2 && (
               <motion.div
                 key="step2"
@@ -464,18 +544,19 @@ export default function OnboardingModal() {
                 <div className="flex flex-wrap gap-2 justify-center max-h-56 overflow-y-auto p-1 scrollbar-none">
                   {POPULAR_GENRES.map((g) => {
                     const isSelected = selectedGenres.includes(g.id);
+                    const IconComp = g.icon;
                     return (
                       <button
                         key={g.id}
                         type="button"
                         onClick={() => toggleGenre(g.id)}
-                        className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer active:scale-95 border ${
+                        className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer active:scale-95 border ${
                           isSelected
                             ? "bg-[var(--theme-accent)] border-[var(--theme-accent)] text-[var(--theme-accent-fg)] shadow-md"
                             : "bg-[var(--theme-surface)] border-[var(--theme-border)] text-[var(--theme-fg)] hover:border-[var(--theme-accent)]/50"
                         }`}
                       >
-                        <span>{g.emoji}</span>
+                        <IconComp className="w-3.5 h-3.5 shrink-0" />
                         <span>{g.label}</span>
                         {isSelected && <Check size={12} className="ml-0.5" />}
                       </button>
@@ -508,70 +589,143 @@ export default function OnboardingModal() {
               </motion.div>
             )}
 
-            {/* STEP 3: FAVORITE ARTISTS */}
+            {/* STEP 3: FAVORITE ARTISTS WITH REAL PORTRAITS & SEARCH */}
             {step === 3 && (
               <motion.div
                 key="step3"
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
-                className="space-y-5"
+                className="space-y-4"
               >
-                <div className="text-center space-y-1.5">
-                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-[var(--theme-accent)]/15 border border-[var(--theme-accent)]/30 text-[var(--theme-accent)] mb-2 shadow-inner">
+                <div className="text-center space-y-1">
+                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-[var(--theme-accent)]/15 border border-[var(--theme-accent)]/30 text-[var(--theme-accent)] mb-1 shadow-inner">
                     <Heart size={24} />
                   </div>
                   <h2 className="text-xl sm:text-2xl font-black text-[var(--theme-fg)] font-display tracking-tight">
                     Who's in your rotation?
                   </h2>
                   <p className="text-xs sm:text-sm text-[var(--theme-muted)] max-w-sm mx-auto">
-                    Pick legendary artists you love or add your personal favorites.
+                    Pick legendary artists or search for anyone in the open catalog.
                   </p>
                 </div>
 
-                {/* Curated Artists Chips */}
-                <div className="flex flex-wrap gap-2 justify-center max-h-56 overflow-y-auto p-1 scrollbar-none">
+                {/* Curated Artists Cards Grid with Real Cover Photos */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto p-1 scrollbar-none">
                   {CURATED_ARTISTS.map((artist) => {
-                    const isSelected = selectedArtists.includes(artist.name);
+                    const isSelected = selectedArtists.some(
+                      (a) =>
+                        a.name.toLowerCase() === artist.name.toLowerCase() ||
+                        (a.id && a.id === artist.id)
+                    );
                     return (
                       <button
                         key={artist.name}
                         type="button"
-                        onClick={() => toggleArtist(artist.name)}
-                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer active:scale-95 border ${
+                        onClick={() => toggleArtist(artist)}
+                        className={`flex items-center gap-2 p-1.5 rounded-2xl text-xs font-bold transition-all duration-200 cursor-pointer active:scale-95 border text-left ${
                           isSelected
-                            ? "bg-[var(--theme-accent)] border-[var(--theme-accent)] text-[var(--theme-accent-fg)] shadow-md"
+                            ? "bg-[var(--theme-accent)]/15 border-[var(--theme-accent)] text-[var(--theme-fg)] shadow-md ring-1 ring-[var(--theme-accent)]/30"
                             : "bg-[var(--theme-surface)] border-[var(--theme-border)] text-[var(--theme-fg)] hover:border-[var(--theme-accent)]/50"
                         }`}
                       >
-                        <span>{artist.name}</span>
-                        {isSelected && <Check size={12} />}
+                        <img
+                          src={artist.image}
+                          alt={artist.name}
+                          className="w-8 h-8 rounded-full object-cover shrink-0 ring-1 ring-[var(--theme-border)]"
+                          onError={(e) => {
+                            e.currentTarget.src = "https://placehold.co/100x100/17020B/E8A87C?text=Artist";
+                          }}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-bold text-xs truncate leading-tight text-[var(--theme-fg)]">{artist.name}</p>
+                          <p className="text-[10px] text-[var(--theme-muted)] truncate">{artist.genre}</p>
+                        </div>
+                        <div
+                          className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 border transition ${
+                            isSelected
+                              ? "bg-[var(--theme-accent)] border-[var(--theme-accent)] text-[var(--theme-accent-fg)]"
+                              : "border-[var(--theme-border)] bg-[var(--theme-card)]"
+                          }`}
+                        >
+                          {isSelected && <Check size={10} />}
+                        </div>
                       </button>
                     );
                   })}
                 </div>
 
-                {/* Custom Artist Adder */}
-                <div className="flex items-center gap-2 pt-2 border-t border-[var(--theme-border)]">
-                  <input
-                    type="text"
-                    value={customArtist}
-                    onChange={(e) => setCustomArtist(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handleAddCustomArtist()}
-                    placeholder="Search or add any artist (e.g. Pink Floyd)..."
-                    className="flex-1 bg-[var(--theme-surface)] border border-[var(--theme-border)] focus:border-[var(--theme-accent)] rounded-xl px-3.5 py-2 text-xs font-medium text-[var(--theme-fg)] outline-none"
-                  />
-                  <button
-                    onClick={handleAddCustomArtist}
-                    type="button"
-                    className="h-9 px-3 rounded-xl bg-[var(--theme-surface)] border border-[var(--theme-border)] hover:border-[var(--theme-accent)] text-[var(--theme-fg)] text-xs font-bold flex items-center justify-center gap-1 active:scale-95 cursor-pointer"
-                  >
-                    <Plus size={14} />
-                    <span>Add</span>
-                  </button>
+                {/* Real Live Artist Search */}
+                <div className="space-y-2 pt-2 border-t border-[var(--theme-border)]">
+                  <div className="relative flex items-center">
+                    <Search className="w-4 h-4 text-[var(--theme-muted)] absolute left-3 pointer-events-none" />
+                    <input
+                      type="text"
+                      value={artistSearchQuery}
+                      onChange={(e) => handleSearchArtists(e.target.value)}
+                      placeholder="Search any artist catalog (e.g. Radiohead)..."
+                      className="w-full bg-[var(--theme-surface)] border border-[var(--theme-border)] focus:border-[var(--theme-accent)] rounded-xl pl-9 pr-8 py-2 text-xs font-medium text-[var(--theme-fg)] outline-none"
+                    />
+                    {isSearchingArtists && (
+                      <div className="w-3.5 h-3.5 rounded-full border-2 border-[var(--theme-accent)] border-t-transparent animate-spin absolute right-3" />
+                    )}
+                  </div>
+
+                  {/* Real Search Results with Real Photos */}
+                  {artistSearchResults.length > 0 && (
+                    <div className="bg-[var(--theme-surface)] border border-[var(--theme-border)] rounded-2xl p-1.5 shadow-xl space-y-1 max-h-36 overflow-y-auto">
+                      {artistSearchResults.map((art) => {
+                        const isSelected = selectedArtists.some(
+                          (a) => a.name.toLowerCase() === art.name.toLowerCase() || (a.id && a.id === art.id)
+                        );
+                        const artImage = art.image || art.url || "https://placehold.co/100x100/17020B/E8A87C?text=Artist";
+                        return (
+                          <div
+                            key={art.id}
+                            onClick={() =>
+                              toggleArtist({
+                                id: art.id,
+                                name: art.name,
+                                image: artImage,
+                                genre: art.genres?.[0] || "Artist",
+                              })
+                            }
+                            className="flex items-center justify-between gap-2 p-1.5 rounded-xl hover:bg-[var(--theme-card)] cursor-pointer transition"
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <img
+                                src={artImage}
+                                alt={art.name}
+                                className="w-7 h-7 rounded-full object-cover shrink-0"
+                                onError={(e) => {
+                                  e.currentTarget.src = "https://placehold.co/100x100/17020B/E8A87C?text=Artist";
+                                }}
+                              />
+                              <div className="min-w-0">
+                                <p className="text-xs font-bold text-[var(--theme-fg)] truncate">{art.name}</p>
+                                <p className="text-[10px] text-[var(--theme-muted)] truncate">
+                                  {art.country || art.genres?.[0] || "Artist"}
+                                </p>
+                              </div>
+                            </div>
+                            <span
+                              className={`p-1 rounded-full text-xs font-bold transition ${
+                                isSelected
+                                  ? "bg-[var(--theme-accent)] text-[var(--theme-accent-fg)]"
+                                  : "bg-[var(--theme-card)] border border-[var(--theme-border)] text-[var(--theme-fg)]"
+                              }`}
+                            >
+                              {isSelected ? <Check size={11} /> : <Plus size={11} />}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
+
                 <p className="text-[11px] text-[var(--theme-muted)] text-center font-medium">
-                  {selectedArtists.length} artist{selectedArtists.length === 1 ? "" : "s"} bookmarked
+                  {selectedArtists.length} artist{selectedArtists.length === 1 ? "" : "s"} bookmarked with real photo portraits
                 </p>
               </motion.div>
             )}
@@ -600,9 +754,9 @@ export default function OnboardingModal() {
                 {/* Primary Streaming Platform */}
                 <div className="space-y-2">
                   <label className="text-xs font-bold text-[var(--theme-muted)] uppercase tracking-wider">
-                    Primary Streaming Service
+                    Default Music App
                   </label>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  <div className="grid grid-cols-2 gap-2">
                     {STREAMING_PLATFORMS.map((plat) => {
                       const isSelected = preferredPlatform === plat.id;
                       return (
@@ -610,57 +764,48 @@ export default function OnboardingModal() {
                           key={plat.id}
                           type="button"
                           onClick={() => setPreferredPlatform(plat.id)}
-                          className={`p-2.5 rounded-xl border text-left transition-all duration-200 active:scale-95 cursor-pointer ${
+                          className={`p-3 rounded-2xl border text-left transition-all duration-200 cursor-pointer active:scale-95 ${
                             isSelected
-                              ? "bg-[var(--theme-accent)]/15 border-[var(--theme-accent)] ring-1 ring-[var(--theme-accent)]/30 text-[var(--theme-fg)]"
-                              : "bg-[var(--theme-surface)] border-[var(--theme-border)] text-[var(--theme-muted)] hover:border-[var(--theme-accent)]/40 hover:text-[var(--theme-fg)]"
+                              ? "bg-[var(--theme-accent)]/15 border-[var(--theme-accent)] ring-1 ring-[var(--theme-accent)]/40 shadow-md"
+                              : "bg-[var(--theme-surface)] border-[var(--theme-border)] hover:border-[var(--theme-accent)]/50"
                           }`}
                         >
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-bold">{plat.name}</span>
-                            {isSelected && <Check size={12} className="text-[var(--theme-accent)]" />}
+                          <div className="flex items-center justify-between mb-0.5">
+                            <span className="text-xs font-bold text-[var(--theme-fg)]">{plat.name}</span>
+                            {isSelected && <Check size={13} className="text-[var(--theme-accent)]" />}
                           </div>
+                          <p className="text-[10px] text-[var(--theme-muted)] line-clamp-1">{plat.desc}</p>
                         </button>
                       );
                     })}
                   </div>
                 </div>
 
-                {/* Listening Vibe Cards */}
-                <div className="space-y-2">
+                {/* Listening Vibe */}
+                <div className="space-y-2 pt-2 border-t border-[var(--theme-border)]">
                   <label className="text-xs font-bold text-[var(--theme-muted)] uppercase tracking-wider">
-                    Your Music Vibe
+                    Your Listening Style
                   </label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div className="grid grid-cols-2 gap-2">
                     {LISTENING_VIBES.map((vibe) => {
-                      const Icon = vibe.icon;
                       const isSelected = listeningVibe === vibe.id;
+                      const IconComp = vibe.icon;
                       return (
                         <button
                           key={vibe.id}
                           type="button"
                           onClick={() => setListeningVibe(vibe.id)}
-                          className={`p-3 rounded-2xl border text-left flex items-start gap-3 transition-all duration-200 active:scale-95 cursor-pointer ${
+                          className={`p-2.5 rounded-2xl border text-left transition-all duration-200 cursor-pointer active:scale-95 ${
                             isSelected
-                              ? "bg-[var(--theme-accent)]/15 border-[var(--theme-accent)] ring-1 ring-[var(--theme-accent)]/30"
-                              : "bg-[var(--theme-surface)] border-[var(--theme-border)] hover:border-[var(--theme-accent)]/40"
+                              ? "bg-[var(--theme-accent)]/15 border-[var(--theme-accent)] ring-1 ring-[var(--theme-accent)]/40"
+                              : "bg-[var(--theme-surface)] border-[var(--theme-border)] hover:border-[var(--theme-accent)]/50"
                           }`}
                         >
-                          <div
-                            className={`p-2 rounded-xl shrink-0 ${
-                              isSelected
-                                ? "bg-[var(--theme-accent)] text-[var(--theme-accent-fg)]"
-                                : "bg-[var(--theme-card)] text-[var(--theme-muted)]"
-                            }`}
-                          >
-                            <Icon size={16} />
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <IconComp size={14} className="text-[var(--theme-accent)] shrink-0" />
+                            <span className="text-xs font-bold text-[var(--theme-fg)] truncate">{vibe.title}</span>
                           </div>
-                          <div className="min-w-0 flex-1">
-                            <h4 className="text-xs font-bold text-[var(--theme-fg)]">{vibe.title}</h4>
-                            <p className="text-[11px] text-[var(--theme-muted)] leading-snug mt-0.5">
-                              {vibe.desc}
-                            </p>
-                          </div>
+                          <p className="text-[10px] text-[var(--theme-muted)] line-clamp-2">{vibe.desc}</p>
                         </button>
                       );
                     })}
@@ -669,7 +814,7 @@ export default function OnboardingModal() {
               </motion.div>
             )}
 
-            {/* STEP 5: CELEBRATION & SUMMARY */}
+            {/* STEP 5: CELEBRATION & READY */}
             {step === 5 && (
               <motion.div
                 key="step5"
@@ -677,8 +822,8 @@ export default function OnboardingModal() {
                 animate={{ opacity: 1, scale: 1 }}
                 className="space-y-6 text-center"
               >
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-3xl bg-gradient-to-br from-amber-400/20 via-[var(--theme-accent)]/30 to-purple-500/20 border border-[var(--theme-accent)]/40 text-3xl shadow-xl">
-                  {selectedAvatar.icon}
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-3xl bg-gradient-to-br from-amber-400/20 via-[var(--theme-accent)]/30 to-purple-500/20 border border-[var(--theme-accent)]/40 shadow-xl">
+                  <UserAvatarIcon avatarId={selectedAvatar.id} className="w-8 h-8 text-[var(--theme-accent)]" />
                 </div>
 
                 <div className="space-y-1">
@@ -730,13 +875,16 @@ export default function OnboardingModal() {
                       <span className="text-[10px] font-extrabold uppercase tracking-widest text-[var(--theme-muted)]">
                         Top Artists
                       </span>
-                      <div className="flex flex-wrap gap-1 mt-1">
+                      <div className="flex flex-wrap gap-1.5 mt-1">
                         {selectedArtists.slice(0, 5).map((a) => (
                           <span
-                            key={a}
-                            className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-[var(--theme-card)] border border-[var(--theme-border)] text-[var(--theme-fg)]"
+                            key={typeof a === "object" ? a.name : a}
+                            className="inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-lg bg-[var(--theme-card)] border border-[var(--theme-border)] text-[var(--theme-fg)]"
                           >
-                            {a}
+                            {typeof a === "object" && a.image && (
+                              <img src={a.image} alt="" className="w-3.5 h-3.5 rounded-full object-cover" />
+                            )}
+                            <span>{typeof a === "object" ? a.name : a}</span>
                           </span>
                         ))}
                         {selectedArtists.length > 5 && (
@@ -758,28 +906,26 @@ export default function OnboardingModal() {
           {step > 1 ? (
             <button
               onClick={handleBack}
-              className="h-11 px-4 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-card)] hover:border-[var(--theme-accent)] text-[var(--theme-fg)] text-xs font-bold transition active:scale-95 cursor-pointer shadow-sm"
+              type="button"
+              className="px-4 py-2.5 rounded-2xl bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] border border-[var(--theme-border)] text-[var(--theme-fg)] font-bold text-xs flex items-center gap-1.5 transition active:scale-95 cursor-pointer"
             >
-              Back
+              <ArrowLeft size={14} />
+              <span>Back</span>
             </button>
           ) : (
-            <button
-              onClick={handleSkip}
-              className="h-11 px-4 rounded-xl text-[var(--theme-muted)] hover:text-[var(--theme-fg)] text-xs font-semibold transition cursor-pointer"
-            >
-              Skip
-            </button>
+            <div />
           )}
 
           <button
             onClick={handleNext}
-            className="h-11 px-6 rounded-xl bg-[var(--theme-accent)] hover:opacity-90 active:scale-95 text-[var(--theme-accent-fg)] text-xs font-extrabold flex items-center justify-center gap-2 transition shadow-md cursor-pointer ml-auto"
+            type="button"
+            className="px-6 py-2.5 rounded-2xl bg-[var(--theme-accent)] hover:opacity-95 text-[var(--theme-accent-fg)] font-extrabold text-xs sm:text-sm flex items-center gap-2 transition active:scale-95 shadow-lg shadow-[var(--theme-accent)]/20 cursor-pointer ml-auto"
           >
-            <span>{step === 5 ? "Start Exploring" : "Continue"}</span>
-            <ChevronRight size={16} />
+            <span>{step === 5 ? "Enter GrooveEstrella" : "Continue"}</span>
+            <ChevronRight size={15} />
           </button>
         </div>
-      </motion.div>
+      </div>
     </div>,
     document.body
   );

@@ -13,6 +13,7 @@ import GrooveLoader from '@/Components/GrooveLoader';
 import Link from 'next/link';
 import { toast } from '@/lib/toast';
 import { generateRandomName, getOrSetUserName } from '@/lib/nameGenerator';
+import UserAvatarIcon, { AVAILABLE_AVATARS } from '@/Components/UserAvatarIcon';
 
 const AVAILABLE_GENRES = [
   "Rock", "Pop", "Indie", "Electronic", "Hip Hop", 
@@ -25,6 +26,7 @@ function UserDashboardContent() {
   const [userName, setUserName] = useState('');
   const [userAvatar, setUserAvatar] = useState('');
   const [isEditingName, setIsEditingName] = useState(false);
+  const [isEditingAvatar, setIsEditingAvatar] = useState(false);
   const [tempName, setTempName] = useState('');
   const [activeTab, setActiveTab] = useState('tracks'); // tracks | albums | artists | playlists | reviews | genres
 
@@ -132,6 +134,14 @@ function UserDashboardContent() {
     setIsEditingName(false);
   };
 
+  const handleSelectAvatar = (avId) => {
+    setUserAvatar(avId);
+    localStorage.setItem('userAvatar', avId);
+    setIsEditingAvatar(false);
+    window.dispatchEvent(new CustomEvent('groove-profile-updated'));
+    toast.success('Avatar updated! ✨');
+  };
+
   // Toggle favorite genre
   const handleToggleGenre = (genre) => {
     let updated;
@@ -219,14 +229,23 @@ function UserDashboardContent() {
         {/* Profile Card with Adj+Noun Generator and Live Edit */}
         <div className='bg-[var(--theme-card)]/80 border border-[var(--theme-border)] backdrop-blur-xl rounded-3xl p-6 sm:p-8 shadow-md'>
           <div className='flex flex-col sm:flex-row items-center sm:items-start gap-6'>
-            {/* User Avatar */}
+            {/* User Avatar with Clean Vector Icon & Change Picker */}
             <div className='relative flex-shrink-0'>
-              <div className='w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-gradient-to-tr from-[var(--theme-plum)] to-[var(--theme-accent)] flex items-center justify-center text-4xl font-black text-[var(--theme-fg)] shadow-md border-2 border-[var(--theme-border)]'>
-                {userAvatar ? <span className="text-4xl sm:text-5xl">{userAvatar}</span> : firstLetter}
+              <div 
+                onClick={() => setIsEditingAvatar(!isEditingAvatar)}
+                className='w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-gradient-to-tr from-[var(--theme-plum)] to-[var(--theme-accent)] flex items-center justify-center text-3xl sm:text-4xl font-black text-[var(--theme-fg)] shadow-md border-2 border-[var(--theme-border)] cursor-pointer hover:scale-105 active:scale-95 transition-transform'
+                title="Click to change avatar icon"
+              >
+                <UserAvatarIcon avatarId={userAvatar} className="w-12 h-12 text-[var(--theme-fg)]" fallbackLetter={firstLetter} />
               </div>
-              <div className='absolute -bottom-1 -right-1 bg-[var(--theme-accent-bg)] p-2 rounded-full shadow-md text-[var(--theme-accent-fg)]'>
+              <button
+                type="button"
+                onClick={() => setIsEditingAvatar(!isEditingAvatar)}
+                className='absolute -bottom-1 -right-1 bg-[var(--theme-accent-bg)] p-2 rounded-full shadow-md text-[var(--theme-accent-fg)] hover:opacity-90 transition active:scale-95 cursor-pointer'
+                title="Change Avatar Icon"
+              >
                 <User className='w-4 h-4' />
-              </div>
+              </button>
             </div>
 
             {/* Profile Info & Edit Controls */}
@@ -238,6 +257,44 @@ function UserDashboardContent() {
                     <span>Music Layer • Citizen</span>
                   </span>
                 </div>
+
+                {/* Inline Avatar Icon Selector */}
+                {isEditingAvatar && (
+                  <div className="mb-4 p-3 bg-[var(--theme-surface)]/90 border border-[var(--theme-border)] rounded-2xl animate-fade-in text-left">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-[11px] font-bold text-[var(--theme-muted)] uppercase tracking-wider">
+                        Choose Your Icon Avatar
+                      </p>
+                      <button
+                        onClick={() => setIsEditingAvatar(false)}
+                        className="text-xs text-[var(--theme-muted)] hover:text-[var(--theme-fg)]"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                      {AVAILABLE_AVATARS.map((av) => {
+                        const IconComp = av.icon;
+                        const isSelected = userAvatar === av.id;
+                        return (
+                          <button
+                            key={av.id}
+                            type="button"
+                            onClick={() => handleSelectAvatar(av.id)}
+                            className={`p-2.5 rounded-xl border text-center flex flex-col items-center gap-1 transition cursor-pointer active:scale-95 ${
+                              isSelected
+                                ? "bg-[var(--theme-accent)]/15 border-[var(--theme-accent)] text-[var(--theme-accent)] ring-1 ring-[var(--theme-accent)]/40"
+                                : "bg-[var(--theme-card)] border-[var(--theme-border)] text-[var(--theme-muted)] hover:text-[var(--theme-fg)] hover:border-[var(--theme-accent)]/40"
+                            }`}
+                          >
+                            <IconComp className="w-5 h-5" />
+                            <span className="text-[10px] font-semibold truncate">{av.label.split(" ")[0]}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
 
                 {/* Name Row: Editable or Display with Shuffle Button */}
                 {isEditingName ? (

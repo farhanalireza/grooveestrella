@@ -53,6 +53,8 @@ export default function LibraryTouchSlider({
   getItemSubtitle,
   getItemMeta,
   getItemImage,
+  isNavigating = false,
+  navigatingId = null,
 }) {
   const [direction, setDirection] = useState(0);
   const isDraggingRef = useRef(false);
@@ -229,6 +231,12 @@ export default function LibraryTouchSlider({
                   className="w-full h-full"
                 />
               )}
+              {isNavigating && navigatingId === (currentItem.id || currentItem.trackId || currentItem.trackURI) && (
+                <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px] flex flex-col items-center justify-center gap-2 animate-fade-in z-30">
+                  <div className="w-10 h-10 rounded-full border-3 border-[var(--theme-accent)] border-t-transparent animate-spin" />
+                  <span className="text-[11px] font-bold text-white tracking-widest uppercase font-mono">Opening...</span>
+                </div>
+              )}
             </div>
 
             {/* Item Details */}
@@ -253,11 +261,21 @@ export default function LibraryTouchSlider({
             <div className="relative z-10 mt-6 w-full flex items-center justify-center gap-3 pt-4 border-t border-[var(--theme-border)]/60">
               <button
                 type="button"
+                disabled={isNavigating}
                 onClick={() => handleCardClick(currentItem)}
-                className="flex-1 py-3 px-5 bg-[var(--theme-accent)] hover:opacity-95 text-[var(--theme-accent-fg)] font-bold text-xs sm:text-sm rounded-full transition shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                className="flex-1 py-3 px-5 bg-[var(--theme-accent)] hover:opacity-95 text-[var(--theme-accent-fg)] font-bold text-xs sm:text-sm rounded-full transition shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-95 disabled:opacity-75 disabled:cursor-wait"
               >
-                <span>{getActionLabel()}</span>
-                <ArrowRight size={15} />
+                {isNavigating && navigatingId === (currentItem.id || currentItem.trackId || currentItem.trackURI) ? (
+                  <>
+                    <div className="w-4 h-4 rounded-full border-2 border-current border-t-transparent animate-spin" />
+                    <span>Opening...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>{getActionLabel()}</span>
+                    <ArrowRight size={15} />
+                  </>
+                )}
               </button>
 
               <button
