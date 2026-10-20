@@ -1,8 +1,9 @@
 // src/Components/AppBar.jsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useCallback } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   Search,
   ListMusic,
@@ -16,100 +17,87 @@ import {
 import { motion } from "framer-motion";
 import { useTheme } from "@/contexts/ThemeContext";
 
+const NAV_ITEMS = [
+  {
+    label: "Music",
+    icon: <Music size={18} />, 
+    section: "Music",
+    route: "/"
+  },
+  {
+    label: "Explore",
+    icon: <Search size={18} />, 
+    section: "Search",
+    route: "/search"
+  },
+  {
+    label: "Account",
+    icon: <UserRound size={18} />, 
+    section: "Account",
+    route: "/account"
+  },
+  {
+    label: "Library",
+    icon: <ListMusic size={18} />, 
+    section: "Playlist",
+    route: "/library"
+  },
+  {
+    label: "Settings",
+    icon: <Cog size={18} />, 
+    section: "Settings",
+    route: "/settings"
+  },
+  {
+    label: "Review",
+    icon: <Newspaper size={18} />, 
+    section: "Review",
+    route: "/feedback"
+  }
+];
+
+const MOBILE_NAV_ITEMS = NAV_ITEMS.filter((item) => item.label !== "Review");
+
 const AppBar = ({ selectedSection, setSection }) => {
   const router = useRouter();
   const pathname = usePathname();
   const { isDark, toggleTheme } = useTheme();
 
-  // Set section based on route path
-  useEffect(() => {
+  // Instant route-to-section resolution without waiting for useEffect
+  const activeSection = useMemo(() => {
     const path = pathname || "";
+    if (path === "/") return "Music";
+    if (path.startsWith("/search")) return "Search";
+    if (path.startsWith("/account")) return "Account";
+    if (path.startsWith("/feedback")) return "Review";
+    if (path.startsWith("/settings")) return "Settings";
+    if (path.startsWith("/library")) return "Playlist";
+    return selectedSection || "";
+  }, [pathname, selectedSection]);
 
-    if (path === "/") setSection("Music");
-    else if (path.startsWith("/search")) setSection("Search");
-    else if (path.startsWith("/account")) setSection("Account");
-    else if (path.startsWith("/feedback")) setSection("Review");
-    else if (path.startsWith("/settings")) setSection("Settings");
-    else if (path.startsWith("/library")) setSection("Playlist");
-    else setSection("");
-  }, [pathname, setSection]);
-
-  const navItems = [
-    {
-      label: "Music",
-      icon: <Music size={18} />, 
-      section: "Music",
-      route: "/"
-    },
-    {
-      label: "Explore",
-      icon: <Search size={18} />, 
-      section: "Search",
-      route: "/search"
-    },
-    {
-      label: "Account",
-      icon: <UserRound size={18} />, 
-      section: "Account",
-      route: "/account"
-    },
-    {
-      label: "Library",
-      icon: <ListMusic size={18} />, 
-      section: "Playlist",
-      route: "/library"
-    },
-    {
-      label: "Settings",
-      icon: <Cog size={18} />, 
-      section: "Settings",
-      route: "/settings"
-    },
-    {
-      label: "Review",
-      icon: <Newspaper size={18} />, 
-      section: "Review",
-      route: "/feedback"
+  // Keep parent in sync if setSection is provided
+  useEffect(() => {
+    if (setSection && activeSection && selectedSection !== activeSection) {
+      setSection(activeSection);
     }
-  ];
+  }, [activeSection, selectedSection, setSection]);
 
-  const mobileNavItems = [
-    {
-      label: "Music",
-      icon: <Music size={18} />, 
-      section: "Music",
-      route: "/"
-    },
-    {
-      label: "Explore",
-      icon: <Search size={18} />, 
-      section: "Search",
-      route: "/search"
-    },
-    {
-      label: "Account",
-      icon: <UserRound size={18} />, 
-      section: "Account",
-      route: "/account"
-    },
-    {
-      label: "Library",
-      icon: <ListMusic size={18} />, 
-      section: "Playlist",
-      route: "/library"
-    },
-    {
-      label: "Settings",
-      icon: <Cog size={18} />, 
-      section: "Settings",
-      route: "/settings"
-    }
-  ];
+  // Aggressive route prefetching for all app bar destinations
+  // This completely eliminates navigation delay when switching tabs
+  useEffect(() => {
+    const routesToWarm = ['/', '/search', '/account', '/library', '/settings', '/feedback'];
+    routesToWarm.forEach((route) => {
+      try {
+        router.prefetch(route);
+      } catch (_) {}
+    });
+  }, [router]);
 
-  const handleNavClick = (item) => {
-    setSection(item.section);
-    router.push(item.route);
-  };
+  const handlePrefetch = useCallback((route) => {
+    try {
+      router.prefetch(route);
+    } catch (_) {}
+  }, [router]);
 
   const isDetailPage = pathname?.startsWith("/track/") || pathname?.startsWith("/album/") || pathname?.startsWith("/artist/") || pathname?.startsWith("/playlist/");
   const isSharePage = pathname?.startsWith("/s/");
@@ -122,31 +110,39 @@ const AppBar = ({ selectedSection, setSection }) => {
         <div className="max-w-6xl mx-auto flex items-center justify-between px-6 h-full">
           
           {/* Logo & Brand Name */}
-          <div 
+          <Link
+            href="/"
+            prefetch={true}
+            onMouseEnter={() => handlePrefetch("/")}
             className="flex items-center gap-2.5 cursor-pointer hover:opacity-90 transition duration-200" 
-            onClick={() => router.push("/")}
           >
             <img src="/in.svg" alt={brandName} className="w-8 h-8 object-contain" />
             <span className="text-lg font-bold text-[var(--theme-fg)] tracking-tight font-display">{brandName}</span>
-          </div>
+          </Link>
 
           {/* Desktop Nav Items & Theme Toggle */}
           <div className="flex items-center gap-3">
             <nav className="flex items-center gap-2">
-              {navItems.map((item, idx) => {
-                const isActive = selectedSection === item.section;
+              {NAV_ITEMS.map((item, idx) => {
+                const isActive = activeSection === item.section;
                 return (
-                  <button
+                  <Link
                     key={idx}
-                    onClick={() => handleNavClick(item)}
-                    className={`px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-4xl transition-all duration-300 border cursor-pointer ${
+                    href={item.route}
+                    prefetch={true}
+                    onMouseEnter={() => handlePrefetch(item.route)}
+                    onTouchStart={() => handlePrefetch(item.route)}
+                    onClick={() => {
+                      if (setSection) setSection(item.section);
+                    }}
+                    className={`px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-4xl transition-all duration-200 border cursor-pointer select-none inline-flex items-center justify-center ${
                       isActive
                         ? "bg-[var(--theme-card)] text-[var(--theme-fg)] border-[var(--theme-border-active)] shadow-md shadow-[var(--theme-bg)]/20"
                         : "text-[var(--theme-muted)] hover:text-[var(--theme-fg)] hover:bg-[var(--theme-surface)] border-transparent"
                     }`}
                   >
                     {item.label}
-                  </button>
+                  </Link>
                 );
               })}
             </nav>
@@ -185,14 +181,19 @@ const AppBar = ({ selectedSection, setSection }) => {
           {/* Liquid Glass Top Reflection */}
           <div className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-[var(--theme-accent)]/30 to-transparent pointer-events-none" />
 
-          {mobileNavItems.map((item, idx) => {
-            const isActive = selectedSection === item.section;
+          {MOBILE_NAV_ITEMS.map((item, idx) => {
+            const isActive = activeSection === item.section;
             return (
-              <motion.button
+              <Link
                 key={idx}
-                whileTap={{ scale: 0.92 }}
-                onClick={() => handleNavClick(item)}
-                className="relative flex-1 py-1.5 px-1 flex flex-col justify-center items-center gap-1 transition-colors duration-200 cursor-pointer"
+                href={item.route}
+                prefetch={true}
+                onMouseEnter={() => handlePrefetch(item.route)}
+                onTouchStart={() => handlePrefetch(item.route)}
+                onPointerDown={() => {
+                  if (setSection) setSection(item.section);
+                }}
+                className="relative flex-1 py-1.5 px-1 flex flex-col justify-center items-center gap-1 transition-colors duration-200 cursor-pointer select-none"
               >
                 {/* Fluid Liquid Active Pill */}
                 {isActive && (
@@ -220,7 +221,7 @@ const AppBar = ({ selectedSection, setSection }) => {
                 }`}>
                   {item.label}
                 </span>
-              </motion.button>
+              </Link>
             );
           })}
 

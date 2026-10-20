@@ -1,17 +1,18 @@
 // src/app/library/page.jsx
 "use client";
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { 
   Music, Disc, Users, Heart, FolderHeart, Trash2, ArrowRight, 
-  Plus, UploadCloud, ChevronLeft, ChevronRight, Layers, 
-  LayoutGrid, List, Sparkles, ExternalLink 
+  Plus, UploadCloud, Layers, LayoutGrid, List
 } from 'lucide-react';
 import { toast } from '@/lib/toast';
 import ImportPlaylistModal from '@/Components/ImportPlaylistModal';
 import PlaylistCover from '@/Components/PlaylistCover';
+import LibraryTouchSlider from '@/Components/LibraryTouchSlider';
+import LibraryCoverImage, { FALLBACK_COVER_SVG } from '@/Components/LibraryCoverImage';
 
 export default function LibraryPage() {
   const router = useRouter();
@@ -31,22 +32,26 @@ export default function LibraryPage() {
   const [newPlDesc, setNewPlDesc] = useState('');
 
   useEffect(() => {
-    setSongs(JSON.parse(localStorage.getItem('savedSongs') || '[]'));
-    setAlbums(JSON.parse(localStorage.getItem('savedAlbums') || '[]'));
-    setArtists(JSON.parse(localStorage.getItem('savedArtists') || '[]'));
-    setPlaylists(JSON.parse(localStorage.getItem('savedPlaylists') || '[]'));
-    setCustomPlaylists(JSON.parse(localStorage.getItem('customPlaylists') || '[]'));
+    try {
+      setSongs(JSON.parse(localStorage.getItem('savedSongs') || '[]'));
+      setAlbums(JSON.parse(localStorage.getItem('savedAlbums') || '[]'));
+      setArtists(JSON.parse(localStorage.getItem('savedArtists') || '[]'));
+      setPlaylists(JSON.parse(localStorage.getItem('savedPlaylists') || '[]'));
+      setCustomPlaylists(JSON.parse(localStorage.getItem('customPlaylists') || '[]'));
 
-    const savedView = localStorage.getItem('groove_library_view_mode');
-    if (savedView === 'slider' || savedView === 'grid' || savedView === 'list') {
-      setViewMode(savedView);
-    }
+      const savedView = localStorage.getItem('groove_library_view_mode');
+      if (savedView === 'slider' || savedView === 'grid' || savedView === 'list') {
+        setViewMode(savedView);
+      }
+    } catch (_) {}
   }, []);
 
   const handleChangeViewMode = (mode) => {
     setViewMode(mode);
     if (typeof window !== 'undefined') {
-      localStorage.setItem('groove_library_view_mode', mode);
+      try {
+        localStorage.setItem('groove_library_view_mode', mode);
+      } catch (_) {}
     }
   };
 
@@ -68,36 +73,40 @@ export default function LibraryPage() {
       storageKey = 'savedPlaylists';
     }
 
-    const items = JSON.parse(localStorage.getItem(storageKey) || '[]');
-    const target = items.find(item => {
-      if (key === 'songs') return item.trackId === id || item.trackURI === id || item.id === id;
-      return item.id === id;
-    });
-    if (target) {
-      itemTitle = target.title || target.name || 'Item';
-    }
+    try {
+      const items = JSON.parse(localStorage.getItem(storageKey) || '[]');
+      const target = items.find(item => {
+        if (key === 'songs') return item.trackId === id || item.trackURI === id || item.id === id;
+        return item.id === id;
+      });
+      if (target) {
+        itemTitle = target.title || target.name || 'Item';
+      }
 
-    const updated = items.filter(item => {
-      if (key === 'songs') return item.trackId !== id && item.trackURI !== id && item.id !== id;
-      return item.id !== id;
-    });
-    localStorage.setItem(storageKey, JSON.stringify(updated));
-    listSetter(updated);
-    setSliderIndex((prev) => Math.max(0, Math.min(prev, updated.length - 1)));
-    toast.info(`"${itemTitle}" removed from library.`);
+      const updated = items.filter(item => {
+        if (key === 'songs') return item.trackId !== id && item.trackURI !== id && item.id !== id;
+        return item.id !== id;
+      });
+      localStorage.setItem(storageKey, JSON.stringify(updated));
+      listSetter(updated);
+      setSliderIndex((prev) => Math.max(0, Math.min(prev, updated.length - 1)));
+      toast.info(`"${itemTitle}" removed from library.`);
+    } catch (_) {}
   };
 
   const handleDeleteCustomPlaylist = (id) => {
-    const savedCustom = JSON.parse(localStorage.getItem('customPlaylists') || '[]');
-    const target = savedCustom.find(p => p.id === id);
-    const title = target ? target.name : 'Playlist';
-    
-    const updated = savedCustom.filter(p => p.id !== id);
-    localStorage.setItem('customPlaylists', JSON.stringify(updated));
-    setCustomPlaylists(updated);
-    const remainingCount = updated.length + playlists.length;
-    setSliderIndex((prev) => Math.max(0, Math.min(prev, remainingCount - 1)));
-    toast.info(`"${title}" deleted.`);
+    try {
+      const savedCustom = JSON.parse(localStorage.getItem('customPlaylists') || '[]');
+      const target = savedCustom.find(p => p.id === id);
+      const title = target ? target.name : 'Playlist';
+      
+      const updated = savedCustom.filter(p => p.id !== id);
+      localStorage.setItem('customPlaylists', JSON.stringify(updated));
+      setCustomPlaylists(updated);
+      const remainingCount = updated.length + playlists.length;
+      setSliderIndex((prev) => Math.max(0, Math.min(prev, remainingCount - 1)));
+      toast.info(`"${title}" deleted.`);
+    } catch (_) {}
   };
 
   // Combined playlist items for playlists tab
@@ -116,20 +125,6 @@ export default function LibraryPage() {
     return [];
   }, [activeTab, songs, albums, artists, allPlaylists]);
 
-  // Keyboard navigation for slider
-  useEffect(() => {
-    if (viewMode !== 'slider') return;
-    const handleKeyDown = (e) => {
-      if (e.key === 'ArrowLeft') {
-        setSliderIndex((prev) => Math.max(0, prev - 1));
-      } else if (e.key === 'ArrowRight') {
-        setSliderIndex((prev) => Math.min(currentList.length - 1, prev + 1));
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [viewMode, currentList.length]);
-
   const tabs = [
     { id: 'songs', label: 'Songs', count: songs.length, icon: Music },
     { id: 'albums', label: 'Albums', count: albums.length, icon: Disc },
@@ -138,36 +133,70 @@ export default function LibraryPage() {
   ];
 
   // Helper functions to normalize item properties across types
-  const getItemTitle = (item) => {
+  const getItemTitle = useCallback((item) => {
     return item?.title || item?.name || 'Untitled';
-  };
+  }, []);
 
-  const getItemSubtitle = (item) => {
+  const getItemSubtitle = useCallback((item) => {
     if (activeTab === 'songs') {
-      if (Array.isArray(item.artist)) return item.artist.map(a => a.name).join(', ');
-      return item.artist || 'Unknown Artist';
+      if (Array.isArray(item?.artist)) return item.artist.map(a => a.name).join(', ');
+      return item?.artist || 'Unknown Artist';
     }
     if (activeTab === 'albums') {
-      if (Array.isArray(item.artist)) return item.artist.map(a => a.name).join(', ');
-      return item.artist || 'Various Artists';
+      if (Array.isArray(item?.artist)) return item.artist.map(a => a.name).join(', ');
+      return item?.artist || 'Various Artists';
     }
     if (activeTab === 'artists') {
-      return item.country ? `Artist · ${item.country}` : 'Artist Profile';
+      return item?.country ? `Artist · ${item.country}` : 'Artist Profile';
     }
     if (activeTab === 'playlists') {
-      if (item.isCustom) {
+      if (item?.isCustom) {
         return `${item.tracks?.total || item.tracks?.items?.length || 0} songs · Custom Playlist`;
       }
-      return `By ${item.owner || 'Spotify'}`;
+      return `By ${item?.owner || 'Spotify'}`;
     }
     return '';
-  };
+  }, [activeTab]);
 
-  const getItemImage = (item) => {
-    return item?.image || item?.images?.[0]?.url || item?.coverArt || item?.url || 'https://placehold.co/400x400/17020B/E8A87C?text=Groove';
-  };
+  // Resolution-aware image selector (optimizes bandwidth and prevents loading large assets for small thumbnails)
+  const getItemImage = useCallback((item, size = 'large') => {
+    if (!item) return FALLBACK_COVER_SVG;
 
-  const getItemMeta = (item) => {
+    // Spotify images array: [0: large, 1: medium, 2: small]
+    if (Array.isArray(item.images) && item.images.length > 0) {
+      if (size === 'small') {
+        const smallUrl = item.images[item.images.length - 1]?.url || item.images[0]?.url;
+        if (smallUrl) return smallUrl;
+      } else if (size === 'medium') {
+        const medUrl = item.images[1]?.url || item.images[0]?.url;
+        if (medUrl) return medUrl;
+      }
+      return item.images[0]?.url || FALLBACK_COVER_SVG;
+    }
+
+    const direct = item.image || item.coverArt || item.url || item.album?.images?.[0]?.url;
+    if (direct && typeof direct === 'string' && !direct.includes('placehold.co')) {
+      return direct;
+    }
+
+    return FALLBACK_COVER_SVG;
+  }, []);
+
+  // Preload initial set of images for immediate display without flash
+  useEffect(() => {
+    if (!currentList || currentList.length === 0) return;
+    const initialBatch = currentList.slice(0, 8);
+    initialBatch.forEach(item => {
+      const url = getItemImage(item, viewMode === 'list' ? 'small' : viewMode === 'grid' ? 'medium' : 'large');
+      if (url && typeof url === 'string' && !url.startsWith('data:') && !url.includes('placehold.co')) {
+        const img = new Image();
+        img.src = url;
+      }
+    });
+  }, [currentList, viewMode, getItemImage]);
+
+  const getItemMeta = useCallback((item) => {
+    if (!item) return null;
     if (activeTab === 'songs') {
       return item.release_date || (item.popularity ? `Score: ${item.popularity}` : null);
     }
@@ -181,9 +210,9 @@ export default function LibraryPage() {
       return item.isCustom ? 'Custom Playlist' : 'Bookmarked Spotify Playlist';
     }
     return null;
-  };
+  }, [activeTab]);
 
-  const openItem = (item) => {
+  const openItem = useCallback((item) => {
     if (!item) return;
     if (activeTab === 'songs') {
       const trackTarget = item.trackId || item.id;
@@ -195,9 +224,9 @@ export default function LibraryPage() {
     } else if (activeTab === 'playlists') {
       if (item.id) router.push(`/playlist/${item.id}`);
     }
-  };
+  }, [activeTab, router]);
 
-  const deleteItem = (item) => {
+  const deleteItem = useCallback((item) => {
     if (!item) return;
     if (activeTab === 'songs') {
       handleClearItem('songs', item.trackId || item.trackURI || item.id, setSongs);
@@ -212,17 +241,15 @@ export default function LibraryPage() {
         handleClearItem('playlists', item.id, setPlaylists);
       }
     }
-  };
+  }, [activeTab]);
 
-  const getActionLabel = () => {
+  const getActionLabel = useCallback(() => {
     if (activeTab === 'songs') return 'View Track';
     if (activeTab === 'albums') return 'View Album';
     if (activeTab === 'artists') return 'View Artist';
     if (activeTab === 'playlists') return 'Open Playlist';
     return 'View';
-  };
-
-  const currentSliderItem = currentList[sliderIndex] || null;
+  }, [activeTab]);
 
   return (
     <div className="min-h-screen bg-[var(--theme-bg)] text-[var(--theme-fg)] p-4 sm:p-6 pb-28 md:pl-20 md:pr-20 lg:pl-40 lg:pr-40 pt-8 sm:pt-12 transition-colors duration-300">
@@ -290,7 +317,7 @@ export default function LibraryPage() {
         })}
       </div>
 
-      {/* View Options Switcher: Slider (Deck of Cards) | Grid Box | List */}
+      {/* View Options Switcher: Slider (Touch Deck of Cards) | Grid Box | List */}
       <div className="flex items-center justify-between gap-3 mb-8 flex-wrap">
         {/* If playlists tab, display Create and Import buttons */}
         {activeTab === 'playlists' ? (
@@ -326,10 +353,10 @@ export default function LibraryPage() {
                 ? 'bg-[var(--theme-accent)] text-[var(--theme-accent-fg)] shadow-sm'
                 : 'text-[var(--theme-muted)] hover:text-[var(--theme-fg)]'
             }`}
-            title="Deck of Cards Slider (takes full available space, 1 by 1)"
+            title="Interactive Touch Slider (Swipe or Drag cards 1 by 1)"
           >
             <Layers size={13} />
-            <span>Slider</span>
+            <span>Touch Slider</span>
           </button>
 
           <button
@@ -339,7 +366,7 @@ export default function LibraryPage() {
                 ? 'bg-[var(--theme-accent)] text-[var(--theme-accent-fg)] shadow-sm'
                 : 'text-[var(--theme-muted)] hover:text-[var(--theme-fg)]'
             }`}
-            title="Grid Box format (1 item in 1 row)"
+            title="Grid Box format"
           >
             <LayoutGrid size={13} />
             <span>Grid</span>
@@ -352,7 +379,7 @@ export default function LibraryPage() {
                 ? 'bg-[var(--theme-accent)] text-[var(--theme-accent-fg)] shadow-sm'
                 : 'text-[var(--theme-muted)] hover:text-[var(--theme-fg)]'
             }`}
-            title="Compact List format (1 item in 1 row)"
+            title="Compact List format"
           >
             <List size={13} />
             <span>List</span>
@@ -366,126 +393,24 @@ export default function LibraryPage() {
           <EmptyState type={activeTab} />
         ) : (
           <>
-            {/* VIEW MODE 1: SLIDER (DECK OF CARDS, takes whole available space, 1 by 1) */}
-            {viewMode === 'slider' && currentSliderItem && (
-              <div className="w-full max-w-lg mx-auto flex flex-col items-center">
-                {/* Header row: category badge + card counter */}
-                <div className="w-full flex items-center justify-between mb-3 px-2">
-                  <span className="text-xs font-extrabold uppercase tracking-wider text-[var(--theme-accent)] flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-[var(--theme-accent)]" />
-                    <span>{activeTab.slice(0, -1)} Deck</span>
-                  </span>
-                  <span className="text-xs font-mono font-bold text-[var(--theme-muted)] bg-[var(--theme-surface)] px-2.5 py-0.5 rounded-full border border-[var(--theme-border)] shadow-inner">
-                    {sliderIndex + 1} / {currentList.length}
-                  </span>
-                </div>
-
-                {/* Deck Card */}
-                <div className="relative w-full bg-[var(--theme-card)]/90 backdrop-blur-2xl border border-[var(--theme-border)] rounded-3xl p-6 sm:p-8 shadow-2xl flex flex-col items-center text-center overflow-hidden transition-all duration-300">
-                  {/* Subtle Ambient Art Glow Backdrop */}
-                  <div 
-                    className="absolute inset-0 bg-cover bg-center blur-3xl opacity-20 dark:opacity-15 pointer-events-none scale-125 transition-all duration-700"
-                    style={{ backgroundImage: `url(${getItemImage(currentSliderItem)})` }}
-                  />
-
-                  {/* Artwork / Media Cover */}
-                  <div 
-                    onClick={() => openItem(currentSliderItem)}
-                    className="relative z-10 w-60 h-60 sm:w-72 sm:h-72 aspect-square rounded-2xl overflow-hidden shadow-2xl border border-[var(--theme-border)] group cursor-pointer"
-                  >
-                    {activeTab === 'playlists' && currentSliderItem.isCustom ? (
-                      <PlaylistCover 
-                        tracks={currentSliderItem.tracks?.items || []} 
-                        name={currentSliderItem.name} 
-                        defaultCover={currentSliderItem.image} 
-                      />
-                    ) : (
-                      <img 
-                        src={getItemImage(currentSliderItem)} 
-                        alt={getItemTitle(currentSliderItem)} 
-                        className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 ${activeTab === 'artists' ? 'rounded-full' : ''}`}
-                        onError={(e) => { e.currentTarget.src = 'https://placehold.co/500x500/17020B/E8A87C?text=Groove'; }}
-                      />
-                    )}
-                  </div>
-
-                  {/* Item Details */}
-                  <div className="relative z-10 mt-6 w-full">
-                    <h2 
-                      onClick={() => openItem(currentSliderItem)}
-                      className="text-xl sm:text-2xl font-black text-[var(--theme-fg)] truncate tracking-tight hover:text-[var(--theme-accent)] transition cursor-pointer"
-                    >
-                      {getItemTitle(currentSliderItem)}
-                    </h2>
-                    <p className="text-sm font-semibold text-[var(--theme-accent)] truncate mt-1">
-                      {getItemSubtitle(currentSliderItem)}
-                    </p>
-                    {getItemMeta(currentSliderItem) && (
-                      <p className="text-xs text-[var(--theme-muted)] font-medium mt-1">
-                        {getItemMeta(currentSliderItem)}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Card Action Controls */}
-                  <div className="relative z-10 mt-6 w-full flex items-center justify-center gap-3 pt-4 border-t border-[var(--theme-border)]/60">
-                    <button
-                      onClick={() => openItem(currentSliderItem)}
-                      className="flex-1 py-3 px-5 bg-[var(--theme-accent)] hover:opacity-95 text-[var(--theme-accent-fg)] font-bold text-xs sm:text-sm rounded-full transition shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-95"
-                    >
-                      <span>{getActionLabel()}</span>
-                      <ArrowRight size={15} />
-                    </button>
-
-                    <button
-                      onClick={() => deleteItem(currentSliderItem)}
-                      className="p-3 rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 transition cursor-pointer active:scale-95 shrink-0"
-                      title="Remove from Library"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Slider Navigation Bar */}
-                <div className="w-full flex items-center justify-between gap-4 mt-6 px-4">
-                  <button
-                    onClick={() => setSliderIndex((prev) => Math.max(0, prev - 1))}
-                    disabled={sliderIndex === 0}
-                    className="w-12 h-12 rounded-full aspect-square bg-[var(--theme-card)] border border-[var(--theme-border)] text-[var(--theme-fg)] flex items-center justify-center hover:bg-[var(--theme-surface)] active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed transition shadow-md cursor-pointer"
-                    title="Previous Card (← Arrow Left)"
-                  >
-                    <ChevronLeft size={20} />
-                  </button>
-
-                  {/* Progress dots indicator */}
-                  <div className="flex items-center gap-1.5 flex-wrap justify-center max-w-[200px]">
-                    {Array.from({ length: Math.min(currentList.length, 7) }).map((_, dotIdx) => {
-                      const isActive = (dotIdx === sliderIndex) || (dotIdx === 6 && sliderIndex >= 6);
-                      return (
-                        <span
-                          key={dotIdx}
-                          className={`h-2 rounded-full transition-all duration-300 ${
-                            isActive ? 'w-6 bg-[var(--theme-accent)]' : 'w-2 bg-[var(--theme-border)]'
-                          }`}
-                        />
-                      );
-                    })}
-                  </div>
-
-                  <button
-                    onClick={() => setSliderIndex((prev) => Math.min(currentList.length - 1, prev + 1))}
-                    disabled={sliderIndex >= currentList.length - 1}
-                    className="w-12 h-12 rounded-full aspect-square bg-[var(--theme-card)] border border-[var(--theme-border)] text-[var(--theme-fg)] flex items-center justify-center hover:bg-[var(--theme-surface)] active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed transition shadow-md cursor-pointer"
-                    title="Next Card (→ Arrow Right)"
-                  >
-                    <ChevronRight size={20} />
-                  </button>
-                </div>
-              </div>
+            {/* VIEW MODE 1: ACTUAL TOUCH SLIDER (Physics drag, spring animations, card deck stack) */}
+            {viewMode === 'slider' && (
+              <LibraryTouchSlider
+                items={currentList}
+                currentIndex={sliderIndex}
+                onIndexChange={setSliderIndex}
+                activeTab={activeTab}
+                onOpenItem={openItem}
+                onDeleteItem={deleteItem}
+                getActionLabel={getActionLabel}
+                getItemTitle={getItemTitle}
+                getItemSubtitle={getItemSubtitle}
+                getItemMeta={getItemMeta}
+                getItemImage={getItemImage}
+              />
             )}
 
-            {/* VIEW MODE 2: GRID (1 in 1 row box format) */}
+            {/* VIEW MODE 2: GRID (Responsive layout with optimized images & shimmer loading) */}
             {viewMode === 'grid' && (
               <div className="flex flex-col gap-4 max-w-xl mx-auto w-full">
                 {currentList.map((item, idx) => (
@@ -504,11 +429,12 @@ export default function LibraryPage() {
                           defaultCover={item.image} 
                         />
                       ) : (
-                        <img
-                          src={getItemImage(item)}
+                        <LibraryCoverImage
+                          src={getItemImage(item, 'medium')}
                           alt={getItemTitle(item)}
-                          className={`w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 ${activeTab === 'artists' ? 'rounded-full' : ''}`}
-                          onError={(e) => { e.currentTarget.src = 'https://placehold.co/400x400/17020B/E8A87C?text=Groove'; }}
+                          isCircle={activeTab === 'artists'}
+                          priority={idx < 4}
+                          className="w-full h-full"
                         />
                       )}
                     </div>
@@ -545,6 +471,7 @@ export default function LibraryPage() {
                         onClick={() => deleteItem(item)}
                         className="p-2 text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 rounded-xl transition cursor-pointer active:scale-95"
                         title="Remove from Library"
+                        aria-label="Remove item"
                       >
                         <Trash2 size={14} />
                       </button>
@@ -554,7 +481,7 @@ export default function LibraryPage() {
               </div>
             )}
 
-            {/* VIEW MODE 3: LIST (1 in 1 row compact format) */}
+            {/* VIEW MODE 3: LIST (Compact rows with low-res optimized images & instant render) */}
             {viewMode === 'list' && (
               <div className="flex flex-col gap-2 max-w-2xl mx-auto w-full">
                 {currentList.map((item, idx) => (
@@ -572,11 +499,12 @@ export default function LibraryPage() {
                             defaultCover={item.image} 
                           />
                         ) : (
-                          <img
-                            src={getItemImage(item)}
+                          <LibraryCoverImage
+                            src={getItemImage(item, 'small')}
                             alt={getItemTitle(item)}
-                            className={`w-full h-full object-cover ${activeTab === 'artists' ? 'rounded-full' : ''}`}
-                            onError={(e) => { e.currentTarget.src = 'https://placehold.co/150x150/17020B/E8A87C?text=Groove'; }}
+                            isCircle={activeTab === 'artists'}
+                            priority={idx < 8}
+                            className="w-full h-full"
                           />
                         )}
                       </div>
@@ -602,6 +530,7 @@ export default function LibraryPage() {
                         onClick={() => deleteItem(item)}
                         className="p-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-xl transition cursor-pointer active:scale-95"
                         title="Remove from Library"
+                        aria-label="Remove item"
                       >
                         <Trash2 size={14} />
                       </button>
@@ -623,24 +552,26 @@ export default function LibraryPage() {
             <form onSubmit={(e) => {
               e.preventDefault();
               if (!newPlName.trim()) return;
-              const savedPls = JSON.parse(localStorage.getItem('customPlaylists') || '[]');
-              const newPl = {
-                id: `custom-${Date.now()}`,
-                name: newPlName.trim(),
-                title: newPlName.trim(),
-                description: newPlDesc.trim() || 'Custom playlist created on GrooveEstrella.',
-                image: 'https://placehold.co/150x150?text=Custom+Playlist',
-                images: [{ url: 'https://placehold.co/150x150?text=Custom+Playlist' }],
-                owner: { display_name: localStorage.getItem('userName') || 'You' },
-                tracks: { total: 0, items: [] }
-              };
-              savedPls.push(newPl);
-              localStorage.setItem('customPlaylists', JSON.stringify(savedPls));
-              setCustomPlaylists(savedPls);
-              setIsCreateModalOpen(false);
-              setNewPlName('');
-              setNewPlDesc('');
-              toast.success(`Created playlist "${newPl.name}"! 🎉`);
+              try {
+                const savedPls = JSON.parse(localStorage.getItem('customPlaylists') || '[]');
+                const newPl = {
+                  id: `custom-${Date.now()}`,
+                  name: newPlName.trim(),
+                  title: newPlName.trim(),
+                  description: newPlDesc.trim() || 'Custom playlist created on GrooveEstrella.',
+                  image: FALLBACK_COVER_SVG,
+                  images: [{ url: FALLBACK_COVER_SVG }],
+                  owner: { display_name: localStorage.getItem('userName') || 'You' },
+                  tracks: { total: 0, items: [] }
+                };
+                savedPls.push(newPl);
+                localStorage.setItem('customPlaylists', JSON.stringify(savedPls));
+                setCustomPlaylists(savedPls);
+                setIsCreateModalOpen(false);
+                setNewPlName('');
+                setNewPlDesc('');
+                toast.success(`Created playlist "${newPl.name}"! 🎉`);
+              } catch (_) {}
             }} className="flex flex-col gap-4">
               <div>
                 <label className="block text-xs font-bold text-[var(--theme-muted)] uppercase tracking-wider mb-2">Playlist Name</label>
