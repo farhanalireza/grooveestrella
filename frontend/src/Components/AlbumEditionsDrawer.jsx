@@ -45,6 +45,8 @@ export default function AlbumEditionsDrawer({
   loadingTracks = false,
   albumName = "Album",
   albumCoverUrl = "",
+  mainCoverUrl = "",
+  onRestoreMainCover = null,
 }) {
   const [mounted, setMounted] = useState(false);
   const [activeCategory, setActiveCategory] = useState("all");
@@ -184,6 +186,35 @@ export default function AlbumEditionsDrawer({
                 <X size={18} />
               </button>
             </div>
+
+            {/* Highlighted Main Artwork Action Card */}
+            {mainCoverUrl && albumCoverUrl && albumCoverUrl !== mainCoverUrl && (
+              <div className="mx-4 mt-3.5 p-3 rounded-2xl bg-gradient-to-r from-[var(--theme-surface)] to-[var(--theme-card)] border-2 border-[var(--theme-accent)] shadow-xl shadow-[var(--theme-accent)]/15 flex items-center justify-between gap-3 shrink-0">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="relative w-11 h-11 rounded-xl overflow-hidden shrink-0 border border-white/20 shadow-md">
+                    <img src={mainCoverUrl} alt="Main Album Artwork" className="w-full h-full object-cover" />
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-[10px] uppercase tracking-wider font-extrabold text-[var(--theme-accent)] block">
+                      Custom Edition Cover Active
+                    </span>
+                    <p className="text-xs font-bold text-[var(--theme-fg)] truncate">
+                      Switch back to canonical cover
+                    </p>
+                  </div>
+                </div>
+                {onRestoreMainCover && (
+                  <button
+                    type="button"
+                    onClick={onRestoreMainCover}
+                    className="px-3.5 py-2 rounded-xl bg-[var(--theme-accent)] hover:opacity-95 active:scale-95 text-[var(--theme-accent-fg)] text-xs font-black shrink-0 transition-all shadow-md flex items-center gap-1.5 cursor-pointer ring-2 ring-[var(--theme-accent)]/40"
+                  >
+                    <Sparkles size={14} />
+                    <span>Use Main Artwork</span>
+                  </button>
+                )}
+              </div>
+            )}
 
             {/* Filter Tabs & Search Bar */}
             <div className="p-4 border-b border-[var(--theme-border)] bg-[var(--theme-bg)]/40 space-y-3 shrink-0">

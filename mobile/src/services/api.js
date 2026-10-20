@@ -79,7 +79,12 @@ export async function resolveOpenArtwork(title, artist = '', rgId = null, relId 
   const cached = getCached(cacheKey);
   if (cached) return cached;
 
-  // 1. If release-group ID or release ID is present, Cover Art Archive is the exact official artwork!
+    // 1. If release ID (specific edition/pressing) or release-group ID is present, Cover Art Archive is the exact official artwork!
+  if (relId) {
+    const caa = `https://coverartarchive.org/release/${relId}/front-500`;
+    setCached(cacheKey, caa);
+    return caa;
+  }
   if (rgId) {
     const caa = `https://coverartarchive.org/release-group/${rgId}/front-500`;
     setCached(cacheKey, caa);
@@ -551,8 +556,11 @@ export const fetchAlbum = async (id, targetReleaseId = null) => {
       } catch (_) {}
     }
 
-    // Resolve real album cover
-    const coverUrl = await resolveOpenArtwork(albumTitle, artistCredit, rgData?.id, successfulReleaseId);
+    // Resolve real album cover: Main canonical cover takes precedence on initial open
+    const mainCoverUrl = await resolveOpenArtwork(albumTitle, artistCredit, rgData?.id, null);
+    const coverUrl = targetReleaseId 
+      ? await resolveOpenArtwork(albumTitle, artistCredit, rgData?.id, targetReleaseId) 
+      : mainCoverUrl;
 
     // Active release date & year
     const activeReleaseDate = relData?.date || canonicalOriginalDate || firstReleaseDate || '1972-06-16';

@@ -458,6 +458,9 @@ export default function TrackDetailScreen() {
           releaseYear: releaseYear,
           type: 'track',
         }}
+        rating={track?.rating}
+        duration={track?.duration_ms || track?.duration}
+        discCount={track?.disc_number || 1}
       />
 
       {/* Playlist Picker Modal */}

@@ -395,11 +395,18 @@ export async function resolveOpenArtistPhoto(artistName, mbid = null) {
  * Open Artwork Resolver for Albums:
  * Queries Cover Art Archive -> Deezer album search -> Fallback SVG (strictly NO iTunes)
  */
-export async function resolveOpenAlbumCover(albumTitle, artistName = '', rgId = null) {
+export async function resolveOpenAlbumCover(albumTitle, artistName = '', rgId = null, releaseId = null) {
   const query = `${albumTitle} ${artistName}`.trim();
-  const cacheKey = `img_album_${query.toLowerCase()}_${rgId || ''}`;
+  const cacheKey = `img_album_${query.toLowerCase()}_${releaseId || rgId || ''}`;
   const cached = getCached(cacheKey);
   if (cached) return cached;
+
+  // 1. If specific release/edition is requested, Cover Art Archive for that release takes precedence
+  if (releaseId) {
+    const caaRelease = `https://coverartarchive.org/release/${releaseId}/front-500`;
+    setCached(cacheKey, caaRelease);
+    return caaRelease;
+  }
 
   // 1. Cover Art Archive
   if (rgId) {
@@ -1651,9 +1658,17 @@ export async function fetchMusicBrainzAlbumServer(id, targetReleaseId = null) {
         } catch (_) {}
       }
 
-      // Resolve real album artwork (proper fallback ID)
+      // Resolve real album artwork: Main canonical release-group cover takes precedence when page is opened
       const targetCoverRgId = rgData?.id || relData?.['release-group']?.id || relData?.id || resolvedRgId || id;
-      const coverUrl = await resolveOpenAlbumCover(albumTitle, artistCredit, targetCoverRgId);
+      const mainCoverUrl = await resolveOpenAlbumCover(albumTitle, artistCredit, targetCoverRgId, null);
+
+      // Only resolve edition-specific cover if the user explicitly requested a specific target release
+      let coverUrl = mainCoverUrl;
+      let editionCoverUrl = null;
+      if (targetReleaseId) {
+        editionCoverUrl = await resolveOpenAlbumCover(albumTitle, artistCredit, targetCoverRgId, targetReleaseId);
+        coverUrl = editionCoverUrl || mainCoverUrl;
+      }
 
       // Active release date & year based on the selected release
       const activeReleaseDate = relData?.date || canonicalOriginalDate || firstReleaseDate || null;
@@ -1721,8 +1736,13 @@ export async function fetchMusicBrainzAlbumServer(id, targetReleaseId = null) {
         title: albumTitle || 'Album',
         artists: artistsList,
         artist: artistsList,
-        images: [{ url: coverUrl, width: 600, height: 600 }],
+        images: [
+          { url: coverUrl, width: 600, height: 600 },
+          ...(mainCoverUrl && mainCoverUrl !== coverUrl ? [{ url: mainCoverUrl, width: 600, height: 600 }] : [])
+        ],
         coverArt: coverUrl,
+        mainCoverArt: mainCoverUrl,
+        editionCoverArt: editionCoverUrl,
         url: coverUrl,
         release_date: activeReleaseDate || 'Unknown',
         releaseDate: activeReleaseDate || null,
@@ -1744,7 +1764,7 @@ export async function fetchMusicBrainzAlbumServer(id, targetReleaseId = null) {
           musicbrainz: `https://musicbrainz.org/${rgData ? 'release-group' : 'release'}/${id}`,
         },
         uri: `musicbrainz:album:${id}`,
-        selectedReleaseId: successfulReleaseId || targetReleaseId || canonicalOriginalId,
+        selectedReleaseId: targetReleaseId || null,
         activeEdition: activeEditionObj,
         editions: editions,
         variations: variations,

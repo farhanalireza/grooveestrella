@@ -502,6 +502,9 @@ export default function TrackDetailClient({ id, initialData }) {
                 artist={artistsList}
                 imageUrl={coverUrl}
                 popularity={track.popularity || 80}
+                rating={track.rating}
+                duration={track.duration || track.duration_ms}
+                discCount={track.disc_number || 1}
                 explicit={track.explicit}
                 type="track"
                 releaseDate={track.releaseDate || track.album?.release_date || (track.releaseYear ? String(track.releaseYear) : null)}

@@ -21,14 +21,18 @@ import {
   shareCard,
 } from '../utils/cardExport';
 import GrooveLogo from './GrooveLogo';
+import RatingPieChart from './RatingPieChart';
 import { useTheme } from '../context/ThemeContext';
 import { COLORS, FONTS } from '../constants/theme';
 
 const THEMES = [
-  { id: 'obsidian', label: 'Obsidian Dusk', colors: ['#0A0A0C', '#121216', '#050507'], border: 'rgba(255, 255, 255, 0.12)' },
-  { id: 'cosmic', label: 'Cosmic Purple', colors: ['#1e1035', '#2e0854', '#0d0718'], border: 'rgba(232, 121, 249, 0.3)' },
-  { id: 'ocean', label: 'Ocean Blue', colors: ['#061a2f', '#092b4c', '#030d18'], border: 'rgba(96, 165, 250, 0.3)' },
-  { id: 'sunset', label: 'Sunset Rose', colors: ['#2d0e19', '#471426', '#14060b'], border: 'rgba(244, 63, 94, 0.3)' },
+  { id: 'obsidian', label: 'Obsidian', colors: ['#1f2029', '#0d0e13', '#050608'], border: 'rgba(255, 255, 255, 0.12)', accent: '#E8A87C' },
+  { id: 'midnight', label: 'Midnight', colors: ['#17223b', '#0b1122', '#04070e'], border: 'rgba(56, 189, 248, 0.25)', accent: '#38BDF8' },
+  { id: 'amber', label: 'Amber', colors: ['#2b1a0e', '#160c06', '#080402'], border: 'rgba(245, 158, 11, 0.25)', accent: '#F59E0B' },
+  { id: 'slate', label: 'Slate', colors: ['#262933', '#14151a', '#090a0d'], border: 'rgba(255, 255, 255, 0.14)', accent: '#E2E8F0' },
+  { id: 'emerald', label: 'Emerald', colors: ['#11261d', '#081610', '#030805'], border: 'rgba(16, 185, 129, 0.25)', accent: '#10B981' },
+  { id: 'bordeaux', label: 'Bordeaux', colors: ['#2b0d1c', '#17060e', '#080205'], border: 'rgba(244, 63, 94, 0.25)', accent: '#F43F5E' },
+  { id: 'monochrome', label: 'Carbon', colors: ['#18181b', '#111113', '#09090b'], border: 'rgba(255, 255, 255, 0.15)', accent: '#FFFFFF' },
 ];
 
 const QR_COLORS = [
@@ -51,15 +55,21 @@ export default function GrooveCardModal({
   imageUrl = '',
   releaseDate = '',
   releaseYear = '',
+  rating = null,
+  duration = null,
+  discCount = null,
+  totalTracks = null,
   type = 'track',
   itemId = '',
 }) {
   const { colors, isDark } = useTheme();
   const cardRef = useRef(null);
   const [selectedTheme, setSelectedTheme] = useState('obsidian');
+  const [cornerWidget, setCornerWidget] = useState('rating'); // 'rating' (default) | 'qr' | 'none'
   const [selectedQrColor, setSelectedQrColor] = useState('000000');
-  const [showQR, setShowQR] = useState(true);
-  const [showYear, setShowYear] = useState(true);
+  const [dateMode, setDateMode] = useState('year'); // 'year' (default) | 'full' | 'monthYear' | 'none'
+  const [showDuration, setShowDuration] = useState(false);
+  const [showDiscs, setShowDiscs] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [qrFullScreen, setQrFullScreen] = useState(false);
   const [imgError, setImgError] = useState(false);
@@ -145,32 +155,89 @@ export default function GrooveCardModal({
     );
   }, [t, releaseDate, releaseYear]);
 
-  // Exact UTC Date calculation matching web app GrooveCardComposer
-  const displayReleaseDate = useMemo(() => {
-    if (rawDate) {
-      const raw = String(rawDate).trim();
-      if (/^\d{4}$/.test(raw)) return raw;
-      const parsed = new Date(raw);
-      if (!isNaN(parsed.getTime())) {
-        try {
-          return parsed.toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-            timeZone: 'UTC',
-          });
-        } catch (_) {
-          return raw;
-        }
-      }
-      return raw;
+  // Date parsing: Year primarily, month/date selectable
+  const dateInfo = useMemo(() => {
+    if (!rawDate) return { year: null, full: null, monthYear: null };
+    const raw = String(rawDate).trim();
+    const yearMatch = raw.match(/\b(19\d{2}|20\d{2})\b/);
+    const year = yearMatch ? yearMatch[1] : raw;
+    let full = year;
+    let monthYear = year;
+
+    const parsed = new Date(raw);
+    if (!isNaN(parsed.getTime())) {
+      try {
+        full = parsed.toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+          timeZone: 'UTC',
+        });
+        monthYear = parsed.toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'short',
+          timeZone: 'UTC',
+        });
+      } catch (_) {}
+    }
+
+    return { year, full, monthYear };
+  }, [rawDate]);
+
+  const displayDate = useMemo(() => {
+    if (dateMode === 'none') return null;
+    if (dateMode === 'year') return dateInfo.year;
+    if (dateMode === 'full') return dateInfo.full || dateInfo.year;
+    if (dateMode === 'monthYear') return dateInfo.monthYear || dateInfo.year;
+    return dateInfo.year;
+  }, [dateMode, dateInfo]);
+
+  // Duration formatting
+  const effectiveDuration = duration || t.duration || t.duration_ms || null;
+  const formattedDuration = useMemo(() => {
+    if (!effectiveDuration || effectiveDuration <= 0) return null;
+    const totalSecs = Math.floor(effectiveDuration > 1000 ? effectiveDuration / 1000 : effectiveDuration);
+    const mins = Math.floor(totalSecs / 60);
+    const secs = totalSecs % 60;
+    if (mins >= 60) {
+      const hours = Math.floor(mins / 60);
+      const remMins = mins % 60;
+      return `${hours}h ${remMins}m`;
+    }
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+  }, [effectiveDuration]);
+
+  // Discs / Tracks formatting
+  const effectiveDiscs = discCount || t.disc || t.disc_number || null;
+  const effectiveTracks = totalTracks || t.total_tracks || t.trackCount || null;
+  const formattedDiscs = useMemo(() => {
+    const dCount = effectiveDiscs && Number(effectiveDiscs) > 0 ? Number(effectiveDiscs) : null;
+    const tCount = effectiveTracks && Number(effectiveTracks) > 0 ? Number(effectiveTracks) : null;
+    if (dCount && dCount > 1) {
+      return tCount ? `${dCount} Discs · ${tCount} Tracks` : `${dCount} Discs`;
+    }
+    if (tCount && tCount > 1) {
+      return `${tCount} Tracks`;
+    }
+    if (dCount === 1 && effectiveType === 'track') {
+      return 'Disc 1';
     }
     return null;
-  }, [rawDate]);
+  }, [effectiveDiscs, effectiveTracks, effectiveType]);
+
+  // Rating for Pie Chart
+  const effectiveRating = useMemo(() => {
+    if (rating && (rating.value !== undefined || typeof rating === 'number')) {
+      return typeof rating === 'number' ? { value: rating } : rating;
+    }
+    if (t.rating) return t.rating;
+    if (t.popularity) return { value: Math.max(1, Math.min(5, (t.popularity / 20))) };
+    return { value: 4.4 };
+  }, [rating, t]);
 
   const activeThemeObj = THEMES.find((theme) => theme.id === selectedTheme) || THEMES[0];
 
-  // Universal Groove routing link matching web app
+  // Universal Groove routing link
   const universalUrl = useMemo(() => {
     if (effectiveId) {
       return `https://groove.amplecen.com/${effectiveType}/${effectiveId}?groovelink=true`;
@@ -182,7 +249,7 @@ export default function GrooveCardModal({
     universalUrl
   )}&color=${selectedQrColor}&bgcolor=ffffff&ecc=H&format=png`;
 
-  // Download Card as high-res PNG into user camera roll
+  // Download Card as high-res PNG
   const handleDownloadCard = async () => {
     if (isExporting) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -223,7 +290,7 @@ export default function GrooveCardModal({
           <View style={styles.sheetHeader}>
             <View>
               <Text style={[styles.sheetTitle, { color: colors.text }]}>GrooveCard Composer</Text>
-              <Text style={[styles.sheetSubtitle, { color: colors.textSecondary }]}>Personalize and export your music card</Text>
+              <Text style={[styles.sheetSubtitle, { color: colors.textSecondary }]}>Abstract backgrounds & customizable widgets</Text>
             </View>
             <TouchableOpacity style={styles.closeBtn} onPress={onClose} hitSlop={10}>
               <Ionicons name="close" size={22} color={colors.textSecondary} />
@@ -248,15 +315,21 @@ export default function GrooveCardModal({
                   style={StyleSheet.absoluteFill}
                 />
 
-                {/* Header row */}
+                {/* Subtle Ambient Radial Glow */}
+                <View
+                  style={[
+                    styles.cardAmbientGlow,
+                    { backgroundColor: activeThemeObj.accent },
+                  ]}
+                />
+
+                {/* Header row: Unboxed, Minimal Typography */}
                 <View style={styles.cardHeaderRow}>
                   <View style={styles.cardLogoGroup}>
-                    <GrooveLogo size={15} style={{ marginRight: 6 }} />
+                    <GrooveLogo size={14} style={{ marginRight: 6 }} />
                     <Text style={styles.cardLogoText}>GROOVECARD</Text>
                   </View>
-                  <View style={styles.musicLayerBadge}>
-                    <Text style={styles.musicLayerBadgeText}>MUSIC LAYER</Text>
-                  </View>
+                  <Text style={styles.cardTypeIndicator}>{(type || 'MUSIC').toUpperCase()}</Text>
                 </View>
 
                 {/* Album artwork */}
@@ -284,23 +357,52 @@ export default function GrooveCardModal({
                   )}
                 </View>
 
-                {/* Metadata & QR code row */}
+                {/* Metadata & Bottom Right Widget row */}
                 <View style={styles.cardInfoRow}>
                   <View style={styles.cardTextCol}>
                     <Text style={styles.cardTitle} numberOfLines={2}>{effectiveTitle}</Text>
                     <Text style={styles.cardArtist} numberOfLines={1}>{effectiveArtist}</Text>
                     {effectiveAlbum && effectiveAlbum !== effectiveTitle ? (
-                      <Text style={styles.cardAlbum} numberOfLines={1}>Album: {effectiveAlbum}</Text>
+                      <Text style={styles.cardAlbum} numberOfLines={1}>{effectiveAlbum}</Text>
                     ) : null}
-                    {showYear && displayReleaseDate ? (
-                      <View style={styles.yearPill}>
-                        <Text style={styles.yearText}>{displayReleaseDate}</Text>
+
+                    {/* Unboxed Dot-Separated Metadata Row */}
+                    {(displayDate || (showDuration && formattedDuration) || (showDiscs && formattedDiscs)) ? (
+                      <View style={styles.metaTextRow}>
+                        {displayDate ? (
+                          <Text style={styles.metaInlineText}>{displayDate}</Text>
+                        ) : null}
+
+                        {showDuration && formattedDuration ? (
+                          <>
+                            {displayDate ? <Text style={styles.metaDot}>•</Text> : null}
+                            <Text style={styles.metaInlineText}>{formattedDuration}</Text>
+                          </>
+                        ) : null}
+
+                        {showDiscs && formattedDiscs ? (
+                          <>
+                            {(displayDate || (showDuration && formattedDuration)) ? <Text style={styles.metaDot}>•</Text> : null}
+                            <Text style={styles.metaInlineText}>{formattedDiscs}</Text>
+                          </>
+                        ) : null}
                       </View>
                     ) : null}
                   </View>
 
-                  {/* QR code with centered app logo overlay */}
-                  {showQR && (
+                  {/* Bottom Right Corner Widget: Unboxed Rating Pie (DEFAULT) OR QR Code OR None */}
+                  {cornerWidget === 'rating' && (
+                    <View style={styles.ratingCornerWidget}>
+                      <RatingPieChart
+                        rating={effectiveRating}
+                        size="sm"
+                        style={{ backgroundColor: 'transparent', borderWidth: 0, padding: 0 }}
+                      />
+                      <Text style={styles.ratingTinyLabel}>RATING</Text>
+                    </View>
+                  )}
+
+                  {cornerWidget === 'qr' && (
                     <TouchableOpacity
                       style={styles.qrContainer}
                       activeOpacity={0.85}
@@ -316,9 +418,9 @@ export default function GrooveCardModal({
               </View>
             </View>
 
-            {/* Customizer: Theme Selection */}
+            {/* Customizer Section 1: Abstract Themes */}
             <View style={styles.customSection}>
-              <Text style={[styles.customLabel, { color: colors.textSecondary }]}>CARD THEME</Text>
+              <Text style={[styles.customLabel, { color: colors.textSecondary }]}>ABSTRACT BACKGROUND</Text>
               <View style={styles.themeGrid}>
                 {THEMES.map((tItem) => {
                   const isSelected = selectedTheme === tItem.id;
@@ -355,11 +457,56 @@ export default function GrooveCardModal({
               </View>
             </View>
 
-            {/* Customizer: QR Color chips */}
-            {showQR && (
-              <View style={styles.customSection}>
-                <Text style={[styles.customLabel, { color: colors.textSecondary }]}>QR COLOR ACCENT</Text>
-                <View style={styles.qrColorRow}>
+            {/* Customizer Section 2: Corner Widget (Rating Pie vs QR vs None) */}
+            <View style={styles.customSection}>
+              <Text style={[styles.customLabel, { color: colors.textSecondary }]}>BOTTOM-RIGHT WIDGET</Text>
+              <View style={styles.segmentedRow}>
+                {[
+                  { id: 'rating', label: 'Rating Pie (Default)', icon: 'star' },
+                  { id: 'qr', label: 'QR Code', icon: 'qr-code' },
+                  { id: 'none', label: 'None', icon: 'close-circle' },
+                ].map((item) => {
+                  const isSelected = cornerWidget === item.id;
+                  return (
+                    <TouchableOpacity
+                      key={item.id}
+                      style={[
+                        styles.segmentedBtn,
+                        { borderColor: colors.border },
+                        isSelected && {
+                          borderColor: colors.accent,
+                          backgroundColor: colors.accent,
+                        },
+                      ]}
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        setCornerWidget(item.id);
+                      }}
+                      activeOpacity={0.8}
+                    >
+                      <Ionicons
+                        name={item.icon}
+                        size={13}
+                        color={isSelected ? '#FFFFFF' : colors.textSecondary}
+                        style={{ marginRight: 4 }}
+                      />
+                      <Text
+                        style={[
+                          styles.segmentedBtnText,
+                          { color: isSelected ? '#FFFFFF' : colors.textSecondary },
+                          isSelected && { fontWeight: '700' },
+                        ]}
+                      >
+                        {item.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              {/* QR Color Accent row if QR is selected */}
+              {cornerWidget === 'qr' && (
+                <View style={[styles.qrColorRow, { marginTop: 12 }]}>
                   {QR_COLORS.map((c) => {
                     const isSelected = selectedQrColor === c.id;
                     return (
@@ -381,64 +528,118 @@ export default function GrooveCardModal({
                     );
                   })}
                 </View>
+              )}
+            </View>
+
+            {/* Customizer Section 3: Date Format (Year Primary) */}
+            <View style={styles.customSection}>
+              <Text style={[styles.customLabel, { color: colors.textSecondary }]}>RELEASE DATE FORMAT (YEAR PRIMARY)</Text>
+              <View style={styles.segmentedRow}>
+                {[
+                  { id: 'year', label: 'Year' },
+                  { id: 'full', label: 'Full Date' },
+                  { id: 'monthYear', label: 'Month/Year' },
+                  { id: 'none', label: 'Hide' },
+                ].map((d) => {
+                  const isSelected = dateMode === d.id;
+                  return (
+                    <TouchableOpacity
+                      key={d.id}
+                      style={[
+                        styles.segmentedBtn,
+                        { borderColor: colors.border },
+                        isSelected && {
+                          borderColor: colors.accent,
+                          backgroundColor: colors.accent,
+                        },
+                      ]}
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        setDateMode(d.id);
+                      }}
+                      activeOpacity={0.8}
+                    >
+                      <Text
+                        style={[
+                          styles.segmentedBtnText,
+                          { color: isSelected ? '#FFFFFF' : colors.textSecondary },
+                          isSelected && { fontWeight: '700' },
+                        ]}
+                      >
+                        {d.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
-            )}
+            </View>
 
-            {/* Toggles */}
-            <View style={styles.toggleRow}>
-              <TouchableOpacity
-                style={[
-                  styles.toggleBtn,
-                  { borderColor: colors.border },
-                  showQR && {
-                    backgroundColor: isDark ? 'rgba(71, 11, 36, 0.6)' : 'rgba(212, 163, 115, 0.25)',
-                    borderColor: colors.accent,
-                  },
-                ]}
-                onPress={() => setShowQR(!showQR)}
-              >
-                <Ionicons
-                  name={showQR ? 'qr-code' : 'qr-code-outline'}
-                  size={15}
-                  color={showQR ? colors.accent : colors.textSecondary}
-                />
-                <Text
+            {/* Customizer Section 4: Optional Audio Info Toggles */}
+            <View style={styles.customSection}>
+              <Text style={[styles.customLabel, { color: colors.textSecondary }]}>AUDIO INFO (OPTIONAL)</Text>
+              <View style={styles.toggleRow}>
+                <TouchableOpacity
                   style={[
-                    styles.toggleBtnText,
-                    { color: colors.textSecondary },
-                    showQR && { color: colors.text, fontWeight: '700' },
+                    styles.toggleBtn,
+                    { borderColor: colors.border },
+                    showDuration && {
+                      backgroundColor: isDark ? 'rgba(71, 11, 36, 0.6)' : 'rgba(212, 163, 115, 0.25)',
+                      borderColor: colors.accent,
+                    },
                   ]}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setShowDuration(!showDuration);
+                  }}
+                  activeOpacity={0.8}
                 >
-                  {showQR ? 'QR Visible' : 'QR Hidden'}
-                </Text>
-              </TouchableOpacity>
+                  <Ionicons
+                    name="time-outline"
+                    size={15}
+                    color={showDuration ? colors.accent : colors.textSecondary}
+                  />
+                  <Text
+                    style={[
+                      styles.toggleBtnText,
+                      { color: colors.textSecondary },
+                      showDuration && { color: colors.text, fontWeight: '700' },
+                    ]}
+                  >
+                    {showDuration ? 'Duration Shown' : 'Duration Hidden'}
+                  </Text>
+                </TouchableOpacity>
 
-              <TouchableOpacity
-                style={[
-                  styles.toggleBtn,
-                  { borderColor: colors.border },
-                  showYear && {
-                    backgroundColor: isDark ? 'rgba(71, 11, 36, 0.6)' : 'rgba(212, 163, 115, 0.25)',
-                    borderColor: colors.accent,
-                  },
-                ]}
-                onPress={() => setShowYear(!showYear)}
-              >
-                <Ionicons
-                  name="calendar-outline"
-                  size={15}
-                  color={showYear ? colors.accent : colors.textSecondary}
-                />
-                <Text
+                <TouchableOpacity
                   style={[
-                    styles.toggleBtnText,
-                    { color: colors.textSecondary },
-                    showYear && { color: colors.text, fontWeight: '700' },
+                    styles.toggleBtn,
+                    { borderColor: colors.border },
+                    showDiscs && {
+                      backgroundColor: isDark ? 'rgba(71, 11, 36, 0.6)' : 'rgba(212, 163, 115, 0.25)',
+                      borderColor: colors.accent,
+                    },
                   ]}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setShowDiscs(!showDiscs);
+                  }}
+                  activeOpacity={0.8}
                 >
-                  {showYear ? 'Date Shown' : 'Date Hidden'}
-                </Text>
-              </TouchableOpacity>
+                  <Ionicons
+                    name="disc-outline"
+                    size={15}
+                    color={showDiscs ? colors.accent : colors.textSecondary}
+                  />
+                  <Text
+                    style={[
+                      styles.toggleBtnText,
+                      { color: colors.textSecondary },
+                      showDiscs && { color: colors.text, fontWeight: '700' },
+                    ]}
+                  >
+                    {showDiscs ? 'Discs Shown' : 'Discs Hidden'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </ScrollView>
 
@@ -576,12 +777,23 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.5,
     shadowRadius: 20,
     elevation: 8,
+    position: 'relative',
+  },
+  cardAmbientGlow: {
+    position: 'absolute',
+    top: -40,
+    right: -40,
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    opacity: 0.25,
   },
   cardHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 12,
+    zIndex: 10,
   },
   cardLogoGroup: {
     flexDirection: 'row',
@@ -594,29 +806,22 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
     color: '#8992A5',
   },
-  musicLayerBadge: {
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  musicLayerBadgeText: {
+  cardTypeIndicator: {
     fontSize: 9,
-    fontFamily: FONTS.displayBold,
-    color: 'rgba(255, 255, 255, 0.9)',
-    letterSpacing: 1,
+    fontFamily: FONTS.bodySemiBold,
+    color: 'rgba(255, 255, 255, 0.4)',
+    letterSpacing: 1.5,
   },
   cardArtworkContainer: {
     width: '100%',
     aspectRatio: 1,
-    borderRadius: 16,
+    borderRadius: 14,
     overflow: 'hidden',
     backgroundColor: '#10141F',
-    marginBottom: 14,
+    marginBottom: 10,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.08)',
+    zIndex: 10,
   },
   cardArtwork: {
     width: '100%',
@@ -645,53 +850,69 @@ const styles = StyleSheet.create({
   },
   cardInfoRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'flex-end',
     justifyContent: 'space-between',
-    gap: 12,
+    gap: 10,
+    zIndex: 10,
   },
   cardTextCol: {
     flex: 1,
   },
   cardTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontFamily: FONTS.displayBold,
     color: '#FFFFFF',
-    marginBottom: 4,
-    lineHeight: 20,
+    marginBottom: 2,
+    lineHeight: 19,
   },
   cardArtist: {
-    fontSize: 13,
+    fontSize: 12,
     fontFamily: FONTS.bodySemiBold,
-    color: '#8992A5',
-    marginBottom: 4,
+    color: 'rgba(255, 255, 255, 0.75)',
+    marginBottom: 2,
   },
   cardAlbum: {
-    fontSize: 11,
+    fontSize: 10,
     fontFamily: FONTS.body,
-    color: 'rgba(137, 146, 165, 0.8)',
+    color: 'rgba(255, 255, 255, 0.5)',
     fontStyle: 'italic',
-    marginBottom: 6,
+    marginBottom: 4,
   },
-  yearPill: {
-    alignSelf: 'flex-start',
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
+  metaTextRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 4,
+    marginTop: 3,
+  },
+  metaInlineText: {
+    fontSize: 11,
+    fontFamily: FONTS.bodyMedium,
+    color: 'rgba(255, 255, 255, 0.7)',
+  },
+  metaDot: {
+    fontSize: 11,
+    color: 'rgba(255, 255, 255, 0.3)',
+    marginHorizontal: 1,
+  },
+  ratingCornerWidget: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 0,
+    backgroundColor: 'transparent',
+  },
+  ratingTinyLabel: {
+    fontSize: 8,
+    fontFamily: FONTS.displayBold,
+    color: 'rgba(255, 255, 255, 0.6)',
+    letterSpacing: 1.5,
     marginTop: 2,
   },
-  yearText: {
-    fontSize: 10,
-    fontFamily: FONTS.bodySemiBold,
-    color: '#8992A5',
-  },
   qrContainer: {
-    width: 80,
-    height: 80,
+    width: 76,
+    height: 76,
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 4,
     alignItems: 'center',
     justifyContent: 'center',
@@ -704,13 +925,13 @@ const styles = StyleSheet.create({
   qrImage: {
     width: '100%',
     height: '100%',
-    borderRadius: 8,
+    borderRadius: 10,
   },
   qrLogoOverlay: {
     position: 'absolute',
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#E5E7EB',
@@ -729,7 +950,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontFamily: FONTS.displayBold,
     color: '#8992A5',
-    letterSpacing: 1.5,
+    letterSpacing: 1.2,
     marginBottom: 10,
   },
   themeGrid: {
@@ -755,18 +976,38 @@ const styles = StyleSheet.create({
     borderRadius: 7,
   },
   themeOptionText: {
-    fontSize: 12,
+    fontSize: 11,
     fontFamily: FONTS.bodyMedium,
     color: '#8992A5',
+  },
+  segmentedRow: {
+    flexDirection: 'row',
+    gap: 6,
+    padding: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    borderRadius: 14,
+  },
+  segmentedBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    borderRadius: 10,
+  },
+  segmentedBtnText: {
+    fontSize: 10,
+    fontFamily: FONTS.bodyMedium,
   },
   qrColorRow: {
     flexDirection: 'row',
     gap: 12,
+    justifyContent: 'center',
   },
   qrColorChip: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     borderWidth: 2,
     borderColor: 'transparent',
     alignItems: 'center',
@@ -779,7 +1020,6 @@ const styles = StyleSheet.create({
   toggleRow: {
     flexDirection: 'row',
     gap: 10,
-    marginBottom: 10,
   },
   toggleBtn: {
     flex: 1,
@@ -866,7 +1106,6 @@ const styles = StyleSheet.create({
   fullQrImage: {
     width: '100%',
     height: '100%',
-    borderRadius: 12,
   },
   fullQrLogoBadge: {
     position: 'absolute',
@@ -874,31 +1113,29 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: 22,
     backgroundColor: '#FFFFFF',
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: '#E5E7EB',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 6,
   },
   fullQrSubtitle: {
     fontSize: 12,
     fontFamily: FONTS.body,
     textAlign: 'center',
-    lineHeight: 18,
     marginBottom: 20,
   },
   fullQrCloseBtn: {
-    paddingVertical: 10,
-    paddingHorizontal: 28,
-    borderRadius: 12,
+    width: '100%',
+    paddingVertical: 12,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   fullQrCloseText: {
     fontSize: 13,
     fontFamily: FONTS.displayBold,
     color: '#FFFFFF',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
 });

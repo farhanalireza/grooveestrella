@@ -76,6 +76,16 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
         const prevReleaseId = selectedReleaseId;
         setSelectedReleaseId(relId);
         setLoadingTracks(true);
+
+        // Optimistically update cover art to the selected edition
+        const targetEdition = album?.editions?.find(e => e.id === relId);
+        const newCover = targetEdition?.coverArt || `https://coverartarchive.org/release/${relId}/front-500`;
+        setAlbum(prev => prev ? {
+            ...prev,
+            coverArt: newCover,
+            url: newCover,
+            images: [{ url: newCover, width: 600, height: 600 }],
+        } : prev);
         try {
             const res = await fetch(`/api/album/${encodeURIComponent(id)}?release=${encodeURIComponent(relId)}`);
             if (res.ok) {
@@ -103,6 +113,18 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
         } finally {
             setLoadingTracks(false);
         }
+    };
+
+    const handleRestoreMainCover = (e) => {
+        e?.stopPropagation?.();
+        if (!album?.mainCoverArt) return;
+        setAlbum(prev => prev ? {
+            ...prev,
+            coverArt: prev.mainCoverArt,
+            url: prev.mainCoverArt,
+            images: [{ url: prev.mainCoverArt, width: 600, height: 600 }],
+        } : prev);
+        toast.success("Restored main album artwork 🎨");
     };
 
     useEffect(() => {
@@ -433,7 +455,13 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
                         src={coverUrl} 
                         alt={album.name || album.title} 
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" 
-                        onError={(e) => { e.currentTarget.src = 'https://placehold.co/500x500/17020B/E8A87C?text=Album'; }}
+                        onError={(e) => { 
+                            if (album?.mainCoverArt && e.currentTarget.src !== album.mainCoverArt) {
+                                e.currentTarget.src = album.mainCoverArt;
+                            } else {
+                                e.currentTarget.src = 'https://placehold.co/500x500/17020B/E8A87C?text=Album'; 
+                            }
+                        }}
                     />
                 </div>
 
@@ -858,6 +886,10 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
                 releaseYear={releaseYear}
                 releaseDate={album.releaseDate || album.release_date || (releaseYear ? String(releaseYear) : null)}
                 popularity={album.popularity || 85}
+                rating={album.rating}
+                duration={totalDurationMs}
+                discCount={trackSections.length}
+                totalTracks={tracks.length || album.total_tracks}
                 explicit={false}
                 type="album"
                 genres={validGenres}
@@ -889,6 +921,9 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
                     album={selectedTrackForGrooveCard.album}
                     releaseYear={album.releaseYear}
                     popularity={85}
+                    rating={album.rating}
+                    duration={selectedTrackForGrooveCard.duration || selectedTrackForGrooveCard.duration_ms}
+                    discCount={selectedTrackForGrooveCard.disc || 1}
                     explicit={selectedTrackForGrooveCard.explicit}
                     type="track"
                     genres={selectedTrackForGrooveCard.genres || album.genres || []}
@@ -905,6 +940,8 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
                 loadingTracks={loadingTracks}
                 albumName={album.name || album.title}
                 albumCoverUrl={coverUrl}
+                mainCoverUrl={album.mainCoverArt || coverUrl}
+                onRestoreMainCover={handleRestoreMainCover}
             />
         </div>
     );

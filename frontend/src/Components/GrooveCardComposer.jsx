@@ -1,14 +1,153 @@
 // src/Components/GrooveCardComposer.jsx
-import React, { useRef, useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+"use client";
+
+import React, { useRef, useState, useEffect, useMemo } from 'react';
 import { 
-    X, 
+    ArrowLeft, 
     Download, 
-    Share2 
+    Share2, 
+    Sparkles, 
+    Palette, 
+    Star, 
+    Calendar, 
+    Sliders,
+    QrCode,
+    Check,
+    X,
+    EyeOff
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { createPortal } from 'react-dom';
 import { toast } from '@/lib/toast';
+
+// Client-side generated high-fidelity noise PNG data URI generator
+let cachedNoiseUri = null;
+function getClientNoiseUri() {
+    if (cachedNoiseUri) return cachedNoiseUri;
+    if (typeof document === 'undefined') return '';
+    try {
+        const canvas = document.createElement('canvas');
+        canvas.width = 128;
+        canvas.height = 128;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return '';
+        const imgData = ctx.createImageData(128, 128);
+        const data = imgData.data;
+        for (let i = 0; i < data.length; i += 4) {
+            const v = (Math.random() * 255) | 0;
+            data[i] = v;
+            data[i + 1] = v;
+            data[i + 2] = v;
+            data[i + 3] = 255;
+        }
+        ctx.putImageData(imgData, 0, 0);
+        cachedNoiseUri = canvas.toDataURL('image/png');
+        return cachedNoiseUri;
+    } catch (_) {
+        return '';
+    }
+}
+
+// Sophisticated, minimalist abstract backgrounds (no harsh gaudy blobs)
+const THEMES = {
+    obsidian: {
+        id: 'obsidian',
+        label: 'Obsidian',
+        bgStyle: {
+            background: 'radial-gradient(ellipse at 50% 0%, #1f2029 0%, #0d0e13 60%, #050608 100%)',
+        },
+        border: 'rgba(255, 255, 255, 0.12)',
+        preview: '#14151c',
+        accent: '#E8A87C',
+        isLight: false,
+    },
+    midnight: {
+        id: 'midnight',
+        label: 'Midnight',
+        bgStyle: {
+            background: 'radial-gradient(ellipse at 60% 0%, #17223b 0%, #0b1122 60%, #04070e 100%)',
+        },
+        border: 'rgba(56, 189, 248, 0.25)',
+        preview: '#0e172e',
+        accent: '#38BDF8',
+        isLight: false,
+    },
+    amber: {
+        id: 'amber',
+        label: 'Amber',
+        bgStyle: {
+            background: 'radial-gradient(ellipse at 40% 0%, #2b1a0e 0%, #160c06 60%, #080402 100%)',
+        },
+        border: 'rgba(245, 158, 11, 0.25)',
+        preview: '#201208',
+        accent: '#F59E0B',
+        isLight: false,
+    },
+    slate: {
+        id: 'slate',
+        label: 'Slate',
+        bgStyle: {
+            background: 'radial-gradient(ellipse at 50% 10%, #262933 0%, #14151a 60%, #090a0d 100%)',
+        },
+        border: 'rgba(255, 255, 255, 0.14)',
+        preview: '#1a1c24',
+        accent: '#E2E8F0',
+        isLight: false,
+    },
+    emerald: {
+        id: 'emerald',
+        label: 'Emerald',
+        bgStyle: {
+            background: 'radial-gradient(ellipse at 60% 0%, #11261d 0%, #081610 60%, #030805 100%)',
+        },
+        border: 'rgba(16, 185, 129, 0.25)',
+        preview: '#0b1d15',
+        accent: '#10B981',
+        isLight: false,
+    },
+    bordeaux: {
+        id: 'bordeaux',
+        label: 'Bordeaux',
+        bgStyle: {
+            background: 'radial-gradient(ellipse at 35% 0%, #2b0d1c 0%, #17060e 60%, #080205 100%)',
+        },
+        border: 'rgba(244, 63, 94, 0.25)',
+        preview: '#200813',
+        accent: '#F43F5E',
+        isLight: false,
+    },
+    monochrome: {
+        id: 'monochrome',
+        label: 'Carbon',
+        bgStyle: {
+            background: 'linear-gradient(180deg, #18181b 0%, #09090b 100%)',
+        },
+        border: 'rgba(255, 255, 255, 0.15)',
+        preview: '#111113',
+        accent: '#FFFFFF',
+        isLight: false,
+    },
+    cream: {
+        id: 'cream',
+        label: 'Studio Cream',
+        bgStyle: {
+            background: 'linear-gradient(180deg, #F6F4EE 0%, #EAE7DC 100%)',
+        },
+        border: 'rgba(0, 0, 0, 0.12)',
+        preview: '#F0ECE1',
+        accent: '#17020B',
+        isLight: true,
+    },
+};
+
+const QR_COLORS = [
+    { label: 'Black', hex: '000000', class: 'bg-black border-white/20' },
+    { label: 'Purple', hex: '9333ea', class: 'bg-purple-600 border-transparent' },
+    { label: 'Emerald', hex: '10b981', class: 'bg-emerald-500 border-transparent' },
+    { label: 'Cyan', hex: '06b6d4', class: 'bg-cyan-500 border-transparent' },
+    { label: 'Rose', hex: 'ec4899', class: 'bg-rose-500 border-transparent' },
+    { label: 'Amber', hex: 'f59e0b', class: 'bg-amber-500 border-transparent' }
+];
 
 export default function GrooveCardComposer({
     isOpen,
@@ -18,89 +157,200 @@ export default function GrooveCardComposer({
     artist,
     imageUrl,
     popularity,
+    rating,
     explicit,
     type = "track", // track, album, artist, playlist
     platform = "musicbrainz",
     releaseDate, // accurate date string e.g. "1975-10-31" or "1975"
     releaseYear: propReleaseYear,
     album,
+    duration, // duration in ms or seconds
+    discCount, // number of discs
+    totalTracks, // total tracks count
     genres = [],
 }) {
     const cardRef = useRef(null);
     const [isGenerating, setIsGenerating] = useState(false);
+    const [noiseDataUri, setNoiseDataUri] = useState('');
     
     // Customization states
     const [cardTheme, setCardTheme] = useState('obsidian');
-    const [qrColor, setQrColor] = useState('000000'); // Default black foreground
-    const [showQR, setShowQR] = useState(true);
+    const [noiseLevel, setNoiseLevel] = useState('medium'); // 'none' | 'subtle' | 'medium' | 'heavy'
+    const [cornerWidget, setCornerWidget] = useState('rating'); // 'rating' (default) | 'qr' | 'none'
+    const [qrColor, setQrColor] = useState('000000');
     const [qrFullScreen, setQrFullScreen] = useState(false);
-    const [showYear, setShowYear] = useState(true);
+    const [dateMode, setDateMode] = useState('year'); // 'year' (default) | 'full' | 'monthYear' | 'none'
+    const [showDuration, setShowDuration] = useState(false);
+    const [showDiscs, setShowDiscs] = useState(false);
 
-    // Compute accurate release date / year
-    const displayReleaseDate = React.useMemo(() => {
-        if (releaseDate) {
-            const raw = String(releaseDate).trim();
-            if (/^\d{4}$/.test(raw)) return raw;
-            const parsed = new Date(raw);
-            if (!isNaN(parsed.getTime())) {
-                try {
-                    return parsed.toLocaleDateString("en-US", {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                        timeZone: "UTC"
-                    });
-                } catch (_) {
-                    return raw;
+    // Mobile editor active tab
+    const [mobileTab, setMobileTab] = useState('theme'); // 'theme' | 'grain' | 'widget' | 'date' | 'info'
+
+    // Initialize grain texture once on client mount
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            setNoiseDataUri(getClientNoiseUri());
+        }
+    }, []);
+
+    // Full-page takeover: hide background scroll and global app bar when open
+    useEffect(() => {
+        if (!isOpen) return;
+        const originalOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        document.documentElement.classList.add('groovecard-active');
+        return () => {
+            document.body.style.overflow = originalOverflow;
+            document.documentElement.classList.remove('groovecard-active');
+        };
+    }, [isOpen]);
+
+    // Close on Escape key
+    useEffect(() => {
+        if (!isOpen) return;
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape') {
+                if (qrFullScreen) {
+                    setQrFullScreen(false);
+                } else {
+                    onClose?.();
                 }
             }
-            return raw;
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [isOpen, qrFullScreen, onClose]);
+
+    // Compute release date representations
+    const dateInfo = useMemo(() => {
+        const raw = releaseDate 
+            ? String(releaseDate).trim() 
+            : (propReleaseYear ? String(propReleaseYear).trim() : null);
+        if (!raw) return { year: null, full: null, monthYear: null };
+
+        // 4-digit year match
+        const yearMatch = raw.match(/\b(19\d{2}|20\d{2})\b/);
+        const year = yearMatch ? yearMatch[1] : raw;
+
+        let full = year;
+        let monthYear = year;
+
+        const parsed = new Date(raw);
+        if (!isNaN(parsed.getTime())) {
+            try {
+                full = parsed.toLocaleDateString("en-US", {
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric",
+                    timeZone: "UTC"
+                });
+                monthYear = parsed.toLocaleDateString("en-US", {
+                    year: "numeric",
+                    month: "short",
+                    timeZone: "UTC"
+                });
+            } catch (_) {}
         }
-        if (propReleaseYear) return String(propReleaseYear);
-        return null;
+
+        return { year, full, monthYear };
     }, [releaseDate, propReleaseYear]);
+
+    // Active displayed date string based on dateMode
+    const displayDate = useMemo(() => {
+        if (dateMode === 'none') return null;
+        if (dateMode === 'year') return dateInfo.year;
+        if (dateMode === 'full') return dateInfo.full || dateInfo.year;
+        if (dateMode === 'monthYear') return dateInfo.monthYear || dateInfo.year;
+        return dateInfo.year;
+    }, [dateMode, dateInfo]);
+
+    // Format duration helper (supports ms or seconds)
+    const formattedDuration = useMemo(() => {
+        if (!duration || duration <= 0) return null;
+        const totalSecs = Math.floor(duration > 1000 ? duration / 1000 : duration);
+        const mins = Math.floor(totalSecs / 60);
+        const secs = totalSecs % 60;
+        if (mins >= 60) {
+            const hours = Math.floor(mins / 60);
+            const remMins = mins % 60;
+            return `${hours}h ${remMins}m`;
+        }
+        return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+    }, [duration]);
+
+    // Format discs / tracks helper
+    const formattedDiscs = useMemo(() => {
+        const dCount = discCount && Number(discCount) > 0 ? Number(discCount) : null;
+        const tCount = totalTracks && Number(totalTracks) > 0 ? Number(totalTracks) : null;
+        if (dCount && dCount > 1) {
+            return tCount ? `${dCount} Discs · ${tCount} Tracks` : `${dCount} Discs`;
+        }
+        if (tCount && tCount > 1) {
+            return `${tCount} Tracks`;
+        }
+        if (dCount === 1 && type === 'track') {
+            return 'Disc 1';
+        }
+        return null;
+    }, [discCount, totalTracks, type]);
+
+    // Calculate rating on 1-10 scale
+    const score10 = useMemo(() => {
+        if (rating?.value !== undefined && rating?.value !== null) {
+            const v = Number(rating.value);
+            return Math.max(1, Math.min(10, Number((v <= 5 ? v * 2 : v).toFixed(1))));
+        }
+        if (popularity !== undefined && popularity !== null) {
+            const pop = Number(popularity);
+            return Math.max(1, Math.min(10, Number((pop / 10).toFixed(1))));
+        }
+        return 8.8;
+    }, [rating, popularity]);
+
+    // Rating color
+    const ratingColor = useMemo(() => {
+        if (score10 >= 8) return '#10B981'; // Green
+        if (score10 >= 5) return '#F59E0B'; // Amber
+        return '#EF4444'; // Red
+    }, [score10]);
 
     // Generate clean share url based on current site host
     const shareUrl = typeof window !== "undefined" 
         ? `${window.location.origin}/${type || 'track'}/${itemId}?groovelink=true`
         : '';
 
-    const themes = {
-        obsidian: {
-            label: 'Obsidian Dusk',
-            class: 'bg-black border-zinc-800/80 shadow-[0_0_50px_rgba(0,0,0,0.8)]'
-        },
-        cosmic: {
-            label: 'Cosmic Purple',
-            class: 'bg-gradient-to-br from-indigo-950 via-purple-950 to-slate-950 border-purple-500/20 shadow-[0_0_50px_rgba(147,51,234,0.15)]'
-        },
-        ocean: {
-            label: 'Ocean Blue',
-            class: 'bg-gradient-to-br from-slate-950 via-cyan-950 to-blue-950 border-cyan-500/20 shadow-[0_0_50px_rgba(6,182,212,0.15)]'
-        },
-        sunset: {
-            label: 'Sunset Rose',
-            class: 'bg-gradient-to-br from-stone-950 via-rose-950 to-red-950 border-rose-500/20 shadow-[0_0_50px_rgba(244,63,94,0.15)]'
-        }
-    };
-
-    const qrColors = [
-        { label: 'Black', hex: '000000', class: 'bg-black border-white/20' },
-        { label: 'Purple', hex: '9333ea', class: 'bg-purple-600 border-transparent' },
-        { label: 'Emerald', hex: '10b981', class: 'bg-emerald-500 border-transparent' },
-        { label: 'Cyan', hex: '06b6d4', class: 'bg-cyan-500 border-transparent' },
-        { label: 'Rose', hex: 'ec4899', class: 'bg-rose-500 border-transparent' },
-        { label: 'Amber', hex: 'f59e0b', class: 'bg-amber-500 border-transparent' }
-    ];
-
     const qrApi = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(shareUrl)}&color=${qrColor}&bgcolor=ffffff&ecc=H&format=png`;
+
+    const currentTheme = THEMES[cardTheme] || THEMES.obsidian;
+
+    // Circular pie SVG calculations
+    const pieRadius = 16;
+    const pieCircumference = 2 * Math.PI * pieRadius;
+    const pieOffset = pieCircumference * (1 - score10 / 10);
+
+    // Format metadata items inline with clean dot separators (NO BOXES)
+    const metaItems = useMemo(() => {
+        const items = [];
+        if (displayDate) items.push(displayDate);
+        if (showDuration && formattedDuration) items.push(formattedDuration);
+        if (showDiscs && formattedDiscs) items.push(formattedDiscs);
+        return items;
+    }, [displayDate, showDuration, formattedDuration, showDiscs, formattedDiscs]);
+
+    // Grain opacity mapping
+    const grainOpacity = useMemo(() => {
+        if (noiseLevel === 'none') return 0;
+        if (noiseLevel === 'subtle') return currentTheme.isLight ? 0.15 : 0.22;
+        if (noiseLevel === 'medium') return currentTheme.isLight ? 0.28 : 0.40;
+        if (noiseLevel === 'heavy') return currentTheme.isLight ? 0.48 : 0.65;
+        return 0;
+    }, [noiseLevel, currentTheme.isLight]);
 
     // Generate high-resolution card PNG representation
     const generateCardImage = async () => {
         if (!cardRef.current) return null;
         const disabledSheets = [];
         try {
-            // Temporarily disable cross-origin stylesheets that trigger SecurityError
             if (typeof document !== 'undefined') {
                 const linkElements = Array.from(document.querySelectorAll('link[rel="stylesheet"]'));
                 linkElements.forEach(link => {
@@ -129,7 +379,7 @@ export default function GrooveCardComposer({
 
             const dataUrl = await toPng(cardRef.current, {
                 quality: 1.0,
-                pixelRatio: 3, // Premium quality printing
+                pixelRatio: 3,
                 style: {
                     transform: 'scale(1)',
                     transformOrigin: 'top left',
@@ -149,7 +399,7 @@ export default function GrooveCardComposer({
         }
     };
 
-    // Share Card specifically as an image file (Web Share API) or download fallback
+    // Share Card as image file (Web Share API) or fallback
     const handleShareCard = async () => {
         setIsGenerating(true);
         try {
@@ -173,7 +423,6 @@ export default function GrooveCardComposer({
                 }
             }
 
-            // Fallback for devices without file sharing support: download the card image directly
             const link = document.createElement('a');
             link.download = fileName;
             link.href = dataUrl;
@@ -189,7 +438,7 @@ export default function GrooveCardComposer({
         }
     };
 
-    // Download Card strictly as PNG image file
+    // Download Card as PNG image file
     const handleDownloadCard = async () => {
         setIsGenerating(true);
         try {
@@ -212,34 +461,6 @@ export default function GrooveCardComposer({
         }
     };
 
-    // Close on Escape key
-    useEffect(() => {
-        if (!isOpen) return;
-        const handleKeyDown = (e) => {
-            if (e.key === 'Escape') {
-                if (qrFullScreen) {
-                    setQrFullScreen(false);
-                } else {
-                    onClose?.();
-                }
-            }
-        };
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [isOpen, qrFullScreen, onClose]);
-
-    // Prevent backdrop scroll
-    useEffect(() => {
-        if (isOpen) {
-            document.body.style.overflow = 'hidden';
-        } else {
-            document.body.style.overflow = 'unset';
-        }
-        return () => {
-            document.body.style.overflow = 'unset';
-        };
-    }, [isOpen]);
-
     if (!isOpen || typeof window === "undefined") return null;
 
     const artistLabel = Array.isArray(artist) 
@@ -247,293 +468,645 @@ export default function GrooveCardComposer({
         : artist;
 
     return createPortal(
-        <AnimatePresence>
-            <motion.div 
-                key="share-modal-overlay"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 z-[600] flex items-center justify-center p-2 sm:p-4 md:p-6 bg-black/85 backdrop-blur-md overflow-hidden"
-            >
-                {/* Backdrop Click to Close */}
-                <div className="absolute inset-0 cursor-default" onClick={onClose} />
-
-                {/* Modal Container */}
-                <motion.div
-                    initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                    transition={{ type: 'spring', damping: 25, stiffness: 240 }}
-                    className="relative w-full max-w-4xl h-[88dvh] sm:h-auto max-h-[88dvh] sm:max-h-[86vh] bg-[var(--theme-card)] border border-[var(--theme-border)] text-[var(--theme-fg)] backdrop-blur-xl rounded-2xl sm:rounded-3xl shadow-2xl z-10 flex flex-col overflow-hidden"
+        <div className="fixed inset-0 z-[99999] bg-[#07070A] text-white flex flex-col w-screen h-[100dvh] overflow-hidden select-none font-sans">
+            {/* Top Bar: Back on Left, Title in Center, Share & Download on Right */}
+            <header className="h-14 sm:h-16 px-3 sm:px-6 border-b border-white/10 bg-[#0c0c12]/95 backdrop-blur-md flex items-center justify-between shrink-0 z-40">
+                {/* Left: Back to details */}
+                <button 
+                    onClick={onClose}
+                    className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-full hover:bg-white/10 active:scale-95 text-white/80 hover:text-white transition-all cursor-pointer"
+                    title="Exit Card Studio"
                 >
-                    {/* Pinned Modal Header */}
-                    <div className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 border-b border-[var(--theme-border)] bg-[var(--theme-surface)]/80 backdrop-blur-md shrink-0 z-20">
-                        <div className="flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-xl bg-[var(--theme-card)] border border-[var(--theme-border)] flex items-center justify-center p-1.5 shadow-sm">
-                                <img src="/in.svg" alt="Groove" className="w-full h-full object-contain" />
-                            </div>
-                            <div>
-                                <h2 className="text-sm sm:text-base font-extrabold text-[var(--theme-fg)] tracking-tight font-display">
-                                    GrooveCard Composer
-                                </h2>
-                                <p className="text-[11px] sm:text-xs text-[var(--theme-muted)] hidden xs:block">
-                                    Personalize and export your music card
-                                </p>
-                            </div>
-                        </div>
-                        <button 
-                            onClick={onClose} 
-                            className="p-1.5 sm:p-2 rounded-full bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] text-[var(--theme-muted)] hover:text-[var(--theme-fg)] border border-[var(--theme-border)] transition-all shadow-sm cursor-pointer"
-                            aria-label="Close modal"
-                        >
-                            <X size={18} />
-                        </button>
+                    <ArrowLeft size={18} />
+                    <span className="text-xs sm:text-sm font-semibold tracking-tight">Done</span>
+                </button>
+
+                {/* Center: Title / Breadcrumb */}
+                <div className="flex items-center gap-2 max-w-[140px] xs:max-w-[200px] sm:max-w-xs truncate text-center">
+                    <img src="/in.svg" alt="Groove" className="w-4 h-4 object-contain opacity-70 shrink-0 hidden xs:block" />
+                    <span className="text-xs sm:text-sm font-bold tracking-tight text-white/90 truncate font-display">
+                        {title || 'Card Studio'}
+                    </span>
+                </div>
+
+                {/* Right: BOTH Share & Download Action Buttons */}
+                <div className="flex items-center gap-1.5 sm:gap-2.5">
+                    <button
+                        type="button"
+                        onClick={handleDownloadCard}
+                        disabled={isGenerating}
+                        className="flex items-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 active:scale-95 text-white text-xs font-semibold border border-white/15 transition-all shadow-sm disabled:opacity-50 cursor-pointer"
+                        title="Download high-resolution PNG"
+                    >
+                        <Download size={14} />
+                        <span className="hidden xs:inline">Download</span>
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={handleShareCard}
+                        disabled={isGenerating}
+                        className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-xl bg-[var(--theme-accent,#E8A87C)] hover:opacity-90 active:scale-95 text-[#17020B] text-xs font-bold transition-all shadow-md disabled:opacity-50 cursor-pointer"
+                        title="Share Card"
+                    >
+                        <Share2 size={14} />
+                        <span>{isGenerating ? 'Exporting...' : 'Share'}</span>
+                    </button>
+                </div>
+            </header>
+
+            {/* Main Studio View: Responsive PC Left-Sidebar / Mobile Bottom-Tray Layout */}
+            <div className="flex-1 flex flex-col md:flex-row min-h-0 overflow-hidden">
+                {/* PC ONLY: Left Sidebar Controls */}
+                <aside className="hidden md:flex md:w-80 lg:w-92 flex-col border-r border-white/10 bg-[#0b0b10] overflow-y-auto p-5 space-y-6 shrink-0 z-20">
+                    <div>
+                        <h2 className="text-sm font-bold uppercase tracking-wider text-white/50 font-display">
+                            Card Elements & Style
+                        </h2>
+                        <p className="text-xs text-white/40 mt-0.5">
+                            Fine-tune minimalist artwork, grain texture & widgets
+                        </p>
                     </div>
 
-                    {/* Scrollable Modal Body: 2-column grid on desktop, smooth stacked scroll on mobile */}
-                    <div className="flex-1 overflow-y-auto grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-[var(--theme-border)] min-h-0">
-                        {/* Column 1: Live GrooveCard Card Preview */}
-                        <div className="flex flex-col items-center justify-center p-3 sm:p-6 md:p-8 bg-[var(--theme-surface)]/30">
-                            <div className="text-[10px] sm:text-xs uppercase tracking-widest text-[var(--theme-accent)] font-bold mb-2 sm:mb-4">
-                                Live Card Preview
-                            </div>
-
-                            {/* Capture Container */}
-                            <div 
-                                ref={cardRef} 
-                                className={`w-full max-w-[210px] xs:max-w-[230px] sm:max-w-[320px] rounded-2xl sm:rounded-3xl p-3 sm:p-6 flex flex-col justify-between min-h-[290px] xs:min-h-[320px] sm:min-h-[480px] select-none text-[#F4F7FF] ${themes[cardTheme].class} border border-white/10 transition-all duration-500 shadow-xl`}
-                            >
-                                {/* Card Header: Type Badge */}
-                                <div className="w-full flex justify-between items-center mb-2.5 sm:mb-4">
-                                    <div className="flex items-center gap-1.5">
-                                        <img src="/in.svg" alt="Groove" className="w-3.5 h-3.5 object-contain shrink-0" crossOrigin="anonymous" />
-                                        <span className="text-[9px] sm:text-[10px] tracking-[0.2em] font-extrabold uppercase text-[#8992A5]">GrooveCard</span>
-                                    </div>
-                                    <span className="text-[8px] sm:text-[9px] font-bold px-1.5 sm:px-2 py-0.5 rounded bg-white/5 border border-white/10 text-white/90">
-                                        MUSIC LAYER
-                                    </span>
-                                </div>
-
-                                {/* Cover Art Image */}
-                                <div className="relative w-full aspect-square rounded-xl sm:rounded-2xl overflow-hidden shadow-xl mb-2.5 sm:mb-4 border border-white/5 bg-[var(--theme-surface)]">
-                                    <img
-                                        src={imageUrl || "/placeholder.jpg"}
-                                        alt={title}
-                                        className="w-full h-full object-cover"
-                                        crossOrigin="anonymous"
-                                        onError={(e) => {
-                                            e.currentTarget.src = 'https://placehold.co/400x400/17020B/E8A87C?text=Music';
-                                        }}
-                                    />
-                                </div>
-
-                                {/* Music Details - Full titles & artist names, NO truncation */}
-                                <div className="flex justify-between items-start gap-2 sm:gap-3 text-left">
-                                    <div className="flex-1 min-w-0 pr-1">
-                                        <h4 className="text-xs sm:text-base font-bold leading-snug font-display text-white break-words" title={title}>
-                                            {title}
-                                        </h4>
-                                        <p className="text-[10px] sm:text-xs text-[#8992A5] font-medium font-body mt-0.5 sm:mt-1 break-words" title={artistLabel}>
-                                            {artistLabel}
-                                        </p>
-                                        {album && type === 'track' && album !== title && (
-                                            <p className="text-[9px] sm:text-[11px] text-[#8992A5]/70 font-normal italic mt-0.5 break-words">
-                                                Album: {album}
-                                            </p>
-                                        )}
-                                        
-                                        {/* Accurate Release Date Badge */}
-                                        {showYear && displayReleaseDate && (
-                                            <div className="inline-flex items-center gap-1 text-[8px] sm:text-[9px] text-[#8992A5] px-1.5 sm:px-2 py-0.5 rounded bg-white/5 border border-white/10 mt-1 sm:mt-2">
-                                                <span>{displayReleaseDate}</span>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {/* QR Code Container */}
-                                    {showQR && (
+                    {/* Section 1: Abstract Backgrounds */}
+                    <div className="space-y-2">
+                        <label className="text-xs font-bold uppercase tracking-wider text-white/60 flex items-center justify-between">
+                            <span>Background Theme</span>
+                            <span className="text-[11px] text-[var(--theme-accent,#E8A87C)] font-semibold">{currentTheme.label}</span>
+                        </label>
+                        <div className="grid grid-cols-4 gap-2">
+                            {Object.keys(THEMES).map((tKey) => {
+                                const t = THEMES[tKey];
+                                const isSelected = cardTheme === tKey;
+                                return (
+                                    <button
+                                        key={tKey}
+                                        type="button"
+                                        onClick={() => setCardTheme(tKey)}
+                                        className={`p-1.5 rounded-xl border flex flex-col items-center gap-1.5 transition-all cursor-pointer ${
+                                            isSelected 
+                                                ? 'border-[var(--theme-accent,#E8A87C)] ring-2 ring-[var(--theme-accent,#E8A87C)]/30 bg-white/10' 
+                                                : 'border-white/10 bg-white/5 hover:bg-white/10'
+                                        }`}
+                                        title={t.label}
+                                    >
                                         <div 
-                                            onClick={() => setQrFullScreen(true)}
-                                            className="relative w-16 h-16 sm:w-24 sm:h-24 bg-white p-1 rounded-lg shadow-md flex items-center justify-center shrink-0 border border-white/10 cursor-zoom-in group/qr transition duration-300 hover:scale-[1.03]"
-                                            title="Click to full screen QR"
-                                        >
-                                            <img
-                                                src={qrApi}
-                                                alt="QR"
-                                                className="w-full h-full object-contain"
-                                                crossOrigin="anonymous"
-                                            />
-                                            {/* Centered Logo Overlay */}
-                                            <div className="absolute w-4.5 h-4.5 sm:w-6.5 sm:h-6.5 bg-white border border-gray-100 rounded-full flex items-center justify-center shadow p-0.5 pointer-events-none">
-                                                <img src="/in.svg" alt="Groove Logo" className="w-full h-full object-contain" crossOrigin="anonymous" />
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
+                                            className="w-full h-8 rounded-lg shadow-inner border border-white/10" 
+                                            style={{ background: t.preview }} 
+                                        />
+                                        <span className="text-[10px] font-medium text-white/80 truncate w-full text-center">
+                                            {t.label}
+                                        </span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* Section 2: Film Grain Texture */}
+                    <div className="space-y-2">
+                        <label className="text-xs font-bold uppercase tracking-wider text-white/60 flex items-center justify-between">
+                            <span>Film Grain Texture</span>
+                            <span className="text-[11px] text-[var(--theme-accent,#E8A87C)] capitalize">{noiseLevel}</span>
+                        </label>
+                        <div className="grid grid-cols-4 gap-1 p-1 bg-white/5 border border-white/10 rounded-xl">
+                            {['none', 'subtle', 'medium', 'heavy'].map((lvl) => (
+                                <button
+                                    key={lvl}
+                                    type="button"
+                                    onClick={() => setNoiseLevel(lvl)}
+                                    className={`py-1.5 px-2 text-[11px] font-semibold rounded-lg capitalize transition cursor-pointer ${
+                                        noiseLevel === lvl
+                                            ? 'bg-white text-black font-bold shadow'
+                                            : 'text-white/60 hover:text-white'
+                                    }`}
+                                >
+                                    {lvl === 'none' ? 'Off' : lvl}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Section 3: Bottom-Right Corner Widget */}
+                    <div className="space-y-2">
+                        <label className="text-xs font-bold uppercase tracking-wider text-white/60">
+                            Corner Element (Bottom Right)
+                        </label>
+                        <div className="grid grid-cols-3 gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setCornerWidget('rating')}
+                                className={`p-2 rounded-xl border flex flex-col items-center gap-1 transition cursor-pointer text-center ${
+                                    cornerWidget === 'rating'
+                                        ? 'bg-[var(--theme-accent,#E8A87C)] text-[#17020B] border-[var(--theme-accent,#E8A87C)] font-bold shadow-md'
+                                        : 'bg-white/5 text-white/70 hover:text-white border-white/10'
+                                }`}
+                            >
+                                <Star size={15} />
+                                <span className="text-[10px] font-semibold">Rating Pie</span>
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => setCornerWidget('qr')}
+                                className={`p-2 rounded-xl border flex flex-col items-center gap-1 transition cursor-pointer text-center ${
+                                    cornerWidget === 'qr'
+                                        ? 'bg-[var(--theme-accent,#E8A87C)] text-[#17020B] border-[var(--theme-accent,#E8A87C)] font-bold shadow-md'
+                                        : 'bg-white/5 text-white/70 hover:text-white border-white/10'
+                                }`}
+                            >
+                                <QrCode size={15} />
+                                <span className="text-[10px] font-semibold">QR Code</span>
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => setCornerWidget('none')}
+                                className={`p-2 rounded-xl border flex flex-col items-center gap-1 transition cursor-pointer text-center ${
+                                    cornerWidget === 'none'
+                                        ? 'bg-[var(--theme-accent,#E8A87C)] text-[#17020B] border-[var(--theme-accent,#E8A87C)] font-bold shadow-md'
+                                        : 'bg-white/5 text-white/70 hover:text-white border-white/10'
+                                }`}
+                            >
+                                <EyeOff size={15} />
+                                <span className="text-[10px] font-semibold">None</span>
+                            </button>
                         </div>
 
-                        {/* Column 2: Customizer and Actions */}
-                        <div className="flex flex-col justify-between p-4 sm:p-6 md:p-8 space-y-4 sm:space-y-5 pb-24 md:pb-8">
-                            <div className="space-y-5">
-                                <div className="hidden md:block">
-                                    <h2 className="text-xl sm:text-2xl font-black text-[var(--theme-fg)] mb-1 font-display">Customization</h2>
-                                    <p className="text-xs sm:text-sm text-[var(--theme-muted)]">Personalize theme and card elements.</p>
+                        {/* QR Color Picker (if QR active) */}
+                        {cornerWidget === 'qr' && (
+                            <div className="pt-2 flex items-center justify-between bg-white/5 p-2.5 rounded-xl border border-white/10">
+                                <span className="text-[11px] font-semibold text-white/60">QR Code Color</span>
+                                <div className="flex gap-1.5">
+                                    {QR_COLORS.map((color) => (
+                                        <button
+                                            key={color.hex}
+                                            type="button"
+                                            onClick={() => setQrColor(color.hex)}
+                                            className={`w-5 h-5 rounded-full border transition-all flex items-center justify-center cursor-pointer ${color.class} ${
+                                                qrColor === color.hex ? 'border-white scale-110 shadow-lg ring-2 ring-[var(--theme-accent)]/50' : 'hover:scale-105'
+                                            }`}
+                                            title={color.label}
+                                        >
+                                            {qrColor === color.hex && (
+                                                <div className={`w-1 h-1 rounded-full ${color.hex === 'ffffff' ? 'bg-black' : 'bg-white'}`} />
+                                            )}
+                                        </button>
+                                    ))}
                                 </div>
+                            </div>
+                        )}
+                    </div>
 
-                                {/* Customizer: Themes */}
-                                <div className="space-y-2">
-                                    <label className="text-[11px] sm:text-xs uppercase tracking-wider text-[var(--theme-muted)] font-bold">
-                                        Customize Theme
-                                    </label>
-                                    <div className="grid grid-cols-2 gap-2">
-                                        {Object.keys(themes).map((t) => (
-                                            <button
-                                                key={t}
-                                                onClick={() => setCardTheme(t)}
-                                                className={`px-3 py-2 text-xs font-semibold rounded-lg capitalize border text-left transition-all cursor-pointer ${
-                                                    cardTheme === t 
-                                                        ? 'bg-[var(--theme-accent)] text-[var(--theme-bg)] border-[var(--theme-accent)]' 
-                                                        : 'bg-[var(--theme-surface)] text-[var(--theme-fg)]/80 border-[var(--theme-border)] hover:bg-[var(--theme-card)]'
-                                                }`}
-                                            >
-                                                {themes[t].label}
-                                            </button>
+                    {/* Section 4: Release Date Display */}
+                    <div className="space-y-2">
+                        <label className="text-xs font-bold uppercase tracking-wider text-white/60 flex items-center justify-between">
+                            <span>Release Date</span>
+                            <span className="text-[10px] text-[var(--theme-accent,#E8A87C)]">Year Default</span>
+                        </label>
+                        <div className="grid grid-cols-4 gap-1 p-1 bg-white/5 border border-white/10 rounded-xl">
+                            {[
+                                { id: 'year', label: 'Year' },
+                                { id: 'monthYear', label: 'Mo/Yr' },
+                                { id: 'full', label: 'Full' },
+                                { id: 'none', label: 'Hide' },
+                            ].map((m) => (
+                                <button
+                                    key={m.id}
+                                    type="button"
+                                    onClick={() => setDateMode(m.id)}
+                                    className={`py-1.5 px-1 text-[11px] font-semibold rounded-lg transition cursor-pointer text-center ${
+                                        dateMode === m.id
+                                            ? 'bg-white text-black font-bold shadow'
+                                            : 'text-white/60 hover:text-white'
+                                    }`}
+                                >
+                                    {m.label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Section 5: Audio Info Toggles */}
+                    <div className="space-y-2">
+                        <label className="text-xs font-bold uppercase tracking-wider text-white/60">
+                            Audio Info (Unboxed)
+                        </label>
+                        <div className="space-y-1.5">
+                            <label className="flex items-center justify-between p-2.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition cursor-pointer">
+                                <span className="text-xs text-white/80 font-medium">Show Duration</span>
+                                <input 
+                                    type="checkbox" 
+                                    checked={showDuration}
+                                    onChange={(e) => setShowDuration(e.target.checked)}
+                                    className="accent-[var(--theme-accent,#E8A87C)] cursor-pointer w-4 h-4"
+                                />
+                            </label>
+
+                            <label className="flex items-center justify-between p-2.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition cursor-pointer">
+                                <span className="text-xs text-white/80 font-medium">Show Discs & Tracks</span>
+                                <input 
+                                    type="checkbox" 
+                                    checked={showDiscs}
+                                    onChange={(e) => setShowDiscs(e.target.checked)}
+                                    className="accent-[var(--theme-accent,#E8A87C)] cursor-pointer w-4 h-4"
+                                />
+                            </label>
+                        </div>
+                    </div>
+                </aside>
+
+                {/* Center / Main Canvas: Static, Crisp Live Preview (ZERO lag, NO moving animations) */}
+                <main className="flex-1 flex items-center justify-center p-3 sm:p-6 lg:p-10 bg-[#050508] relative overflow-hidden select-none min-h-0">
+                    {/* Subtle Studio Grid Backdrop */}
+                    <div 
+                        className="absolute inset-0 opacity-[0.03] pointer-events-none"
+                        style={{
+                            backgroundImage: 'radial-gradient(#fff 1px, transparent 1px)',
+                            backgroundSize: '24px 24px'
+                        }}
+                    />
+
+                    {/* LIVE CARD PREVIEW (Export Target) */}
+                    <div 
+                        ref={cardRef} 
+                        style={{
+                            ...currentTheme.bgStyle,
+                            borderColor: currentTheme.border,
+                        }}
+                        className="relative w-full max-w-[270px] xs:max-w-[290px] sm:max-w-[330px] aspect-[1/1.42] p-3.5 sm:p-4 rounded-2xl flex flex-col justify-between shadow-2xl border transition-colors duration-200 overflow-hidden select-none"
+                    >
+                        {/* Film Grain Texture Overlay (Canvas-generated base64 PNG, 100% visible & exportable) */}
+                        {grainOpacity > 0 && noiseDataUri && (
+                            <div 
+                                aria-hidden="true"
+                                className="absolute inset-0 pointer-events-none rounded-2xl"
+                                style={{
+                                    backgroundImage: `url("${noiseDataUri}")`,
+                                    backgroundRepeat: 'repeat',
+                                    mixBlendMode: currentTheme.isLight ? 'multiply' : 'overlay',
+                                    opacity: grainOpacity,
+                                }}
+                            />
+                        )}
+
+                        {/* Card Header: Pure Minimalist Logo & Type Indicator (NO BOXES) */}
+                        <div className="relative z-10 w-full flex justify-between items-center mb-2 sm:mb-2.5">
+                            <div className="flex items-center gap-1.5">
+                                <img 
+                                    src="/in.svg" 
+                                    alt="Groove" 
+                                    className={`w-3.5 h-3.5 object-contain shrink-0 ${currentTheme.isLight ? 'brightness-0' : 'opacity-80'}`} 
+                                    crossOrigin="anonymous" 
+                                />
+                                <span className={`text-[9px] tracking-[0.25em] font-bold uppercase font-sans ${currentTheme.isLight ? 'text-black/60' : 'text-white/60'}`}>
+                                    GrooveCard
+                                </span>
+                            </div>
+                            <span className={`text-[8px] sm:text-[9px] font-semibold tracking-wider uppercase font-sans ${currentTheme.isLight ? 'text-black/40' : 'text-white/40'}`}>
+                                {type || 'MUSIC'}
+                            </span>
+                        </div>
+
+                        {/* Cover Art Artwork: Square with tight radius, clean border */}
+                        <div className="relative z-10 w-full aspect-square rounded-xl overflow-hidden shadow-lg border border-white/10 bg-black/40 mb-2 sm:mb-2.5">
+                            <img
+                                src={imageUrl || "/placeholder.jpg"}
+                                alt={title}
+                                className="w-full h-full object-cover"
+                                crossOrigin="anonymous"
+                                onError={(e) => {
+                                    e.currentTarget.src = 'https://placehold.co/400x400/17020B/E8A87C?text=Music';
+                                }}
+                            />
+                        </div>
+
+                        {/* Bottom Info & Corner Widget: Tight, Unified, Zero Monospace, ZERO BOXES */}
+                        <div className="relative z-10 flex justify-between items-end gap-3 text-left">
+                            {/* Text Info Column */}
+                            <div className="flex-1 min-w-0 pr-1">
+                                <h4 
+                                    className={`text-xs sm:text-sm font-bold leading-snug font-display tracking-tight break-words line-clamp-1 ${currentTheme.isLight ? 'text-black' : 'text-white'}`} 
+                                    title={title}
+                                >
+                                    {title}
+                                </h4>
+                                <p 
+                                    className={`text-[10px] sm:text-xs font-medium font-sans mt-0.5 break-words line-clamp-1 ${currentTheme.isLight ? 'text-black/70' : 'text-white/75'}`} 
+                                    title={artistLabel}
+                                >
+                                    {artistLabel}
+                                </p>
+                                {album && type === 'track' && album !== title && (
+                                    <p 
+                                        className={`text-[9px] sm:text-[10px] font-normal font-sans italic mt-0.5 break-words line-clamp-1 ${currentTheme.isLight ? 'text-black/50' : 'text-white/50'}`}
+                                    >
+                                        {album}
+                                    </p>
+                                )}
+
+                                {/* Dot-Separated Metadata Line (NO BOXES, Clean Sans) */}
+                                {metaItems.length > 0 && (
+                                    <div className={`flex items-center gap-1.5 flex-wrap text-[10px] sm:text-[11px] font-sans font-medium tracking-tight mt-1 ${currentTheme.isLight ? 'text-black/60' : 'text-white/70'}`}>
+                                        {metaItems.map((item, idx) => (
+                                            <React.Fragment key={idx}>
+                                                {idx > 0 && (
+                                                    <span className={`select-none ${currentTheme.isLight ? 'text-black/30' : 'text-white/30'}`}>
+                                                        •
+                                                    </span>
+                                                )}
+                                                <span>{item}</span>
+                                            </React.Fragment>
                                         ))}
                                     </div>
-                                </div>
+                                )}
+                            </div>
 
-                                {/* Customizer: QR Options */}
-                                <div className="space-y-4">
-                                    <div className="flex flex-col gap-2">
-                                        <span className="text-[11px] sm:text-xs uppercase tracking-wider text-[var(--theme-muted)] font-bold">
-                                            Card Elements
-                                        </span>
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 gap-2">
-                                            <label className="flex items-center justify-between p-2.5 rounded-lg bg-[var(--theme-surface)] border border-[var(--theme-border)] cursor-pointer">
-                                                <span className="text-xs text-[var(--theme-fg)]/80 font-semibold">Render QR Code</span>
-                                                <input 
-                                                    type="checkbox" 
-                                                    checked={showQR}
-                                                    onChange={(e) => setShowQR(e.target.checked)}
-                                                    className="accent-[var(--theme-accent)] cursor-pointer"
-                                                />
-                                            </label>
-                                            <label className="flex items-center justify-between p-2.5 rounded-lg bg-[var(--theme-surface)] border border-[var(--theme-border)] cursor-pointer">
-                                                <span className="text-xs text-[var(--theme-fg)]/80 font-semibold">Render Release Date</span>
-                                                <input 
-                                                    type="checkbox" 
-                                                    checked={showYear}
-                                                    onChange={(e) => setShowYear(e.target.checked)}
-                                                    className="accent-[var(--theme-accent)] cursor-pointer"
-                                                />
-                                            </label>
+                            {/* Corner Element (Bottom Right): Unboxed Rating Pie (Default) or QR or None */}
+                            {cornerWidget === 'rating' && (
+                                <div 
+                                    className="flex flex-col items-center justify-center shrink-0 cursor-default"
+                                    title={`Rating: ${score10}/10`}
+                                >
+                                    <div className="relative w-10 h-10 sm:w-11 sm:h-11 flex items-center justify-center">
+                                        <svg className="w-full h-full -rotate-90 transform" viewBox="0 0 44 44">
+                                            {/* Track */}
+                                            <circle 
+                                                cx="22" 
+                                                cy="22" 
+                                                r={pieRadius} 
+                                                fill="transparent" 
+                                                stroke={currentTheme.isLight ? "rgba(0,0,0,0.12)" : "rgba(255,255,255,0.15)"} 
+                                                strokeWidth="3.2" 
+                                            />
+                                            {/* Progress */}
+                                            <circle
+                                                cx="22" 
+                                                cy="22" 
+                                                r={pieRadius} 
+                                                fill="none" 
+                                                stroke={ratingColor} 
+                                                strokeWidth="3.5" 
+                                                strokeDasharray={pieCircumference} 
+                                                strokeDashoffset={pieOffset} 
+                                                strokeLinecap="round" 
+                                            />
+                                        </svg>
+                                        <div className="absolute inset-0 flex items-center justify-center">
+                                            <span 
+                                                className="text-[11px] sm:text-xs font-extrabold font-sans leading-none" 
+                                                style={{ color: ratingColor }}
+                                            >
+                                                {score10}
+                                            </span>
                                         </div>
                                     </div>
-
-                                    {showQR && (
-                                        <div className="space-y-2">
-                                            <label className="text-[11px] sm:text-xs uppercase tracking-wider text-[var(--theme-muted)] font-bold">
-                                                QR Forecolor
-                                            </label>
-                                            <div className="flex flex-wrap gap-2">
-                                                {qrColors.map((color) => (
-                                                    <button
-                                                        key={color.hex}
-                                                        onClick={() => setQrColor(color.hex)}
-                                                        className={`w-7 h-7 rounded-full border transition-all flex items-center justify-center cursor-pointer ${color.class} ${
-                                                            qrColor === color.hex 
-                                                                ? 'border-white scale-110 shadow-lg ring-2 ring-[var(--theme-accent)]/50' 
-                                                                : 'scale-100 hover:scale-105'
-                                                        }`}
-                                                        title={color.label}
-                                                    >
-                                                        {qrColor === color.hex && (
-                                                            <div className={`w-1.5 h-1.5 rounded-full ${color.hex === 'ffffff' ? 'bg-black' : 'bg-white'}`} />
-                                                        )}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
+                                    <span className={`text-[7px] sm:text-[8px] font-bold tracking-widest uppercase mt-0.5 font-sans ${currentTheme.isLight ? 'text-black/50' : 'text-white/60'}`}>
+                                        RATING
+                                    </span>
                                 </div>
-                            </div>
+                            )}
 
-                            {/* Actions Area (Desktop) */}
-                            <div className="hidden md:block space-y-4 pt-2">
-                                <div className="grid grid-cols-2 gap-2 sm:gap-3">
-                                    <button
-                                        onClick={handleShareCard}
-                                        disabled={isGenerating}
-                                        className="flex items-center justify-center gap-1.5 sm:gap-2 py-2.5 sm:py-3 px-3 sm:px-4 bg-[var(--theme-accent)] hover:opacity-90 active:scale-95 text-[var(--theme-bg)] font-bold rounded-xl sm:rounded-2xl transition-all shadow-lg disabled:opacity-50 text-xs sm:text-sm cursor-pointer"
-                                    >
-                                        <Share2 size={15} />
-                                        <span>{isGenerating ? 'Exporting...' : 'Share Card'}</span>
-                                    </button>
-
-                                    <button
-                                        onClick={handleDownloadCard}
-                                        disabled={isGenerating}
-                                        className="flex items-center justify-center gap-1.5 sm:gap-2 py-2.5 sm:py-3 px-3 sm:px-4 bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] active:scale-95 text-[var(--theme-fg)] font-bold rounded-xl sm:rounded-2xl transition-all border border-[var(--theme-border)] text-xs sm:text-sm cursor-pointer disabled:opacity-50"
-                                    >
-                                        <Download size={15} />
-                                        <span>Download PNG</span>
-                                    </button>
+                            {cornerWidget === 'qr' && (
+                                <div 
+                                    onClick={() => setQrFullScreen(true)}
+                                    className="flex flex-col items-center justify-center shrink-0 cursor-zoom-in"
+                                    title="Click to expand QR Code"
+                                >
+                                    <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-lg overflow-hidden bg-white p-0.5 shadow-md">
+                                        <img
+                                            src={qrApi}
+                                            alt="QR"
+                                            className="w-full h-full object-contain"
+                                            crossOrigin="anonymous"
+                                        />
+                                    </div>
+                                    <span className={`text-[7px] sm:text-[8px] font-bold tracking-widest uppercase mt-0.5 font-sans ${currentTheme.isLight ? 'text-black/50' : 'text-white/60'}`}>
+                                        SCAN
+                                    </span>
                                 </div>
-                            </div>
+                            )}
                         </div>
                     </div>
+                </main>
+            </div>
 
-                    {/* Mobile Sticky Action Footer */}
-                    <div className="md:hidden flex items-center gap-2 p-3 border-t border-[var(--theme-border)] bg-[var(--theme-surface)]/95 backdrop-blur-md shrink-0 z-20">
-                        <button
-                            onClick={handleShareCard}
-                            disabled={isGenerating}
-                            className="flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 bg-[var(--theme-accent)] hover:opacity-90 active:scale-95 text-[var(--theme-bg)] font-bold rounded-xl transition-all shadow-md disabled:opacity-50 text-xs cursor-pointer"
-                        >
-                            <Share2 size={14} />
-                            <span>{isGenerating ? 'Exporting...' : 'Share Card'}</span>
-                        </button>
-                        <button
-                            onClick={handleDownloadCard}
-                            disabled={isGenerating}
-                            className="flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] active:scale-95 text-[var(--theme-fg)] font-bold rounded-xl transition-all border border-[var(--theme-border)] text-xs cursor-pointer disabled:opacity-50"
-                        >
-                            <Download size={14} />
-                            <span>Download PNG</span>
-                        </button>
-                    </div>
-                </motion.div>
-            </motion.div>
+            {/* MOBILE ONLY: Modern Photo Editor Style Bottom Sliding Tool Tray */}
+            <div className="md:hidden border-t border-white/10 bg-[#0d0d14]/95 backdrop-blur-xl shrink-0 z-40 pb-safe">
+                {/* Horizontal Tool Options Bar (Slides Right-to-Left / Left-to-Right based on active tool) */}
+                <div className="px-3 py-2.5 border-b border-white/5 overflow-x-auto no-scrollbar flex items-center gap-2">
+                    {/* Active Tool Sub-options */}
+                    {mobileTab === 'theme' && (
+                        <div className="flex items-center gap-2">
+                            {Object.keys(THEMES).map((tKey) => {
+                                const t = THEMES[tKey];
+                                const isSelected = cardTheme === tKey;
+                                return (
+                                    <button
+                                        key={tKey}
+                                        type="button"
+                                        onClick={() => setCardTheme(tKey)}
+                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border shrink-0 transition-all cursor-pointer ${
+                                            isSelected 
+                                                ? 'bg-white text-black border-white font-bold shadow' 
+                                                : 'bg-white/5 text-white/70 border-white/10 hover:text-white'
+                                        }`}
+                                    >
+                                        <div 
+                                            className="w-3.5 h-3.5 rounded-full border border-black/20 shrink-0" 
+                                            style={{ background: t.preview }} 
+                                        />
+                                        <span className="text-xs">{t.label}</span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    )}
 
-            {/* Full-screen QR Modal */}
+                    {mobileTab === 'grain' && (
+                        <div className="flex items-center gap-2">
+                            {['none', 'subtle', 'medium', 'heavy'].map((lvl) => (
+                                <button
+                                    key={lvl}
+                                    type="button"
+                                    onClick={() => setNoiseLevel(lvl)}
+                                    className={`px-3 py-1.5 rounded-full border text-xs capitalize shrink-0 transition-all cursor-pointer ${
+                                        noiseLevel === lvl
+                                            ? 'bg-white text-black border-white font-bold shadow'
+                                            : 'bg-white/5 text-white/70 border-white/10 hover:text-white'
+                                    }`}
+                                >
+                                    {lvl === 'none' ? 'No Grain' : `${lvl} Grain`}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+
+                    {mobileTab === 'widget' && (
+                        <div className="flex items-center gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setCornerWidget('rating')}
+                                className={`px-3 py-1.5 rounded-full border text-xs shrink-0 transition-all cursor-pointer ${
+                                    cornerWidget === 'rating'
+                                        ? 'bg-white text-black border-white font-bold shadow'
+                                        : 'bg-white/5 text-white/70 border-white/10 hover:text-white'
+                                }`}
+                            >
+                                ⭐ Rating Pie (Default)
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setCornerWidget('qr')}
+                                className={`px-3 py-1.5 rounded-full border text-xs shrink-0 transition-all cursor-pointer ${
+                                    cornerWidget === 'qr'
+                                        ? 'bg-white text-black border-white font-bold shadow'
+                                        : 'bg-white/5 text-white/70 border-white/10 hover:text-white'
+                                }`}
+                            >
+                                📱 QR Code
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setCornerWidget('none')}
+                                className={`px-3 py-1.5 rounded-full border text-xs shrink-0 transition-all cursor-pointer ${
+                                    cornerWidget === 'none'
+                                        ? 'bg-white text-black border-white font-bold shadow'
+                                        : 'bg-white/5 text-white/70 border-white/10 hover:text-white'
+                                }`}
+                            >
+                                ✕ None
+                            </button>
+
+                            {/* Inline QR colors if QR active */}
+                            {cornerWidget === 'qr' && (
+                                <div className="flex items-center gap-1.5 pl-2 border-l border-white/10 shrink-0">
+                                    {QR_COLORS.map((c) => (
+                                        <button
+                                            key={c.hex}
+                                            type="button"
+                                            onClick={() => setQrColor(c.hex)}
+                                            className={`w-5 h-5 rounded-full border transition-all ${c.class} ${
+                                                qrColor === c.hex ? 'border-white scale-110 shadow' : 'opacity-80'
+                                            }`}
+                                        />
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {mobileTab === 'date' && (
+                        <div className="flex items-center gap-2">
+                            {[
+                                { id: 'year', label: 'Year Only' },
+                                { id: 'monthYear', label: 'Month & Year' },
+                                { id: 'full', label: 'Full Date' },
+                                { id: 'none', label: 'Hide Date' },
+                            ].map((m) => (
+                                <button
+                                    key={m.id}
+                                    type="button"
+                                    onClick={() => setDateMode(m.id)}
+                                    className={`px-3 py-1.5 rounded-full border text-xs shrink-0 transition-all cursor-pointer ${
+                                        dateMode === m.id
+                                            ? 'bg-white text-black border-white font-bold shadow'
+                                            : 'bg-white/5 text-white/70 border-white/10 hover:text-white'
+                                    }`}
+                                >
+                                    {m.label}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+
+                    {mobileTab === 'info' && (
+                        <div className="flex items-center gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setShowDuration(!showDuration)}
+                                className={`px-3 py-1.5 rounded-full border text-xs shrink-0 transition-all cursor-pointer ${
+                                    showDuration
+                                        ? 'bg-[var(--theme-accent,#E8A87C)] text-[#17020B] border-[var(--theme-accent,#E8A87C)] font-bold'
+                                        : 'bg-white/5 text-white/70 border-white/10'
+                                }`}
+                            >
+                                Duration {showDuration ? '✓' : ''}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setShowDiscs(!showDiscs)}
+                                className={`px-3 py-1.5 rounded-full border text-xs shrink-0 transition-all cursor-pointer ${
+                                    showDiscs
+                                        ? 'bg-[var(--theme-accent,#E8A87C)] text-[#17020B] border-[var(--theme-accent,#E8A87C)] font-bold'
+                                        : 'bg-white/5 text-white/70 border-white/10'
+                                }`}
+                            >
+                                Discs / Tracks {showDiscs ? '✓' : ''}
+                            </button>
+                        </div>
+                    )}
+                </div>
+
+                {/* Mobile Bottom Photo Editor Category Tabs */}
+                <div className="flex justify-around items-center px-2 py-2">
+                    {[
+                        { id: 'theme', label: 'Theme', icon: <Palette size={16} /> },
+                        { id: 'grain', label: 'Grain', icon: <Sparkles size={16} /> },
+                        { id: 'widget', label: 'Corner', icon: <Star size={16} /> },
+                        { id: 'date', label: 'Date', icon: <Calendar size={16} /> },
+                        { id: 'info', label: 'Info', icon: <Sliders size={16} /> },
+                    ].map((tab) => {
+                        const isActive = mobileTab === tab.id;
+                        return (
+                            <button
+                                key={tab.id}
+                                type="button"
+                                onClick={() => setMobileTab(tab.id)}
+                                className={`flex flex-col items-center gap-1 py-1 px-3 rounded-xl transition-all cursor-pointer ${
+                                    isActive 
+                                        ? 'text-[var(--theme-accent,#E8A87C)] font-bold scale-105' 
+                                        : 'text-white/50 hover:text-white/80'
+                                }`}
+                            >
+                                {tab.icon}
+                                <span className="text-[10px] tracking-tight">{tab.label}</span>
+                            </button>
+                        );
+                    })}
+                </div>
+            </div>
+
+            {/* Full-screen QR Viewer Modal (if tapped on card QR) */}
             {qrFullScreen && (
                 <div 
-                    className="fixed inset-0 bg-black/90 backdrop-blur-md z-[700] flex flex-col items-center justify-center p-4 sm:p-6"
+                    className="fixed inset-0 bg-black/90 backdrop-blur-md z-[100000] flex flex-col items-center justify-center p-4 sm:p-6"
                     onClick={() => setQrFullScreen(false)}
                 >
-                    <div className="max-w-md w-full flex flex-col items-center gap-5 sm:gap-6" onClick={(e) => e.stopPropagation()}>
-                        <h3 className="text-base sm:text-lg font-bold text-white uppercase tracking-widest font-display">Scan QR Code</h3>
-                        <div className="relative w-64 h-64 sm:w-80 sm:h-80 max-w-[85vw] max-h-[85vw] p-3 sm:p-4 bg-white border border-gray-200 rounded-2xl sm:rounded-3xl flex items-center justify-center shadow-2xl">
+                    <div className="max-w-md w-full flex flex-col items-center gap-5" onClick={(e) => e.stopPropagation()}>
+                        <h3 className="text-sm font-bold text-white uppercase tracking-widest font-display">
+                            Universal GrooveCard QR
+                        </h3>
+                        <div className="relative w-64 h-64 sm:w-72 sm:h-72 p-3 bg-white border border-gray-200 rounded-2xl flex items-center justify-center shadow-2xl">
                             <img src={qrApi} alt="QR Code" className="w-full h-full object-contain rounded-xl" crossOrigin="anonymous" />
-                            {/* Centered Logo Overlay */}
-                            <div className="absolute w-12 h-12 sm:w-16 sm:h-16 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-xl p-2 sm:p-2.5">
+                            <div className="absolute w-12 h-12 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow p-2">
                                 <img src="/in.svg" alt="Groove Logo" className="w-full h-full object-contain" crossOrigin="anonymous" />
                             </div>
                         </div>
-                        <p className="text-xs sm:text-sm text-zinc-400 text-center max-w-[280px]">
-                            Scan with your phone&apos;s camera to instantly open in Groove.
+                        <p className="text-xs text-zinc-400 text-center max-w-[260px]">
+                            Scan with any smartphone camera to open track & streaming links.
                         </p>
                         <button
+                            type="button"
                             onClick={() => setQrFullScreen(false)}
-                            className="px-6 py-2.5 bg-[var(--theme-accent)] hover:opacity-90 text-[var(--theme-bg)] font-bold text-xs uppercase tracking-wider rounded-xl transition cursor-pointer"
+                            className="px-6 py-2 bg-white text-black font-bold text-xs uppercase tracking-wider rounded-xl transition cursor-pointer"
                         >
                             Close
                         </button>
                     </div>
                 </div>
             )}
-        </AnimatePresence>,
+        </div>,
         document.body
     );
 }

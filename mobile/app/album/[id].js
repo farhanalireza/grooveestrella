@@ -137,12 +137,34 @@ export default function AlbumDetailScreen() {
     }
   };
 
+  const handleRestoreMainCover = () => {
+    if (!albumData?.mainCoverArt) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setAlbumData((prev) => prev ? {
+      ...prev,
+      image: prev.mainCoverArt,
+      coverArt: prev.mainCoverArt,
+    } : prev);
+    Toast.show({
+      type: 'success',
+      text1: 'Main Artwork Restored',
+      text2: 'Showing canonical album cover',
+    });
+  };
+
   const handleSwitchEdition = async (relId) => {
     if (!relId || relId === selectedReleaseId || loadingTracks) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const prevReleaseId = selectedReleaseId;
     setSelectedReleaseId(relId);
     setLoadingTracks(true);
+
+    // Optimistically update cover art to the selected edition
+    setAlbumData((prev) => prev ? {
+      ...prev,
+      image: `https://coverartarchive.org/release/${relId}/front-500`,
+      coverArt: `https://coverartarchive.org/release/${relId}/front-500`,
+    } : prev);
     try {
       const result = await ApiService.fetchAlbum(String(id), relId);
       if (result) {
@@ -745,6 +767,10 @@ export default function AlbumDetailScreen() {
         visible={showGrooveCardModal}
         onClose={() => setShowGrooveCardModal(false)}
         item={modalTrackTarget || { ...albumData, type: 'album' }}
+        rating={albumData?.rating}
+        duration={albumData?.totalDurationMs}
+        discCount={groupedVariations.length || 1}
+        totalTracks={tracks.length}
       />
 
       {/* Playlist Picker Modal */}
@@ -792,6 +818,22 @@ const styles = StyleSheet.create({
   coverImage: {
     width: '100%',
     height: '100%',
+  },
+  restoreCoverBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    marginTop: -8,
+    marginBottom: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
+  },
+  restoreCoverText: {
+    fontSize: 11,
+    fontFamily: FONTS.bodySemiBold,
   },
   titleRow: {
     flexDirection: 'row',
