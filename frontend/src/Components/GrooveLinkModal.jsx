@@ -689,6 +689,7 @@ export default function GrooveLinkModal({ isOpen, onClose, item, onOpenGrooveCar
               releaseYear={item.releaseYear}
               album={item.album?.name || item.album || (itemType === "album" ? title : "")}
               genres={item.genres || []}
+              tracks={item.tracks || []}
             />
           )}
         </div>

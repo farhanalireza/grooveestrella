@@ -33,6 +33,7 @@ const THEMES = [
   { id: 'emerald', label: 'Emerald', colors: ['#11261d', '#081610', '#030805'], border: 'rgba(16, 185, 129, 0.25)', accent: '#10B981' },
   { id: 'bordeaux', label: 'Bordeaux', colors: ['#2b0d1c', '#17060e', '#080205'], border: 'rgba(244, 63, 94, 0.25)', accent: '#F43F5E' },
   { id: 'monochrome', label: 'Carbon', colors: ['#18181b', '#111113', '#09090b'], border: 'rgba(255, 255, 255, 0.15)', accent: '#FFFFFF' },
+  { id: 'cream', label: 'Studio Cream', colors: ['#F6F4EE', '#EAE7DC', '#DFDACB'], border: 'rgba(0, 0, 0, 0.12)', accent: '#17020B' },
 ];
 
 const QR_COLORS = [

@@ -920,6 +920,7 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
                 explicit={false}
                 type="album"
                 genres={validGenres}
+                tracks={tracks}
             />
 
             {/* Track Specific GrooveLink Modal */}

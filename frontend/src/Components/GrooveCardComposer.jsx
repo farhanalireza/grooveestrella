@@ -14,7 +14,24 @@ import {
     QrCode,
     Check,
     X,
-    EyeOff
+    EyeOff,
+    AlignLeft,
+    AlignCenter,
+    AlignRight,
+    Tag,
+    ListMusic,
+    FileText,
+    Library,
+    Disc3,
+    Type,
+    Quote,
+    Paintbrush,
+    Layers,
+    MessageSquare,
+    Ticket,
+    Disc,
+    Music,
+    RefreshCw
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { createPortal } from 'react-dom';
@@ -48,7 +65,30 @@ function getClientNoiseUri() {
     }
 }
 
-// Sophisticated, minimalist abstract backgrounds (no harsh gaudy blobs)
+// Relative luminance calculator for auto text contrast
+function getLuminance(hex) {
+    if (!hex || typeof hex !== 'string') return 0;
+    const clean = hex.replace('#', '').trim();
+    if (clean.length === 3) {
+        const r = parseInt(clean[0] + clean[0], 16) / 255;
+        const g = parseInt(clean[1] + clean[1], 16) / 255;
+        const b = parseInt(clean[2] + clean[2], 16) / 255;
+        return 0.299 * r + 0.587 * g + 0.114 * b;
+    }
+    if (clean.length === 6) {
+        const r = parseInt(clean.substring(0, 2), 16) / 255;
+        const g = parseInt(clean.substring(2, 4), 16) / 255;
+        const b = parseInt(clean.substring(4, 6), 16) / 255;
+        return 0.299 * r + 0.587 * g + 0.114 * b;
+    }
+    return 0;
+}
+
+function isLightColor(hex) {
+    return getLuminance(hex) > 0.52;
+}
+
+// 8 Curated Background Themes + Solid Mode
 const THEMES = {
     obsidian: {
         id: 'obsidian',
@@ -140,6 +180,98 @@ const THEMES = {
     },
 };
 
+// Preset palette for Solid Color backgrounds
+const SOLID_COLOR_PRESETS = [
+    { label: 'Pitch Black', hex: '#09090b' },
+    { label: 'Zinc Dark', hex: '#18181b' },
+    { label: 'Warm Espresso', hex: '#261810' },
+    { label: 'Deep Indigo', hex: '#10162f' },
+    { label: 'Navy Abyss', hex: '#0a1128' },
+    { label: 'Forest Pine', hex: '#052317' },
+    { label: 'Velvet Wine', hex: '#290618' },
+    { label: 'Dark Plum', hex: '#1e082b' },
+    { label: 'Studio Cream', hex: '#f7f4ec' },
+    { label: 'Parchment', hex: '#fef3c7' },
+    { label: 'Pure Paper', hex: '#fafafa' },
+    { label: 'Slate Mist', hex: '#e2e8f0' },
+];
+
+// Curated Text Colors
+const TEXT_COLOR_PRESETS = [
+    { label: 'White', hex: '#ffffff' },
+    { label: 'Charcoal', hex: '#0e0e12' },
+    { label: 'Peach', hex: '#e8a87c' },
+    { label: 'Amber', hex: '#f59e0b' },
+    { label: 'Sky Cyan', hex: '#38bdf8' },
+    { label: 'Mint', hex: '#10b981' },
+    { label: 'Rose Coral', hex: '#f43f5e' },
+    { label: 'Lilac', hex: '#c084fc' },
+];
+
+// Defined Design Styles
+const DESIGN_STYLES = {
+    modern: {
+        id: 'modern',
+        label: 'Modern Studio',
+        tag: 'Default',
+        description: 'Sleek luxury streaming card with glass layers and fine grain',
+    },
+    library: {
+        id: 'library',
+        label: 'Library Catalogue',
+        tag: 'Vintage',
+        description: 'Index card stock, classification codes, loan stamps & drawer rod punch',
+    },
+    vinyl: {
+        id: 'vinyl',
+        label: 'Vinyl Insert & OBI',
+        tag: 'Audiophile',
+        description: 'Japanese OBI strip, matrix runout numbers & high-fidelity seal',
+    },
+    museum: {
+        id: 'museum',
+        label: 'Museum Exhibit',
+        tag: 'Exhibition',
+        description: 'Contemporary gallery placard with accession data & Swiss typography',
+    },
+    cassette: {
+        id: 'cassette',
+        label: 'Cassette J-Card',
+        tag: 'Retro',
+        description: '80s/90s tape inlay with spine fold, Dolby NR badge & tape counter',
+    },
+    ticket: {
+        id: 'ticket',
+        label: 'Concert Ticket Stub',
+        tag: 'Live Event',
+        description: 'Commemorative stub with perforated tear lines, section/seat & barcode',
+    },
+};
+
+// Card Types
+const CARD_TYPES = {
+    standard: {
+        id: 'standard',
+        label: 'Classic Artwork',
+        desc: 'Hero cover artwork showcase with corner widget',
+    },
+    tracklist: {
+        id: 'tracklist',
+        label: 'Tracklist Edition',
+        desc: 'Numbered album/playlist tracklist with durations',
+    },
+    scannable_qr: {
+        id: 'scannable_qr',
+        label: 'Scannable QR Focus',
+        desc: 'High-contrast large QR code scannable instantly by camera',
+    },
+    mini_poster: {
+        id: 'mini_poster',
+        label: 'Mini Poster',
+        desc: 'Cinematic poster layout with bold typography block',
+    },
+};
+
 const QR_COLORS = [
     { label: 'Black', hex: '000000', class: 'bg-black border-white/20' },
     { label: 'Purple', hex: '9333ea', class: 'bg-purple-600 border-transparent' },
@@ -161,30 +293,52 @@ export default function GrooveCardComposer({
     explicit,
     type = "track", // track, album, artist, playlist
     platform = "musicbrainz",
-    releaseDate, // accurate date string e.g. "1975-10-31" or "1975"
+    releaseDate,
     releaseYear: propReleaseYear,
     album,
-    duration, // duration in ms or seconds
-    discCount, // number of discs
-    totalTracks, // total tracks count
+    duration,
+    discCount,
+    totalTracks,
     genres = [],
+    tracks = [],
 }) {
     const cardRef = useRef(null);
     const [isGenerating, setIsGenerating] = useState(false);
     const [noiseDataUri, setNoiseDataUri] = useState('');
     
-    // Customization states
-    const [cardTheme, setCardTheme] = useState('obsidian');
+    // Core customization states
+    const [cardTheme, setCardTheme] = useState('obsidian'); // key of THEMES or 'solid'
+    const [customBgColor, setCustomBgColor] = useState('#0d0f14');
+    const [textColorMode, setTextColorMode] = useState('auto'); // 'auto' | 'custom'
+    const [customTextColor, setCustomTextColor] = useState('#ffffff');
+    const [designStyle, setDesignStyle] = useState('modern'); // 'modern' | 'library' | 'vinyl' | 'museum' | 'cassette' | 'ticket'
+    const [cardType, setCardType] = useState('standard'); // 'standard' | 'tracklist' | 'scannable_qr' | 'mini_poster'
+    
+    // Layout and alignment states
+    const [textAlign, setTextAlign] = useState('left'); // 'left' | 'center' | 'right'
+    const [titlePlacement, setTitlePlacement] = useState('bottom'); // 'bottom' | 'top'
+    const [showGenres, setShowGenres] = useState(true);
+    const [genresPlacement, setGenresPlacement] = useState('below_artist'); // 'below_artist' | 'top_header' | 'footer'
+    const [ratingPlacement, setRatingPlacement] = useState('bottom_right'); // 'bottom_right' | 'top_right' | 'inline' | 'none'
+    const [datePlacement, setDatePlacement] = useState('inline'); // 'inline' | 'header' | 'subhead' | 'none'
+
+    // Corner widget & Audio details
     const [noiseLevel, setNoiseLevel] = useState('medium'); // 'none' | 'subtle' | 'medium' | 'heavy'
-    const [cornerWidget, setCornerWidget] = useState('rating'); // 'rating' (default) | 'qr' | 'none'
+    const [cornerWidget, setCornerWidget] = useState('rating'); // 'rating' | 'qr' | 'none'
     const [qrColor, setQrColor] = useState('000000');
     const [qrFullScreen, setQrFullScreen] = useState(false);
-    const [dateMode, setDateMode] = useState('year'); // 'year' (default) | 'full' | 'monthYear' | 'none'
+    const [dateMode, setDateMode] = useState('year'); // 'year' | 'full' | 'monthYear' | 'none'
     const [showDuration, setShowDuration] = useState(false);
     const [showDiscs, setShowDiscs] = useState(false);
 
-    // Mobile editor active tab
-    const [mobileTab, setMobileTab] = useState('theme'); // 'theme' | 'grain' | 'widget' | 'date' | 'info'
+    // Annotations states
+    const [showAnnotation, setShowAnnotation] = useState(false);
+    const [annotationText, setAnnotationText] = useState('Essential late night listening.');
+    const [annotationStyle, setAnnotationStyle] = useState('handwritten'); // 'handwritten' | 'typewriter' | 'pill' | 'quote'
+    const [annotationPlacement, setAnnotationPlacement] = useState('bottom'); // 'bottom' | 'under_art' | 'badge'
+
+    // Studio Navigation Tab (Desktop sidebar and Mobile bottom tray)
+    const [activeTab, setActiveTab] = useState('style'); // 'style' | 'type' | 'bg' | 'text' | 'layout' | 'note' | 'widget'
 
     // Initialize grain texture once on client mount
     useEffect(() => {
@@ -221,6 +375,14 @@ export default function GrooveCardComposer({
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [isOpen, qrFullScreen, onClose]);
 
+    // Format artist display
+    const artistLabel = useMemo(() => {
+        if (Array.isArray(artist)) {
+            return artist.map(a => (typeof a === 'string' ? a : a.name || '')).filter(Boolean).join(', ');
+        }
+        return artist || 'Unknown Artist';
+    }, [artist]);
+
     // Compute release date representations
     const dateInfo = useMemo(() => {
         const raw = releaseDate 
@@ -228,7 +390,6 @@ export default function GrooveCardComposer({
             : (propReleaseYear ? String(propReleaseYear).trim() : null);
         if (!raw) return { year: null, full: null, monthYear: null };
 
-        // 4-digit year match
         const yearMatch = raw.match(/\b(19\d{2}|20\d{2})\b/);
         const year = yearMatch ? yearMatch[1] : raw;
 
@@ -257,12 +418,12 @@ export default function GrooveCardComposer({
 
     // Active displayed date string based on dateMode
     const displayDate = useMemo(() => {
-        if (dateMode === 'none') return null;
+        if (dateMode === 'none' || datePlacement === 'none') return null;
         if (dateMode === 'year') return dateInfo.year;
         if (dateMode === 'full') return dateInfo.full || dateInfo.year;
         if (dateMode === 'monthYear') return dateInfo.monthYear || dateInfo.year;
         return dateInfo.year;
-    }, [dateMode, dateInfo]);
+    }, [dateMode, datePlacement, dateInfo]);
 
     // Format duration helper (supports ms or seconds)
     const formattedDuration = useMemo(() => {
@@ -277,6 +438,33 @@ export default function GrooveCardComposer({
         }
         return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
     }, [duration]);
+
+    // Format track durations for tracklist
+    const formatTrackDuration = (dur) => {
+        if (!dur) return '3:45';
+        const totalSecs = Math.floor(dur > 1000 ? dur / 1000 : dur);
+        const mins = Math.floor(totalSecs / 60);
+        const secs = totalSecs % 60;
+        return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+    };
+
+    // Prepare tracklist items
+    const displayTracks = useMemo(() => {
+        if (Array.isArray(tracks) && tracks.length > 0) {
+            return tracks.slice(0, 5).map((tr, idx) => ({
+                num: String(idx + 1).padStart(2, '0'),
+                title: tr.title || tr.name || `Track ${idx + 1}`,
+                duration: formatTrackDuration(tr.duration || tr.duration_ms)
+            }));
+        }
+        return [
+            { num: '01', title: title || 'Title Track', duration: formattedDuration || '3:42' },
+            { num: '02', title: `${title || 'Track'} (Acoustic)`, duration: '4:10' },
+            { num: '03', title: `${album || 'B-Side'} Live Session`, duration: '3:55' },
+            { num: '04', title: 'Instrumental Cut', duration: '3:20' },
+            { num: '05', title: 'Master Reprise', duration: '4:35' },
+        ];
+    }, [tracks, title, album, formattedDuration]);
 
     // Format discs / tracks helper
     const formattedDiscs = useMemo(() => {
@@ -309,42 +497,100 @@ export default function GrooveCardComposer({
 
     // Rating color
     const ratingColor = useMemo(() => {
-        if (score10 >= 8) return '#10B981'; // Green
-        if (score10 >= 5) return '#F59E0B'; // Amber
-        return '#EF4444'; // Red
+        if (score10 >= 8) return '#10B981';
+        if (score10 >= 5) return '#F59E0B';
+        return '#EF4444';
     }, [score10]);
 
-    // Generate clean share url based on current site host
+    // Active background theme & computed properties
+    const activeTheme = useMemo(() => {
+        if (cardTheme === 'solid') {
+            const isLight = isLightColor(customBgColor);
+            return {
+                id: 'solid',
+                label: 'Custom Solid',
+                bgStyle: { backgroundColor: customBgColor },
+                border: isLight ? 'rgba(0, 0, 0, 0.12)' : 'rgba(255, 255, 255, 0.14)',
+                preview: customBgColor,
+                accent: isLight ? '#17020B' : '#E8A87C',
+                isLight,
+            };
+        }
+        return THEMES[cardTheme] || THEMES.obsidian;
+    }, [cardTheme, customBgColor]);
+
+    // Computed text colors based on Auto vs Custom text color
+    const textColors = useMemo(() => {
+        if (textColorMode === 'custom' && customTextColor) {
+            const isCustomLight = isLightColor(customTextColor);
+            return {
+                primary: customTextColor,
+                secondary: isCustomLight ? 'rgba(255, 255, 255, 0.82)' : 'rgba(15, 15, 18, 0.82)',
+                muted: isCustomLight ? 'rgba(255, 255, 255, 0.58)' : 'rgba(15, 15, 18, 0.58)',
+                faint: isCustomLight ? 'rgba(255, 255, 255, 0.32)' : 'rgba(15, 15, 18, 0.30)',
+                accent: customTextColor,
+                isDark: !isCustomLight,
+            };
+        }
+
+        // Auto mode: Light text when background is dark, dark text when background is light
+        if (activeTheme.isLight) {
+            return {
+                primary: '#0d0d12',
+                secondary: 'rgba(13, 13, 18, 0.78)',
+                muted: 'rgba(13, 13, 18, 0.55)',
+                faint: 'rgba(13, 13, 18, 0.28)',
+                accent: activeTheme.accent || '#17020B',
+                isDark: true,
+            };
+        }
+        return {
+            primary: '#ffffff',
+            secondary: 'rgba(255, 255, 255, 0.80)',
+            muted: 'rgba(255, 255, 255, 0.55)',
+            faint: 'rgba(255, 255, 255, 0.28)',
+            accent: activeTheme.accent || '#E8A87C',
+            isDark: false,
+        };
+    }, [textColorMode, customTextColor, activeTheme]);
+
+    // Effective genres list
+    const effectiveGenres = useMemo(() => {
+        if (Array.isArray(genres) && genres.length > 0) {
+            return genres.map(g => (typeof g === 'string' ? g : g.name || '')).filter(Boolean);
+        }
+        return ['Music', 'Groove'];
+    }, [genres]);
+
+    // Share & QR URL
     const shareUrl = typeof window !== "undefined" 
-        ? `${window.location.origin}/${type || 'track'}/${itemId}?groovelink=true`
+        ? `${window.location.origin}/${type || 'track'}/${itemId || ''}?groovelink=true`
         : '';
 
     const qrApi = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(shareUrl)}&color=${qrColor}&bgcolor=ffffff&ecc=H&format=png`;
-
-    const currentTheme = THEMES[cardTheme] || THEMES.obsidian;
 
     // Circular pie SVG calculations
     const pieRadius = 16;
     const pieCircumference = 2 * Math.PI * pieRadius;
     const pieOffset = pieCircumference * (1 - score10 / 10);
 
-    // Format metadata items inline with clean dot separators (NO BOXES)
+    // Format metadata items inline with dot separators
     const metaItems = useMemo(() => {
         const items = [];
-        if (displayDate) items.push(displayDate);
+        if (displayDate && datePlacement === 'inline') items.push(displayDate);
         if (showDuration && formattedDuration) items.push(formattedDuration);
         if (showDiscs && formattedDiscs) items.push(formattedDiscs);
         return items;
-    }, [displayDate, showDuration, formattedDuration, showDiscs, formattedDiscs]);
+    }, [displayDate, datePlacement, showDuration, formattedDuration, showDiscs, formattedDiscs]);
 
     // Grain opacity mapping
     const grainOpacity = useMemo(() => {
         if (noiseLevel === 'none') return 0;
-        if (noiseLevel === 'subtle') return currentTheme.isLight ? 0.15 : 0.22;
-        if (noiseLevel === 'medium') return currentTheme.isLight ? 0.28 : 0.40;
-        if (noiseLevel === 'heavy') return currentTheme.isLight ? 0.48 : 0.65;
+        if (noiseLevel === 'subtle') return activeTheme.isLight ? 0.15 : 0.22;
+        if (noiseLevel === 'medium') return activeTheme.isLight ? 0.28 : 0.40;
+        if (noiseLevel === 'heavy') return activeTheme.isLight ? 0.48 : 0.65;
         return 0;
-    }, [noiseLevel, currentTheme.isLight]);
+    }, [noiseLevel, activeTheme.isLight]);
 
     // Generate high-resolution card PNG representation
     const generateCardImage = async () => {
@@ -463,15 +709,126 @@ export default function GrooveCardComposer({
 
     if (!isOpen || typeof window === "undefined") return null;
 
-    const artistLabel = Array.isArray(artist) 
-        ? artist.map(a => a.name).join(', ') 
-        : artist;
+    // Alignment CSS classes helper
+    const alignClass = textAlign === 'center' ? 'text-center items-center' : textAlign === 'right' ? 'text-right items-end' : 'text-left items-start';
+    const justifyClass = textAlign === 'center' ? 'justify-center' : textAlign === 'right' ? 'justify-end' : 'justify-start';
+
+    // RENDER ANNOTATION COMPONENT
+    const renderAnnotation = () => {
+        if (!showAnnotation || !annotationText.trim()) return null;
+
+        if (annotationStyle === 'handwritten') {
+            return (
+                <div className={`mt-2 py-0.5 px-1 font-serif italic text-xs tracking-wide leading-snug break-words ${textAlign === 'center' ? 'text-center' : textAlign === 'right' ? 'text-right' : 'text-left'}`} style={{ color: textColors.primary }}>
+                    &ldquo;{annotationText}&rdquo;
+                </div>
+            );
+        }
+        if (annotationStyle === 'typewriter') {
+            return (
+                <div className={`mt-2 pt-1.5 border-t border-dashed font-mono text-[9px] uppercase tracking-wider break-words ${textAlign === 'center' ? 'text-center' : textAlign === 'right' ? 'text-right' : 'text-left'}`} style={{ color: textColors.secondary, borderColor: textColors.faint }}>
+                    [NOTE: {annotationText}]
+                </div>
+            );
+        }
+        if (annotationStyle === 'pill') {
+            return (
+                <div className={`mt-2 flex ${justifyClass}`}>
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full border text-[9px] font-semibold break-words" style={{ borderColor: textColors.faint, backgroundColor: activeTheme.isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.08)', color: textColors.primary }}>
+                        ✦ {annotationText}
+                    </span>
+                </div>
+            );
+        }
+        return (
+            <div className={`mt-2 pl-2 border-l-2 text-[11px] italic leading-tight break-words`} style={{ borderColor: textColors.accent, color: textColors.secondary }}>
+                &ldquo;{annotationText}&rdquo;
+            </div>
+        );
+    };
+
+    // RENDER GENRE TAGS
+    const renderGenreTags = () => {
+        if (!showGenres || effectiveGenres.length === 0) return null;
+        return (
+            <div className={`flex items-center gap-1.5 flex-wrap mt-1.5 ${justifyClass}`}>
+                {effectiveGenres.slice(0, 3).map((g, idx) => (
+                    <span
+                        key={idx}
+                        className="px-2 py-0.5 rounded-md text-[8px] sm:text-[9px] font-bold tracking-wider uppercase border select-none"
+                        style={{
+                            backgroundColor: activeTheme.isLight ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.08)',
+                            borderColor: textColors.faint,
+                            color: textColors.secondary,
+                        }}
+                    >
+                        {g}
+                    </span>
+                ))}
+            </div>
+        );
+    };
+
+    // RENDER TITLE & ARTIST BLOCK
+    const renderTitleBlock = () => (
+        <div className={`flex flex-col w-full ${alignClass}`}>
+            {datePlacement === 'subhead' && displayDate && (
+                <span className="text-[9px] uppercase font-bold tracking-widest mb-0.5" style={{ color: textColors.muted }}>
+                    {displayDate}
+                </span>
+            )}
+            <h4 
+                className="text-xs sm:text-sm font-bold leading-tight font-display tracking-tight break-words line-clamp-2 w-full"
+                style={{ color: textColors.primary }}
+                title={title}
+            >
+                {title || 'Untitled'}
+            </h4>
+            <p 
+                className="text-[10px] sm:text-xs font-medium font-sans mt-0.5 break-words line-clamp-1 w-full"
+                style={{ color: textColors.secondary }}
+                title={artistLabel}
+            >
+                {artistLabel}
+            </p>
+            {album && type === 'track' && album !== title && (
+                <p 
+                    className="text-[9px] sm:text-[10px] font-normal font-sans italic mt-0.5 break-words line-clamp-1 w-full"
+                    style={{ color: textColors.muted }}
+                >
+                    {album}
+                </p>
+            )}
+
+            {/* Genre tags when placed below artist */}
+            {genresPlacement === 'below_artist' && renderGenreTags()}
+
+            {/* Metadata line (date, duration, disc count) */}
+            {metaItems.length > 0 && (
+                <div className={`flex items-center gap-1.5 flex-wrap text-[9px] sm:text-[10px] font-sans font-medium tracking-tight mt-1.5 ${justifyClass}`} style={{ color: textColors.muted }}>
+                    {metaItems.map((item, idx) => (
+                        <React.Fragment key={idx}>
+                            {idx > 0 && <span style={{ color: textColors.faint }}>•</span>}
+                            <span>{item}</span>
+                        </React.Fragment>
+                    ))}
+                    {ratingPlacement === 'inline' && (
+                        <>
+                            <span style={{ color: textColors.faint }}>•</span>
+                            <span className="font-bold flex items-center gap-0.5" style={{ color: ratingColor }}>
+                                ★ {score10}
+                            </span>
+                        </>
+                    )}
+                </div>
+            )}
+        </div>
+    );
 
     return createPortal(
         <div className="fixed inset-0 z-[99999] bg-[#07070A] text-white flex flex-col w-screen h-[100dvh] overflow-hidden select-none font-sans">
-            {/* Top Bar: Back on Left, Title in Center, Share & Download on Right */}
+            {/* Top Bar: Back, Title, Download & Share */}
             <header className="h-14 sm:h-16 px-3 sm:px-6 border-b border-white/10 bg-[#0c0c12]/95 backdrop-blur-md flex items-center justify-between shrink-0 z-40">
-                {/* Left: Back to details */}
                 <button 
                     onClick={onClose}
                     className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-full hover:bg-white/10 active:scale-95 text-white/80 hover:text-white transition-all cursor-pointer"
@@ -481,15 +838,13 @@ export default function GrooveCardComposer({
                     <span className="text-xs sm:text-sm font-semibold tracking-tight">Done</span>
                 </button>
 
-                {/* Center: Title / Breadcrumb */}
                 <div className="flex items-center gap-2 max-w-[140px] xs:max-w-[200px] sm:max-w-xs truncate text-center">
                     <img src="/in.svg" alt="Groove" className="w-4 h-4 object-contain opacity-70 shrink-0 hidden xs:block" />
                     <span className="text-xs sm:text-sm font-bold tracking-tight text-white/90 truncate font-display">
-                        {title || 'Card Studio'}
+                        {title || 'Card Creator'}
                     </span>
                 </div>
 
-                {/* Right: BOTH Share & Download Action Buttons */}
                 <div className="flex items-center gap-1.5 sm:gap-2.5">
                     <button
                         type="button"
@@ -515,210 +870,603 @@ export default function GrooveCardComposer({
                 </div>
             </header>
 
-            {/* Main Studio View: Responsive PC Left-Sidebar / Mobile Bottom-Tray Layout */}
+            {/* Studio Workspace Layout */}
             <div className="flex-1 flex flex-col md:flex-row min-h-0 overflow-hidden">
                 {/* PC ONLY: Left Sidebar Controls */}
-                <aside className="hidden md:flex md:w-80 lg:w-92 flex-col border-r border-white/10 bg-[#0b0b10] overflow-y-auto p-5 space-y-6 shrink-0 z-20">
-                    <div>
-                        <h2 className="text-sm font-bold uppercase tracking-wider text-white/50 font-display">
-                            Card Elements & Style
-                        </h2>
-                        <p className="text-xs text-white/40 mt-0.5">
-                            Fine-tune minimalist artwork, grain texture & widgets
-                        </p>
-                    </div>
-
-                    {/* Section 1: Abstract Backgrounds */}
-                    <div className="space-y-2">
-                        <label className="text-xs font-bold uppercase tracking-wider text-white/60 flex items-center justify-between">
-                            <span>Background Theme</span>
-                            <span className="text-[11px] text-[var(--theme-accent,#E8A87C)] font-semibold">{currentTheme.label}</span>
-                        </label>
-                        <div className="grid grid-cols-4 gap-2">
-                            {Object.keys(THEMES).map((tKey) => {
-                                const t = THEMES[tKey];
-                                const isSelected = cardTheme === tKey;
-                                return (
-                                    <button
-                                        key={tKey}
-                                        type="button"
-                                        onClick={() => setCardTheme(tKey)}
-                                        className={`p-1.5 rounded-xl border flex flex-col items-center gap-1.5 transition-all cursor-pointer ${
-                                            isSelected 
-                                                ? 'border-[var(--theme-accent,#E8A87C)] ring-2 ring-[var(--theme-accent,#E8A87C)]/30 bg-white/10' 
-                                                : 'border-white/10 bg-white/5 hover:bg-white/10'
-                                        }`}
-                                        title={t.label}
-                                    >
-                                        <div 
-                                            className="w-full h-8 rounded-lg shadow-inner border border-white/10" 
-                                            style={{ background: t.preview }} 
-                                        />
-                                        <span className="text-[10px] font-medium text-white/80 truncate w-full text-center">
-                                            {t.label}
-                                        </span>
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    </div>
-
-                    {/* Section 2: Film Grain Texture */}
-                    <div className="space-y-2">
-                        <label className="text-xs font-bold uppercase tracking-wider text-white/60 flex items-center justify-between">
-                            <span>Film Grain Texture</span>
-                            <span className="text-[11px] text-[var(--theme-accent,#E8A87C)] capitalize">{noiseLevel}</span>
-                        </label>
-                        <div className="grid grid-cols-4 gap-1 p-1 bg-white/5 border border-white/10 rounded-xl">
-                            {['none', 'subtle', 'medium', 'heavy'].map((lvl) => (
-                                <button
-                                    key={lvl}
-                                    type="button"
-                                    onClick={() => setNoiseLevel(lvl)}
-                                    className={`py-1.5 px-2 text-[11px] font-semibold rounded-lg capitalize transition cursor-pointer ${
-                                        noiseLevel === lvl
-                                            ? 'bg-white text-black font-bold shadow'
-                                            : 'text-white/60 hover:text-white'
-                                    }`}
-                                >
-                                    {lvl === 'none' ? 'Off' : lvl}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Section 3: Bottom-Right Corner Widget */}
-                    <div className="space-y-2">
-                        <label className="text-xs font-bold uppercase tracking-wider text-white/60">
-                            Corner Element (Bottom Right)
-                        </label>
-                        <div className="grid grid-cols-3 gap-2">
+                <aside className="hidden md:flex md:w-84 lg:w-96 flex-col border-r border-white/10 bg-[#0b0b10] shrink-0 z-20 min-h-0">
+                    {/* Category Tabs Header */}
+                    <div className="flex items-center border-b border-white/10 bg-[#0e0e16] p-1.5 gap-1 overflow-x-auto no-scrollbar shrink-0">
+                        {[
+                            { id: 'style', label: 'Design', icon: <Layers size={13} /> },
+                            { id: 'type', label: 'Type', icon: <ListMusic size={13} /> },
+                            { id: 'bg', label: 'Theme & Bg', icon: <Palette size={13} /> },
+                            { id: 'text', label: 'Text & Color', icon: <Type size={13} /> },
+                            { id: 'layout', label: 'Alignment', icon: <Sliders size={13} /> },
+                            { id: 'note', label: 'Annotation', icon: <MessageSquare size={13} /> },
+                        ].map(t => (
                             <button
+                                key={t.id}
                                 type="button"
-                                onClick={() => setCornerWidget('rating')}
-                                className={`p-2 rounded-xl border flex flex-col items-center gap-1 transition cursor-pointer text-center ${
-                                    cornerWidget === 'rating'
-                                        ? 'bg-[var(--theme-accent,#E8A87C)] text-[#17020B] border-[var(--theme-accent,#E8A87C)] font-bold shadow-md'
-                                        : 'bg-white/5 text-white/70 hover:text-white border-white/10'
+                                onClick={() => setActiveTab(t.id)}
+                                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer whitespace-nowrap ${
+                                    activeTab === t.id 
+                                        ? 'bg-white/15 text-white shadow-sm border border-white/10' 
+                                        : 'text-white/50 hover:text-white/80'
                                 }`}
                             >
-                                <Star size={15} />
-                                <span className="text-[10px] font-semibold">Rating Pie</span>
+                                {t.icon}
+                                <span>{t.label}</span>
                             </button>
+                        ))}
+                    </div>
 
-                            <button
-                                type="button"
-                                onClick={() => setCornerWidget('qr')}
-                                className={`p-2 rounded-xl border flex flex-col items-center gap-1 transition cursor-pointer text-center ${
-                                    cornerWidget === 'qr'
-                                        ? 'bg-[var(--theme-accent,#E8A87C)] text-[#17020B] border-[var(--theme-accent,#E8A87C)] font-bold shadow-md'
-                                        : 'bg-white/5 text-white/70 hover:text-white border-white/10'
-                                }`}
-                            >
-                                <QrCode size={15} />
-                                <span className="text-[10px] font-semibold">QR Code</span>
-                            </button>
-
-                            <button
-                                type="button"
-                                onClick={() => setCornerWidget('none')}
-                                className={`p-2 rounded-xl border flex flex-col items-center gap-1 transition cursor-pointer text-center ${
-                                    cornerWidget === 'none'
-                                        ? 'bg-[var(--theme-accent,#E8A87C)] text-[#17020B] border-[var(--theme-accent,#E8A87C)] font-bold shadow-md'
-                                        : 'bg-white/5 text-white/70 hover:text-white border-white/10'
-                                }`}
-                            >
-                                <EyeOff size={15} />
-                                <span className="text-[10px] font-semibold">None</span>
-                            </button>
-                        </div>
-
-                        {/* QR Color Picker (if QR active) */}
-                        {cornerWidget === 'qr' && (
-                            <div className="pt-2 flex items-center justify-between bg-white/5 p-2.5 rounded-xl border border-white/10">
-                                <span className="text-[11px] font-semibold text-white/60">QR Code Color</span>
-                                <div className="flex gap-1.5">
-                                    {QR_COLORS.map((color) => (
-                                        <button
-                                            key={color.hex}
-                                            type="button"
-                                            onClick={() => setQrColor(color.hex)}
-                                            className={`w-5 h-5 rounded-full border transition-all flex items-center justify-center cursor-pointer ${color.class} ${
-                                                qrColor === color.hex ? 'border-white scale-110 shadow-lg ring-2 ring-[var(--theme-accent)]/50' : 'hover:scale-105'
-                                            }`}
-                                            title={color.label}
-                                        >
-                                            {qrColor === color.hex && (
-                                                <div className={`w-1 h-1 rounded-full ${color.hex === 'ffffff' ? 'bg-black' : 'bg-white'}`} />
-                                            )}
-                                        </button>
-                                    ))}
+                    {/* Scrollable Control Panel Body */}
+                    <div className="flex-1 overflow-y-auto p-4 space-y-5">
+                        {/* TAB 1: DESIGN STYLE */}
+                        {activeTab === 'style' && (
+                            <div className="space-y-3">
+                                <div>
+                                    <h3 className="text-xs font-bold uppercase tracking-wider text-white/50">Defined Design Styles</h3>
+                                    <p className="text-[11px] text-white/40 mt-0.5">Select a vintage or modernist template layout</p>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2">
+                                    {Object.values(DESIGN_STYLES).map(style => {
+                                        const isSelected = designStyle === style.id;
+                                        return (
+                                            <button
+                                                key={style.id}
+                                                type="button"
+                                                onClick={() => setDesignStyle(style.id)}
+                                                className={`p-3 rounded-xl border text-left flex flex-col justify-between gap-1.5 transition cursor-pointer ${
+                                                    isSelected
+                                                        ? 'bg-white/15 border-[var(--theme-accent,#E8A87C)] ring-1 ring-[var(--theme-accent,#E8A87C)]'
+                                                        : 'bg-white/5 border-white/10 hover:bg-white/10'
+                                                }`}
+                                            >
+                                                <div className="flex items-center justify-between w-full">
+                                                    <span className="text-xs font-bold text-white tracking-tight">{style.label}</span>
+                                                    <span className="text-[9px] px-1.5 py-0.2 rounded font-semibold bg-white/10 text-white/70">{style.tag}</span>
+                                                </div>
+                                                <p className="text-[10px] text-white/50 leading-relaxed line-clamp-2">{style.description}</p>
+                                            </button>
+                                        );
+                                    })}
                                 </div>
                             </div>
                         )}
-                    </div>
 
-                    {/* Section 4: Release Date Display */}
-                    <div className="space-y-2">
-                        <label className="text-xs font-bold uppercase tracking-wider text-white/60 flex items-center justify-between">
-                            <span>Release Date</span>
-                            <span className="text-[10px] text-[var(--theme-accent,#E8A87C)]">Year Default</span>
-                        </label>
-                        <div className="grid grid-cols-4 gap-1 p-1 bg-white/5 border border-white/10 rounded-xl">
-                            {[
-                                { id: 'year', label: 'Year' },
-                                { id: 'monthYear', label: 'Mo/Yr' },
-                                { id: 'full', label: 'Full' },
-                                { id: 'none', label: 'Hide' },
-                            ].map((m) => (
-                                <button
-                                    key={m.id}
-                                    type="button"
-                                    onClick={() => setDateMode(m.id)}
-                                    className={`py-1.5 px-1 text-[11px] font-semibold rounded-lg transition cursor-pointer text-center ${
-                                        dateMode === m.id
-                                            ? 'bg-white text-black font-bold shadow'
-                                            : 'text-white/60 hover:text-white'
-                                    }`}
-                                >
-                                    {m.label}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
+                        {/* TAB 2: CARD TYPE */}
+                        {activeTab === 'type' && (
+                            <div className="space-y-3">
+                                <div>
+                                    <h3 className="text-xs font-bold uppercase tracking-wider text-white/50">Card Content Layout</h3>
+                                    <p className="text-[11px] text-white/40 mt-0.5">Choose classic artwork, tracklist, or big scannable QR</p>
+                                </div>
+                                <div className="space-y-2">
+                                    {Object.values(CARD_TYPES).map(cType => {
+                                        const isSelected = cardType === cType.id;
+                                        return (
+                                            <button
+                                                key={cType.id}
+                                                type="button"
+                                                onClick={() => setCardType(cType.id)}
+                                                className={`w-full p-3 rounded-xl border text-left flex items-start justify-between gap-3 transition cursor-pointer ${
+                                                    isSelected
+                                                        ? 'bg-white/15 border-[var(--theme-accent,#E8A87C)] ring-1 ring-[var(--theme-accent,#E8A87C)]'
+                                                        : 'bg-white/5 border-white/10 hover:bg-white/10'
+                                                }`}
+                                            >
+                                                <div>
+                                                    <h4 className="text-xs font-bold text-white tracking-tight">{cType.label}</h4>
+                                                    <p className="text-[10px] text-white/50 mt-0.5">{cType.desc}</p>
+                                                </div>
+                                                {isSelected && <Check size={16} className="text-[var(--theme-accent,#E8A87C)] shrink-0 mt-0.5" />}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
 
-                    {/* Section 5: Audio Info Toggles */}
-                    <div className="space-y-2">
-                        <label className="text-xs font-bold uppercase tracking-wider text-white/60">
-                            Audio Info (Unboxed)
-                        </label>
-                        <div className="space-y-1.5">
-                            <label className="flex items-center justify-between p-2.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition cursor-pointer">
-                                <span className="text-xs text-white/80 font-medium">Show Duration</span>
-                                <input 
-                                    type="checkbox" 
-                                    checked={showDuration}
-                                    onChange={(e) => setShowDuration(e.target.checked)}
-                                    className="accent-[var(--theme-accent,#E8A87C)] cursor-pointer w-4 h-4"
-                                />
-                            </label>
+                        {/* TAB 3: THEME & BACKGROUND */}
+                        {activeTab === 'bg' && (
+                            <div className="space-y-4">
+                                <div>
+                                    <h3 className="text-xs font-bold uppercase tracking-wider text-white/50 flex items-center justify-between">
+                                        <span>Background Theme</span>
+                                        <span className="text-[11px] text-[var(--theme-accent,#E8A87C)] font-semibold">{activeTheme.label}</span>
+                                    </h3>
+                                    <p className="text-[11px] text-white/40 mt-0.5">8 Abstract themes or custom solid color</p>
+                                </div>
 
-                            <label className="flex items-center justify-between p-2.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition cursor-pointer">
-                                <span className="text-xs text-white/80 font-medium">Show Discs & Tracks</span>
-                                <input 
-                                    type="checkbox" 
-                                    checked={showDiscs}
-                                    onChange={(e) => setShowDiscs(e.target.checked)}
-                                    className="accent-[var(--theme-accent,#E8A87C)] cursor-pointer w-4 h-4"
-                                />
-                            </label>
-                        </div>
+                                {/* 8 Themes + Solid Color Button */}
+                                <div className="grid grid-cols-3 gap-2">
+                                    {Object.keys(THEMES).map(tKey => {
+                                        const t = THEMES[tKey];
+                                        const isSelected = cardTheme === tKey;
+                                        return (
+                                            <button
+                                                key={tKey}
+                                                type="button"
+                                                onClick={() => setCardTheme(tKey)}
+                                                className={`p-2 rounded-xl border flex flex-col items-center gap-1.5 transition cursor-pointer ${
+                                                    isSelected 
+                                                        ? 'border-[var(--theme-accent,#E8A87C)] ring-1 ring-[var(--theme-accent,#E8A87C)] bg-white/10' 
+                                                        : 'border-white/10 bg-white/5 hover:bg-white/10'
+                                                }`}
+                                            >
+                                                <div className="w-full h-7 rounded-lg shadow-inner border border-white/10" style={{ background: t.preview }} />
+                                                <span className="text-[10px] font-medium text-white/80 truncate w-full text-center">{t.label}</span>
+                                            </button>
+                                        );
+                                    })}
+
+                                    {/* 9th Option: Solid Color Button */}
+                                    <button
+                                        type="button"
+                                        onClick={() => setCardTheme('solid')}
+                                        className={`p-2 rounded-xl border flex flex-col items-center gap-1.5 transition cursor-pointer ${
+                                            cardTheme === 'solid'
+                                                ? 'border-[var(--theme-accent,#E8A87C)] ring-1 ring-[var(--theme-accent,#E8A87C)] bg-white/10'
+                                                : 'border-white/10 bg-white/5 hover:bg-white/10'
+                                        }`}
+                                    >
+                                        <div className="w-full h-7 rounded-lg shadow-inner border border-white/10 flex items-center justify-center" style={{ backgroundColor: customBgColor }}>
+                                            <Paintbrush size={13} className={isLightColor(customBgColor) ? 'text-black/70' : 'text-white/70'} />
+                                        </div>
+                                        <span className="text-[10px] font-bold text-white/90 truncate w-full text-center">Solid Color</span>
+                                    </button>
+                                </div>
+
+                                {/* Solid Color Chooser Drawer */}
+                                {cardTheme === 'solid' && (
+                                    <div className="p-3 bg-white/5 rounded-2xl border border-white/10 space-y-3">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-xs font-bold text-white/80">Background Color Chooser</span>
+                                            <div className="flex items-center gap-2">
+                                                <input
+                                                    type="color"
+                                                    value={customBgColor}
+                                                    onChange={(e) => setCustomBgColor(e.target.value)}
+                                                    className="w-7 h-7 rounded-lg border border-white/20 cursor-pointer bg-transparent"
+                                                    title="Pick any color"
+                                                />
+                                                <span className="text-[11px] font-mono font-semibold uppercase text-white/70">{customBgColor}</span>
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <span className="text-[10px] font-semibold text-white/50 uppercase tracking-wider block mb-1.5">Preset Palette</span>
+                                            <div className="grid grid-cols-6 gap-1.5">
+                                                {SOLID_COLOR_PRESETS.map((p) => (
+                                                    <button
+                                                        key={p.hex}
+                                                        type="button"
+                                                        onClick={() => setCustomBgColor(p.hex)}
+                                                        className={`h-7 rounded-lg border transition-all flex items-center justify-center cursor-pointer ${
+                                                            customBgColor.toLowerCase() === p.hex.toLowerCase()
+                                                                ? 'border-white scale-105 shadow-md ring-2 ring-[var(--theme-accent)]/50'
+                                                                : 'border-white/10 hover:scale-105'
+                                                        }`}
+                                                        style={{ backgroundColor: p.hex }}
+                                                        title={p.label}
+                                                    >
+                                                        {customBgColor.toLowerCase() === p.hex.toLowerCase() && (
+                                                            <div className={`w-1.5 h-1.5 rounded-full ${isLightColor(p.hex) ? 'bg-black' : 'bg-white'}`} />
+                                                        )}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Film Grain Texture Section */}
+                                <div className="space-y-2 pt-2 border-t border-white/10">
+                                    <label className="text-xs font-bold uppercase tracking-wider text-white/60 flex items-center justify-between">
+                                        <span>Film Grain Texture</span>
+                                        <span className="text-[11px] text-[var(--theme-accent,#E8A87C)] capitalize">{noiseLevel}</span>
+                                    </label>
+                                    <div className="grid grid-cols-4 gap-1 p-1 bg-white/5 border border-white/10 rounded-xl">
+                                        {['none', 'subtle', 'medium', 'heavy'].map((lvl) => (
+                                            <button
+                                                key={lvl}
+                                                type="button"
+                                                onClick={() => setNoiseLevel(lvl)}
+                                                className={`py-1.5 px-2 text-[11px] font-semibold rounded-lg capitalize transition cursor-pointer ${
+                                                    noiseLevel === lvl
+                                                        ? 'bg-white text-black font-bold shadow'
+                                                        : 'text-white/60 hover:text-white'
+                                                }`}
+                                            >
+                                                {lvl === 'none' ? 'Off' : lvl}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* TAB 4: TEXT & COLOR */}
+                        {activeTab === 'text' && (
+                            <div className="space-y-4">
+                                <div>
+                                    <h3 className="text-xs font-bold uppercase tracking-wider text-white/50">Typography & Text Color</h3>
+                                    <p className="text-[11px] text-white/40 mt-0.5">Smart auto contrast or custom text palette</p>
+                                </div>
+
+                                {/* Text Color Mode: Auto vs Custom */}
+                                <div className="grid grid-cols-2 gap-2 p-1 bg-white/5 border border-white/10 rounded-xl">
+                                    <button
+                                        type="button"
+                                        onClick={() => setTextColorMode('auto')}
+                                        className={`py-1.5 px-3 text-xs font-bold rounded-lg transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                                            textColorMode === 'auto'
+                                                ? 'bg-white text-black shadow'
+                                                : 'text-white/60 hover:text-white'
+                                        }`}
+                                    >
+                                        <Sparkles size={13} />
+                                        <span>Auto Contrast</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setTextColorMode('custom')}
+                                        className={`py-1.5 px-3 text-xs font-bold rounded-lg transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                                            textColorMode === 'custom'
+                                                ? 'bg-white text-black shadow'
+                                                : 'text-white/60 hover:text-white'
+                                        }`}
+                                    >
+                                        <Palette size={13} />
+                                        <span>Custom Color</span>
+                                    </button>
+                                </div>
+
+                                {textColorMode === 'auto' ? (
+                                    <div className="p-3 bg-white/5 rounded-xl border border-white/10 text-[11px] text-white/60 leading-relaxed">
+                                        💡 Smart contrast active: Automatically switches to crisp dark text on light backgrounds and pure white on dark backgrounds.
+                                    </div>
+                                ) : (
+                                    <div className="p-3 bg-white/5 rounded-2xl border border-white/10 space-y-3">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-xs font-bold text-white/80">Text Color Chooser</span>
+                                            <div className="flex items-center gap-2">
+                                                <input
+                                                    type="color"
+                                                    value={customTextColor}
+                                                    onChange={(e) => setCustomTextColor(e.target.value)}
+                                                    className="w-7 h-7 rounded-lg border border-white/20 cursor-pointer bg-transparent"
+                                                    title="Pick text color"
+                                                />
+                                                <span className="text-[11px] font-mono font-semibold uppercase text-white/70">{customTextColor}</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-4 gap-2">
+                                            {TEXT_COLOR_PRESETS.map((tc) => (
+                                                <button
+                                                    key={tc.hex}
+                                                    type="button"
+                                                    onClick={() => setCustomTextColor(tc.hex)}
+                                                    className={`py-1.5 px-2 rounded-lg border text-xs flex items-center gap-1.5 transition cursor-pointer ${
+                                                        customTextColor.toLowerCase() === tc.hex.toLowerCase()
+                                                            ? 'border-white bg-white/20 font-bold'
+                                                            : 'border-white/10 bg-white/5 hover:bg-white/10'
+                                                    }`}
+                                                >
+                                                    <div className="w-3.5 h-3.5 rounded-full border border-black/20 shrink-0" style={{ backgroundColor: tc.hex }} />
+                                                    <span className="truncate">{tc.label}</span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Alignment Controls */}
+                                <div className="space-y-2 pt-2 border-t border-white/10">
+                                    <label className="text-xs font-bold uppercase tracking-wider text-white/60">Text Alignment</label>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {[
+                                            { id: 'left', label: 'Left', icon: <AlignLeft size={14} /> },
+                                            { id: 'center', label: 'Center', icon: <AlignCenter size={14} /> },
+                                            { id: 'right', label: 'Right', icon: <AlignRight size={14} /> },
+                                        ].map((al) => (
+                                            <button
+                                                key={al.id}
+                                                type="button"
+                                                onClick={() => setTextAlign(al.id)}
+                                                className={`py-2 px-3 rounded-xl border flex items-center justify-center gap-1.5 text-xs font-bold transition cursor-pointer ${
+                                                    textAlign === al.id
+                                                        ? 'bg-white text-black border-white shadow'
+                                                        : 'bg-white/5 text-white/60 border-white/10 hover:text-white'
+                                                }`}
+                                            >
+                                                {al.icon}
+                                                <span>{al.label}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* TAB 5: LAYOUT & PLACEMENT */}
+                        {activeTab === 'layout' && (
+                            <div className="space-y-4">
+                                <div>
+                                    <h3 className="text-xs font-bold uppercase tracking-wider text-white/50">Element Placements</h3>
+                                    <p className="text-[11px] text-white/40 mt-0.5">Customize Title, Genre tags, Date, and Rating</p>
+                                </div>
+
+                                {/* Title & Artist Position */}
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-bold text-white/70">Title & Artist Placement</label>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => setTitlePlacement('bottom')}
+                                            className={`p-2 rounded-xl border text-xs font-bold transition cursor-pointer text-center ${
+                                                titlePlacement === 'bottom'
+                                                    ? 'bg-white text-black border-white shadow'
+                                                    : 'bg-white/5 text-white/60 border-white/10 hover:text-white'
+                                            }`}
+                                        >
+                                            Below Artwork (Classic)
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setTitlePlacement('top')}
+                                            className={`p-2 rounded-xl border text-xs font-bold transition cursor-pointer text-center ${
+                                                titlePlacement === 'top'
+                                                    ? 'bg-white text-black border-white shadow'
+                                                    : 'bg-white/5 text-white/60 border-white/10 hover:text-white'
+                                            }`}
+                                        >
+                                            Above Artwork (Editorial)
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Genre Tags Placement & Toggle */}
+                                <div className="space-y-2 p-3 bg-white/5 rounded-2xl border border-white/10">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-xs font-bold text-white/80">Display Genre Tags</span>
+                                        <input
+                                            type="checkbox"
+                                            checked={showGenres}
+                                            onChange={(e) => setShowGenres(e.target.checked)}
+                                            className="w-4 h-4 accent-[var(--theme-accent,#E8A87C)] cursor-pointer"
+                                        />
+                                    </div>
+                                    {showGenres && (
+                                        <div className="grid grid-cols-3 gap-1 pt-1.5 border-t border-white/10">
+                                            {[
+                                                { id: 'below_artist', label: 'Below Artist' },
+                                                { id: 'top_header', label: 'Top Header' },
+                                                { id: 'footer', label: 'Footer Tag' },
+                                            ].map((gp) => (
+                                                <button
+                                                    key={gp.id}
+                                                    type="button"
+                                                    onClick={() => setGenresPlacement(gp.id)}
+                                                    className={`py-1.5 px-1 rounded-lg text-[10px] font-semibold transition cursor-pointer text-center ${
+                                                        genresPlacement === gp.id
+                                                            ? 'bg-white text-black font-bold shadow'
+                                                            : 'bg-white/5 text-white/60 hover:text-white'
+                                                    }`}
+                                                >
+                                                    {gp.label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Rating Placement */}
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-bold text-white/70">Rating Display</label>
+                                    <div className="grid grid-cols-4 gap-1 p-1 bg-white/5 border border-white/10 rounded-xl">
+                                        {[
+                                            { id: 'bottom_right', label: 'Corner Pie' },
+                                            { id: 'top_right', label: 'Header Pill' },
+                                            { id: 'inline', label: 'Inline Star' },
+                                            { id: 'none', label: 'Hide' },
+                                        ].map((rp) => (
+                                            <button
+                                                key={rp.id}
+                                                type="button"
+                                                onClick={() => setRatingPlacement(rp.id)}
+                                                className={`py-1.5 px-1 text-[10px] font-semibold rounded-lg transition cursor-pointer text-center ${
+                                                    ratingPlacement === rp.id
+                                                        ? 'bg-white text-black font-bold shadow'
+                                                        : 'text-white/60 hover:text-white'
+                                                }`}
+                                            >
+                                                {rp.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Date Placement & Format */}
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-bold text-white/70">Release Date Placement</label>
+                                    <div className="grid grid-cols-4 gap-1 p-1 bg-white/5 border border-white/10 rounded-xl">
+                                        {[
+                                            { id: 'inline', label: 'Metadata' },
+                                            { id: 'header', label: 'Header' },
+                                            { id: 'subhead', label: 'Subhead' },
+                                            { id: 'none', label: 'Hide' },
+                                        ].map((dp) => (
+                                            <button
+                                                key={dp.id}
+                                                type="button"
+                                                onClick={() => setDatePlacement(dp.id)}
+                                                className={`py-1.5 px-1 text-[10px] font-semibold rounded-lg transition cursor-pointer text-center ${
+                                                    datePlacement === dp.id
+                                                        ? 'bg-white text-black font-bold shadow'
+                                                        : 'text-white/60 hover:text-white'
+                                                }`}
+                                            >
+                                                {dp.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Corner Widget Options */}
+                                <div className="space-y-2 pt-2 border-t border-white/10">
+                                    <label className="text-xs font-bold uppercase tracking-wider text-white/60">Bottom-Right Corner Widget</label>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => setCornerWidget('rating')}
+                                            className={`p-2 rounded-xl border flex flex-col items-center gap-1 transition cursor-pointer text-center ${
+                                                cornerWidget === 'rating'
+                                                    ? 'bg-[var(--theme-accent,#E8A87C)] text-[#17020B] border-[var(--theme-accent,#E8A87C)] font-bold shadow-md'
+                                                    : 'bg-white/5 text-white/70 hover:text-white border-white/10'
+                                            }`}
+                                        >
+                                            <Star size={14} />
+                                            <span className="text-[10px]">Rating Pie</span>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setCornerWidget('qr')}
+                                            className={`p-2 rounded-xl border flex flex-col items-center gap-1 transition cursor-pointer text-center ${
+                                                cornerWidget === 'qr'
+                                                    ? 'bg-[var(--theme-accent,#E8A87C)] text-[#17020B] border-[var(--theme-accent,#E8A87C)] font-bold shadow-md'
+                                                    : 'bg-white/5 text-white/70 hover:text-white border-white/10'
+                                            }`}
+                                        >
+                                            <QrCode size={14} />
+                                            <span className="text-[10px]">QR Code</span>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setCornerWidget('none')}
+                                            className={`p-2 rounded-xl border flex flex-col items-center gap-1 transition cursor-pointer text-center ${
+                                                cornerWidget === 'none'
+                                                    ? 'bg-[var(--theme-accent,#E8A87C)] text-[#17020B] border-[var(--theme-accent,#E8A87C)] font-bold shadow-md'
+                                                    : 'bg-white/5 text-white/70 hover:text-white border-white/10'
+                                            }`}
+                                        >
+                                            <EyeOff size={14} />
+                                            <span className="text-[10px]">None</span>
+                                        </button>
+                                    </div>
+                                    {cornerWidget === 'qr' && (
+                                        <div className="flex items-center justify-between p-2.5 bg-white/5 rounded-xl border border-white/10 mt-1">
+                                            <span className="text-[11px] font-semibold text-white/60">QR Code Color</span>
+                                            <div className="flex gap-1.5">
+                                                {QR_COLORS.map((c) => (
+                                                    <button
+                                                        key={c.hex}
+                                                        type="button"
+                                                        onClick={() => setQrColor(c.hex)}
+                                                        className={`w-5 h-5 rounded-full border transition cursor-pointer ${c.class} ${
+                                                            qrColor === c.hex ? 'border-white scale-110 shadow-md ring-2 ring-[var(--theme-accent)]/50' : 'hover:scale-105'
+                                                        }`}
+                                                        title={c.label}
+                                                    />
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* TAB 6: ANNOTATION */}
+                        {activeTab === 'note' && (
+                            <div className="space-y-4">
+                                <div>
+                                    <h3 className="text-xs font-bold uppercase tracking-wider text-white/50">Personal Annotation</h3>
+                                    <p className="text-[11px] text-white/40 mt-0.5">Add a personal note, memory, quote, or review snippet</p>
+                                </div>
+
+                                <label className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition cursor-pointer">
+                                    <span className="text-xs font-bold text-white/90">Enable Annotation on Card</span>
+                                    <input
+                                        type="checkbox"
+                                        checked={showAnnotation}
+                                        onChange={(e) => setShowAnnotation(e.target.checked)}
+                                        className="w-4 h-4 accent-[var(--theme-accent,#E8A87C)] cursor-pointer"
+                                    />
+                                </label>
+
+                                {showAnnotation && (
+                                    <div className="space-y-3">
+                                        <div>
+                                            <label className="text-xs font-bold text-white/70 block mb-1">Annotation Text</label>
+                                            <textarea
+                                                value={annotationText}
+                                                onChange={(e) => setAnnotationText(e.target.value)}
+                                                rows={3}
+                                                placeholder="Write your note, memory, or liner note..."
+                                                className="w-full p-2.5 rounded-xl bg-white/5 border border-white/15 text-xs text-white focus:outline-none focus:border-[var(--theme-accent,#E8A87C)] resize-none"
+                                            />
+                                        </div>
+
+                                        <div className="space-y-1.5">
+                                            <label className="text-xs font-bold text-white/70">Annotation Style</label>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                {[
+                                                    { id: 'handwritten', label: 'Handwritten / Script', desc: 'Serif italic cursive note' },
+                                                    { id: 'typewriter', label: 'Typewriter / Mono', desc: 'Vintage monospace note' },
+                                                    { id: 'pill', label: 'Curator Pill', desc: 'Enclosed border stamp badge' },
+                                                    { id: 'quote', label: 'Pull Quote', desc: 'Editorial quote bar' },
+                                                ].map((st) => (
+                                                    <button
+                                                        key={st.id}
+                                                        type="button"
+                                                        onClick={() => setAnnotationStyle(st.id)}
+                                                        className={`p-2 rounded-xl border text-left transition cursor-pointer ${
+                                                            annotationStyle === st.id
+                                                                ? 'bg-white text-black font-bold border-white shadow'
+                                                                : 'bg-white/5 text-white/70 border-white/10 hover:bg-white/10'
+                                                        }`}
+                                                    >
+                                                        <span className="text-[11px] block">{st.label}</span>
+                                                        <span className={`text-[9px] block ${annotationStyle === st.id ? 'text-black/60' : 'text-white/40'}`}>{st.desc}</span>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-1.5">
+                                            <label className="text-xs font-bold text-white/70">Placement</label>
+                                            <div className="grid grid-cols-3 gap-1.5">
+                                                {[
+                                                    { id: 'bottom', label: 'Card Bottom' },
+                                                    { id: 'under_art', label: 'Under Artwork' },
+                                                    { id: 'badge', label: 'Artwork Badge' },
+                                                ].map((pl) => (
+                                                    <button
+                                                        key={pl.id}
+                                                        type="button"
+                                                        onClick={() => setAnnotationPlacement(pl.id)}
+                                                        className={`py-1.5 px-2 rounded-lg text-[10px] font-semibold transition cursor-pointer text-center ${
+                                                            annotationPlacement === pl.id
+                                                                ? 'bg-white text-black font-bold shadow'
+                                                                : 'bg-white/5 text-white/60 hover:text-white'
+                                                        }`}
+                                                    >
+                                                        {pl.label}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
                 </aside>
 
-                {/* Center / Main Canvas: Static, Crisp Live Preview (ZERO lag, NO moving animations) */}
+                {/* Center / Main Canvas Preview */}
                 <main className="flex-1 flex items-center justify-center p-3 sm:p-6 lg:p-10 bg-[#050508] relative overflow-hidden select-none min-h-0">
-                    {/* Subtle Studio Grid Backdrop */}
                     <div 
                         className="absolute inset-0 opacity-[0.03] pointer-events-none"
                         style={{
@@ -731,159 +1479,293 @@ export default function GrooveCardComposer({
                     <div 
                         ref={cardRef} 
                         style={{
-                            ...currentTheme.bgStyle,
-                            borderColor: currentTheme.border,
+                            ...activeTheme.bgStyle,
+                            borderColor: activeTheme.border,
                         }}
-                        className="relative w-full max-w-[270px] xs:max-w-[290px] sm:max-w-[330px] aspect-[1/1.42] p-3.5 sm:p-4 rounded-2xl flex flex-col justify-between shadow-2xl border transition-colors duration-200 overflow-hidden select-none"
+                        className={`relative w-full max-w-[280px] xs:max-w-[305px] sm:max-w-[340px] md:max-w-[350px] min-h-[460px] sm:min-h-[490px] p-4 rounded-2xl flex flex-col justify-between shadow-2xl border transition-colors duration-200 overflow-hidden select-none ${
+                            designStyle === 'library' ? 'font-mono' : designStyle === 'museum' ? 'tracking-wide' : 'font-sans'
+                        }`}
                     >
-                        {/* Film Grain Texture Overlay (Canvas-generated base64 PNG, 100% visible & exportable) */}
+                        {/* Film Grain Texture Overlay */}
                         {grainOpacity > 0 && noiseDataUri && (
                             <div 
                                 aria-hidden="true"
-                                className="absolute inset-0 pointer-events-none rounded-2xl"
+                                className="absolute inset-0 pointer-events-none rounded-2xl z-0"
                                 style={{
                                     backgroundImage: `url("${noiseDataUri}")`,
                                     backgroundRepeat: 'repeat',
-                                    mixBlendMode: currentTheme.isLight ? 'multiply' : 'overlay',
+                                    mixBlendMode: activeTheme.isLight ? 'multiply' : 'overlay',
                                     opacity: grainOpacity,
                                 }}
                             />
                         )}
 
-                        {/* Card Header: Pure Minimalist Logo & Type Indicator (NO BOXES) */}
-                        <div className="relative z-10 w-full flex justify-between items-center mb-2 sm:mb-2.5">
-                            <div className="flex items-center gap-1.5">
-                                <img 
-                                    src="/in.svg" 
-                                    alt="Groove" 
-                                    className={`w-3.5 h-3.5 object-contain shrink-0 ${currentTheme.isLight ? 'brightness-0' : 'opacity-80'}`} 
-                                    crossOrigin="anonymous" 
-                                />
-                                <span className={`text-[9px] tracking-[0.25em] font-bold uppercase font-sans ${currentTheme.isLight ? 'text-black/60' : 'text-white/60'}`}>
-                                    GrooveCard
+                        {/* DESIGN STYLE 1: LIBRARY CATALOGUE CARD ACCENTS */}
+                        {designStyle === 'library' && (
+                            <div className="relative z-10 w-full mb-2 pb-1.5 border-b border-red-500/30 flex justify-between items-start text-[8px] sm:text-[9px] uppercase font-bold tracking-widest text-red-600/80">
+                                <div className="flex flex-col">
+                                    <span>CLASS: 781.66 / GROOVE</span>
+                                    <span style={{ color: textColors.muted }}>ACCESSION: MB-{String(itemId || '9481').slice(0, 6).toUpperCase()}</span>
+                                </div>
+                                <span className="border border-red-500/60 px-1 py-0.2 rounded text-[8px] rotate-[-2deg]">
+                                    LOAN ARCHIVE
                                 </span>
                             </div>
-                            <span className={`text-[8px] sm:text-[9px] font-semibold tracking-wider uppercase font-sans ${currentTheme.isLight ? 'text-black/40' : 'text-white/40'}`}>
-                                {type || 'MUSIC'}
-                            </span>
-                        </div>
+                        )}
 
-                        {/* Cover Art Artwork: Square with tight radius, clean border */}
-                        <div className="relative z-10 w-full aspect-square rounded-xl overflow-hidden shadow-lg border border-white/10 bg-black/40 mb-2 sm:mb-2.5">
-                            <img
-                                src={imageUrl || "/placeholder.jpg"}
-                                alt={title}
-                                className="w-full h-full object-cover"
-                                crossOrigin="anonymous"
-                                onError={(e) => {
-                                    e.currentTarget.src = 'https://placehold.co/400x400/17020B/E8A87C?text=Music';
-                                }}
-                            />
-                        </div>
+                        {/* DESIGN STYLE 2: VINYL INSERT OBI BANNER */}
+                        {designStyle === 'vinyl' && (
+                            <div className="relative z-10 w-full mb-2 px-2 py-1 rounded bg-black/30 border border-white/10 flex justify-between items-center text-[8px] font-bold tracking-widest uppercase">
+                                <span style={{ color: textColors.accent }}>
+                                    GROOVE 帯 • 33⅓ RPM • STEREO
+                                </span>
+                                <span style={{ color: textColors.muted }}>
+                                    FULL FREQUENCY AUDIO
+                                </span>
+                            </div>
+                        )}
 
-                        {/* Bottom Info & Corner Widget: Tight, Unified, Zero Monospace, ZERO BOXES */}
-                        <div className="relative z-10 flex justify-between items-end gap-3 text-left">
-                            {/* Text Info Column */}
-                            <div className="flex-1 min-w-0 pr-1">
-                                <h4 
-                                    className={`text-xs sm:text-sm font-bold leading-snug font-display tracking-tight break-words line-clamp-1 ${currentTheme.isLight ? 'text-black' : 'text-white'}`} 
-                                    title={title}
-                                >
-                                    {title}
-                                </h4>
-                                <p 
-                                    className={`text-[10px] sm:text-xs font-medium font-sans mt-0.5 break-words line-clamp-1 ${currentTheme.isLight ? 'text-black/70' : 'text-white/75'}`} 
-                                    title={artistLabel}
-                                >
-                                    {artistLabel}
-                                </p>
-                                {album && type === 'track' && album !== title && (
-                                    <p 
-                                        className={`text-[9px] sm:text-[10px] font-normal font-sans italic mt-0.5 break-words line-clamp-1 ${currentTheme.isLight ? 'text-black/50' : 'text-white/50'}`}
-                                    >
-                                        {album}
-                                    </p>
-                                )}
+                        {/* DESIGN STYLE 3: MUSEUM EXHIBIT ACCESSION HEADER */}
+                        {designStyle === 'museum' && (
+                            <div className="relative z-10 w-full mb-2 flex justify-between items-center text-[8px] font-semibold tracking-widest uppercase" style={{ color: textColors.muted }}>
+                                <span>GALLERY 4 • SOUND SCULPTURES</span>
+                                <span>OBJ: 2026.04.18</span>
+                            </div>
+                        )}
 
-                                {/* Dot-Separated Metadata Line (NO BOXES, Clean Sans) */}
-                                {metaItems.length > 0 && (
-                                    <div className={`flex items-center gap-1.5 flex-wrap text-[10px] sm:text-[11px] font-sans font-medium tracking-tight mt-1 ${currentTheme.isLight ? 'text-black/60' : 'text-white/70'}`}>
-                                        {metaItems.map((item, idx) => (
-                                            <React.Fragment key={idx}>
-                                                {idx > 0 && (
-                                                    <span className={`select-none ${currentTheme.isLight ? 'text-black/30' : 'text-white/30'}`}>
-                                                        •
-                                                    </span>
-                                                )}
-                                                <span>{item}</span>
-                                            </React.Fragment>
-                                        ))}
+                        {/* DESIGN STYLE 4: CASSETTE J-CARD HEADER */}
+                        {designStyle === 'cassette' && (
+                            <div className="relative z-10 w-full mb-2 pb-1 border-b border-dashed flex justify-between items-center text-[8px] font-mono uppercase tracking-wider" style={{ borderColor: textColors.faint, color: textColors.muted }}>
+                                <span>SIDE A • TYPE II [CrO2] • 120μs</span>
+                                <span className="px-1 bg-white/10 rounded font-bold">DOLBY B-NR</span>
+                            </div>
+                        )}
+
+                        {/* DESIGN STYLE 5: CONCERT TICKET STUB PERFORATION HEADER */}
+                        {designStyle === 'ticket' && (
+                            <div className="relative z-10 w-full mb-2 pb-1.5 border-b-2 border-dashed flex justify-between items-center text-[8px] font-bold uppercase tracking-widest" style={{ borderColor: textColors.faint, color: textColors.primary }}>
+                                <span>ADMIT ONE • GROOVE SOUND ARENA</span>
+                                <span>SEC: PIT • ROW: A</span>
+                            </div>
+                        )}
+
+                        {/* STANDARD HEADER (Modern Studio) */}
+                        {designStyle === 'modern' && (
+                            <div className="relative z-10 w-full flex justify-between items-center mb-2.5">
+                                <div className="flex items-center gap-1.5">
+                                    <img 
+                                        src="/in.svg" 
+                                        alt="Groove" 
+                                        className={`w-3.5 h-3.5 object-contain shrink-0 ${activeTheme.isLight ? 'brightness-0' : 'opacity-80'}`} 
+                                        crossOrigin="anonymous" 
+                                    />
+                                    <span className="text-[9px] tracking-[0.25em] font-bold uppercase font-sans" style={{ color: textColors.secondary }}>
+                                        GrooveCard
+                                    </span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    {genresPlacement === 'top_header' && renderGenreTags()}
+                                    {datePlacement === 'header' && displayDate && (
+                                        <span className="text-[8px] font-bold uppercase tracking-wider font-sans" style={{ color: textColors.muted }}>
+                                            {displayDate}
+                                        </span>
+                                    )}
+                                    {ratingPlacement === 'top_right' && (
+                                        <span className="px-1.5 py-0.5 rounded-full text-[8px] font-extrabold uppercase font-sans border" style={{ backgroundColor: ratingColor + '20', borderColor: ratingColor, color: ratingColor }}>
+                                            ★ {score10}
+                                        </span>
+                                    )}
+                                    <span className="text-[8px] font-semibold tracking-wider uppercase font-sans" style={{ color: textColors.faint }}>
+                                        {type || 'MUSIC'}
+                                    </span>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* TOP TITLE POSITION (If editorial top position chosen) */}
+                        {titlePlacement === 'top' && (
+                            <div className="relative z-10 mb-2.5">
+                                {renderTitleBlock()}
+                            </div>
+                        )}
+
+                        {/* CARD TYPE 1: STANDARD ARTWORK CARD */}
+                        {cardType === 'standard' && (
+                            <div className="relative z-10 w-full aspect-square rounded-xl overflow-hidden shadow-lg border border-white/10 bg-black/40 mb-2.5 group">
+                                <img
+                                    src={imageUrl || "/placeholder.jpg"}
+                                    alt={title}
+                                    className="w-full h-full object-cover"
+                                    crossOrigin="anonymous"
+                                    onError={(e) => {
+                                        e.currentTarget.src = 'https://placehold.co/400x400/17020B/E8A87C?text=Music';
+                                    }}
+                                />
+                                {showAnnotation && annotationPlacement === 'badge' && (
+                                    <div className="absolute top-2 left-2 max-w-[85%] z-20">
+                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-black/80 backdrop-blur-md text-[9px] font-semibold text-white border border-white/20 shadow-md">
+                                            ✦ {annotationText}
+                                        </span>
                                     </div>
                                 )}
                             </div>
+                        )}
 
-                            {/* Corner Element (Bottom Right): Unboxed Rating Pie (Default) or QR or None */}
-                            {cornerWidget === 'rating' && (
-                                <div 
-                                    className="flex flex-col items-center justify-center shrink-0 cursor-default"
-                                    title={`Rating: ${score10}/10`}
-                                >
-                                    <div className="relative w-10 h-10 sm:w-11 sm:h-11 flex items-center justify-center">
-                                        <svg className="w-full h-full -rotate-90 transform" viewBox="0 0 44 44">
-                                            {/* Track */}
-                                            <circle 
-                                                cx="22" 
-                                                cy="22" 
-                                                r={pieRadius} 
-                                                fill="transparent" 
-                                                stroke={currentTheme.isLight ? "rgba(0,0,0,0.12)" : "rgba(255,255,255,0.15)"} 
-                                                strokeWidth="3.2" 
-                                            />
-                                            {/* Progress */}
-                                            <circle
-                                                cx="22" 
-                                                cy="22" 
-                                                r={pieRadius} 
-                                                fill="none" 
-                                                stroke={ratingColor} 
-                                                strokeWidth="3.5" 
-                                                strokeDasharray={pieCircumference} 
-                                                strokeDashoffset={pieOffset} 
-                                                strokeLinecap="round" 
-                                            />
-                                        </svg>
-                                        <div className="absolute inset-0 flex items-center justify-center">
-                                            <span 
-                                                className="text-[11px] sm:text-xs font-extrabold font-sans leading-none" 
-                                                style={{ color: ratingColor }}
-                                            >
-                                                {score10}
-                                            </span>
+                        {/* CARD TYPE 2: TRACKLIST CARD */}
+                        {cardType === 'tracklist' && (
+                            <div className="relative z-10 w-full flex-1 flex flex-col justify-between my-1 space-y-2">
+                                <div className="flex items-center gap-2.5 p-2 rounded-xl bg-white/5 border border-white/10">
+                                    <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0 border border-white/10 bg-black/30">
+                                        <img src={imageUrl || "/placeholder.jpg"} alt={title} className="w-full h-full object-cover" crossOrigin="anonymous" />
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                        <h5 className="text-[11px] font-bold truncate" style={{ color: textColors.primary }}>{title}</h5>
+                                        <p className="text-[9px] truncate" style={{ color: textColors.secondary }}>{artistLabel}</p>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-1.5 py-1">
+                                    <div className="flex justify-between text-[8px] font-bold uppercase tracking-wider pb-0.5 border-b" style={{ borderColor: textColors.faint, color: textColors.muted }}>
+                                        <span>TRACK / TITLE</span>
+                                        <span>TIME</span>
+                                    </div>
+                                    {displayTracks.map((tr) => (
+                                        <div key={tr.num} className="flex items-center justify-between text-[9px] font-medium leading-none py-0.5">
+                                            <div className="flex items-center gap-1.5 truncate pr-2">
+                                                <span className="font-mono text-[8px]" style={{ color: textColors.muted }}>{tr.num}</span>
+                                                <span className="truncate" style={{ color: textColors.primary }}>{tr.title}</span>
+                                            </div>
+                                            <span className="font-mono text-[8px] shrink-0" style={{ color: textColors.secondary }}>{tr.duration}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* CARD TYPE 3: SCANNABLE QR FOCUS (Solves small un-scannable QR) */}
+                        {cardType === 'scannable_qr' && (
+                            <div className="relative z-10 w-full flex-1 flex flex-col items-center justify-center my-1">
+                                <div className="w-full p-3.5 rounded-2xl bg-white text-black shadow-xl flex flex-col items-center justify-center">
+                                    <div className="relative p-1 bg-white rounded-xl flex items-center justify-center">
+                                        <img 
+                                            src={qrApi} 
+                                            alt="Camera Scannable QR" 
+                                            className="w-32 h-32 sm:w-36 sm:h-36 object-contain"
+                                            crossOrigin="anonymous" 
+                                        />
+                                        <div className="absolute w-8 h-8 rounded-full bg-white border border-gray-200 p-1 flex items-center justify-center shadow-md">
+                                            <img src="/in.svg" alt="Groove" className="w-full h-full object-contain" crossOrigin="anonymous" />
                                         </div>
                                     </div>
-                                    <span className={`text-[7px] sm:text-[8px] font-bold tracking-widest uppercase mt-0.5 font-sans ${currentTheme.isLight ? 'text-black/50' : 'text-white/60'}`}>
-                                        RATING
-                                    </span>
+                                    <div className="mt-2 flex items-center gap-1.5 text-center">
+                                        <QrCode size={13} className="text-black/70" />
+                                        <span className="text-[10px] font-extrabold uppercase tracking-wider font-sans text-black">
+                                            Scan camera to listen
+                                        </span>
+                                    </div>
                                 </div>
+                            </div>
+                        )}
+
+                        {/* CARD TYPE 4: MINI POSTER */}
+                        {cardType === 'mini_poster' && (
+                            <div className="relative z-10 w-full aspect-[4/3] rounded-xl overflow-hidden shadow-lg border border-white/10 bg-black/40 mb-2">
+                                <img src={imageUrl || "/placeholder.jpg"} alt={title} className="w-full h-full object-cover" crossOrigin="anonymous" />
+                            </div>
+                        )}
+
+                        {/* ANNOTATION UNDER ARTWORK PLACEMENT */}
+                        {showAnnotation && annotationPlacement === 'under_art' && renderAnnotation()}
+
+                        {/* BOTTOM TITLE POSITION (Default Classic) */}
+                        {titlePlacement === 'bottom' && (
+                            <div className="relative z-10 mt-1 mb-2">
+                                {renderTitleBlock()}
+                            </div>
+                        )}
+
+                        {/* ANNOTATION BOTTOM PLACEMENT */}
+                        {showAnnotation && annotationPlacement === 'bottom' && renderAnnotation()}
+
+                        {/* GENRE TAGS FOOTER PLACEMENT */}
+                        {genresPlacement === 'footer' && renderGenreTags()}
+
+                        {/* FOOTER BAR: Widgets (Rating Pie, QR, None) or Archive Punch */}
+                        <div className="relative z-10 flex justify-between items-end gap-3 pt-1 border-t border-white/5 mt-auto">
+                            {/* Left stamp info */}
+                            <div className="flex flex-col text-[8px] font-sans" style={{ color: textColors.faint }}>
+                                {designStyle === 'library' ? (
+                                    <span>GROOVE SOUND INDEX • NO. {String(itemId || '1').slice(0, 4)}</span>
+                                ) : designStyle === 'vinyl' ? (
+                                    <span>MATRIX RUNOUT: SIDE A • 33RPM</span>
+                                ) : designStyle === 'museum' ? (
+                                    <span>PROVENANCE: GROOVE ARCHIVE</span>
+                                ) : (
+                                    <span>OFFICIAL GROOVECARD</span>
+                                )}
+                            </div>
+
+                            {/* Center Rod Hole Punch (Library Design Style) */}
+                            {designStyle === 'library' && (
+                                <div 
+                                    className="w-3.5 h-3.5 rounded-full border border-stone-400/50 bg-stone-300/40 shadow-inner shrink-0 -mb-1"
+                                    title="Catalogue card drawer rod hole"
+                                />
                             )}
 
-                            {cornerWidget === 'qr' && (
-                                <div 
-                                    onClick={() => setQrFullScreen(true)}
-                                    className="flex flex-col items-center justify-center shrink-0 cursor-zoom-in"
-                                    title="Click to expand QR Code"
-                                >
-                                    <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-lg overflow-hidden bg-white p-0.5 shadow-md">
-                                        <img
-                                            src={qrApi}
-                                            alt="QR"
-                                            className="w-full h-full object-contain"
-                                            crossOrigin="anonymous"
-                                        />
-                                    </div>
-                                    <span className={`text-[7px] sm:text-[8px] font-bold tracking-widest uppercase mt-0.5 font-sans ${currentTheme.isLight ? 'text-black/50' : 'text-white/60'}`}>
-                                        SCAN
-                                    </span>
+                            {/* Right Corner Element: Rating Pie / QR Code / None */}
+                            {cardType !== 'scannable_qr' && (
+                                <div className="shrink-0 flex items-center justify-end">
+                                    {cornerWidget === 'rating' && ratingPlacement === 'bottom_right' && (
+                                        <div className="flex flex-col items-center justify-center cursor-default" title={`Rating: ${score10}/10`}>
+                                            <div className="relative w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center">
+                                                <svg className="w-full h-full -rotate-90 transform" viewBox="0 0 44 44">
+                                                    <circle 
+                                                        cx="22" 
+                                                        cy="22" 
+                                                        r={pieRadius} 
+                                                        fill="transparent" 
+                                                        stroke={activeTheme.isLight ? "rgba(0,0,0,0.12)" : "rgba(255,255,255,0.15)"} 
+                                                        strokeWidth="3.2" 
+                                                    />
+                                                    <circle
+                                                        cx="22" 
+                                                        cy="22" 
+                                                        r={pieRadius} 
+                                                        fill="none" 
+                                                        stroke={ratingColor} 
+                                                        strokeWidth="3.5" 
+                                                        strokeDasharray={pieCircumference} 
+                                                        strokeDashoffset={pieOffset} 
+                                                        strokeLinecap="round" 
+                                                    />
+                                                </svg>
+                                                <div className="absolute inset-0 flex items-center justify-center">
+                                                    <span className="text-[10px] sm:text-[11px] font-extrabold font-sans leading-none" style={{ color: ratingColor }}>
+                                                        {score10}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <span className="text-[7px] font-bold tracking-widest uppercase mt-0.5 font-sans" style={{ color: textColors.muted }}>
+                                                RATING
+                                            </span>
+                                        </div>
+                                    )}
+
+                                    {cornerWidget === 'qr' && (
+                                        <div 
+                                            onClick={() => setQrFullScreen(true)}
+                                            className="flex flex-col items-center justify-center cursor-zoom-in"
+                                            title="Click to view full-size QR"
+                                        >
+                                            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg overflow-hidden bg-white p-0.5 shadow-md">
+                                                <img src={qrApi} alt="QR" className="w-full h-full object-contain" crossOrigin="anonymous" />
+                                            </div>
+                                            <span className="text-[7px] font-bold tracking-widest uppercase mt-0.5 font-sans" style={{ color: textColors.muted }}>
+                                                SCAN
+                                            </span>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -893,177 +1775,204 @@ export default function GrooveCardComposer({
 
             {/* MOBILE ONLY: Modern Photo Editor Style Bottom Sliding Tool Tray */}
             <div className="md:hidden border-t border-white/10 bg-[#0d0d14]/95 backdrop-blur-xl shrink-0 z-40 pb-safe">
-                {/* Horizontal Tool Options Bar (Slides Right-to-Left / Left-to-Right based on active tool) */}
-                <div className="px-3 py-2.5 border-b border-white/5 overflow-x-auto no-scrollbar flex items-center gap-2">
-                    {/* Active Tool Sub-options */}
-                    {mobileTab === 'theme' && (
+                {/* Active Sub-Options Bar */}
+                <div className="px-3 py-2 border-b border-white/5 overflow-x-auto no-scrollbar flex items-center gap-2">
+                    {/* Active Tab: Design Style */}
+                    {activeTab === 'style' && (
                         <div className="flex items-center gap-2">
-                            {Object.keys(THEMES).map((tKey) => {
+                            {Object.values(DESIGN_STYLES).map(s => (
+                                <button
+                                    key={s.id}
+                                    type="button"
+                                    onClick={() => setDesignStyle(s.id)}
+                                    className={`px-3 py-1.5 rounded-full border text-xs whitespace-nowrap transition cursor-pointer ${
+                                        designStyle === s.id ? 'bg-white text-black font-bold shadow' : 'bg-white/5 text-white/70 border-white/10'
+                                    }`}
+                                >
+                                    {s.label}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* Active Tab: Card Type */}
+                    {activeTab === 'type' && (
+                        <div className="flex items-center gap-2">
+                            {Object.values(CARD_TYPES).map(c => (
+                                <button
+                                    key={c.id}
+                                    type="button"
+                                    onClick={() => setCardType(c.id)}
+                                    className={`px-3 py-1.5 rounded-full border text-xs whitespace-nowrap transition cursor-pointer ${
+                                        cardType === c.id ? 'bg-white text-black font-bold shadow' : 'bg-white/5 text-white/70 border-white/10'
+                                    }`}
+                                >
+                                    {c.label}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* Active Tab: Theme & Background */}
+                    {activeTab === 'bg' && (
+                        <div className="flex items-center gap-2">
+                            {Object.keys(THEMES).map(tKey => {
                                 const t = THEMES[tKey];
-                                const isSelected = cardTheme === tKey;
                                 return (
                                     <button
                                         key={tKey}
                                         type="button"
                                         onClick={() => setCardTheme(tKey)}
-                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border shrink-0 transition-all cursor-pointer ${
-                                            isSelected 
-                                                ? 'bg-white text-black border-white font-bold shadow' 
-                                                : 'bg-white/5 text-white/70 border-white/10 hover:text-white'
+                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border shrink-0 transition cursor-pointer ${
+                                            cardTheme === tKey ? 'bg-white text-black font-bold shadow' : 'bg-white/5 text-white/70 border-white/10'
                                         }`}
                                     >
-                                        <div 
-                                            className="w-3.5 h-3.5 rounded-full border border-black/20 shrink-0" 
-                                            style={{ background: t.preview }} 
-                                        />
+                                        <div className="w-3.5 h-3.5 rounded-full border border-black/20" style={{ background: t.preview }} />
                                         <span className="text-xs">{t.label}</span>
                                     </button>
                                 );
                             })}
-                        </div>
-                    )}
-
-                    {mobileTab === 'grain' && (
-                        <div className="flex items-center gap-2">
-                            {['none', 'subtle', 'medium', 'heavy'].map((lvl) => (
-                                <button
-                                    key={lvl}
-                                    type="button"
-                                    onClick={() => setNoiseLevel(lvl)}
-                                    className={`px-3 py-1.5 rounded-full border text-xs capitalize shrink-0 transition-all cursor-pointer ${
-                                        noiseLevel === lvl
-                                            ? 'bg-white text-black border-white font-bold shadow'
-                                            : 'bg-white/5 text-white/70 border-white/10 hover:text-white'
-                                    }`}
-                                >
-                                    {lvl === 'none' ? 'No Grain' : `${lvl} Grain`}
-                                </button>
-                            ))}
-                        </div>
-                    )}
-
-                    {mobileTab === 'widget' && (
-                        <div className="flex items-center gap-2">
                             <button
                                 type="button"
-                                onClick={() => setCornerWidget('rating')}
-                                className={`px-3 py-1.5 rounded-full border text-xs shrink-0 transition-all cursor-pointer ${
-                                    cornerWidget === 'rating'
-                                        ? 'bg-white text-black border-white font-bold shadow'
-                                        : 'bg-white/5 text-white/70 border-white/10 hover:text-white'
+                                onClick={() => setCardTheme('solid')}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border shrink-0 transition cursor-pointer ${
+                                    cardTheme === 'solid' ? 'bg-white text-black font-bold shadow' : 'bg-white/5 text-white/70 border-white/10'
                                 }`}
                             >
-                                ⭐ Rating Pie (Default)
+                                <div className="w-3.5 h-3.5 rounded-full border border-black/20" style={{ backgroundColor: customBgColor }} />
+                                <span className="text-xs">Solid Color</span>
                             </button>
-                            <button
-                                type="button"
-                                onClick={() => setCornerWidget('qr')}
-                                className={`px-3 py-1.5 rounded-full border text-xs shrink-0 transition-all cursor-pointer ${
-                                    cornerWidget === 'qr'
-                                        ? 'bg-white text-black border-white font-bold shadow'
-                                        : 'bg-white/5 text-white/70 border-white/10 hover:text-white'
-                                }`}
-                            >
-                                📱 QR Code
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setCornerWidget('none')}
-                                className={`px-3 py-1.5 rounded-full border text-xs shrink-0 transition-all cursor-pointer ${
-                                    cornerWidget === 'none'
-                                        ? 'bg-white text-black border-white font-bold shadow'
-                                        : 'bg-white/5 text-white/70 border-white/10 hover:text-white'
-                                }`}
-                            >
-                                ✕ None
-                            </button>
-
-                            {/* Inline QR colors if QR active */}
-                            {cornerWidget === 'qr' && (
-                                <div className="flex items-center gap-1.5 pl-2 border-l border-white/10 shrink-0">
-                                    {QR_COLORS.map((c) => (
-                                        <button
-                                            key={c.hex}
-                                            type="button"
-                                            onClick={() => setQrColor(c.hex)}
-                                            className={`w-5 h-5 rounded-full border transition-all ${c.class} ${
-                                                qrColor === c.hex ? 'border-white scale-110 shadow' : 'opacity-80'
-                                            }`}
-                                        />
-                                    ))}
-                                </div>
+                            {cardTheme === 'solid' && (
+                                <input
+                                    type="color"
+                                    value={customBgColor}
+                                    onChange={(e) => setCustomBgColor(e.target.value)}
+                                    className="w-7 h-7 rounded-full border border-white/20 cursor-pointer bg-transparent shrink-0"
+                                    title="Pick solid color"
+                                />
                             )}
                         </div>
                     )}
 
-                    {mobileTab === 'date' && (
+                    {/* Active Tab: Text & Color */}
+                    {activeTab === 'text' && (
                         <div className="flex items-center gap-2">
-                            {[
-                                { id: 'year', label: 'Year Only' },
-                                { id: 'monthYear', label: 'Month & Year' },
-                                { id: 'full', label: 'Full Date' },
-                                { id: 'none', label: 'Hide Date' },
-                            ].map((m) => (
-                                <button
-                                    key={m.id}
-                                    type="button"
-                                    onClick={() => setDateMode(m.id)}
-                                    className={`px-3 py-1.5 rounded-full border text-xs shrink-0 transition-all cursor-pointer ${
-                                        dateMode === m.id
-                                            ? 'bg-white text-black border-white font-bold shadow'
-                                            : 'bg-white/5 text-white/70 border-white/10 hover:text-white'
-                                    }`}
-                                >
-                                    {m.label}
-                                </button>
-                            ))}
+                            <button
+                                type="button"
+                                onClick={() => setTextColorMode(textColorMode === 'auto' ? 'custom' : 'auto')}
+                                className={`px-3 py-1.5 rounded-full border text-xs shrink-0 transition cursor-pointer ${
+                                    textColorMode === 'auto' ? 'bg-white text-black font-bold shadow' : 'bg-white/5 text-white/70 border-white/10'
+                                }`}
+                            >
+                                {textColorMode === 'auto' ? 'Auto Contrast ✓' : 'Custom Color'}
+                            </button>
+                            {textColorMode === 'custom' && (
+                                <>
+                                    <input
+                                        type="color"
+                                        value={customTextColor}
+                                        onChange={(e) => setCustomTextColor(e.target.value)}
+                                        className="w-7 h-7 rounded-full border border-white/20 cursor-pointer bg-transparent shrink-0"
+                                        title="Pick text color"
+                                    />
+                                    {TEXT_COLOR_PRESETS.map((tc) => (
+                                        <button
+                                            key={tc.hex}
+                                            type="button"
+                                            onClick={() => setCustomTextColor(tc.hex)}
+                                            className="w-5 h-5 rounded-full border border-white/20 shrink-0"
+                                            style={{ backgroundColor: tc.hex }}
+                                            title={tc.label}
+                                        />
+                                    ))}
+                                </>
+                            )}
                         </div>
                     )}
 
-                    {mobileTab === 'info' && (
+                    {/* Active Tab: Layout & Align */}
+                    {activeTab === 'layout' && (
+                        <div className="flex items-center gap-2">
+                            {['left', 'center', 'right'].map((al) => (
+                                <button
+                                    key={al}
+                                    type="button"
+                                    onClick={() => setTextAlign(al)}
+                                    className={`px-3 py-1.5 rounded-full border text-xs capitalize shrink-0 transition cursor-pointer ${
+                                        textAlign === al ? 'bg-white text-black font-bold shadow' : 'bg-white/5 text-white/70 border-white/10'
+                                    }`}
+                                >
+                                    Align {al}
+                                </button>
+                            ))}
+                            <button
+                                type="button"
+                                onClick={() => setTitlePlacement(titlePlacement === 'bottom' ? 'top' : 'bottom')}
+                                className="px-3 py-1.5 rounded-full border text-xs shrink-0 bg-white/5 text-white/70 border-white/10"
+                            >
+                                Title: {titlePlacement === 'bottom' ? 'Below Art' : 'Above Art'}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setShowGenres(!showGenres)}
+                                className={`px-3 py-1.5 rounded-full border text-xs shrink-0 ${
+                                    showGenres ? 'bg-white text-black font-bold' : 'bg-white/5 text-white/70 border-white/10'
+                                }`}
+                            >
+                                Genres {showGenres ? '✓' : ''}
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Active Tab: Annotation */}
+                    {activeTab === 'note' && (
                         <div className="flex items-center gap-2">
                             <button
                                 type="button"
-                                onClick={() => setShowDuration(!showDuration)}
-                                className={`px-3 py-1.5 rounded-full border text-xs shrink-0 transition-all cursor-pointer ${
-                                    showDuration
-                                        ? 'bg-[var(--theme-accent,#E8A87C)] text-[#17020B] border-[var(--theme-accent,#E8A87C)] font-bold'
-                                        : 'bg-white/5 text-white/70 border-white/10'
+                                onClick={() => setShowAnnotation(!showAnnotation)}
+                                className={`px-3 py-1.5 rounded-full border text-xs shrink-0 transition cursor-pointer ${
+                                    showAnnotation ? 'bg-[var(--theme-accent,#E8A87C)] text-[#17020B] font-bold' : 'bg-white/5 text-white/70 border-white/10'
                                 }`}
                             >
-                                Duration {showDuration ? '✓' : ''}
+                                Annotation {showAnnotation ? 'ON' : 'OFF'}
                             </button>
-                            <button
-                                type="button"
-                                onClick={() => setShowDiscs(!showDiscs)}
-                                className={`px-3 py-1.5 rounded-full border text-xs shrink-0 transition-all cursor-pointer ${
-                                    showDiscs
-                                        ? 'bg-[var(--theme-accent,#E8A87C)] text-[#17020B] border-[var(--theme-accent,#E8A87C)] font-bold'
-                                        : 'bg-white/5 text-white/70 border-white/10'
-                                }`}
-                            >
-                                Discs / Tracks {showDiscs ? '✓' : ''}
-                            </button>
+                            {showAnnotation && (
+                                <>
+                                    {['handwritten', 'typewriter', 'pill', 'quote'].map((st) => (
+                                        <button
+                                            key={st}
+                                            type="button"
+                                            onClick={() => setAnnotationStyle(st)}
+                                            className={`px-2.5 py-1.5 rounded-full border text-[11px] capitalize shrink-0 ${
+                                                annotationStyle === st ? 'bg-white text-black font-bold' : 'bg-white/5 text-white/70 border-white/10'
+                                            }`}
+                                        >
+                                            {st}
+                                        </button>
+                                    ))}
+                                </>
+                            )}
                         </div>
                     )}
                 </div>
 
-                {/* Mobile Bottom Photo Editor Category Tabs */}
-                <div className="flex justify-around items-center px-2 py-2">
+                {/* Mobile Bottom Photo Editor Category Selector */}
+                <div className="flex justify-around items-center px-1 py-2">
                     {[
-                        { id: 'theme', label: 'Theme', icon: <Palette size={16} /> },
-                        { id: 'grain', label: 'Grain', icon: <Sparkles size={16} /> },
-                        { id: 'widget', label: 'Corner', icon: <Star size={16} /> },
-                        { id: 'date', label: 'Date', icon: <Calendar size={16} /> },
-                        { id: 'info', label: 'Info', icon: <Sliders size={16} /> },
+                        { id: 'style', label: 'Design', icon: <Layers size={16} /> },
+                        { id: 'type', label: 'Type', icon: <ListMusic size={16} /> },
+                        { id: 'bg', label: 'Theme', icon: <Palette size={16} /> },
+                        { id: 'text', label: 'Color', icon: <Type size={16} /> },
+                        { id: 'layout', label: 'Layout', icon: <Sliders size={16} /> },
+                        { id: 'note', label: 'Note', icon: <MessageSquare size={16} /> },
                     ].map((tab) => {
-                        const isActive = mobileTab === tab.id;
+                        const isActive = activeTab === tab.id;
                         return (
                             <button
                                 key={tab.id}
                                 type="button"
-                                onClick={() => setMobileTab(tab.id)}
-                                className={`flex flex-col items-center gap-1 py-1 px-3 rounded-xl transition-all cursor-pointer ${
+                                onClick={() => setActiveTab(tab.id)}
+                                className={`flex flex-col items-center gap-1 py-1 px-2.5 rounded-xl transition-all cursor-pointer ${
                                     isActive 
                                         ? 'text-[var(--theme-accent,#E8A87C)] font-bold scale-105' 
                                         : 'text-white/50 hover:text-white/80'
