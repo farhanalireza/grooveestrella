@@ -284,6 +284,191 @@ const QR_COLORS = [
     { label: 'Amber', hex: 'f59e0b', class: 'bg-amber-500 border-transparent' }
 ];
 
+// ─── Custom Color Picker Component ──────────────────────────────────────────
+function ColorPicker({ value, onChange, label }) {
+    const [hexInput, setHexInput] = React.useState(value || '#000000');
+    const [isExpanded, setIsExpanded] = React.useState(false);
+
+    // Parse hex to hsl
+    const hexToHsl = (hex) => {
+        const clean = hex.replace('#', '');
+        if (clean.length < 6) return { h: 0, s: 0, l: 0 };
+        const r = parseInt(clean.substring(0, 2), 16) / 255;
+        const g = parseInt(clean.substring(2, 4), 16) / 255;
+        const b = parseInt(clean.substring(4, 6), 16) / 255;
+        const max = Math.max(r, g, b), min = Math.min(r, g, b);
+        let h = 0, s = 0, l = (max + min) / 2;
+        if (max !== min) {
+            const d = max - min;
+            s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+            switch (max) {
+                case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                case g: h = (b - r) / d + 2; break;
+                case b: h = (r - g) / d + 4; break;
+            }
+            h /= 6;
+        }
+        return { h: Math.round(h * 360), s: Math.round(s * 100), l: Math.round(l * 100) };
+    };
+
+    const hslToHex = (h, s, l) => {
+        h /= 360; s /= 100; l /= 100;
+        let r, g, b;
+        if (s === 0) { r = g = b = l; }
+        else {
+            const hue2rgb = (p, q, t) => {
+                if (t < 0) t += 1; if (t > 1) t -= 1;
+                if (t < 1/6) return p + (q - p) * 6 * t;
+                if (t < 1/2) return q;
+                if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+                return p;
+            };
+            const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+            const p = 2 * l - q;
+            r = hue2rgb(p, q, h + 1/3);
+            g = hue2rgb(p, q, h);
+            b = hue2rgb(p, q, h - 1/3);
+        }
+        const toHex = x => Math.round(x * 255).toString(16).padStart(2, '0');
+        return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+    };
+
+    const hsl = hexToHsl(value || '#000000');
+
+    const handleHexChange = (e) => {
+        const raw = e.target.value;
+        setHexInput(raw);
+        const cleaned = raw.startsWith('#') ? raw : `#${raw}`;
+        if (/^#[0-9a-fA-F]{6}$/.test(cleaned)) {
+            onChange(cleaned);
+        }
+    };
+
+    const handleHueChange = (e) => {
+        const newH = Number(e.target.value);
+        const newHex = hslToHex(newH, hsl.s, hsl.l);
+        setHexInput(newHex);
+        onChange(newHex);
+    };
+
+    const handleSatChange = (e) => {
+        const newS = Number(e.target.value);
+        const newHex = hslToHex(hsl.h, newS, hsl.l);
+        setHexInput(newHex);
+        onChange(newHex);
+    };
+
+    const handleLightChange = (e) => {
+        const newL = Number(e.target.value);
+        const newHex = hslToHex(hsl.h, hsl.s, newL);
+        setHexInput(newHex);
+        onChange(newHex);
+    };
+
+    // Sync hex input when value prop changes externally
+    React.useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setHexInput(value || '#000000');
+    }, [value]);
+
+    const quickSwatches = [
+        '#ffffff', '#0d0d12', '#E8A87C', '#F59E0B', '#38BDF8',
+        '#10B981', '#F43F5E', '#c084fc', '#06b6d4', '#f97316',
+    ];
+
+    return (
+        <div className="space-y-2">
+            {label && <span className="text-xs font-bold text-white/70 block">{label}</span>}
+            <div className="flex items-center gap-2">
+                <button
+                    type="button"
+                    onClick={() => setIsExpanded(!isExpanded)}
+                    className="w-9 h-9 rounded-lg border-2 border-white/20 cursor-pointer shadow-md shrink-0 hover:scale-105 transition-transform"
+                    style={{ backgroundColor: value }}
+                    title="Click to expand color picker"
+                />
+                <input
+                    type="text"
+                    value={hexInput}
+                    onChange={handleHexChange}
+                    className="flex-1 px-2.5 py-1.5 rounded-lg bg-white/8 border border-white/15 text-xs font-mono text-white/90 uppercase tracking-wider focus:outline-none focus:border-[#E8A87C]"
+                    placeholder="#000000"
+                    maxLength={7}
+                />
+                <button
+                    type="button"
+                    onClick={() => setIsExpanded(!isExpanded)}
+                    className="text-[10px] px-2 py-1.5 rounded-lg bg-white/8 border border-white/15 text-white/60 hover:text-white transition cursor-pointer shrink-0"
+                >
+                    {isExpanded ? '▲' : '▼'}
+                </button>
+            </div>
+            {isExpanded && (
+                <div className="space-y-2.5 p-3 bg-white/5 rounded-xl border border-white/10">
+                    {/* Hue */}
+                    <div className="space-y-1">
+                        <div className="flex justify-between text-[10px] text-white/50">
+                            <span>Hue</span>
+                            <span>{hsl.h}°</span>
+                        </div>
+                        <div className="relative h-3 rounded-full overflow-hidden" style={{ background: 'linear-gradient(to right, #f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00)' }}>
+                            <input
+                                type="range" min={0} max={360} value={hsl.h}
+                                onChange={handleHueChange}
+                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                            />
+                            <div className="absolute top-0 bottom-0 w-2 -ml-1 rounded-full border-2 border-white shadow pointer-events-none" style={{ left: `${(hsl.h / 360) * 100}%` }} />
+                        </div>
+                    </div>
+                    {/* Saturation */}
+                    <div className="space-y-1">
+                        <div className="flex justify-between text-[10px] text-white/50">
+                            <span>Saturation</span>
+                            <span>{hsl.s}%</span>
+                        </div>
+                        <div className="relative h-3 rounded-full overflow-hidden" style={{ background: `linear-gradient(to right, hsl(${hsl.h},0%,${hsl.l}%), hsl(${hsl.h},100%,${hsl.l}%))` }}>
+                            <input
+                                type="range" min={0} max={100} value={hsl.s}
+                                onChange={handleSatChange}
+                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                            />
+                            <div className="absolute top-0 bottom-0 w-2 -ml-1 rounded-full border-2 border-white shadow pointer-events-none" style={{ left: `${hsl.s}%` }} />
+                        </div>
+                    </div>
+                    {/* Lightness */}
+                    <div className="space-y-1">
+                        <div className="flex justify-between text-[10px] text-white/50">
+                            <span>Lightness</span>
+                            <span>{hsl.l}%</span>
+                        </div>
+                        <div className="relative h-3 rounded-full overflow-hidden" style={{ background: `linear-gradient(to right, #000, hsl(${hsl.h},${hsl.s}%,50%), #fff)` }}>
+                            <input
+                                type="range" min={0} max={100} value={hsl.l}
+                                onChange={handleLightChange}
+                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                            />
+                            <div className="absolute top-0 bottom-0 w-2 -ml-1 rounded-full border-2 border-white shadow pointer-events-none" style={{ left: `${hsl.l}%` }} />
+                        </div>
+                    </div>
+                    {/* Quick Swatches */}
+                    <div className="flex flex-wrap gap-1.5 pt-1 border-t border-white/10">
+                        {quickSwatches.map(sw => (
+                            <button
+                                key={sw}
+                                type="button"
+                                onClick={() => { onChange(sw); setHexInput(sw); }}
+                                className={`w-6 h-6 rounded-md border-2 cursor-pointer hover:scale-110 transition-transform shrink-0 ${value === sw ? 'border-white shadow-md' : 'border-white/20'}`}
+                                style={{ backgroundColor: sw }}
+                                title={sw}
+                            />
+                        ))}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
 export default function GrooveCardComposer({
     isOpen,
     onClose,
@@ -318,7 +503,7 @@ export default function GrooveCardComposer({
     const [customBgColor, setCustomBgColor] = useState('#0d0f14');
     const [textColorMode, setTextColorMode] = useState('auto'); // 'auto' | 'custom'
     const [customTextColor, setCustomTextColor] = useState('#ffffff');
-    const [noiseLevel, setNoiseLevel] = useState('medium'); // 'none' | 'subtle' | 'medium' | 'heavy'
+    const [grainAmount, setGrainAmount] = useState(35); // 0–100 slider value
 
     // Granular element visibility toggles (User selects what they want inside the card)
     const [showCoverArt, setShowCoverArt] = useState(true);
@@ -336,6 +521,13 @@ export default function GrooveCardComposer({
     const [showDuration, setShowDuration] = useState(false);
     const [showDiscs, setShowDiscs] = useState(false);
 
+    // Rating source selection
+    const [ratingSource, setRatingSource] = useState('community'); // 'community' | 'critic' | 'custom'
+    const [customRating, setCustomRating] = useState(8.5);
+
+    // Selected genres to show (empty array = show all)
+    const [selectedGenres, setSelectedGenres] = useState([]);
+
     // Layout and alignment
     const [textAlign, setTextAlign] = useState('left'); // 'left' | 'center' | 'right'
     const [titlePlacement, setTitlePlacement] = useState('bottom'); // 'bottom' (below art) | 'top' (above art)
@@ -348,7 +540,7 @@ export default function GrooveCardComposer({
 
     // Personal Annotations states
     const [showAnnotation, setShowAnnotation] = useState(false);
-    const [annotationText, setAnnotationText] = useState('Essential late night listening.');
+    const [annotationText, setAnnotationText] = useState('');
     const [annotationStyle, setAnnotationStyle] = useState('handwritten'); // 'handwritten' | 'typewriter' | 'pill' | 'quote'
     const [annotationPlacement, setAnnotationPlacement] = useState('bottom'); // 'bottom' | 'under_art' | 'badge'
 
@@ -515,16 +707,27 @@ export default function GrooveCardComposer({
 
     // Rating score calculation on 1-10 scale
     const score10 = useMemo(() => {
-        if (rating?.value !== undefined && rating?.value !== null) {
-            const v = Number(rating.value);
-            return Math.max(1, Math.min(10, Number((v <= 5 ? v * 2 : v).toFixed(1))));
+        if (ratingSource === 'custom') {
+            return Math.max(1, Math.min(10, Number(customRating.toFixed(1))));
         }
+        if (ratingSource === 'critic') {
+            if (rating?.value !== undefined && rating?.value !== null) {
+                const v = Number(rating.value);
+                return Math.max(1, Math.min(10, Number((v <= 5 ? v * 2 : v).toFixed(1))));
+            }
+            return 8.8;
+        }
+        // community (default)
         if (popularity !== undefined && popularity !== null) {
             const pop = Number(popularity);
             return Math.max(1, Math.min(10, Number((pop / 10).toFixed(1))));
         }
+        if (rating?.value !== undefined && rating?.value !== null) {
+            const v = Number(rating.value);
+            return Math.max(1, Math.min(10, Number((v <= 5 ? v * 2 : v).toFixed(1))));
+        }
         return 8.8;
-    }, [rating, popularity]);
+    }, [rating, popularity, ratingSource, customRating]);
 
     // Rating color
     const ratingColor = useMemo(() => {
@@ -585,13 +788,21 @@ export default function GrooveCardComposer({
         };
     }, [textColorMode, customTextColor, activeTheme]);
 
-    // Effective genres list
-    const effectiveGenres = useMemo(() => {
+    // All available genres (raw list)
+    const allGenres = useMemo(() => {
         if (Array.isArray(genres) && genres.length > 0) {
             return genres.map(g => (typeof g === 'string' ? g : g.name || '')).filter(Boolean);
         }
         return ['Music', 'Groove'];
     }, [genres]);
+
+    // Effective genres list (filtered by selectedGenres if any are picked)
+    const effectiveGenres = useMemo(() => {
+        if (selectedGenres.length > 0) {
+            return allGenres.filter(g => selectedGenres.includes(g));
+        }
+        return allGenres;
+    }, [allGenres, selectedGenres]);
 
     // Share & QR URL
     const shareUrl = typeof window !== "undefined" 
@@ -614,14 +825,12 @@ export default function GrooveCardComposer({
         return items;
     }, [displayDate, datePlacement, showDuration, formattedDuration, showDiscs, formattedDiscs]);
 
-    // Grain opacity mapping
+    // Grain opacity mapping (slider 0–100 → opacity)
     const grainOpacity = useMemo(() => {
-        if (noiseLevel === 'none') return 0;
-        if (noiseLevel === 'subtle') return activeTheme.isLight ? 0.15 : 0.22;
-        if (noiseLevel === 'medium') return activeTheme.isLight ? 0.28 : 0.40;
-        if (noiseLevel === 'heavy') return activeTheme.isLight ? 0.48 : 0.65;
-        return 0;
-    }, [noiseLevel, activeTheme.isLight]);
+        if (grainAmount <= 0) return 0;
+        const maxOpacity = activeTheme.isLight ? 0.65 : 0.85;
+        return (grainAmount / 100) * maxOpacity;
+    }, [grainAmount, activeTheme.isLight]);
 
     // Generate high-resolution card PNG representation
     const generateCardImage = async () => {
@@ -1123,24 +1332,60 @@ export default function GrooveCardComposer({
                                         <input type="checkbox" checked={showGenres} onChange={e => setShowGenres(e.target.checked)} className="accent-[var(--theme-accent,#E8A87C)] w-4 h-4 cursor-pointer" />
                                     </div>
                                     {showGenres && (
-                                        <div className="grid grid-cols-3 gap-1 pt-1 border-t border-white/10">
-                                            {[
-                                                { id: 'below_artist', label: 'Below Artist' },
-                                                { id: 'top_header', label: 'Top Header' },
-                                                { id: 'footer', label: 'Footer Tag' },
-                                            ].map(gp => (
-                                                <button
-                                                    key={gp.id}
-                                                    type="button"
-                                                    onClick={() => setGenresPlacement(gp.id)}
-                                                    className={`py-1 text-[10px] font-semibold rounded-lg transition cursor-pointer text-center ${
-                                                        genresPlacement === gp.id ? 'bg-white text-black font-bold shadow' : 'bg-white/5 text-white/60 hover:text-white'
-                                                    }`}
-                                                >
-                                                    {gp.label}
-                                                </button>
-                                            ))}
-                                        </div>
+                                        <>
+                                            <div className="grid grid-cols-3 gap-1 pt-1 border-t border-white/10">
+                                                {[
+                                                    { id: 'below_artist', label: 'Below Artist' },
+                                                    { id: 'top_header', label: 'Top Header' },
+                                                    { id: 'footer', label: 'Footer Tag' },
+                                                ].map(gp => (
+                                                    <button
+                                                        key={gp.id}
+                                                        type="button"
+                                                        onClick={() => setGenresPlacement(gp.id)}
+                                                        className={`py-1 text-[10px] font-semibold rounded-lg transition cursor-pointer text-center ${
+                                                            genresPlacement === gp.id ? 'bg-white text-black font-bold shadow' : 'bg-white/5 text-white/60 hover:text-white'
+                                                        }`}
+                                                    >
+                                                        {gp.label}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                            {allGenres.length > 1 && (
+                                                <div className="pt-1 border-t border-white/10 space-y-1.5">
+                                                    <span className="text-[10px] font-semibold text-white/40 uppercase tracking-wider block">Which genres to show</span>
+                                                    <div className="flex flex-wrap gap-1.5">
+                                                        {allGenres.map(g => (
+                                                            <button
+                                                                key={g}
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    setSelectedGenres(prev =>
+                                                                        prev.includes(g) ? prev.filter(x => x !== g) : [...prev, g]
+                                                                    );
+                                                                }}
+                                                                className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border transition cursor-pointer ${
+                                                                    selectedGenres.length === 0 || selectedGenres.includes(g)
+                                                                        ? 'bg-white text-black border-white'
+                                                                        : 'bg-white/5 text-white/50 border-white/10'
+                                                                }`}
+                                                            >
+                                                                {g}
+                                                            </button>
+                                                        ))}
+                                                        {selectedGenres.length > 0 && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setSelectedGenres([])}
+                                                                className="px-2 py-0.5 rounded-full text-[10px] text-white/40 border border-white/10 transition cursor-pointer hover:text-white/70"
+                                                            >
+                                                                All
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </>
                                     )}
                                 </div>
 
@@ -1151,24 +1396,63 @@ export default function GrooveCardComposer({
                                         <input type="checkbox" checked={showRating} onChange={e => setShowRating(e.target.checked)} className="accent-[var(--theme-accent,#E8A87C)] w-4 h-4 cursor-pointer" />
                                     </div>
                                     {showRating && (
-                                        <div className="grid grid-cols-3 gap-1 pt-1 border-t border-white/10">
-                                            {[
-                                                { id: 'corner', label: 'Corner Pie' },
-                                                { id: 'header', label: 'Header Pill' },
-                                                { id: 'inline', label: 'Inline Star' },
-                                            ].map(rp => (
-                                                <button
-                                                    key={rp.id}
-                                                    type="button"
-                                                    onClick={() => setRatingPlacement(rp.id)}
-                                                    className={`py-1 text-[10px] font-semibold rounded-lg transition cursor-pointer text-center ${
-                                                        ratingPlacement === rp.id ? 'bg-white text-black font-bold shadow' : 'bg-white/5 text-white/60 hover:text-white'
-                                                    }`}
-                                                >
-                                                    {rp.label}
-                                                </button>
-                                            ))}
-                                        </div>
+                                        <>
+                                            <div className="grid grid-cols-3 gap-1 pt-1 border-t border-white/10">
+                                                {[
+                                                    { id: 'corner', label: 'Corner Pie' },
+                                                    { id: 'header', label: 'Header Pill' },
+                                                    { id: 'inline', label: 'Inline Star' },
+                                                ].map(rp => (
+                                                    <button
+                                                        key={rp.id}
+                                                        type="button"
+                                                        onClick={() => setRatingPlacement(rp.id)}
+                                                        className={`py-1 text-[10px] font-semibold rounded-lg transition cursor-pointer text-center ${
+                                                            ratingPlacement === rp.id ? 'bg-white text-black font-bold shadow' : 'bg-white/5 text-white/60 hover:text-white'
+                                                        }`}
+                                                    >
+                                                        {rp.label}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                            <div className="pt-1 border-t border-white/10 space-y-1.5">
+                                                <span className="text-[10px] font-semibold text-white/40 uppercase tracking-wider block">Rating Source</span>
+                                                <div className="grid grid-cols-3 gap-1">
+                                                    {[
+                                                        { id: 'community', label: 'Community' },
+                                                        { id: 'critic', label: 'Critic' },
+                                                        { id: 'custom', label: 'My Own' },
+                                                    ].map(rs => (
+                                                        <button
+                                                            key={rs.id}
+                                                            type="button"
+                                                            onClick={() => setRatingSource(rs.id)}
+                                                            className={`py-1 text-[10px] font-semibold rounded-lg transition cursor-pointer text-center ${
+                                                                ratingSource === rs.id ? 'bg-[var(--theme-accent,#E8A87C)] text-black font-bold' : 'bg-white/5 text-white/60 hover:text-white'
+                                                            }`}
+                                                        >
+                                                            {rs.label}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                                {ratingSource === 'custom' && (
+                                                    <div className="flex items-center gap-2 pt-1">
+                                                        <input
+                                                            type="range"
+                                                            min={1}
+                                                            max={10}
+                                                            step={0.1}
+                                                            value={customRating}
+                                                            onChange={(e) => setCustomRating(Number(e.target.value))}
+                                                            className="flex-1 h-1.5 rounded-full appearance-none cursor-pointer bg-white/15 accent-[var(--theme-accent,#E8A87C)]"
+                                                        />
+                                                        <span className="text-xs font-bold min-w-[28px] text-right" style={{ color: customRating >= 8 ? '#10B981' : customRating >= 5 ? '#F59E0B' : '#EF4444' }}>
+                                                            {customRating.toFixed(1)}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </>
                                     )}
                                 </div>
 
@@ -1240,20 +1524,11 @@ export default function GrooveCardComposer({
                                 {/* Solid Color Chooser Drawer */}
                                 {cardTheme === 'solid' && (
                                     <div className="p-3 bg-white/5 rounded-2xl border border-white/10 space-y-3">
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-xs font-bold text-white/80">Background Color Chooser</span>
-                                            <div className="flex items-center gap-2">
-                                                <input
-                                                    type="color"
-                                                    value={customBgColor}
-                                                    onChange={(e) => setCustomBgColor(e.target.value)}
-                                                    className="w-7 h-7 rounded-lg border border-white/20 cursor-pointer bg-transparent"
-                                                    title="Pick any background color"
-                                                />
-                                                <span className="text-[11px] font-mono font-semibold uppercase text-white/70">{customBgColor}</span>
-                                            </div>
-                                        </div>
-
+                                        <ColorPicker
+                                            label="Background Color"
+                                            value={customBgColor}
+                                            onChange={setCustomBgColor}
+                                        />
                                         <div>
                                             <span className="text-[10px] font-semibold text-white/50 uppercase tracking-wider block mb-1.5">Preset Palette</span>
                                             <div className="grid grid-cols-6 gap-1.5">
@@ -1308,20 +1583,11 @@ export default function GrooveCardComposer({
 
                                     {textColorMode === 'custom' && (
                                         <div className="p-3 bg-white/5 rounded-2xl border border-white/10 space-y-3">
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-xs font-bold text-white/80">Text Color Chooser</span>
-                                                <div className="flex items-center gap-2">
-                                                    <input
-                                                        type="color"
-                                                        value={customTextColor}
-                                                        onChange={(e) => setCustomTextColor(e.target.value)}
-                                                        className="w-7 h-7 rounded-lg border border-white/20 cursor-pointer bg-transparent"
-                                                        title="Pick text color"
-                                                    />
-                                                    <span className="text-[11px] font-mono font-semibold uppercase text-white/70">{customTextColor}</span>
-                                                </div>
-                                            </div>
-
+                                            <ColorPicker
+                                                label="Text Color"
+                                                value={customTextColor}
+                                                onChange={setCustomTextColor}
+                                            />
                                             <div className="grid grid-cols-4 gap-2">
                                                 {TEXT_COLOR_PRESETS.map((tc) => (
                                                     <button
@@ -1344,24 +1610,29 @@ export default function GrooveCardComposer({
                                 </div>
 
                                 {/* Film Grain Texture Section */}
-                                <div className="space-y-2 pt-2 border-t border-white/10">
+                                <div className="space-y-2.5 pt-2 border-t border-white/10">
                                     <label className="text-xs font-bold uppercase tracking-wider text-white/60 flex items-center justify-between">
                                         <span>Film Grain Texture</span>
-                                        <span className="text-[11px] text-[var(--theme-accent,#E8A87C)] capitalize">{noiseLevel}</span>
+                                        <span className="text-[11px] text-[var(--theme-accent,#E8A87C)]">
+                                            {grainAmount === 0 ? 'Off' : `${grainAmount}%`}
+                                        </span>
                                     </label>
-                                    <div className="grid grid-cols-4 gap-1 p-1 bg-white/5 border border-white/10 rounded-xl">
-                                        {['none', 'subtle', 'medium', 'heavy'].map((lvl) => (
-                                            <button
-                                                key={lvl}
-                                                type="button"
-                                                onClick={() => setNoiseLevel(lvl)}
-                                                className={`py-1.5 px-2 text-[11px] font-semibold rounded-lg capitalize transition cursor-pointer ${
-                                                    noiseLevel === lvl ? 'bg-white text-black font-bold shadow' : 'text-white/60 hover:text-white'
-                                                }`}
-                                            >
-                                                {lvl === 'none' ? 'Off' : lvl}
-                                            </button>
-                                        ))}
+                                    <div className="px-1 space-y-1.5">
+                                        <input
+                                            type="range"
+                                            min={0}
+                                            max={100}
+                                            step={1}
+                                            value={grainAmount}
+                                            onChange={(e) => setGrainAmount(Number(e.target.value))}
+                                            className="w-full h-1.5 rounded-full appearance-none cursor-pointer bg-white/15 accent-[var(--theme-accent,#E8A87C)]"
+                                        />
+                                        <div className="flex justify-between text-[9px] text-white/35 font-medium">
+                                            <span>None</span>
+                                            <span>Subtle</span>
+                                            <span>Medium</span>
+                                            <span>Heavy</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -1655,8 +1926,10 @@ export default function GrooveCardComposer({
                             ...activeTheme.bgStyle,
                             borderColor: activeTheme.border,
                         }}
-                        className={`relative w-full max-w-[320px] xs:max-w-[340px] sm:max-w-[380px] h-auto my-auto p-4 sm:p-5 rounded-2xl flex flex-col justify-start shadow-2xl border transition-colors duration-200 overflow-hidden select-none ${
+                        className={`relative w-full max-w-[300px] xs:max-w-[320px] sm:max-w-[360px] overflow-y-auto my-auto p-4 sm:p-5 rounded-2xl flex flex-col justify-start shadow-2xl border transition-colors duration-200 overflow-hidden select-none ${
                             designStyle === 'library' ? 'font-mono' : designStyle === 'museum' ? 'tracking-wide' : 'font-sans'
+                        } ${
+                            cardType === 'tracklist' ? 'max-h-[calc(100vh-180px)]' : 'aspect-[1/1.55]'
                         }`}
                     >
                         {/* Film Grain Texture Overlay */}
@@ -1971,18 +2244,18 @@ export default function GrooveCardComposer({
                 </main>
             </div>
 
-            {/* MOBILE ONLY: Photo Editor Style Bottom Sliding Tool Tray */}
-            <div className="md:hidden border-t border-white/10 bg-[#0d0d14]/95 backdrop-blur-xl shrink-0 z-40 pb-safe">
-                {/* Horizontal Tool Sub-Options Bar */}
-                <div className="px-3 py-2 border-b border-white/5 overflow-x-auto no-scrollbar flex items-center gap-2">
+            {/* MOBILE ONLY: Two-row bottom tray (like a photo editor) */}
+            <div className="md:hidden flex flex-col border-t border-white/10 bg-[#0d0d14]/95 backdrop-blur-xl shrink-0 z-40" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+                {/* ROW 1: Sub-options for the active tab (horizontal scroll) */}
+                <div className="h-12 border-b border-white/8 overflow-x-auto no-scrollbar flex items-center gap-2 px-3">
                     {activeTab === 'designs' && (
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 h-full">
                             {Object.values(DESIGN_STYLES).map(s => (
                                 <button
                                     key={s.id}
                                     type="button"
                                     onClick={() => setDesignStyle(s.id)}
-                                    className={`px-3 py-1.5 rounded-full border text-xs whitespace-nowrap transition cursor-pointer ${
+                                    className={`px-3 py-1.5 rounded-full border text-xs whitespace-nowrap transition cursor-pointer shrink-0 ${
                                         designStyle === s.id ? 'bg-white text-black font-bold shadow' : 'bg-white/5 text-white/70 border-white/10'
                                     }`}
                                 >
@@ -1991,15 +2264,14 @@ export default function GrooveCardComposer({
                             ))}
                         </div>
                     )}
-
                     {activeTab === 'formats' && (
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 h-full">
                             {Object.values(CARD_TYPES).map(c => (
                                 <button
                                     key={c.id}
                                     type="button"
                                     onClick={() => setCardType(c.id)}
-                                    className={`px-3 py-1.5 rounded-full border text-xs whitespace-nowrap transition cursor-pointer ${
+                                    className={`px-3 py-1.5 rounded-full border text-xs whitespace-nowrap transition cursor-pointer shrink-0 ${
                                         cardType === c.id ? 'bg-white text-black font-bold shadow' : 'bg-white/5 text-white/70 border-white/10'
                                     }`}
                                 >
@@ -2008,13 +2280,12 @@ export default function GrooveCardComposer({
                             ))}
                         </div>
                     )}
-
                     {activeTab === 'elements' && (
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 h-full">
                             <button
                                 type="button"
                                 onClick={() => setShowCoverArt(!showCoverArt)}
-                                className={`px-2.5 py-1.5 rounded-full border text-xs whitespace-nowrap ${
+                                className={`px-2.5 py-1.5 rounded-full border text-xs whitespace-nowrap shrink-0 ${
                                     showCoverArt ? 'bg-white text-black font-bold' : 'bg-white/5 text-white/70 border-white/10'
                                 }`}
                             >
@@ -2023,7 +2294,7 @@ export default function GrooveCardComposer({
                             <button
                                 type="button"
                                 onClick={() => setShowTitle(!showTitle)}
-                                className={`px-2.5 py-1.5 rounded-full border text-xs whitespace-nowrap ${
+                                className={`px-2.5 py-1.5 rounded-full border text-xs whitespace-nowrap shrink-0 ${
                                     showTitle ? 'bg-white text-black font-bold' : 'bg-white/5 text-white/70 border-white/10'
                                 }`}
                             >
@@ -2032,7 +2303,7 @@ export default function GrooveCardComposer({
                             <button
                                 type="button"
                                 onClick={() => setShowArtist(!showArtist)}
-                                className={`px-2.5 py-1.5 rounded-full border text-xs whitespace-nowrap ${
+                                className={`px-2.5 py-1.5 rounded-full border text-xs whitespace-nowrap shrink-0 ${
                                     showArtist ? 'bg-white text-black font-bold' : 'bg-white/5 text-white/70 border-white/10'
                                 }`}
                             >
@@ -2041,7 +2312,7 @@ export default function GrooveCardComposer({
                             <button
                                 type="button"
                                 onClick={() => setShowReleaseDate(!showReleaseDate)}
-                                className={`px-2.5 py-1.5 rounded-full border text-xs whitespace-nowrap ${
+                                className={`px-2.5 py-1.5 rounded-full border text-xs whitespace-nowrap shrink-0 ${
                                     showReleaseDate ? 'bg-white text-black font-bold' : 'bg-white/5 text-white/70 border-white/10'
                                 }`}
                             >
@@ -2050,7 +2321,7 @@ export default function GrooveCardComposer({
                             <button
                                 type="button"
                                 onClick={() => setShowGenres(!showGenres)}
-                                className={`px-2.5 py-1.5 rounded-full border text-xs whitespace-nowrap ${
+                                className={`px-2.5 py-1.5 rounded-full border text-xs whitespace-nowrap shrink-0 ${
                                     showGenres ? 'bg-white text-black font-bold' : 'bg-white/5 text-white/70 border-white/10'
                                 }`}
                             >
@@ -2059,7 +2330,7 @@ export default function GrooveCardComposer({
                             <button
                                 type="button"
                                 onClick={() => setShowRating(!showRating)}
-                                className={`px-2.5 py-1.5 rounded-full border text-xs whitespace-nowrap ${
+                                className={`px-2.5 py-1.5 rounded-full border text-xs whitespace-nowrap shrink-0 ${
                                     showRating ? 'bg-white text-black font-bold' : 'bg-white/5 text-white/70 border-white/10'
                                 }`}
                             >
@@ -2067,9 +2338,8 @@ export default function GrooveCardComposer({
                             </button>
                         </div>
                     )}
-
                     {activeTab === 'colors' && (
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 h-full">
                             {Object.keys(THEMES).map(tKey => {
                                 const t = THEMES[tKey];
                                 return (
@@ -2107,15 +2377,14 @@ export default function GrooveCardComposer({
                             )}
                         </div>
                     )}
-
                     {activeTab === 'tracklist' && (
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 h-full">
                             {['auto', '1', '2'].map(c => (
                                 <button
                                     key={c}
                                     type="button"
                                     onClick={() => setTracklistColumns(c)}
-                                    className={`px-3 py-1.5 rounded-full border text-xs whitespace-nowrap ${
+                                    className={`px-3 py-1.5 rounded-full border text-xs whitespace-nowrap shrink-0 ${
                                         tracklistColumns === c ? 'bg-white text-black font-bold' : 'bg-white/5 text-white/70 border-white/10'
                                     }`}
                                 >
@@ -2125,7 +2394,7 @@ export default function GrooveCardComposer({
                             <button
                                 type="button"
                                 onClick={() => setShowTrackDurations(!showTrackDurations)}
-                                className={`px-3 py-1.5 rounded-full border text-xs whitespace-nowrap ${
+                                className={`px-3 py-1.5 rounded-full border text-xs whitespace-nowrap shrink-0 ${
                                     showTrackDurations ? 'bg-[var(--theme-accent,#E8A87C)] text-black font-bold' : 'bg-white/5 text-white/70 border-white/10'
                                 }`}
                             >
@@ -2133,9 +2402,8 @@ export default function GrooveCardComposer({
                             </button>
                         </div>
                     )}
-
                     {activeTab === 'annotation' && (
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 h-full">
                             <button
                                 type="button"
                                 onClick={() => setShowAnnotation(!showAnnotation)}
@@ -2163,9 +2431,8 @@ export default function GrooveCardComposer({
                             )}
                         </div>
                     )}
-
                     {activeTab === 'layout' && (
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 h-full">
                             {['left', 'center', 'right'].map(al => (
                                 <button
                                     key={al}
@@ -2189,7 +2456,7 @@ export default function GrooveCardComposer({
                     )}
                 </div>
 
-                {/* Mobile Bottom Photo Editor Category Selector */}
+                {/* ROW 2: Tab category selector */}
                 <div className="flex justify-around items-center px-1 py-2">
                     {[
                         { id: 'designs', label: 'Designs', icon: <Layers size={16} /> },
@@ -2207,8 +2474,8 @@ export default function GrooveCardComposer({
                                 type="button"
                                 onClick={() => setActiveTab(tab.id)}
                                 className={`flex flex-col items-center gap-1 py-1 px-2 rounded-xl transition-all cursor-pointer ${
-                                    isActive 
-                                        ? 'text-[var(--theme-accent,#E8A87C)] font-bold scale-105' 
+                                    isActive
+                                        ? 'text-[var(--theme-accent,#E8A87C)] font-bold scale-105'
                                         : 'text-white/50 hover:text-white/80'
                                 }`}
                             >
