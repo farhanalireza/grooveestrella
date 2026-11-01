@@ -551,6 +551,7 @@ export default function GrooveCardComposer({
 
     // Editor Tab Navigation
     const [activeTab, setActiveTab] = useState('designs'); // 'designs' | 'formats' | 'elements' | 'colors' | 'tracklist' | 'annotation' | 'layout'
+    const [mobileSheetOpen, setMobileSheetOpen] = useState(true); // Mobile bottom sheet expanded state
 
     // Initialize grain texture once on mount
     useEffect(() => {
@@ -1132,7 +1133,7 @@ export default function GrooveCardComposer({
                             <button
                                 key={t.id}
                                 type="button"
-                                onClick={() => setActiveTab(t.id)}
+                                onClick={() => { setActiveTab(t.id); if (t.id === 'tracklist') setCardType('tracklist'); }}
                                 className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer whitespace-nowrap ${
                                     activeTab === t.id 
                                         ? 'bg-white/15 text-white shadow-sm border border-white/10' 
@@ -2244,246 +2245,477 @@ export default function GrooveCardComposer({
                 </main>
             </div>
 
-            {/* MOBILE ONLY: Two-row bottom tray (like a photo editor) */}
+            {/* MOBILE ONLY: Bottom panel with tab nav + expandable sheet */}
             <div className="md:hidden flex flex-col border-t border-white/10 bg-[#0d0d14]/95 backdrop-blur-xl shrink-0 z-40" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
-                {/* ROW 1: Sub-options for the active tab (horizontal scroll) */}
-                <div className="h-12 border-b border-white/8 overflow-x-auto no-scrollbar flex items-center gap-2 px-3">
-                    {activeTab === 'designs' && (
-                        <div className="flex items-center gap-2 h-full">
-                            {Object.values(DESIGN_STYLES).map(s => (
-                                <button
-                                    key={s.id}
-                                    type="button"
-                                    onClick={() => setDesignStyle(s.id)}
-                                    className={`px-3 py-1.5 rounded-full border text-xs whitespace-nowrap transition cursor-pointer shrink-0 ${
-                                        designStyle === s.id ? 'bg-white text-black font-bold shadow' : 'bg-white/5 text-white/70 border-white/10'
-                                    }`}
-                                >
-                                    {s.label}
-                                </button>
-                            ))}
+                {/* Expandable content sheet */}
+                {mobileSheetOpen && (
+                    <div className="max-h-[45vh] overflow-y-auto overscroll-contain border-b border-white/8">
+                        {/* Grab handle */}
+                        <div className="flex justify-center pt-2 pb-1 sticky top-0 bg-[#0d0d14]/95 z-10">
+                            <div className="w-8 h-1 rounded-full bg-white/20" />
                         </div>
-                    )}
-                    {activeTab === 'formats' && (
-                        <div className="flex items-center gap-2 h-full">
-                            {Object.values(CARD_TYPES).map(c => (
-                                <button
-                                    key={c.id}
-                                    type="button"
-                                    onClick={() => setCardType(c.id)}
-                                    className={`px-3 py-1.5 rounded-full border text-xs whitespace-nowrap transition cursor-pointer shrink-0 ${
-                                        cardType === c.id ? 'bg-white text-black font-bold shadow' : 'bg-white/5 text-white/70 border-white/10'
-                                    }`}
-                                >
-                                    {c.label}
-                                </button>
-                            ))}
-                        </div>
-                    )}
-                    {activeTab === 'elements' && (
-                        <div className="flex items-center gap-2 h-full">
-                            <button
-                                type="button"
-                                onClick={() => setShowCoverArt(!showCoverArt)}
-                                className={`px-2.5 py-1.5 rounded-full border text-xs whitespace-nowrap shrink-0 ${
-                                    showCoverArt ? 'bg-white text-black font-bold' : 'bg-white/5 text-white/70 border-white/10'
-                                }`}
-                            >
-                                Cover Art {showCoverArt ? '✓' : ''}
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setShowTitle(!showTitle)}
-                                className={`px-2.5 py-1.5 rounded-full border text-xs whitespace-nowrap shrink-0 ${
-                                    showTitle ? 'bg-white text-black font-bold' : 'bg-white/5 text-white/70 border-white/10'
-                                }`}
-                            >
-                                Title {showTitle ? '✓' : ''}
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setShowArtist(!showArtist)}
-                                className={`px-2.5 py-1.5 rounded-full border text-xs whitespace-nowrap shrink-0 ${
-                                    showArtist ? 'bg-white text-black font-bold' : 'bg-white/5 text-white/70 border-white/10'
-                                }`}
-                            >
-                                Artist {showArtist ? '✓' : ''}
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setShowReleaseDate(!showReleaseDate)}
-                                className={`px-2.5 py-1.5 rounded-full border text-xs whitespace-nowrap shrink-0 ${
-                                    showReleaseDate ? 'bg-white text-black font-bold' : 'bg-white/5 text-white/70 border-white/10'
-                                }`}
-                            >
-                                Date {showReleaseDate ? '✓' : ''}
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setShowGenres(!showGenres)}
-                                className={`px-2.5 py-1.5 rounded-full border text-xs whitespace-nowrap shrink-0 ${
-                                    showGenres ? 'bg-white text-black font-bold' : 'bg-white/5 text-white/70 border-white/10'
-                                }`}
-                            >
-                                Genres {showGenres ? '✓' : ''}
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setShowRating(!showRating)}
-                                className={`px-2.5 py-1.5 rounded-full border text-xs whitespace-nowrap shrink-0 ${
-                                    showRating ? 'bg-white text-black font-bold' : 'bg-white/5 text-white/70 border-white/10'
-                                }`}
-                            >
-                                Rating {showRating ? '✓' : ''}
-                            </button>
-                        </div>
-                    )}
-                    {activeTab === 'colors' && (
-                        <div className="flex items-center gap-2 h-full">
-                            {Object.keys(THEMES).map(tKey => {
-                                const t = THEMES[tKey];
-                                return (
-                                    <button
-                                        key={tKey}
-                                        type="button"
-                                        onClick={() => setCardTheme(tKey)}
-                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border shrink-0 transition cursor-pointer ${
-                                            cardTheme === tKey ? 'bg-white text-black font-bold shadow' : 'bg-white/5 text-white/70 border-white/10'
-                                        }`}
-                                    >
-                                        <div className="w-3.5 h-3.5 rounded-full border border-black/20" style={{ background: t.preview }} />
-                                        <span className="text-xs">{t.label}</span>
-                                    </button>
-                                );
-                            })}
-                            <button
-                                type="button"
-                                onClick={() => setCardTheme('solid')}
-                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border shrink-0 transition cursor-pointer ${
-                                    cardTheme === 'solid' ? 'bg-white text-black font-bold shadow' : 'bg-white/5 text-white/70 border-white/10'
-                                }`}
-                            >
-                                <div className="w-3.5 h-3.5 rounded-full border border-black/20" style={{ backgroundColor: customBgColor }} />
-                                <span className="text-xs">Solid</span>
-                            </button>
-                            {cardTheme === 'solid' && (
-                                <input
-                                    type="color"
-                                    value={customBgColor}
-                                    onChange={(e) => setCustomBgColor(e.target.value)}
-                                    className="w-7 h-7 rounded-full border border-white/20 cursor-pointer bg-transparent shrink-0"
-                                    title="Pick solid color"
-                                />
+
+                        <div className="px-4 pb-4 space-y-4">
+
+                            {/* DESIGNS TAB */}
+                            {activeTab === 'designs' && (
+                                <div className="space-y-2">
+                                    <p className="text-[10px] font-bold uppercase tracking-wider text-white/40">Design Style</p>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {Object.values(DESIGN_STYLES).map(s => (
+                                            <button
+                                                key={s.id}
+                                                type="button"
+                                                onClick={() => setDesignStyle(s.id)}
+                                                className={`p-2.5 rounded-xl border text-left transition cursor-pointer ${
+                                                    designStyle === s.id ? 'bg-white/15 border-[var(--theme-accent,#E8A87C)] ring-1 ring-[var(--theme-accent,#E8A87C)]' : 'bg-white/5 border-white/10'
+                                                }`}
+                                            >
+                                                <span className="text-xs font-bold text-white block">{s.label}</span>
+                                                <span className="text-[9px] text-white/50 block mt-0.5 line-clamp-1">{s.description}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
                             )}
-                        </div>
-                    )}
-                    {activeTab === 'tracklist' && (
-                        <div className="flex items-center gap-2 h-full">
-                            {['auto', '1', '2'].map(c => (
-                                <button
-                                    key={c}
-                                    type="button"
-                                    onClick={() => setTracklistColumns(c)}
-                                    className={`px-3 py-1.5 rounded-full border text-xs whitespace-nowrap shrink-0 ${
-                                        tracklistColumns === c ? 'bg-white text-black font-bold' : 'bg-white/5 text-white/70 border-white/10'
-                                    }`}
-                                >
-                                    {c === 'auto' ? 'Auto Columns' : `${c} Col`}
-                                </button>
-                            ))}
-                            <button
-                                type="button"
-                                onClick={() => setShowTrackDurations(!showTrackDurations)}
-                                className={`px-3 py-1.5 rounded-full border text-xs whitespace-nowrap shrink-0 ${
-                                    showTrackDurations ? 'bg-[var(--theme-accent,#E8A87C)] text-black font-bold' : 'bg-white/5 text-white/70 border-white/10'
-                                }`}
-                            >
-                                Durations {showTrackDurations ? '✓' : ''}
-                            </button>
-                        </div>
-                    )}
-                    {activeTab === 'annotation' && (
-                        <div className="flex items-center gap-2 h-full">
-                            <button
-                                type="button"
-                                onClick={() => setShowAnnotation(!showAnnotation)}
-                                className={`px-3 py-1.5 rounded-full border text-xs shrink-0 transition cursor-pointer ${
-                                    showAnnotation ? 'bg-[var(--theme-accent,#E8A87C)] text-[#17020B] font-bold' : 'bg-white/5 text-white/70 border-white/10'
-                                }`}
-                            >
-                                Annotation {showAnnotation ? 'ON' : 'OFF'}
-                            </button>
-                            {showAnnotation && (
-                                <>
-                                    {['handwritten', 'typewriter', 'pill', 'quote'].map(st => (
+
+                            {/* FORMATS TAB */}
+                            {activeTab === 'formats' && (
+                                <div className="space-y-2">
+                                    <p className="text-[10px] font-bold uppercase tracking-wider text-white/40">Card Format</p>
+                                    {Object.values(CARD_TYPES).map(c => (
                                         <button
-                                            key={st}
+                                            key={c.id}
                                             type="button"
-                                            onClick={() => setAnnotationStyle(st)}
-                                            className={`px-2.5 py-1.5 rounded-full border text-[11px] capitalize shrink-0 ${
-                                                annotationStyle === st ? 'bg-white text-black font-bold' : 'bg-white/5 text-white/70 border-white/10'
+                                            onClick={() => setCardType(c.id)}
+                                            className={`w-full p-3 rounded-xl border text-left flex items-start justify-between gap-3 transition cursor-pointer ${
+                                                cardType === c.id ? 'bg-white/15 border-[var(--theme-accent,#E8A87C)] ring-1 ring-[var(--theme-accent,#E8A87C)]' : 'bg-white/5 border-white/10'
                                             }`}
                                         >
-                                            {st}
+                                            <div>
+                                                <h4 className="text-xs font-bold text-white">{c.label}</h4>
+                                                <p className="text-[10px] text-white/50 mt-0.5">{c.desc}</p>
+                                            </div>
+                                            {cardType === c.id && <Check size={16} className="text-[var(--theme-accent,#E8A87C)] shrink-0 mt-0.5" />}
                                         </button>
                                     ))}
-                                </>
+                                </div>
                             )}
+
+                            {/* ELEMENTS TAB */}
+                            {activeTab === 'elements' && (
+                                <div className="space-y-3">
+                                    {/* Core toggles */}
+                                    <div className="space-y-1 p-3 bg-white/5 rounded-2xl border border-white/10">
+                                        <span className="text-[10px] font-bold uppercase tracking-wider text-white/40 block mb-1">Core Elements</span>
+                                        {[
+                                            { label: 'Cover Artwork', val: showCoverArt, set: setShowCoverArt },
+                                            { label: 'Song / Album Title', val: showTitle, set: setShowTitle },
+                                            { label: 'Artist Name', val: showArtist, set: setShowArtist },
+                                            { label: 'Album Subtitle', val: showAlbum, set: setShowAlbum },
+                                            { label: 'Header Logo', val: showHeaderLogo, set: setShowHeaderLogo },
+                                        ].map((el, i) => (
+                                            <label key={el.label} className={`flex items-center justify-between py-1.5 cursor-pointer ${i > 0 ? 'border-t border-white/5' : ''}`}>
+                                                <span className="text-xs text-white/80 font-medium">{el.label}</span>
+                                                <input type="checkbox" checked={el.val} onChange={e => el.set(e.target.checked)} className="accent-[var(--theme-accent,#E8A87C)] w-4 h-4 cursor-pointer" />
+                                            </label>
+                                        ))}
+                                    </div>
+                                    {/* Release Date */}
+                                    <div className="p-3 bg-white/5 rounded-2xl border border-white/10 space-y-2">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-xs font-bold text-white/90">Release Date</span>
+                                            <input type="checkbox" checked={showReleaseDate} onChange={e => setShowReleaseDate(e.target.checked)} className="accent-[var(--theme-accent,#E8A87C)] w-4 h-4 cursor-pointer" />
+                                        </div>
+                                        {showReleaseDate && (
+                                            <>
+                                                <div className="grid grid-cols-3 gap-1 pt-1 border-t border-white/10">
+                                                    {['year', 'monthYear', 'full'].map(m => (
+                                                        <button key={m} type="button" onClick={() => setDateMode(m)}
+                                                            className={`py-1 text-[10px] font-semibold rounded-lg transition cursor-pointer text-center ${dateMode === m ? 'bg-white text-black font-bold shadow' : 'bg-white/5 text-white/60 hover:text-white'}`}>
+                                                            {m === 'year' ? 'Year' : m === 'monthYear' ? 'Mon/Yr' : 'Full'}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                                <div className="grid grid-cols-3 gap-1">
+                                                    {[{id:'inline',label:'Metadata'},{id:'subhead',label:'Under Title'},{id:'header',label:'Header'}].map(dp => (
+                                                        <button key={dp.id} type="button" onClick={() => setDatePlacement(dp.id)}
+                                                            className={`py-1 text-[10px] font-semibold rounded-lg transition cursor-pointer text-center ${datePlacement === dp.id ? 'bg-[var(--theme-accent,#E8A87C)] text-black font-bold' : 'bg-white/5 text-white/60 hover:text-white'}`}>
+                                                            {dp.label}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
+                                    {/* Genres */}
+                                    <div className="p-3 bg-white/5 rounded-2xl border border-white/10 space-y-2">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-xs font-bold text-white/90">Genre Tags</span>
+                                            <input type="checkbox" checked={showGenres} onChange={e => setShowGenres(e.target.checked)} className="accent-[var(--theme-accent,#E8A87C)] w-4 h-4 cursor-pointer" />
+                                        </div>
+                                        {showGenres && (
+                                            <>
+                                                <div className="grid grid-cols-3 gap-1 pt-1 border-t border-white/10">
+                                                    {[{id:'below_artist',label:'Below Artist'},{id:'top_header',label:'Top Header'},{id:'footer',label:'Footer'}].map(gp => (
+                                                        <button key={gp.id} type="button" onClick={() => setGenresPlacement(gp.id)}
+                                                            className={`py-1 text-[10px] font-semibold rounded-lg transition cursor-pointer text-center ${genresPlacement === gp.id ? 'bg-white text-black font-bold shadow' : 'bg-white/5 text-white/60 hover:text-white'}`}>
+                                                            {gp.label}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                                {allGenres.length > 1 && (
+                                                    <div className="pt-1 border-t border-white/10">
+                                                        <span className="text-[10px] font-semibold text-white/40 uppercase tracking-wider block mb-1.5">Which genres</span>
+                                                        <div className="flex flex-wrap gap-1.5">
+                                                            {allGenres.map(g => (
+                                                                <button key={g} type="button"
+                                                                    onClick={() => setSelectedGenres(prev => prev.includes(g) ? prev.filter(x => x !== g) : [...prev, g])}
+                                                                    className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border transition cursor-pointer ${selectedGenres.length === 0 || selectedGenres.includes(g) ? 'bg-white text-black border-white' : 'bg-white/5 text-white/50 border-white/10'}`}>
+                                                                    {g}
+                                                                </button>
+                                                            ))}
+                                                            {selectedGenres.length > 0 && (
+                                                                <button type="button" onClick={() => setSelectedGenres([])} className="px-2 py-0.5 rounded-full text-[10px] text-white/40 border border-white/10 cursor-pointer">All</button>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </>
+                                        )}
+                                    </div>
+                                    {/* Rating */}
+                                    <div className="p-3 bg-white/5 rounded-2xl border border-white/10 space-y-2">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-xs font-bold text-white/90">Music Rating</span>
+                                            <input type="checkbox" checked={showRating} onChange={e => setShowRating(e.target.checked)} className="accent-[var(--theme-accent,#E8A87C)] w-4 h-4 cursor-pointer" />
+                                        </div>
+                                        {showRating && (
+                                            <>
+                                                <div className="grid grid-cols-3 gap-1 pt-1 border-t border-white/10">
+                                                    {[{id:'corner',label:'Corner Pie'},{id:'header',label:'Header Pill'},{id:'inline',label:'Inline Star'}].map(rp => (
+                                                        <button key={rp.id} type="button" onClick={() => setRatingPlacement(rp.id)}
+                                                            className={`py-1 text-[10px] font-semibold rounded-lg transition cursor-pointer text-center ${ratingPlacement === rp.id ? 'bg-white text-black font-bold shadow' : 'bg-white/5 text-white/60 hover:text-white'}`}>
+                                                            {rp.label}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                                <div className="pt-1 border-t border-white/10 space-y-1.5">
+                                                    <span className="text-[10px] font-semibold text-white/40 uppercase tracking-wider block">Source</span>
+                                                    <div className="grid grid-cols-3 gap-1">
+                                                        {[{id:'community',label:'Community'},{id:'critic',label:'Critic'},{id:'custom',label:'My Own'}].map(rs => (
+                                                            <button key={rs.id} type="button" onClick={() => setRatingSource(rs.id)}
+                                                                className={`py-1 text-[10px] font-semibold rounded-lg transition cursor-pointer text-center ${ratingSource === rs.id ? 'bg-[var(--theme-accent,#E8A87C)] text-black font-bold' : 'bg-white/5 text-white/60 hover:text-white'}`}>
+                                                                {rs.label}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                    {ratingSource === 'custom' && (
+                                                        <div className="flex items-center gap-2">
+                                                            <input type="range" min={1} max={10} step={0.1} value={customRating} onChange={e => setCustomRating(Number(e.target.value))}
+                                                                className="flex-1 h-1.5 rounded-full appearance-none cursor-pointer bg-white/15 accent-[var(--theme-accent,#E8A87C)]" />
+                                                            <span className="text-xs font-bold min-w-[28px] text-right" style={{ color: customRating >= 8 ? '#10B981' : customRating >= 5 ? '#F59E0B' : '#EF4444' }}>{customRating.toFixed(1)}</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
+                                    {/* Duration + Discs */}
+                                    <div className="space-y-1 p-3 bg-white/5 rounded-2xl border border-white/10">
+                                        <span className="text-[10px] font-bold uppercase tracking-wider text-white/40 block mb-1">Audio Specs</span>
+                                        {[
+                                            { label: 'Show Duration', val: showDuration, set: setShowDuration },
+                                            { label: 'Discs & Track Count', val: showDiscs, set: setShowDiscs },
+                                        ].map((el, i) => (
+                                            <label key={el.label} className={`flex items-center justify-between py-1.5 cursor-pointer ${i > 0 ? 'border-t border-white/5' : ''}`}>
+                                                <span className="text-xs text-white/80 font-medium">{el.label}</span>
+                                                <input type="checkbox" checked={el.val} onChange={e => el.set(e.target.checked)} className="accent-[var(--theme-accent,#E8A87C)] w-4 h-4 cursor-pointer" />
+                                            </label>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* COLORS TAB */}
+                            {activeTab === 'colors' && (
+                                <div className="space-y-4">
+                                    {/* Theme swatches */}
+                                    <div>
+                                        <p className="text-[10px] font-bold uppercase tracking-wider text-white/40 mb-2">Background Theme</p>
+                                        <div className="grid grid-cols-3 gap-2">
+                                            {Object.keys(THEMES).map(tKey => {
+                                                const t = THEMES[tKey];
+                                                return (
+                                                    <button key={tKey} type="button" onClick={() => setCardTheme(tKey)}
+                                                        className={`p-2 rounded-xl border flex flex-col items-center gap-1 transition cursor-pointer ${cardTheme === tKey ? 'border-[var(--theme-accent,#E8A87C)] ring-1 ring-[var(--theme-accent,#E8A87C)] bg-white/10' : 'border-white/10 bg-white/5'}`}>
+                                                        <div className="w-full h-6 rounded-lg border border-white/10" style={{ background: t.preview }} />
+                                                        <span className="text-[9px] font-medium text-white/80 truncate w-full text-center">{t.label}</span>
+                                                    </button>
+                                                );
+                                            })}
+                                            <button type="button" onClick={() => setCardTheme('solid')}
+                                                className={`p-2 rounded-xl border flex flex-col items-center gap-1 transition cursor-pointer ${cardTheme === 'solid' ? 'border-[var(--theme-accent,#E8A87C)] ring-1 ring-[var(--theme-accent,#E8A87C)] bg-white/10' : 'border-white/10 bg-white/5'}`}>
+                                                <div className="w-full h-6 rounded-lg border border-white/10 flex items-center justify-center" style={{ backgroundColor: customBgColor }}>
+                                                    <Paintbrush size={10} className={isLightColor(customBgColor) ? 'text-black/70' : 'text-white/70'} />
+                                                </div>
+                                                <span className="text-[9px] font-bold text-white/90">Solid</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    {/* Solid color picker */}
+                                    {cardTheme === 'solid' && (
+                                        <div className="p-3 bg-white/5 rounded-2xl border border-white/10">
+                                            <ColorPicker label="Background Color" value={customBgColor} onChange={setCustomBgColor} />
+                                        </div>
+                                    )}
+                                    {/* Text color */}
+                                    <div className="space-y-2 pt-2 border-t border-white/10">
+                                        <label className="text-[10px] font-bold uppercase tracking-wider text-white/60 block">Text Color</label>
+                                        <div className="grid grid-cols-2 gap-2 p-1 bg-white/5 border border-white/10 rounded-xl">
+                                            <button type="button" onClick={() => setTextColorMode('auto')}
+                                                className={`py-1.5 px-3 text-xs font-bold rounded-lg transition cursor-pointer flex items-center justify-center gap-1.5 ${textColorMode === 'auto' ? 'bg-white text-black shadow' : 'text-white/60 hover:text-white'}`}>
+                                                <Sparkles size={12} /><span>Auto</span>
+                                            </button>
+                                            <button type="button" onClick={() => setTextColorMode('custom')}
+                                                className={`py-1.5 px-3 text-xs font-bold rounded-lg transition cursor-pointer flex items-center justify-center gap-1.5 ${textColorMode === 'custom' ? 'bg-white text-black shadow' : 'text-white/60 hover:text-white'}`}>
+                                                <Palette size={12} /><span>Custom</span>
+                                            </button>
+                                        </div>
+                                        {textColorMode === 'custom' && (
+                                            <div className="p-3 bg-white/5 rounded-2xl border border-white/10">
+                                                <ColorPicker label="Text Color" value={customTextColor} onChange={setCustomTextColor} />
+                                            </div>
+                                        )}
+                                    </div>
+                                    {/* Grain slider */}
+                                    <div className="space-y-2 pt-2 border-t border-white/10">
+                                        <div className="flex justify-between items-center">
+                                            <label className="text-[10px] font-bold uppercase tracking-wider text-white/60">Film Grain</label>
+                                            <span className="text-[11px] text-[var(--theme-accent,#E8A87C)]">{grainAmount === 0 ? 'Off' : `${grainAmount}%`}</span>
+                                        </div>
+                                        <input type="range" min={0} max={100} step={1} value={grainAmount} onChange={e => setGrainAmount(Number(e.target.value))}
+                                            className="w-full h-1.5 rounded-full appearance-none cursor-pointer bg-white/15 accent-[var(--theme-accent,#E8A87C)]" />
+                                        <div className="flex justify-between text-[9px] text-white/35 font-medium">
+                                            <span>None</span><span>Subtle</span><span>Medium</span><span>Heavy</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* TRACKLIST TAB */}
+                            {activeTab === 'tracklist' && (
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <p className="text-[10px] font-bold uppercase tracking-wider text-white/40">Tracklist — {fullTracksList.length} tracks</p>
+                                        {cardType !== 'tracklist' && (
+                                            <button type="button" onClick={() => setCardType('tracklist')}
+                                                className="px-2.5 py-1 rounded-full bg-[var(--theme-accent,#E8A87C)] text-black text-[10px] font-bold cursor-pointer">
+                                                Enable Format
+                                            </button>
+                                        )}
+                                    </div>
+                                    {/* Art mode */}
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-bold text-white/70">Artwork Mode</label>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            {[{id:'square_top',label:'Square Above Tracks'},{id:'compact_header',label:'Compact Header'}].map(am => (
+                                                <button key={am.id} type="button" onClick={() => setTracklistArtMode(am.id)}
+                                                    className={`p-2 rounded-xl border text-xs font-semibold text-center transition cursor-pointer ${tracklistArtMode === am.id ? 'bg-white text-black font-bold border-white' : 'bg-white/5 text-white/60 border-white/10 hover:text-white'}`}>
+                                                    {am.label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    {/* Columns */}
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-bold text-white/70">Column Layout</label>
+                                        <div className="grid grid-cols-3 gap-2">
+                                            {[{id:'auto',label:'Auto'},{id:'1',label:'1 Column'},{id:'2',label:'2 Columns'}].map(col => (
+                                                <button key={col.id} type="button" onClick={() => setTracklistColumns(col.id)}
+                                                    className={`py-2 px-3 rounded-xl border text-xs font-bold transition cursor-pointer text-center ${tracklistColumns === col.id ? 'bg-white text-black font-bold border-white' : 'bg-white/5 text-white/60 border-white/10 hover:text-white'}`}>
+                                                    {col.label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    {/* Track display options */}
+                                    <div className="space-y-1 p-3 bg-white/5 rounded-2xl border border-white/10">
+                                        {[
+                                            { label: 'Show Track Durations', val: showTrackDurations, set: setShowTrackDurations },
+                                            { label: 'Show Track Numbers', val: showTrackNumbers, set: setShowTrackNumbers },
+                                        ].map((el, i) => (
+                                            <label key={el.label} className={`flex items-center justify-between py-1.5 cursor-pointer ${i > 0 ? 'border-t border-white/5' : ''}`}>
+                                                <span className="text-xs text-white/80 font-medium">{el.label}</span>
+                                                <input type="checkbox" checked={el.val} onChange={e => el.set(e.target.checked)} className="accent-[var(--theme-accent,#E8A87C)] w-4 h-4 cursor-pointer" />
+                                            </label>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* ANNOTATION TAB */}
+                            {activeTab === 'annotation' && (
+                                <div className="space-y-3">
+                                    <label className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/10 cursor-pointer">
+                                        <span className="text-xs font-bold text-white/90">Show Note on Card</span>
+                                        <input type="checkbox" checked={showAnnotation} onChange={e => setShowAnnotation(e.target.checked)} className="w-4 h-4 accent-[var(--theme-accent,#E8A87C)] cursor-pointer" />
+                                    </label>
+                                    {showAnnotation && (
+                                        <>
+                                            <div>
+                                                <label className="text-xs font-bold text-white/70 block mb-1">Your Note</label>
+                                                <textarea
+                                                    value={annotationText}
+                                                    onChange={e => setAnnotationText(e.target.value)}
+                                                    rows={3}
+                                                    placeholder="Write your note, review, or vinyl liner memory..."
+                                                    className="w-full p-2.5 rounded-xl bg-white/5 border border-white/15 text-xs text-white focus:outline-none focus:border-[var(--theme-accent,#E8A87C)] resize-none"
+                                                />
+                                            </div>
+                                            {/* Quick inspiration */}
+                                            <div>
+                                                <span className="text-[10px] font-semibold text-white/40 uppercase tracking-wider block mb-1.5">Quick Inspiration</span>
+                                                <div className="flex flex-wrap gap-1.5">
+                                                    {['Side B is pure magic.','Best bridge in music history.','Spun this on repeat all summer.','Master analog recording.','Late night headphone listening.'].map(q => (
+                                                        <button key={q} type="button" onClick={() => setAnnotationText(q)}
+                                                            className="px-2 py-1 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-[10px] text-white/70 transition cursor-pointer">
+                                                            {q}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                            {/* Style */}
+                                            <div className="space-y-1.5">
+                                                <label className="text-xs font-bold text-white/70">Typography Style</label>
+                                                <div className="grid grid-cols-2 gap-2">
+                                                    {[{id:'handwritten',label:'Handwritten'},{id:'typewriter',label:'Typewriter'},{id:'pill',label:'Curator Pill'},{id:'quote',label:'Pull Quote'}].map(st => (
+                                                        <button key={st.id} type="button" onClick={() => setAnnotationStyle(st.id)}
+                                                            className={`p-2 rounded-xl border text-xs font-semibold text-center transition cursor-pointer ${annotationStyle === st.id ? 'bg-white text-black font-bold border-white shadow' : 'bg-white/5 text-white/70 border-white/10 hover:bg-white/10'}`}>
+                                                            {st.label}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                            {/* Placement */}
+                                            <div className="space-y-1.5">
+                                                <label className="text-xs font-bold text-white/70">Placement</label>
+                                                <div className="grid grid-cols-3 gap-1.5">
+                                                    {[{id:'bottom',label:'Card Bottom'},{id:'under_art',label:'Under Art'},{id:'badge',label:'Art Badge'}].map(pl => (
+                                                        <button key={pl.id} type="button" onClick={() => setAnnotationPlacement(pl.id)}
+                                                            className={`py-1.5 px-2 rounded-lg text-[10px] font-semibold transition cursor-pointer text-center ${annotationPlacement === pl.id ? 'bg-white text-black font-bold shadow' : 'bg-white/5 text-white/60 hover:text-white'}`}>
+                                                            {pl.label}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* LAYOUT TAB */}
+                            {activeTab === 'layout' && (
+                                <div className="space-y-4">
+                                    {/* Text alignment */}
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-bold text-white/70">Text Alignment</label>
+                                        <div className="grid grid-cols-3 gap-2">
+                                            {[{id:'left',label:'Left',icon:<AlignLeft size={14}/>},{id:'center',label:'Center',icon:<AlignCenter size={14}/>},{id:'right',label:'Right',icon:<AlignRight size={14}/>}].map(al => (
+                                                <button key={al.id} type="button" onClick={() => setTextAlign(al.id)}
+                                                    className={`py-2 px-3 rounded-xl border flex items-center justify-center gap-1.5 text-xs font-bold transition cursor-pointer ${textAlign === al.id ? 'bg-white text-black border-white shadow' : 'bg-white/5 text-white/60 border-white/10 hover:text-white'}`}>
+                                                    {al.icon}<span>{al.label}</span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    {/* Title position */}
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-bold text-white/70">Title Position</label>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            {[{id:'bottom',label:'Below Artwork'},{id:'top',label:'Above Artwork'}].map(tp => (
+                                                <button key={tp.id} type="button" onClick={() => setTitlePlacement(tp.id)}
+                                                    className={`p-2 rounded-xl border text-xs font-bold transition cursor-pointer text-center ${titlePlacement === tp.id ? 'bg-white text-black border-white shadow' : 'bg-white/5 text-white/60 border-white/10 hover:text-white'}`}>
+                                                    {tp.label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    {/* Corner widget */}
+                                    <div className="space-y-2 pt-2 border-t border-white/10">
+                                        <label className="text-xs font-bold uppercase tracking-wider text-white/60">Corner Widget</label>
+                                        <div className="grid grid-cols-3 gap-2">
+                                            {[{id:'rating',label:'Rating Pie',icon:<Star size={14}/>},{id:'qr',label:'QR Code',icon:<QrCode size={14}/>},{id:'none',label:'None',icon:<EyeOff size={14}/>}].map(cw => (
+                                                <button key={cw.id} type="button" onClick={() => setCornerWidget(cw.id)}
+                                                    className={`p-2 rounded-xl border flex flex-col items-center gap-1 transition cursor-pointer text-center ${cornerWidget === cw.id ? 'bg-[var(--theme-accent,#E8A87C)] text-[#17020B] border-[var(--theme-accent,#E8A87C)] font-bold shadow-md' : 'bg-white/5 text-white/70 hover:text-white border-white/10'}`}>
+                                                    {cw.icon}<span className="text-[10px]">{cw.label}</span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                        {cornerWidget === 'qr' && (
+                                            <div className="flex items-center justify-between p-2.5 bg-white/5 rounded-xl border border-white/10">
+                                                <span className="text-[11px] font-semibold text-white/60">QR Color</span>
+                                                <div className="flex gap-1.5">
+                                                    {QR_COLORS.map(c => (
+                                                        <button key={c.hex} type="button" onClick={() => setQrColor(c.hex)}
+                                                            className={`w-5 h-5 rounded-full border transition cursor-pointer ${c.class} ${qrColor === c.hex ? 'border-white scale-110 shadow-md ring-2 ring-[var(--theme-accent)]/50' : 'hover:scale-105'}`}
+                                                            title={c.label} />
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
                         </div>
-                    )}
-                    {activeTab === 'layout' && (
-                        <div className="flex items-center gap-2 h-full">
-                            {['left', 'center', 'right'].map(al => (
+                    </div>
+                )}
+
+                {/* Bottom nav bar with sheet toggle */}
+                <div className="flex items-center h-14 px-1 gap-0.5 relative">
+                    {/* Sheet toggle chevron button (leftmost) */}
+                    <button
+                        type="button"
+                        onClick={() => setMobileSheetOpen(!mobileSheetOpen)}
+                        className="flex flex-col items-center justify-center gap-0.5 py-2 px-2 rounded-xl text-white/40 hover:text-white/70 transition cursor-pointer shrink-0"
+                    >
+                        <span className="text-sm leading-none">{mobileSheetOpen ? '▼' : '▲'}</span>
+                        <span className="text-[8px] tracking-tight">{mobileSheetOpen ? 'Hide' : 'Show'}</span>
+                    </button>
+                    {/* Tab buttons (horizontally scrollable) */}
+                    <div className="flex-1 overflow-x-auto no-scrollbar flex items-center gap-0.5">
+                        {[
+                            { id: 'designs', label: 'Designs', icon: <Layers size={15} /> },
+                            { id: 'formats', label: 'Formats', icon: <Maximize2 size={15} /> },
+                            { id: 'elements', label: 'Elements', icon: <Sliders size={15} /> },
+                            { id: 'colors', label: 'Colors', icon: <Palette size={15} /> },
+                            { id: 'tracklist', label: 'Tracks', icon: <ListMusic size={15} /> },
+                            { id: 'annotation', label: 'Note', icon: <MessageSquare size={15} /> },
+                            { id: 'layout', label: 'Layout', icon: <AlignLeft size={15} /> },
+                        ].map(tab => {
+                            const isActive = activeTab === tab.id;
+                            return (
                                 <button
-                                    key={al}
+                                    key={tab.id}
                                     type="button"
-                                    onClick={() => setTextAlign(al)}
-                                    className={`px-3 py-1.5 rounded-full border text-xs capitalize shrink-0 ${
-                                        textAlign === al ? 'bg-white text-black font-bold shadow' : 'bg-white/5 text-white/70 border-white/10'
+                                    onClick={() => {
+                                        setActiveTab(tab.id);
+                                        if (tab.id === 'tracklist') setCardType('tracklist');
+                                        setMobileSheetOpen(true);
+                                    }}
+                                    className={`flex flex-col items-center justify-center gap-0.5 py-2 px-2.5 rounded-xl transition-all cursor-pointer shrink-0 min-w-[52px] ${
+                                        isActive
+                                            ? 'bg-white/12 text-[var(--theme-accent,#E8A87C)] font-bold border border-white/10'
+                                            : 'text-white/50 hover:text-white/80'
                                     }`}
                                 >
-                                    {al}
+                                    {tab.icon}
+                                    <span className="text-[9px] tracking-tight whitespace-nowrap">{tab.label}</span>
                                 </button>
-                            ))}
-                            <button
-                                type="button"
-                                onClick={() => setTitlePlacement(titlePlacement === 'bottom' ? 'top' : 'bottom')}
-                                className="px-3 py-1.5 rounded-full border text-xs shrink-0 bg-white/5 text-white/70 border-white/10"
-                            >
-                                Title: {titlePlacement === 'bottom' ? 'Below Art' : 'Above Art'}
-                            </button>
-                        </div>
-                    )}
-                </div>
-
-                {/* ROW 2: Tab category selector */}
-                <div className="flex justify-around items-center px-1 py-2">
-                    {[
-                        { id: 'designs', label: 'Designs', icon: <Layers size={16} /> },
-                        { id: 'formats', label: 'Formats', icon: <Maximize2 size={16} /> },
-                        { id: 'elements', label: 'Elements', icon: <Sliders size={16} /> },
-                        { id: 'colors', label: 'Colors', icon: <Palette size={16} /> },
-                        { id: 'tracklist', label: 'Tracks', icon: <ListMusic size={16} /> },
-                        { id: 'annotation', label: 'Note', icon: <MessageSquare size={16} /> },
-                        { id: 'layout', label: 'Layout', icon: <AlignLeft size={16} /> },
-                    ].map((tab) => {
-                        const isActive = activeTab === tab.id;
-                        return (
-                            <button
-                                key={tab.id}
-                                type="button"
-                                onClick={() => setActiveTab(tab.id)}
-                                className={`flex flex-col items-center gap-1 py-1 px-2 rounded-xl transition-all cursor-pointer ${
-                                    isActive
-                                        ? 'text-[var(--theme-accent,#E8A87C)] font-bold scale-105'
-                                        : 'text-white/50 hover:text-white/80'
-                                }`}
-                            >
-                                {tab.icon}
-                                <span className="text-[10px] tracking-tight">{tab.label}</span>
-                            </button>
-                        );
-                    })}
+                            );
+                        })}
+                    </div>
                 </div>
             </div>
 
