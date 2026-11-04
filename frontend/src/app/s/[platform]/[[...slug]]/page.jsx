@@ -89,9 +89,20 @@ export default async function UniversalLinkPage({ params }) {
       if (match?.redirectUrl) {
         redirect(match.redirectUrl);
       }
+      if (platform === 'apple_music' && type === 'track') {
+        redirect(`/track/itunes-${encodeURIComponent(id)}?groovelink=true`);
+      }
+      if (entity.title) {
+        const fallbackTarget = entity.artist ? `${entity.title} ${entity.artist}` : entity.title;
+        redirect(`/${type}/${encodeURIComponent(fallbackTarget)}?groovelink=true`);
+      }
     }
   } catch (err) {
     console.warn('Universal link resolution error:', err.message);
+  }
+
+  if (platform === 'apple_music' && type === 'track') {
+    redirect(`/track/itunes-${encodeURIComponent(id)}?groovelink=true`);
   }
 
   redirect(`/search?q=${encodeURIComponent(id)}`);

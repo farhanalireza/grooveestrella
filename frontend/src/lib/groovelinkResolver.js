@@ -112,54 +112,81 @@ export function parseSharedMusicUrl(rawInput) {
   if (!rawInput) return null;
   const url = extractUrlFromString(rawInput) || rawInput.trim();
 
-  // 1. Apple Music
-  // Formats:
-  // - https://music.apple.com/us/album/song-name/269572838?i=269573364
-  // - https://music.apple.com/us/song/song-name/269573364
-  // - https://music.apple.com/us/album/album-name/269572838
-  // - https://music.apple.com/us/artist/artist-name/32940
-  // - https://music.apple.com/us/playlist/playlist-name/pl.u-XYZ
-  const amMatch = url.match(/https?:\/\/music\.apple\.com\/[a-z]{2}\/(album|artist|playlist|song)\/([^\/?#]+)(?:\/(\d+|pl\.[a-zA-Z0-9_-]+))?(?:\?i=(\d+))?/i);
-  if (amMatch) {
-    const rawKind = amMatch[1].toLowerCase();
-    const slug = amMatch[2];
-    const pathId = amMatch[3] || (!isNaN(slug) ? slug : '');
-    const trackParamId = amMatch[4];
+  // 1. Apple Music & iTunes
+  // Handles all formats:
+  // - https://music.apple.com/us/album/song-name/1559523357?i=1559523359
+  // - https://music.apple.com/album/song-name/1559523357?i=1559523359
+  // - https://music.apple.com/us/song/1559523359
+  // - https://music.apple.com/us/song/song-name/1559523359
+  // - https://itunes.apple.com/us/album/song-name/1559523357?i=1559523359
+  // - https://itunes.apple.com/lookup?id=1559523359
+  const isApple = /(?:music|itunes)\.apple\.com|apple\.co/i.test(url);
+  if (isApple) {
+    const trackParamMatch = url.match(/[?&]i=(\d+)/i);
+    const trackParamId = trackParamMatch ? trackParamMatch[1] : null;
+    const lookupMatch = url.match(/[?&]id=(\d+)/i);
+    const kindMatch = url.match(/(?:\/(?:[a-z]{2}(?:-[a-z]{2})?)\/|\/)(album|artist|playlist|song)\/([^\/?#]+)(?:\/(\d+|pl\.[a-zA-Z0-9_-]+))?/i);
 
-    if (trackParamId || rawKind === 'song') {
+    if (trackParamId) {
+      const albumPathId = kindMatch ? (kindMatch[3] || (!isNaN(kindMatch[2]) ? kindMatch[2] : null)) : null;
       return {
         platform: 'apple_music',
         type: 'track',
-        id: trackParamId || pathId,
-        albumId: pathId,
-        slug,
+        id: trackParamId,
+        albumId: albumPathId,
+        slug: kindMatch ? kindMatch[2] : null,
         rawUrl: url,
       };
     }
-    if (rawKind === 'album') {
-      return {
-        platform: 'apple_music',
-        type: 'album',
-        id: pathId,
-        slug,
-        rawUrl: url,
-      };
+
+    if (kindMatch) {
+      const rawKind = kindMatch[1].toLowerCase();
+      const slug = kindMatch[2];
+      const pathId = kindMatch[3] || (!isNaN(slug) ? slug : '');
+
+      if (rawKind === 'song') {
+        return {
+          platform: 'apple_music',
+          type: 'track',
+          id: pathId || slug,
+          slug,
+          rawUrl: url,
+        };
+      }
+      if (rawKind === 'album') {
+        return {
+          platform: 'apple_music',
+          type: 'album',
+          id: pathId,
+          slug,
+          rawUrl: url,
+        };
+      }
+      if (rawKind === 'artist') {
+        return {
+          platform: 'apple_music',
+          type: 'artist',
+          id: pathId,
+          slug,
+          rawUrl: url,
+        };
+      }
+      if (rawKind === 'playlist') {
+        return {
+          platform: 'apple_music',
+          type: 'playlist',
+          id: pathId,
+          slug,
+          rawUrl: url,
+        };
+      }
     }
-    if (rawKind === 'artist') {
+
+    if (lookupMatch) {
       return {
         platform: 'apple_music',
-        type: 'artist',
-        id: pathId,
-        slug,
-        rawUrl: url,
-      };
-    }
-    if (rawKind === 'playlist') {
-      return {
-        platform: 'apple_music',
-        type: 'playlist',
-        id: pathId,
-        slug,
+        type: 'track',
+        id: lookupMatch[1],
         rawUrl: url,
       };
     }
@@ -686,7 +713,19 @@ export async function resolveSharedLink(rawInput) {
     }
 
     // 3. Fallback: If MusicBrainz doesn't have the entity in catalog yet,
-    // route to universal landing page with rich metadata
+    // route directly to track page for Apple Music tracks or universal landing page
+    if (parsed.platform === 'apple_music' && parsed.type === 'track') {
+      return {
+        success: true,
+        platform: 'apple_music',
+        type: 'track',
+        id: `itunes-${platformEntity.id || parsed.id}`,
+        redirectUrl: `/track/itunes-${platformEntity.id || parsed.id}?groovelink=true`,
+        sourceEntity: platformEntity,
+        matchedTitle: platformEntity.title,
+      };
+    }
+
     return {
       success: true,
       platform: parsed.platform,
@@ -698,6 +737,16 @@ export async function resolveSharedLink(rawInput) {
   }
 
   // Fallback to platform landing
+  if (parsed.platform === 'apple_music' && parsed.type === 'track') {
+    return {
+      success: true,
+      platform: 'apple_music',
+      type: 'track',
+      id: `itunes-${parsed.id}`,
+      redirectUrl: `/track/itunes-${parsed.id}?groovelink=true`,
+    };
+  }
+
   return {
     success: true,
     platform: parsed.platform,

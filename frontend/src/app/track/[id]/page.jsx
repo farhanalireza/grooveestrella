@@ -17,10 +17,29 @@ export async function generateMetadata({ params }) {
     }
 
     if (!track && cleanId && !cleanId.startsWith('local-')) {
-      track = await Promise.race([
-        searchMusicBrainzTrackServer(decodeURIComponent(cleanId)),
-        new Promise((res) => setTimeout(() => res(null), 4000)),
-      ]);
+      const itunesMatch = cleanId.match(/^(?:itunes-)?(\d{6,})$/i);
+      if (itunesMatch) {
+        try {
+          const res = await fetch(`https://itunes.apple.com/lookup?id=${itunesMatch[1]}`);
+          const json = await res.json();
+          const item = json.results?.[0];
+          if (item) {
+            track = {
+              title: item.trackName || item.trackCensoredName,
+              artist: item.artistName,
+              album: { name: item.collectionName, images: [{ url: item.artworkUrl100?.replace('100x100bb', '600x600bb') }] },
+              coverArt: item.artworkUrl100?.replace('100x100bb', '600x600bb'),
+            };
+          }
+        } catch (_) {}
+      }
+
+      if (!track) {
+        track = await Promise.race([
+          searchMusicBrainzTrackServer(decodeURIComponent(cleanId)),
+          new Promise((res) => setTimeout(() => res(null), 4000)),
+        ]);
+      }
     }
   } catch (_) {}
 

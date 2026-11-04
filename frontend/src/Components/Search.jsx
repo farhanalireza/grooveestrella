@@ -15,6 +15,12 @@ const SearchComp = ({ initialQuery = "", handleChange }) => {
 
     const handleSearch = (query, type) => {
         setSearchQuery(query);
+        const trimmed = (query || "").trim();
+        // If user pastes an Apple Music, Spotify, or YouTube URL, route to share target converter
+        if (/https?:\/\/(?:music|itunes)\.apple\.com|apple\.co|open\.spotify\.com|music\.youtube\.com/i.test(trimmed)) {
+            window.location.href = `/share-target?url=${encodeURIComponent(trimmed)}`;
+            return;
+        }
         handleChange(query, type);
     };
 

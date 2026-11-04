@@ -19,7 +19,16 @@ function ShareTargetHandler() {
       const title = searchParams.get("title") || "";
 
       // Many apps (Spotify, Apple Music, YouTube) put the URL inside `text` or `url`
-      const rawInput = (url || text || title || "").trim();
+      let targetUrl = url;
+      if (!targetUrl && text) {
+        const urlMatch = text.match(/https?:\/\/[^\s]+/i);
+        targetUrl = urlMatch ? urlMatch[0] : text;
+      }
+      if (!targetUrl && title) {
+        const urlMatch = title.match(/https?:\/\/[^\s]+/i);
+        targetUrl = urlMatch ? urlMatch[0] : title;
+      }
+      const rawInput = (targetUrl || url || text || title || "").trim();
 
       if (!rawInput) {
         toast.error("No shared music link received.");
