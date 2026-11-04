@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useRef, useState, useEffect, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
     ArrowLeft, 
     Download, 
@@ -864,14 +865,23 @@ export default function GrooveCardComposer({
                 }
             }
 
-            const dataUrl = await toPng(cardRef.current, {
+            const el = cardRef.current;
+            const fullWidth = el.offsetWidth || 360;
+            const fullHeight = Math.max(el.scrollHeight, el.offsetHeight);
+
+            const dataUrl = await toPng(el, {
                 quality: 1.0,
                 pixelRatio: 3,
+                width: fullWidth,
+                height: fullHeight,
                 style: {
-                    transform: 'scale(1)',
+                    transform: 'none',
                     transformOrigin: 'top left',
-                    width: cardRef.current.offsetWidth + 'px',
-                    height: cardRef.current.offsetHeight + 'px'
+                    margin: '0',
+                    maxHeight: 'none',
+                    height: `${fullHeight}px`,
+                    width: `${fullWidth}px`,
+                    overflow: 'visible',
                 },
                 cacheBust: true,
                 useCORS: true
@@ -989,14 +999,14 @@ export default function GrooveCardComposer({
     };
 
     // RENDER GENRE TAGS
-    const renderGenreTags = () => {
+    const renderGenreTags = (isHeader = false) => {
         if (!showGenres || effectiveGenres.length === 0) return null;
         return (
-            <div className={`flex items-center gap-1.5 flex-wrap my-1.5 ${justifyClass}`}>
+            <div className={`flex items-center gap-1.5 flex-wrap ${isHeader ? '' : 'my-1'} ${justifyClass}`}>
                 {effectiveGenres.slice(0, 3).map((g, idx) => (
                     <span
                         key={idx}
-                        className="px-2 py-0.5 rounded-md text-[8px] sm:text-[9px] font-bold tracking-wider uppercase border select-none"
+                        className={`px-2 py-0.5 rounded-md font-bold tracking-wider uppercase border select-none ${isHeader ? 'text-[7.5px]' : 'text-[8px] sm:text-[9px]'}`}
                         style={{
                             backgroundColor: activeTheme.isLight ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.08)',
                             borderColor: textColors.faint,
@@ -1014,13 +1024,13 @@ export default function GrooveCardComposer({
     const renderTitleBlock = () => (
         <div className={`flex flex-col w-full ${alignClass}`}>
             {showReleaseDate && datePlacement === 'subhead' && displayDate && (
-                <span className="text-[9px] uppercase font-bold tracking-widest mb-0.5" style={{ color: textColors.muted }}>
+                <span className="text-[9px] sm:text-[10px] uppercase font-bold tracking-widest mb-1" style={{ color: textColors.muted }}>
                     {displayDate}
                 </span>
             )}
             {showTitle && (
                 <h4 
-                    className="text-xs sm:text-sm font-bold leading-tight font-display tracking-tight break-words line-clamp-2 w-full"
+                    className="text-sm sm:text-base font-bold leading-snug font-display tracking-tight break-words line-clamp-2 w-full"
                     style={{ color: textColors.primary }}
                     title={title}
                 >
@@ -1029,7 +1039,7 @@ export default function GrooveCardComposer({
             )}
             {showArtist && (
                 <p 
-                    className="text-[10px] sm:text-xs font-medium font-sans mt-0.5 break-words line-clamp-1 w-full"
+                    className="text-xs sm:text-sm font-medium font-sans mt-0.5 break-words line-clamp-1 w-full"
                     style={{ color: textColors.secondary }}
                     title={artistLabel}
                 >
@@ -1038,15 +1048,16 @@ export default function GrooveCardComposer({
             )}
             {showAlbum && album && type === 'track' && album !== title && (
                 <p 
-                    className="text-[9px] sm:text-[10px] font-normal font-sans italic mt-0.5 break-words line-clamp-1 w-full"
+                    className="text-[10px] sm:text-xs font-normal font-sans italic mt-0.5 break-words line-clamp-1 w-full"
                     style={{ color: textColors.muted }}
+                    title={album}
                 >
                     {album}
                 </p>
             )}
 
             {/* Genre tags when placed below artist */}
-            {showGenres && genresPlacement === 'below_artist' && renderGenreTags()}
+            {showGenres && genresPlacement === 'below_artist' && renderGenreTags(false)}
 
             {/* Metadata line (date, duration, disc count) */}
             {metaItems.length > 0 && (
@@ -1927,10 +1938,10 @@ export default function GrooveCardComposer({
                             ...activeTheme.bgStyle,
                             borderColor: activeTheme.border,
                         }}
-                        className={`relative w-full max-w-[300px] xs:max-w-[320px] sm:max-w-[360px] overflow-y-auto my-auto p-4 sm:p-5 rounded-2xl flex flex-col justify-start shadow-2xl border transition-colors duration-200 overflow-hidden select-none ${
+                        className={`relative w-full max-w-[320px] xs:max-w-[340px] sm:max-w-[360px] my-auto p-4 sm:p-5 rounded-2xl flex flex-col justify-between shadow-2xl border transition-colors duration-200 select-none overflow-hidden ${
                             designStyle === 'library' ? 'font-mono' : designStyle === 'museum' ? 'tracking-wide' : 'font-sans'
                         } ${
-                            cardType === 'tracklist' ? 'max-h-[calc(100vh-180px)]' : 'aspect-[1/1.55]'
+                            cardType === 'tracklist' ? 'h-auto min-h-0' : 'h-auto min-h-[480px] sm:min-h-[500px]'
                         }`}
                     >
                         {/* Film Grain Texture Overlay */}
@@ -2011,7 +2022,7 @@ export default function GrooveCardComposer({
                                     </span>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    {showGenres && genresPlacement === 'top_header' && renderGenreTags()}
+                                    {showGenres && genresPlacement === 'top_header' && renderGenreTags(true)}
                                     {showReleaseDate && datePlacement === 'header' && displayDate && (
                                         <span className="text-[8px] font-bold uppercase tracking-wider font-sans" style={{ color: textColors.muted }}>
                                             {displayDate}
@@ -2143,20 +2154,20 @@ export default function GrooveCardComposer({
                         {/* SCANNABLE QR FOCUS FORMAT (Large Camera Scannable QR) */}
                         {cardType === 'scannable_qr' && (
                             <div className="relative z-10 w-full my-2 flex flex-col items-center justify-center">
-                                <div className="w-full p-4 rounded-2xl bg-white text-black shadow-xl flex flex-col items-center justify-center">
+                                <div className="w-full p-3 sm:p-4 rounded-2xl bg-white text-black shadow-xl flex flex-col items-center justify-center">
                                     <div className="relative p-1 bg-white rounded-xl flex items-center justify-center">
                                         <img 
                                             src={qrApi} 
                                             alt="Camera Scannable QR" 
-                                            className="w-36 h-36 sm:w-40 sm:h-40 object-contain"
+                                            className="w-32 h-32 sm:w-36 sm:h-36 object-contain"
                                             crossOrigin="anonymous" 
                                         />
                                         <div className="absolute w-8 h-8 rounded-full bg-white border border-gray-200 p-1 flex items-center justify-center shadow-md">
                                             <img src="/in.svg" alt="Groove" className="w-full h-full object-contain" crossOrigin="anonymous" />
                                         </div>
                                     </div>
-                                    <div className="mt-2.5 flex items-center gap-1.5 text-center">
-                                        <QrCode size={14} className="text-black/70" />
+                                    <div className="mt-2 flex items-center gap-1.5 text-center">
+                                        <QrCode size={13} className="text-black/70" />
                                         <span className="text-[10px] font-extrabold uppercase tracking-wider font-sans text-black">
                                             Scan camera to listen
                                         </span>
@@ -2168,21 +2179,19 @@ export default function GrooveCardComposer({
                         {/* ANNOTATION BOTTOM PLACEMENT */}
                         {showAnnotation && annotationPlacement === 'bottom' && renderAnnotation()}
 
-                        {/* GENRE TAGS FOOTER PLACEMENT */}
-                        {showGenres && genresPlacement === 'footer' && renderGenreTags()}
-
-                        {/* FOOTER AREA (Removed official groovecard branding completely) */}
-                        {(designStyle === 'library' || (cornerWidget !== 'none' && cardType !== 'scannable_qr')) && (
+                        {/* FOOTER AREA */}
+                        {(designStyle === 'library' || (cornerWidget !== 'none' && cardType !== 'scannable_qr') || (showGenres && genresPlacement === 'footer')) && (
                             <div className="relative z-10 flex justify-between items-end gap-3 pt-2 mt-auto">
-                                {/* Library rod hole punch (vintage index card detail) */}
-                                {designStyle === 'library' ? (
-                                    <div 
-                                        className="w-3.5 h-3.5 rounded-full border border-stone-400/50 bg-stone-300/40 shadow-inner shrink-0"
-                                        title="Catalogue card drawer rod hole"
-                                    />
-                                ) : (
-                                    <div />
-                                )}
+                                {/* Left Side: Library rod hole punch or footer genre tags */}
+                                <div className="flex items-center gap-2">
+                                    {designStyle === 'library' && (
+                                        <div 
+                                            className="w-3.5 h-3.5 rounded-full border border-stone-400/50 bg-stone-300/40 shadow-inner shrink-0"
+                                            title="Catalogue card drawer rod hole"
+                                        />
+                                    )}
+                                    {showGenres && genresPlacement === 'footer' && renderGenreTags(false)}
+                                </div>
 
                                 {/* Corner Element (Bottom Right) */}
                                 {cardType !== 'scannable_qr' && (
@@ -2245,17 +2254,38 @@ export default function GrooveCardComposer({
                 </main>
             </div>
 
-            {/* MOBILE ONLY: Bottom panel with tab nav + expandable sheet */}
+            {/* MOBILE ONLY: Bottom panel with tab nav + expandable movable sheet */}
             <div className="md:hidden flex flex-col border-t border-white/10 bg-[#0d0d14]/95 backdrop-blur-xl shrink-0 z-40" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
-                {/* Expandable content sheet */}
-                {mobileSheetOpen && (
-                    <div className="max-h-[45vh] overflow-y-auto overscroll-contain border-b border-white/8">
-                        {/* Grab handle */}
-                        <div className="flex justify-center pt-2 pb-1 sticky top-0 bg-[#0d0d14]/95 z-10">
-                            <div className="w-8 h-1 rounded-full bg-white/20" />
-                        </div>
+                {/* Movable Expandable content sheet */}
+                <AnimatePresence>
+                    {mobileSheetOpen && (
+                        <motion.div 
+                            key="mobile-drawer"
+                            initial={{ y: '100%', opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            exit={{ y: '100%', opacity: 0 }}
+                            transition={{ type: 'spring', damping: 28, stiffness: 320 }}
+                            drag="y"
+                            dragConstraints={{ top: 0, bottom: 0 }}
+                            dragElastic={{ top: 0.05, bottom: 0.7 }}
+                            onDragEnd={(_, info) => {
+                                if (info.offset.y > 60 || info.velocity.y > 250) {
+                                    setMobileSheetOpen(false);
+                                }
+                            }}
+                            className="border-b border-white/10 bg-[#0d0d14] flex flex-col touch-pan-y"
+                        >
+                            {/* Grab handle with pull-down gesture */}
+                            <div 
+                                className="flex flex-col items-center justify-center pt-2.5 pb-2 cursor-grab active:cursor-grabbing select-none w-full bg-[#0d0d14] border-b border-white/5 active:bg-white/5 transition-colors"
+                                onClick={() => setMobileSheetOpen(false)}
+                                title="Pull down or tap to close"
+                            >
+                                <div className="w-12 h-1.5 rounded-full bg-white/30 hover:bg-white/50 transition-colors" />
+                                <span className="text-[8px] font-bold tracking-widest uppercase text-white/40 mt-1">Pull down to close</span>
+                            </div>
 
-                        <div className="px-4 pb-4 space-y-4">
+                            <div className="max-h-[46vh] overflow-y-auto overscroll-contain px-4 py-3 space-y-4">
 
                             {/* DESIGNS TAB */}
                             {activeTab === 'designs' && (
@@ -2669,54 +2699,63 @@ export default function GrooveCardComposer({
                             )}
 
                         </div>
-                    </div>
+                    </motion.div>
                 )}
+            </AnimatePresence>
 
-                {/* Bottom nav bar with sheet toggle */}
-                <div className="flex items-center h-14 px-1 gap-0.5 relative">
-                    {/* Sheet toggle chevron button (leftmost) */}
-                    <button
-                        type="button"
-                        onClick={() => setMobileSheetOpen(!mobileSheetOpen)}
-                        className="flex flex-col items-center justify-center gap-0.5 py-2 px-2 rounded-xl text-white/40 hover:text-white/70 transition cursor-pointer shrink-0"
-                    >
-                        <span className="text-sm leading-none">{mobileSheetOpen ? '▼' : '▲'}</span>
-                        <span className="text-[8px] tracking-tight">{mobileSheetOpen ? 'Hide' : 'Show'}</span>
-                    </button>
-                    {/* Tab buttons (horizontally scrollable) */}
-                    <div className="flex-1 overflow-x-auto no-scrollbar flex items-center gap-0.5">
-                        {[
-                            { id: 'designs', label: 'Designs', icon: <Layers size={15} /> },
-                            { id: 'formats', label: 'Formats', icon: <Maximize2 size={15} /> },
-                            { id: 'elements', label: 'Elements', icon: <Sliders size={15} /> },
-                            { id: 'colors', label: 'Colors', icon: <Palette size={15} /> },
-                            { id: 'tracklist', label: 'Tracks', icon: <ListMusic size={15} /> },
-                            { id: 'annotation', label: 'Note', icon: <MessageSquare size={15} /> },
-                            { id: 'layout', label: 'Layout', icon: <AlignLeft size={15} /> },
-                        ].map(tab => {
-                            const isActive = activeTab === tab.id;
-                            return (
-                                <button
-                                    key={tab.id}
-                                    type="button"
-                                    onClick={() => {
+            {/* Bottom nav bar with increased height and breathing space between buttons */}
+            <div className="flex items-center h-16 sm:h-[68px] px-3 gap-2 relative bg-[#090a0f] border-t border-white/10 shadow-lg">
+                {/* Sheet toggle chevron button (leftmost) */}
+                <button
+                    type="button"
+                    onClick={() => setMobileSheetOpen(!mobileSheetOpen)}
+                    className="flex flex-col items-center justify-center gap-1 py-2 px-3 rounded-xl bg-white/5 hover:bg-white/10 active:scale-95 text-white/70 hover:text-white transition cursor-pointer shrink-0 border border-white/10 min-w-[52px]"
+                    title={mobileSheetOpen ? "Close panel" : "Open panel"}
+                >
+                    <span className="text-xs transition-transform duration-200">{mobileSheetOpen ? '▼' : '▲'}</span>
+                    <span className="text-[8px] font-bold tracking-wider uppercase">{mobileSheetOpen ? 'Close' : 'Open'}</span>
+                </button>
+
+                <div className="w-[1px] h-7 bg-white/10 shrink-0 mx-0.5" />
+
+                {/* Tab buttons (horizontally scrollable with breathing space) */}
+                <div className="flex-1 overflow-x-auto no-scrollbar flex items-center gap-2.5 py-1">
+                    {[
+                        { id: 'designs', label: 'Designs', icon: <Layers size={16} /> },
+                        { id: 'formats', label: 'Formats', icon: <Maximize2 size={16} /> },
+                        { id: 'elements', label: 'Elements', icon: <Sliders size={16} /> },
+                        { id: 'colors', label: 'Colors', icon: <Palette size={16} /> },
+                        { id: 'tracklist', label: 'Tracks', icon: <ListMusic size={16} /> },
+                        { id: 'annotation', label: 'Note', icon: <MessageSquare size={16} /> },
+                        { id: 'layout', label: 'Layout', icon: <AlignLeft size={16} /> },
+                    ].map(tab => {
+                        const isActive = activeTab === tab.id && mobileSheetOpen;
+                        return (
+                            <button
+                                key={tab.id}
+                                type="button"
+                                onClick={() => {
+                                    if (activeTab === tab.id && mobileSheetOpen) {
+                                        setMobileSheetOpen(false);
+                                    } else {
                                         setActiveTab(tab.id);
                                         if (tab.id === 'tracklist') setCardType('tracklist');
                                         setMobileSheetOpen(true);
-                                    }}
-                                    className={`flex flex-col items-center justify-center gap-0.5 py-2 px-2.5 rounded-xl transition-all cursor-pointer shrink-0 min-w-[52px] ${
-                                        isActive
-                                            ? 'bg-white/12 text-[var(--theme-accent,#E8A87C)] font-bold border border-white/10'
-                                            : 'text-white/50 hover:text-white/80'
-                                    }`}
-                                >
-                                    {tab.icon}
-                                    <span className="text-[9px] tracking-tight whitespace-nowrap">{tab.label}</span>
-                                </button>
-                            );
-                        })}
-                    </div>
+                                    }
+                                }}
+                                className={`flex flex-col items-center justify-center gap-1 py-2 px-3.5 rounded-xl transition-all cursor-pointer shrink-0 min-w-[62px] active:scale-95 ${
+                                    isActive
+                                        ? 'bg-white/15 text-[var(--theme-accent,#E8A87C)] font-bold border border-[var(--theme-accent,#E8A87C)]/40 shadow-sm'
+                                        : 'text-white/60 hover:text-white hover:bg-white/5 border border-transparent'
+                                }`}
+                            >
+                                {tab.icon}
+                                <span className="text-[10px] tracking-tight whitespace-nowrap">{tab.label}</span>
+                            </button>
+                        );
+                    })}
                 </div>
+            </div>
             </div>
 
             {/* Full-screen QR Viewer Modal (if tapped on card QR) */}
