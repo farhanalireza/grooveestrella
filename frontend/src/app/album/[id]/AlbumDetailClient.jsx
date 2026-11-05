@@ -489,14 +489,14 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
                     </div>
                 </div>
 
-                {/* Album Title with Explicit [E] badge */}
-                <div className="mt-4 sm:mt-5 flex items-center justify-center gap-2.5 flex-wrap">
-                    <h1 className="text-2xl sm:text-3xl md:text-4xl font-black leading-tight text-[var(--theme-fg)] tracking-tight font-display">
-                        {album.name || album.title}
+                {/* Album Title with Inline Explicit [E] badge */}
+                <div className="mt-4 sm:mt-5 flex items-center justify-center gap-2 flex-wrap max-w-lg">
+                    <h1 className="text-2xl sm:text-3xl md:text-4xl font-black leading-tight text-[var(--theme-fg)] tracking-tight font-display text-center inline-flex items-center gap-2 flex-wrap justify-center">
+                        <span>{album.name || album.title}</span>
+                        <span className="inline-flex items-center justify-center w-4 h-4 rounded-[3px] text-[10px] font-bold bg-white/10 text-white/80 shrink-0 select-none align-middle" title="Explicit Content">
+                            E
+                        </span>
                     </h1>
-                    <span className="inline-flex items-center justify-center w-4 h-4 rounded-[3px] text-[10px] font-bold bg-[var(--theme-muted)]/20 text-[var(--theme-fg)]/90 shrink-0 select-none" title="Explicit Content">
-                        E
-                    </span>
                 </div>
 
                 {/* Clickable Artist Name */}
@@ -522,41 +522,40 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
                     ))}
                 </div>
 
-                {/* Line 1: Release Year & Primary Genre */}
-                <div className="mt-2.5 flex items-center justify-center gap-2 flex-wrap text-xs font-semibold text-[var(--theme-muted)]">
-                    {releaseYear && (
-                        <span className="px-3 py-0.5 rounded-full bg-[var(--theme-card)]/80 border border-[var(--theme-border)] text-[var(--theme-fg)]/90 shadow-sm">
-                            {releaseYear}
-                        </span>
-                    )}
+                {/* Fun & Minimalist Unified Metadata Line (Year • Genre • Tracks/Duration • Editions) */}
+                <div className="mt-2.5 flex items-center justify-center gap-2 text-xs font-semibold text-[var(--theme-muted)] flex-wrap select-none">
+                    {releaseYear && <span>{releaseYear}</span>}
                     {displayGenre && (
-                        <span className="px-3 py-0.5 rounded-full bg-[var(--theme-card)]/80 border border-[var(--theme-border)] text-[var(--theme-accent)] font-semibold shadow-sm">
-                            {displayGenre}
-                        </span>
+                        <>
+                            <span className="opacity-30">•</span>
+                            <span className="text-[var(--theme-fg)]/90">{displayGenre}</span>
+                        </>
+                    )}
+                    {tracks.length > 0 && (
+                        <>
+                            <span className="opacity-30">•</span>
+                            <span className="inline-flex items-center gap-1">
+                                <Clock size={11} className="text-[var(--theme-accent)] shrink-0" />
+                                <span>{tracks.length} songs{formattedTotalTime ? `, ${formattedTotalTime}` : ''}</span>
+                            </span>
+                        </>
+                    )}
+                    {album.editions && album.editions.length > 1 && (
+                        <>
+                            <span className="opacity-30">•</span>
+                            <button
+                                onClick={() => setIsEditionsDrawerOpen(true)}
+                                className="inline-flex items-center gap-1 text-[var(--theme-accent)] hover:underline cursor-pointer font-bold transition-colors"
+                                title="Explore pressings & editions"
+                            >
+                                <Layers size={11} />
+                                <span>{album.editions.length} Editions</span>
+                            </button>
+                        </>
                     )}
                 </div>
 
-                {/* Line 2: Independent Tracks Count + Duration line */}
-                {(tracks.length > 0 || formattedTotalTime) && (
-                    <div className="mt-1.5 flex items-center justify-center gap-2 text-xs font-medium text-[var(--theme-muted)]">
-                        <Clock size={12} className="text-[var(--theme-accent)] shrink-0" />
-                        <span>{tracks.length} {tracks.length === 1 ? 'song' : 'songs'}</span>
-                        {formattedTotalTime && (
-                            <>
-                                <span>•</span>
-                                <span>{formattedTotalTime}</span>
-                            </>
-                        )}
-                        {trackSections.length > 1 && (
-                            <>
-                                <span>•</span>
-                                <span className="text-[var(--theme-accent)] font-semibold">{trackSections.length} Discs</span>
-                            </>
-                        )}
-                    </div>
-                )}
-
-                {/* Top Interactive User Rating & MusicBrainz Rating Widget */}
+                {/* Compact Floating Dual-Rating Capsule */}
                 <div className="mt-3.5 flex items-center justify-center">
                     <UserRatingWidget
                         id={album.id || id}
@@ -564,22 +563,6 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
                         musicbrainzRating={album.rating}
                     />
                 </div>
-
-                {/* Editions & Pressings Trigger Pill */}
-                {album.editions && album.editions.length > 1 && (
-                    <button
-                        onClick={() => setIsEditionsDrawerOpen(true)}
-                        className="mt-3 inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[var(--theme-card)]/90 hover:bg-[var(--theme-surface)] active:scale-95 text-[var(--theme-fg)] text-xs font-semibold backdrop-blur-md border border-[var(--theme-border)] transition-all shadow-md cursor-pointer group"
-                        title="Explore alternative pressings, remasters, and box sets"
-                    >
-                        <Layers size={14} className="text-[var(--theme-accent)] group-hover:rotate-12 transition-transform duration-300" />
-                        <span>{album.editions.length} Editions & Pressings</span>
-                        <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-[var(--theme-surface)] text-[var(--theme-muted)] font-mono">
-                            {album.releaseYear || 'Active'}
-                        </span>
-                        <ChevronRight size={13} className="text-[var(--theme-muted)] group-hover:translate-x-0.5 transition-transform" />
-                    </button>
-                )}
 
                 {/* Centered Action Controls Row */}
                 <div className="mt-6 flex items-center justify-center gap-3 sm:gap-4 max-w-full flex-wrap">

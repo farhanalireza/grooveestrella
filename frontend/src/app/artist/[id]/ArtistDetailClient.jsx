@@ -4,7 +4,7 @@
 import { useEffect, useState, useMemo, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Bookmark, BookmarkCheck, Users, Award, Music, ChevronRight, MoreHorizontal, Play, Share2, ListPlus, Sparkles } from "lucide-react";
+import { ArrowLeft, Bookmark, BookmarkCheck, Users, User, Award, Music, ChevronRight, MoreHorizontal, Play, Share2, ListPlus, Sparkles, Link2, Info, MapPin, Calendar, Clock } from "lucide-react";
 import {
     DropdownMenu,
     DropdownMenuTrigger,
@@ -19,6 +19,8 @@ import GrooveCardComposer from "@/Components/GrooveCardComposer";
 import MusicLoreAndReviews from "@/Components/MusicLoreAndReviews";
 import RatingPieChart from "@/Components/RatingPieChart";
 import UserRatingWidget from "@/Components/UserRatingWidget";
+import ArtistLinksDrawer from "@/Components/ArtistLinksDrawer";
+import ArtistDetailsDrawer from "@/Components/ArtistDetailsDrawer";
 import GrooveLoader from "@/Components/GrooveLoader";
 import { toast } from "@/lib/toast";
 import { shareLink } from "@/lib/shareHelper";
@@ -36,6 +38,8 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
     const [expandedHeroDesc, setExpandedHeroDesc] = useState(false);
     const [isGrooveLinkOpen, setIsGrooveLinkOpen] = useState(false);
     const [isGrooveCardOpen, setIsGrooveCardOpen] = useState(false);
+    const [isLinksDrawerOpen, setIsLinksDrawerOpen] = useState(false);
+    const [isDetailsDrawerOpen, setIsDetailsDrawerOpen] = useState(false);
     const [selectedTrackForGrooveLink, setSelectedTrackForGrooveLink] = useState(null);
     const [selectedTrackForGrooveCard, setSelectedTrackForGrooveCard] = useState(null);
 
@@ -183,6 +187,20 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
         return valid.slice(0, 6);
     }, [artist?.genres, artist?.tags]);
 
+    // Distinguish Group vs Solo Artist and parse metadata
+    const isGroup = artist.isGroup ?? /group|band|orchestra|choir/i.test(artist.type || "");
+    const entityTypeLabel = isGroup ? (artist.type || "Band / Group") : "Solo Artist";
+    const members = artist.members || { og: [], current: [], past: [], supporting: [] };
+    const currentMembersCount = members.current?.length || 0;
+    const ogCount = members.og?.length || 0;
+    const totalLineupCount = currentMembersCount + (members.past?.length || 0);
+    const bands = artist.bands || [];
+    const collaborations = artist.collaborations || [];
+    const externalLinks = artist.externalLinks || [];
+    const lifeSpan = artist.lifeSpan || {};
+    const beginYear = lifeSpan.begin ? lifeSpan.begin.split("-")[0] : null;
+    const endYear = lifeSpan.end ? lifeSpan.end.split("-")[0] : null;
+
     const handleBack = () => {
         if (typeof window !== "undefined" && window.history.length > 1) {
             router.back();
@@ -263,7 +281,7 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
             </header>
 
             {/* Artist Info Glassmorphic Card Container */}
-            <div className="relative z-10 mt-14 sm:mt-6 w-full bg-transparent sm:bg-[var(--theme-card)]/80 sm:backdrop-blur-xl border-0 sm:border border-transparent sm:border-[var(--theme-border)] rounded-none sm:rounded-3xl p-2 sm:p-8 flex flex-col md:flex-row items-center gap-8 sm:gap-12 sm:shadow-2xl mb-6 sm:mb-10">
+            <div className="relative z-10 mt-14 sm:mt-6 w-full bg-transparent sm:bg-[var(--theme-card)]/80 sm:backdrop-blur-xl border-0 sm:border border-transparent sm:border-[var(--theme-border)] rounded-none sm:rounded-3xl p-2 sm:p-8 flex flex-col md:flex-row items-center gap-6 sm:gap-10 sm:shadow-2xl mb-6 sm:mb-10">
                 <div className="relative flex-shrink-0 w-44 h-44 sm:w-52 sm:h-52 md:w-60 md:h-60 rounded-full overflow-hidden border-4 border-[var(--theme-border)] shadow-2xl bg-[var(--theme-surface)]">
                     <img 
                         src={coverUrl} 
@@ -275,35 +293,101 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
 
                 <div className="flex-1 min-w-0 text-center md:text-left flex flex-col justify-center">
                     <div>
-                        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--theme-card)]/80 border border-[var(--theme-border)] text-xs font-bold text-[var(--theme-accent)] uppercase tracking-wider mb-2">
-                            <Users size={13} />
-                            <span>Artist Profile</span>
+                        {/* Distinguished Group vs. Solo Badge & Quick Access Chips */}
+                        <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mb-2.5">
+                            <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider border shadow-sm ${
+                                isGroup 
+                                    ? 'bg-purple-500/15 text-purple-400 border-purple-500/30' 
+                                    : 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                            }`}>
+                                {isGroup ? <Users size={13} /> : <User size={13} />}
+                                <span>{entityTypeLabel}</span>
+                            </div>
+
+                            {isGroup && (totalLineupCount > 0 || ogCount > 0) && (
+                                <button
+                                    type="button"
+                                    onClick={() => setIsDetailsDrawerOpen(true)}
+                                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--theme-card)] hover:bg-[var(--theme-surface)] active:scale-95 text-[var(--theme-fg)] text-[11px] font-bold border border-[var(--theme-border)] transition cursor-pointer shadow-sm group"
+                                    title="View band lineup"
+                                >
+                                    <span>{totalLineupCount || currentMembersCount} Members</span>
+                                    {ogCount > 0 && (
+                                        <span className="text-[10px] text-amber-400 font-mono font-bold">({ogCount} OG)</span>
+                                    )}
+                                    <ChevronRight size={12} className="text-[var(--theme-muted)] group-hover:text-[var(--theme-accent)] transition-transform group-hover:translate-x-0.5" />
+                                </button>
+                            )}
+
+                            {!isGroup && bands.length > 0 && (
+                                <button
+                                    type="button"
+                                    onClick={() => setIsDetailsDrawerOpen(true)}
+                                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--theme-card)] hover:bg-[var(--theme-surface)] active:scale-95 text-[var(--theme-fg)] text-[11px] font-bold border border-[var(--theme-border)] transition cursor-pointer shadow-sm group"
+                                    title="View artist groups"
+                                >
+                                    <span>In {bands.length} Bands</span>
+                                    <ChevronRight size={12} className="text-[var(--theme-muted)] group-hover:text-[var(--theme-accent)] transition-transform group-hover:translate-x-0.5" />
+                                </button>
+                            )}
+
+                            {externalLinks.length > 0 && (
+                                <button
+                                    type="button"
+                                    onClick={() => setIsLinksDrawerOpen(true)}
+                                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--theme-card)] hover:bg-[var(--theme-surface)] active:scale-95 text-[var(--theme-fg)] text-[11px] font-bold border border-[var(--theme-border)] transition cursor-pointer shadow-sm group"
+                                    title="Open external links drawer"
+                                >
+                                    <Link2 size={12} className="text-[var(--theme-accent)]" />
+                                    <span>{externalLinks.length} Links</span>
+                                    <ChevronRight size={12} className="text-[var(--theme-muted)] group-hover:text-[var(--theme-accent)] transition-transform group-hover:translate-x-0.5" />
+                                </button>
+                            )}
                         </div>
-                        <h1 className="text-3xl sm:text-5xl font-extrabold mb-3 leading-tight tracking-tight text-[var(--theme-fg)]">{artist.name}</h1>
+
+                        {/* Artist Title */}
+                        <h1 className="text-3xl sm:text-5xl font-extrabold mb-2 leading-tight tracking-tight text-[var(--theme-fg)]">{artist.name}</h1>
                         
-                        {genres.length > 0 && (
-                            <div className="flex flex-wrap justify-center md:justify-start gap-1.5 mb-4">
-                                {genres.map((g, idx) => (
-                                    <span key={idx} className="px-2.5 py-1 rounded-full bg-[var(--theme-card)] border border-[var(--theme-border)] text-[var(--theme-accent)] text-[10px] font-bold uppercase tracking-wider">
-                                        {g}
-                                    </span>
-                                ))}
-                            </div>
-                        )}
+                        {/* Minimalist Single-Line Metadata Row */}
+                        <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 text-xs font-semibold text-[var(--theme-muted)] mb-3">
+                            {artist.country && artist.country !== 'Global' ? (
+                                <span className="flex items-center gap-1">
+                                    <MapPin size={13} className="text-[var(--theme-accent)]" />
+                                    <span>{artist.area ? `${artist.area}, ` : ""}{artist.country}</span>
+                                </span>
+                            ) : artist.area ? (
+                                <span className="flex items-center gap-1">
+                                    <MapPin size={13} className="text-[var(--theme-accent)]" />
+                                    <span>{artist.area}</span>
+                                </span>
+                            ) : null}
 
-                        <div className="flex justify-center md:justify-start items-center gap-4 text-xs font-medium text-[var(--theme-muted)] mb-4 uppercase tracking-wider flex-wrap">
-                            <div className="flex items-center gap-1">
-                                <Award size={14} />
-                                <span>Country: {artist.country || 'Global'}</span>
-                            </div>
-                            <span>•</span>
-                            <div className="flex items-center gap-1">
-                                <Award size={14} />
-                                <span>Score: {artist.popularity || 85}</span>
-                            </div>
+                            {beginYear && (
+                                <>
+                                    <span className="text-[var(--theme-border)]">•</span>
+                                    <span className="flex items-center gap-1 font-mono">
+                                        <Calendar size={13} className="text-[var(--theme-accent)]" />
+                                        <span>
+                                            {isGroup
+                                                ? `Formed ${beginYear}${endYear ? ` · Disbanded ${endYear}` : ""}`
+                                                : `${beginYear}${endYear ? ` – ${endYear}` : " – Present"}`
+                                            }
+                                        </span>
+                                    </span>
+                                </>
+                            )}
+
+                            {genres.length > 0 && (
+                                <>
+                                    <span className="text-[var(--theme-border)]">•</span>
+                                    <span className="px-2.5 py-0.5 rounded-full bg-[var(--theme-accent)]/10 text-[var(--theme-accent)] text-[10px] font-bold uppercase tracking-wider border border-[var(--theme-accent)]/20">
+                                        {genres[0]}
+                                    </span>
+                                </>
+                            )}
                         </div>
 
-                        {/* Top Interactive User Rating & MusicBrainz Rating */}
+                        {/* Top Interactive User Rating & MusicBrainz Rating Capsule */}
                         <div className="flex items-center justify-center md:justify-start mb-3">
                             <UserRatingWidget
                                 id={artist.id || id}
@@ -313,52 +397,88 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
                         </div>
                     </div>
                     
-                    {/* Minimized Description before GrooveLink button */}
+                    {/* Editorial Bio Overview with Drawer Trigger */}
                     {artist.description && (
-                        <div className="mt-2 text-left">
+                        <div className="mt-1 text-center md:text-left">
                             <p className={`text-xs sm:text-sm text-[var(--theme-muted)] leading-relaxed font-body ${!expandedHeroDesc ? "line-clamp-2" : ""}`}>
                                 {artist.description}
                             </p>
-                            {artist.description.length > 120 && (
+                            <div className="flex items-center justify-center md:justify-start gap-3 mt-1">
+                                {artist.description.length > 120 && (
+                                    <button
+                                        onClick={() => setExpandedHeroDesc(!expandedHeroDesc)}
+                                        className="text-[11px] font-bold text-[var(--theme-accent)] hover:opacity-80 transition inline-flex items-center gap-1 cursor-pointer"
+                                    >
+                                        <span>{expandedHeroDesc ? "Show less" : "Read inline"}</span>
+                                    </button>
+                                )}
                                 <button
-                                    onClick={() => setExpandedHeroDesc(!expandedHeroDesc)}
-                                    className="mt-1 text-[11px] font-bold text-[var(--theme-accent)] hover:opacity-80 transition inline-flex items-center gap-1 cursor-pointer"
+                                    onClick={() => setIsDetailsDrawerOpen(true)}
+                                    className="text-[11px] font-bold text-[var(--theme-muted)] hover:text-[var(--theme-fg)] transition inline-flex items-center gap-1 cursor-pointer"
                                 >
-                                    <span>{expandedHeroDesc ? "Show less" : "Read full overview"}</span>
+                                    <Info size={11} />
+                                    <span>Full lore & facts</span>
                                 </button>
-                            )}
+                            </div>
                         </div>
                     )}
 
-                    {/* Action Controls Row: GrooveCard, Open GrooveLink, Bookmark */}
-                    <div className="mt-6 flex items-center justify-center md:justify-start gap-3 sm:gap-4 max-w-full">
+                    {/* Action Controls Row */}
+                    <div className="mt-5 flex flex-wrap items-center justify-center md:justify-start gap-2.5 sm:gap-3 max-w-full">
                         {/* Create GrooveCard Button */}
                         <button
                             onClick={() => setIsGrooveCardOpen(true)}
-                            className="w-12 h-12 rounded-full aspect-square shrink-0 bg-[var(--theme-card)]/80 hover:bg-[var(--theme-surface)] active:scale-95 text-[var(--theme-fg)] flex items-center justify-center transition-all duration-200 backdrop-blur-md cursor-pointer shadow-lg border border-[var(--theme-border)] group"
+                            className="w-11 h-11 sm:w-12 sm:h-12 rounded-full aspect-square shrink-0 bg-[var(--theme-card)]/80 hover:bg-[var(--theme-surface)] active:scale-95 text-[var(--theme-fg)] flex items-center justify-center transition-all duration-200 backdrop-blur-md cursor-pointer shadow-lg border border-[var(--theme-border)] group"
                             title="Create GrooveCard"
                         >
-                            <Sparkles size={20} className="text-[var(--theme-fg)] group-hover:text-[var(--theme-accent)] transition-colors" />
+                            <Sparkles size={19} className="text-[var(--theme-fg)] group-hover:text-[var(--theme-accent)] transition-colors" />
                         </button>
 
                         {/* Prominent Open GrooveLink Pill Button */}
                         <button
                             onClick={() => setIsGrooveLinkOpen(true)}
-                            className="h-12 px-6 sm:px-8 rounded-full bg-[var(--theme-accent)] hover:opacity-95 active:scale-95 text-[var(--theme-accent-fg)] font-black text-xs sm:text-sm tracking-wide flex items-center justify-center gap-2 transition-all duration-200 shadow-xl cursor-pointer shrink-0 whitespace-nowrap"
+                            className="h-11 sm:h-12 px-5 sm:px-7 rounded-full bg-[var(--theme-accent)] hover:opacity-95 active:scale-95 text-[var(--theme-accent-fg)] font-black text-xs sm:text-sm tracking-wide flex items-center justify-center gap-2 transition-all duration-200 shadow-xl cursor-pointer shrink-0 whitespace-nowrap"
                             title="Open GrooveLink"
                         >
-                            <img src="/in.svg" alt="GrooveLink" className="w-5 h-5 object-contain shrink-0" />
+                            <img src="/in.svg" alt="GrooveLink" className="w-4 h-4 sm:w-5 sm:h-5 object-contain shrink-0" />
                             <span className="whitespace-nowrap">Open GrooveLink</span>
                             <ChevronRight size={15} className="shrink-0" />
+                        </button>
+
+                        {/* Links Drawer Button */}
+                        <button
+                            type="button"
+                            onClick={() => setIsLinksDrawerOpen(true)}
+                            className="h-11 sm:h-12 px-4 sm:px-5 rounded-full bg-[var(--theme-card)]/80 hover:bg-[var(--theme-surface)] active:scale-95 text-[var(--theme-fg)] font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition backdrop-blur-md cursor-pointer border border-[var(--theme-border)] shadow-lg"
+                            title="All External Links & Streaming Services"
+                        >
+                            <Link2 size={16} className="text-[var(--theme-accent)]" />
+                            <span>Links</span>
+                            {externalLinks.length > 0 && (
+                                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-full bg-[var(--theme-accent)]/20 text-[var(--theme-accent)] font-bold">
+                                    {externalLinks.length}
+                                </span>
+                            )}
+                        </button>
+
+                        {/* Details Drawer Button */}
+                        <button
+                            type="button"
+                            onClick={() => setIsDetailsDrawerOpen(true)}
+                            className="h-11 sm:h-12 px-4 sm:px-5 rounded-full bg-[var(--theme-card)]/80 hover:bg-[var(--theme-surface)] active:scale-95 text-[var(--theme-fg)] font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition backdrop-blur-md cursor-pointer border border-[var(--theme-border)] shadow-lg"
+                            title={isGroup ? "Band Lineup & Lore" : "Artist Details & Bio"}
+                        >
+                            <Info size={16} className="text-[var(--theme-accent)]" />
+                            <span>{isGroup ? "Lineup & Bio" : "Details & Bio"}</span>
                         </button>
 
                         {/* Bookmark Button */}
                         <button
                             onClick={toggleSave}
-                            className="w-12 h-12 rounded-full aspect-square shrink-0 bg-[var(--theme-card)]/80 hover:bg-[var(--theme-surface)] active:scale-95 text-[var(--theme-fg)] flex items-center justify-center transition-all duration-200 backdrop-blur-md cursor-pointer shadow-lg border border-[var(--theme-border)]"
+                            className="w-11 h-11 sm:w-12 sm:h-12 rounded-full aspect-square shrink-0 bg-[var(--theme-card)]/80 hover:bg-[var(--theme-surface)] active:scale-95 text-[var(--theme-fg)] flex items-center justify-center transition-all duration-200 backdrop-blur-md cursor-pointer shadow-lg border border-[var(--theme-border)]"
                             title={saved ? "Remove from Library" : "Add to Library"}
                         >
-                            {saved ? <BookmarkCheck size={20} className="text-[var(--theme-accent)]" /> : <Bookmark size={20} />}
+                            {saved ? <BookmarkCheck size={19} className="text-[var(--theme-accent)]" /> : <Bookmark size={19} />}
                         </button>
                     </div>
                 </div>
@@ -718,6 +838,27 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
                     genres={selectedTrackForGrooveCard.genres || genres}
                 />
             )}
+
+            {/* Artist Links Drawer */}
+            <ArtistLinksDrawer
+                isOpen={isLinksDrawerOpen}
+                onClose={() => setIsLinksDrawerOpen(false)}
+                links={externalLinks}
+                artistName={artist.name}
+                artistPhoto={coverUrl}
+            />
+
+            {/* Artist Details & Lineup Drawer */}
+            <ArtistDetailsDrawer
+                isOpen={isDetailsDrawerOpen}
+                onClose={() => setIsDetailsDrawerOpen(false)}
+                artist={artist}
+                members={members}
+                bands={bands}
+                collaborations={collaborations}
+                description={artist.description}
+                isGroup={isGroup}
+            />
         </div>
     );
 }

@@ -670,53 +670,131 @@ export function parseExternalLinks(relations = [], { title = '', artist = '', ty
   const links = [];
   const seenUrls = new Set();
 
-  const addLink = (platform, label, url, category = 'streaming') => {
+  const addLink = (platform, label, url, category = 'streaming', handle = null) => {
     if (!url || seenUrls.has(url)) return;
     seenUrls.add(url);
-    links.push({ platform, label, url, category });
+    links.push({ platform, label, url, category, handle });
   };
 
-  // Map MusicBrainz URL relations
+  // Map MusicBrainz URL relations - includes EVERYTHING from open catalog
   for (const rel of relations || []) {
     const url = rel.url?.resource;
     const relType = (rel.type || '').toLowerCase();
     if (!url) continue;
 
-    if (url.includes('wikipedia.org')) {
-      addLink('wikipedia', 'Wikipedia', url, 'encyclopedia');
-    } else if (url.includes('wikidata.org')) {
-      addLink('wikidata', 'Wikidata', url, 'database');
-    } else if (url.includes('discogs.com')) {
-      addLink('discogs', 'Discogs', url, 'database');
-    } else if (url.includes('allmusic.com')) {
-      addLink('allmusic', 'AllMusic', url, 'review');
-    } else if (url.includes('last.fm')) {
-      addLink('lastfm', 'Last.fm', url, 'social');
-    } else if (url.includes('rateyourmusic.com')) {
-      addLink('rateyourmusic', 'RateYourMusic', url, 'review');
-    } else if (url.includes('genius.com') || relType.includes('lyrics')) {
-      addLink('genius', 'Genius Lyrics', url, 'lyrics');
-    } else if (url.includes('bbc.co.uk') || relType.includes('review')) {
-      addLink('bbc', 'BBC Review', url, 'review');
-    } else if (relType.includes('official') || relType === 'homepage') {
-      addLink('official', 'Official Website', url, 'official');
-    } else if (url.includes('spotify.com')) {
-      addLink('spotify', 'Spotify', url, 'streaming');
-    } else if (url.includes('apple.com')) {
-      addLink('applemusic', 'Apple Music', url, 'streaming');
+    let platform = 'web';
+    let label = rel.type || 'Web Link';
+    let category = 'other';
+    let handle = null;
+
+    if (url.includes('instagram.com')) {
+      platform = 'instagram'; label = 'Instagram'; category = 'social';
+      handle = '@' + (url.split('instagram.com/')[1]?.split('/')[0]?.replace('@', '') || '');
+    } else if (url.includes('twitter.com') || url.includes('x.com')) {
+      platform = 'twitter'; label = 'X (Twitter)'; category = 'social';
+      const rawUser = url.split('twitter.com/')[1] || url.split('x.com/')[1];
+      handle = '@' + (rawUser?.split('/')[0]?.replace('@', '') || '');
+    } else if (url.includes('threads.net')) {
+      platform = 'threads'; label = 'Threads'; category = 'social';
+      handle = '@' + (url.split('threads.net/')[1]?.split('/')[0]?.replace('@', '') || '');
+    } else if (url.includes('facebook.com')) {
+      platform = 'facebook'; label = 'Facebook'; category = 'social';
+      handle = url.split('facebook.com/')[1]?.split('/')[0] || null;
+    } else if (url.includes('tiktok.com')) {
+      platform = 'tiktok'; label = 'TikTok'; category = 'social';
+      handle = url.split('tiktok.com/')[1]?.split('/')[0] || null;
+    } else if (url.includes('music.youtube.com')) {
+      platform = 'youtubemusic'; label = 'YouTube Music'; category = 'streaming';
     } else if (url.includes('youtube.com') || url.includes('youtu.be')) {
-      addLink('youtube', 'YouTube', url, 'streaming');
+      platform = 'youtube'; label = 'YouTube'; category = 'streaming';
+    } else if (url.includes('spotify.com')) {
+      platform = 'spotify'; label = 'Spotify'; category = 'streaming';
+    } else if (url.includes('apple.com')) {
+      platform = 'applemusic'; label = 'Apple Music'; category = 'streaming';
+      const m = url.match(/apple\.com\/([a-z]{2})\//i);
+      if (m) label = `Apple Music (${m[1].toUpperCase()})`;
     } else if (url.includes('deezer.com')) {
-      addLink('deezer', 'Deezer', url, 'streaming');
+      platform = 'deezer'; label = 'Deezer'; category = 'streaming';
     } else if (url.includes('tidal.com')) {
-      addLink('tidal', 'TIDAL', url, 'streaming');
+      platform = 'tidal'; label = 'TIDAL'; category = 'streaming';
     } else if (url.includes('bandcamp.com')) {
-      addLink('bandcamp', 'Bandcamp', url, 'purchase');
+      platform = 'bandcamp'; label = 'Bandcamp'; category = 'purchase';
     } else if (url.includes('soundcloud.com')) {
-      addLink('soundcloud', 'SoundCloud', url, 'streaming');
+      platform = 'soundcloud'; label = 'SoundCloud'; category = 'streaming';
+    } else if (url.includes('amazon.')) {
+      platform = 'amazon'; label = 'Amazon Music'; category = 'streaming';
+      const am = url.match(/amazon\.([a-z.]+)\//i);
+      if (am && am[1] !== 'com') label = `Amazon Music (${am[1].toUpperCase()})`;
+    } else if (url.includes('discogs.com')) {
+      platform = 'discogs'; label = 'Discogs'; category = 'database';
+    } else if (url.includes('allmusic.com')) {
+      platform = 'allmusic'; label = 'AllMusic'; category = 'review';
+    } else if (url.includes('rateyourmusic.com')) {
+      platform = 'rateyourmusic'; label = 'RateYourMusic'; category = 'review';
+    } else if (url.includes('genius.com') || relType.includes('lyrics')) {
+      platform = 'genius'; label = 'Genius'; category = 'lyrics';
+    } else if (url.includes('musixmatch.com')) {
+      platform = 'musixmatch'; label = 'Musixmatch'; category = 'lyrics';
+    } else if (url.includes('bandsintown.com')) {
+      platform = 'bandsintown'; label = 'Bandsintown'; category = 'live';
     } else if (url.includes('songkick.com')) {
-      addLink('songkick', 'Songkick Live', url, 'live');
+      platform = 'songkick'; label = 'Songkick'; category = 'live';
+    } else if (url.includes('setlist.fm')) {
+      platform = 'setlistfm'; label = 'Setlist.fm'; category = 'live';
+    } else if (url.includes('livefans.jp')) {
+      platform = 'livefans'; label = 'LiveFans'; category = 'live';
+    } else if (url.includes('7digital.com')) {
+      platform = '7digital'; label = '7digital'; category = 'purchase';
+    } else if (url.includes('45cat.com')) {
+      platform = '45cat'; label = '45cat'; category = 'database';
+    } else if (url.includes('cdjapan.co.jp')) {
+      platform = 'cdjapan'; label = 'CDJapan'; category = 'purchase';
+    } else if (url.includes('bugs.co.kr')) {
+      platform = 'bugs'; label = 'Bugs!'; category = 'streaming';
+    } else if (url.includes('melon.com')) {
+      platform = 'melon'; label = 'Melon'; category = 'streaming';
+    } else if (url.includes('mora.jp')) {
+      platform = 'mora'; label = 'mora'; category = 'purchase';
+    } else if (url.includes('id.loc.gov')) {
+      platform = 'loc'; label = 'Library of Congress'; category = 'database';
+    } else if (url.includes('bnf.fr')) {
+      platform = 'bnf'; label = 'BnF Catalogue'; category = 'database';
+    } else if (url.includes('d-nb.info')) {
+      platform = 'dnb'; label = 'DNB'; category = 'database';
+    } else if (url.includes('imdb.com')) {
+      platform = 'imdb'; label = 'IMDb'; category = 'database';
+    } else if (url.includes('imvdb.com')) {
+      platform = 'imvdb'; label = 'IMVDb'; category = 'database';
+    } else if (url.includes('musicmoz.org')) {
+      platform = 'musicmoz'; label = 'MusicMoz'; category = 'database';
+    } else if (url.includes('musik-sammler.de')) {
+      platform = 'musiksammler'; label = 'Musik-Sammler'; category = 'database';
+    } else if (url.includes('muziekweb.nl')) {
+      platform = 'muziekweb'; label = 'Muziekweb'; category = 'database';
+    } else if (url.includes('secondhandsongs.com')) {
+      platform = 'secondhandsongs'; label = 'SecondHandSongs'; category = 'database';
+    } else if (url.includes('whosampled.com')) {
+      platform = 'whosampled'; label = 'WhoSampled'; category = 'database';
+    } else if (url.includes('wikipedia.org')) {
+      platform = 'wikipedia'; label = 'Wikipedia'; category = 'encyclopedia';
+    } else if (url.includes('wikidata.org')) {
+      platform = 'wikidata'; label = 'Wikidata'; category = 'database';
+    } else if (url.includes('last.fm')) {
+      platform = 'lastfm'; label = 'Last.fm'; category = 'social';
+    } else if (url.includes('bbc.co.uk') || relType.includes('review')) {
+      platform = 'bbc'; label = 'BBC Music'; category = 'review';
+    } else if (relType.includes('official') || relType === 'homepage') {
+      platform = 'official'; label = 'Official Homepage'; category = 'official';
+    } else {
+      // Gracefully preserve all other external links from MusicBrainz
+      try {
+        const u = new URL(url);
+        label = rel.type ? rel.type.split(/[\s-]+/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : u.hostname.replace(/^www\./, '');
+        category = relType.includes('purchase') || relType.includes('order') ? 'purchase' : relType.includes('stream') ? 'streaming' : relType.includes('social') ? 'social' : 'other';
+      } catch (_) {}
     }
+
+    addLink(platform, label, url, category, handle);
   }
 
   // Ensure major platforms are present via smart search if not in relations
@@ -993,9 +1071,9 @@ export async function fetchMusicBrainzArtistServer(id) {
 
   return getCachedOrInFlight(cacheKey, async () => {
     try {
-      // 1. Fetch artist core info
+      // 1. Fetch artist core info with both URL relations and Artist relations (lineups/members)
       const artistRes = await rateLimitedGet(`${MUSICBRAINZ_BASE}/artist/${id}`, {
-        inc: 'tags+genres+ratings+url-rels+annotation',
+        inc: 'tags+genres+ratings+url-rels+artist-rels+annotation',
       });
 
       const artistData = artistRes.data;
@@ -1020,13 +1098,62 @@ export async function fetchMusicBrainzArtistServer(id) {
           }
         : null;
 
-      // Parse external links
+      // Parse all external links comprehensively
       const externalLinks = parseExternalLinks(artistData.relations, {
         title: artistData.name,
         artist: artistData.name,
         type: 'artist',
         mbid: artistData.id,
       });
+
+      // Distinguish Group vs Solo Artist & parse member relationships
+      const artistType = artistData.type || 'Artist';
+      const isGroup = /group|band|orchestra|choir/i.test(artistType);
+
+      const ogMembers = [];
+      const currentMembers = [];
+      const pastMembers = [];
+      const supportingMusicians = [];
+      const memberBands = [];
+      const collaborations = [];
+
+      const seenMembers = new Set();
+      for (const rel of artistData.relations || []) {
+        if (rel['target-type'] === 'artist' && rel.artist) {
+          const relArtist = {
+            id: rel.artist.id,
+            name: rel.artist.name,
+            sortName: rel.artist['sort-name'],
+            disambiguation: rel.artist.disambiguation || null,
+            roles: rel.attributes || [],
+            begin: rel.begin || null,
+            end: rel.end || null,
+            ended: !!rel.ended,
+          };
+
+          const key = `${rel.type}_${rel.artist.id}`;
+          if (!seenMembers.has(key)) {
+            seenMembers.add(key);
+            if (rel.type === 'member of band') {
+              if (rel.direction === 'forward') {
+                // For a Solo Person: groups they were a member of
+                memberBands.push(relArtist);
+              } else {
+                // For a Group: individual members of the band
+                const isOg = (rel.attributes || []).some((a) => /original|founder/i.test(a));
+                const isPast = rel.ended || !!rel.end;
+                if (isOg) ogMembers.push(relArtist);
+                if (!isPast) currentMembers.push(relArtist);
+                else pastMembers.push(relArtist);
+              }
+            } else if (rel.type?.includes('supporting')) {
+              supportingMusicians.push(relArtist);
+            } else if (rel.type === 'collaboration' || rel.type?.includes('involved') || rel.type?.includes('tribute')) {
+              collaborations.push({ ...relArtist, relationType: rel.type });
+            }
+          }
+        }
+      }
 
       // 2. Concurrently fetch release-groups, photo, description, and Deezer top tracks!
       const fetchDeezerTracks = async () => {
@@ -1230,7 +1357,21 @@ export async function fetchMusicBrainzArtistServer(id) {
         name: artistData.name,
         title: artistData.name,
         country: artistData.country || 'Global',
-        type: artistData.type || 'Artist',
+        area: artistData.area?.name || null,
+        type: artistType,
+        isGroup: isGroup,
+        gender: artistData.gender || null,
+        lifeSpan: artistData['life-span'] || null,
+        disambiguation: artistData.disambiguation || null,
+        members: {
+          og: ogMembers,
+          current: currentMembers,
+          past: pastMembers,
+          supporting: supportingMusicians,
+          totalCount: currentMembers.length + pastMembers.length,
+        },
+        bands: memberBands,
+        collaborations: collaborations,
         genres: categorizedTags.genres.length > 0 ? categorizedTags.genres.map((g) => g.name) : sanitizeGenreTags(tags).slice(0, 6),
         primaryGenre: primaryGenre,
         categorizedTags: categorizedTags,

@@ -87,118 +87,62 @@ export default function UserRatingWidget({
     const mbVotes = musicbrainzRating?.votesCount || musicbrainzRating?.votes_count || null;
 
     if (!isLoaded) {
-        return null; // Don't flicker before reading localStorage
+        return null;
     }
 
-    if (compact) {
-        return (
-            <div className={`inline-flex items-center gap-2.5 flex-wrap ${className}`}>
-                {/* User Interactive Rating Stars */}
-                <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--theme-card)]/80 backdrop-blur-md border border-[var(--theme-border)] shadow-sm">
-                    <div className="flex items-center gap-0.5" onMouseLeave={() => setHoverRating(0)}>
-                        {[1, 2, 3, 4, 5].map((star) => {
-                            const isFilled = (hoverRating || userRating) >= star;
-                            return (
-                                <button
-                                    key={star}
-                                    type="button"
-                                    onMouseEnter={() => setHoverRating(star)}
-                                    onClick={() => handleRate(star)}
-                                    className="p-0.5 cursor-pointer transition-transform duration-150 hover:scale-125 focus:outline-none"
-                                    title={userRating === star ? "Click to clear rating" : `Rate ${star} star${star > 1 ? "s" : ""}`}
-                                >
-                                    <Star
-                                        size={14}
-                                        fill={isFilled ? "currentColor" : "none"}
-                                        className={`transition-colors duration-150 ${
-                                            isFilled 
-                                                ? "text-amber-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.5)]" 
-                                                : "text-zinc-600 hover:text-amber-300"
-                                        }`}
-                                    />
-                                </button>
-                            );
-                        })}
-                    </div>
-                    <span className="text-[11px] font-bold text-[var(--theme-fg)] select-none">
-                        {userRating > 0 ? (
-                            <span className="text-amber-400 font-black">{userRating}★</span>
-                        ) : (
-                            <span className="text-[var(--theme-muted)] font-medium">Rate</span>
-                        )}
-                    </span>
-                </div>
+    // Unified Minimalist & Playful Horizontal Capsule
+    return (
+        <div className={`inline-flex items-center gap-2 p-1.5 px-3 rounded-full bg-[var(--theme-card)]/80 backdrop-blur-xl border border-[var(--theme-border)] shadow-md select-none transition-all duration-200 hover:border-[var(--theme-accent)]/30 ${className}`}>
+            {/* Interactive User Rating Stars */}
+            <div className="flex items-center gap-0.5" onMouseLeave={() => setHoverRating(0)}>
+                {[1, 2, 3, 4, 5].map((star) => {
+                    const isFilled = (hoverRating || userRating) >= star;
+                    return (
+                        <button
+                            key={star}
+                            type="button"
+                            onMouseEnter={() => setHoverRating(star)}
+                            onClick={() => handleRate(star)}
+                            className="p-0.5 cursor-pointer transition-transform duration-150 hover:scale-130 active:scale-95 focus:outline-none"
+                            title={userRating === star ? "Click to clear rating" : `Rate ${star} star${star > 1 ? "s" : ""}`}
+                        >
+                            <Star
+                                size={compact ? 13 : 15}
+                                fill={isFilled ? "currentColor" : "none"}
+                                className={`transition-colors duration-150 ${
+                                    isFilled 
+                                        ? "text-amber-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.6)]" 
+                                        : "text-zinc-600 hover:text-amber-300"
+                                }`}
+                            />
+                        </button>
+                    );
+                })}
+            </div>
 
-                {/* MusicBrainz Community Score Badge */}
-                {showMusicbrainz && mbScore !== null && mbScore > 0 && (
+            {userRating > 0 ? (
+                <span className="text-[11px] font-black text-amber-400 font-mono tracking-tight">
+                    {userRating}★
+                </span>
+            ) : (
+                <span className="text-[10px] text-[var(--theme-muted)] font-medium">
+                    Rate
+                </span>
+            )}
+
+            {/* Subtle Divider & MusicBrainz Score */}
+            {showMusicbrainz && mbScore !== null && mbScore > 0 && (
+                <>
+                    <div className="w-[1px] h-3.5 bg-white/10 mx-0.5" />
                     <div 
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-[var(--theme-card)]/60 backdrop-blur-md border border-[var(--theme-border)] text-xs font-semibold text-[var(--theme-muted)] shadow-sm"
+                        className="inline-flex items-center gap-1 text-[11px] font-bold text-purple-400 cursor-help"
                         title={`MusicBrainz Community Rating: ${mbScore.toFixed(1)} / 5${mbVotes ? ` (${mbVotes} votes)` : ""}`}
                     >
-                        <Award size={13} className="text-purple-400 shrink-0" />
-                        <span className="text-[11px]">
-                            <strong className="text-[var(--theme-fg)]">MB:</strong> {mbScore.toFixed(1)}★
-                            {mbVotes && <span className="text-[10px] text-[var(--theme-muted)] ml-1">({mbVotes})</span>}
-                        </span>
+                        <Award size={13} className="shrink-0 text-purple-400" />
+                        <span>{mbScore.toFixed(1)}★</span>
+                        {mbVotes && <span className="text-[9px] text-[var(--theme-muted)] font-normal">({mbVotes})</span>}
                     </div>
-                )}
-            </div>
-        );
-    }
-
-    // Default Full Presentation (For Hero and Sections)
-    return (
-        <div className={`flex flex-col sm:flex-row items-center gap-2.5 sm:gap-3.5 ${className}`}>
-            {/* Interactive User Rating Pill */}
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[var(--theme-card)]/80 backdrop-blur-md border border-[var(--theme-border)] shadow-md hover:border-[var(--theme-accent)]/40 transition-colors">
-                <span className="text-xs font-semibold text-[var(--theme-muted)]">
-                    {userRating > 0 ? "Your Rating:" : "Rate:"}
-                </span>
-                <div className="flex items-center gap-1" onMouseLeave={() => setHoverRating(0)}>
-                    {[1, 2, 3, 4, 5].map((star) => {
-                        const isFilled = (hoverRating || userRating) >= star;
-                        return (
-                            <button
-                                key={star}
-                                type="button"
-                                onMouseEnter={() => setHoverRating(star)}
-                                onClick={() => handleRate(star)}
-                                className="p-0.5 cursor-pointer transition-transform duration-150 hover:scale-125 focus:outline-none"
-                                title={userRating === star ? "Click to remove rating" : `Rate ${star} star${star > 1 ? "s" : ""}`}
-                            >
-                                <Star
-                                    size={17}
-                                    fill={isFilled ? "currentColor" : "none"}
-                                    className={`transition-colors duration-150 ${
-                                        isFilled 
-                                            ? "text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.6)]" 
-                                            : "text-zinc-600 hover:text-amber-300"
-                                    }`}
-                                />
-                            </button>
-                        );
-                    })}
-                </div>
-                {userRating > 0 && (
-                    <span className="text-xs font-black text-amber-400 flex items-center gap-1 select-none">
-                        <span>{userRating}/5</span>
-                        <Check size={12} className="text-emerald-400" />
-                    </span>
-                )}
-            </div>
-
-            {/* MusicBrainz Rating Pill */}
-            {showMusicbrainz && mbScore !== null && mbScore > 0 && (
-                <div 
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--theme-card)]/70 backdrop-blur-md border border-[var(--theme-border)] text-xs font-semibold text-[var(--theme-muted)] shadow-md"
-                    title={`MusicBrainz Community Rating: ${mbScore.toFixed(1)} / 5${mbVotes ? ` (${mbVotes} votes)` : ""}`}
-                >
-                    <Award size={14} className="text-purple-400 shrink-0" />
-                    <span>
-                        <strong className="text-[var(--theme-fg)]">MusicBrainz:</strong> {mbScore.toFixed(1)} / 5
-                        {mbVotes && <span className="text-[10px] text-[var(--theme-muted)] ml-1">({mbVotes} votes)</span>}
-                    </span>
-                </div>
+                </>
             )}
         </div>
     );
