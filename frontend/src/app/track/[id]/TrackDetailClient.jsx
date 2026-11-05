@@ -21,6 +21,7 @@ import GrooveLinkModal from "@/Components/GrooveLinkModal";
 import GrooveCardComposer from "@/Components/GrooveCardComposer";
 import MusicLoreAndReviews from "@/Components/MusicLoreAndReviews";
 import RatingPieChart from "@/Components/RatingPieChart";
+import UserRatingWidget from "@/Components/UserRatingWidget";
 import GrooveLoader from "@/Components/GrooveLoader";
 import { toast } from "@/lib/toast";
 import { shareLink } from "@/lib/shareHelper";
@@ -363,6 +364,15 @@ export default function TrackDetailClient({ id, initialData }) {
                     {displayGenre ? `${displayGenre} · ` : ""}{releaseYear || "Track"}
                     {formattedDuration && ` · ${formattedDuration}`}
                 </p>
+
+                {/* Top Interactive User Rating & MusicBrainz Rating Widget */}
+                <div className="mt-3.5 flex items-center justify-center">
+                    <UserRatingWidget
+                        id={track.id || id}
+                        type="track"
+                        musicbrainzRating={track.rating}
+                    />
+                </div>
 
                 {/* Centered Action Controls Row: GrooveCard, Open GrooveLink, Add to Playlist, Bookmark, QR */}
                 <div className="mt-6 flex items-center justify-center gap-3 sm:gap-4 max-w-full flex-wrap">

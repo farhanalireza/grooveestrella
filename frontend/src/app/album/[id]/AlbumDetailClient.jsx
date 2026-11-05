@@ -18,6 +18,7 @@ import GrooveCardComposer from "@/Components/GrooveCardComposer";
 import AlbumEditionsDrawer from "@/Components/AlbumEditionsDrawer";
 import MusicLoreAndReviews from "@/Components/MusicLoreAndReviews";
 import RatingPieChart from "@/Components/RatingPieChart";
+import UserRatingWidget from "@/Components/UserRatingWidget";
 import GrooveLoader from "@/Components/GrooveLoader";
 import { toast } from "@/lib/toast";
 import { shareLink } from "@/lib/shareHelper";
@@ -521,27 +522,47 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
                     ))}
                 </div>
 
-                {/* Sleek Metadata Pills Row */}
+                {/* Line 1: Release Year & Primary Genre */}
                 <div className="mt-2.5 flex items-center justify-center gap-2 flex-wrap text-xs font-semibold text-[var(--theme-muted)]">
+                    {releaseYear && (
+                        <span className="px-3 py-0.5 rounded-full bg-[var(--theme-card)]/80 border border-[var(--theme-border)] text-[var(--theme-fg)]/90 shadow-sm">
+                            {releaseYear}
+                        </span>
+                    )}
                     {displayGenre && (
-                        <span className="px-2.5 py-0.5 rounded-full bg-[var(--theme-card)]/80 border border-[var(--theme-border)] text-[var(--theme-fg)]/90 shadow-sm">
+                        <span className="px-3 py-0.5 rounded-full bg-[var(--theme-card)]/80 border border-[var(--theme-border)] text-[var(--theme-accent)] font-semibold shadow-sm">
                             {displayGenre}
                         </span>
                     )}
-                    <span className="px-2.5 py-0.5 rounded-full bg-[var(--theme-card)]/80 border border-[var(--theme-border)] text-[var(--theme-fg)]/90 shadow-sm">
-                        {releaseYear || "Album"}
-                    </span>
-                    {formattedTotalTime && (
-                        <span className="px-2.5 py-0.5 rounded-full bg-[var(--theme-card)]/80 border border-[var(--theme-border)] text-[var(--theme-fg)]/90 shadow-sm flex items-center gap-1">
-                            <Clock size={11} className="text-[var(--theme-accent)]" />
-                            <span>{tracks.length} songs · {formattedTotalTime}</span>
-                        </span>
-                    )}
-                    {trackSections.length > 1 && (
-                        <span className="px-2.5 py-0.5 rounded-full bg-[var(--theme-card)]/80 border border-[var(--theme-border)] text-[var(--theme-accent)] font-bold shadow-sm">
-                            {trackSections.length} Discs
-                        </span>
-                    )}
+                </div>
+
+                {/* Line 2: Independent Tracks Count + Duration line */}
+                {(tracks.length > 0 || formattedTotalTime) && (
+                    <div className="mt-1.5 flex items-center justify-center gap-2 text-xs font-medium text-[var(--theme-muted)]">
+                        <Clock size={12} className="text-[var(--theme-accent)] shrink-0" />
+                        <span>{tracks.length} {tracks.length === 1 ? 'song' : 'songs'}</span>
+                        {formattedTotalTime && (
+                            <>
+                                <span>•</span>
+                                <span>{formattedTotalTime}</span>
+                            </>
+                        )}
+                        {trackSections.length > 1 && (
+                            <>
+                                <span>•</span>
+                                <span className="text-[var(--theme-accent)] font-semibold">{trackSections.length} Discs</span>
+                            </>
+                        )}
+                    </div>
+                )}
+
+                {/* Top Interactive User Rating & MusicBrainz Rating Widget */}
+                <div className="mt-3.5 flex items-center justify-center">
+                    <UserRatingWidget
+                        id={album.id || id}
+                        type="album"
+                        musicbrainzRating={album.rating}
+                    />
                 </div>
 
                 {/* Editions & Pressings Trigger Pill */}

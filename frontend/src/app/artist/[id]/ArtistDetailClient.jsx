@@ -18,6 +18,7 @@ import GrooveLinkModal from "@/Components/GrooveLinkModal";
 import GrooveCardComposer from "@/Components/GrooveCardComposer";
 import MusicLoreAndReviews from "@/Components/MusicLoreAndReviews";
 import RatingPieChart from "@/Components/RatingPieChart";
+import UserRatingWidget from "@/Components/UserRatingWidget";
 import GrooveLoader from "@/Components/GrooveLoader";
 import { toast } from "@/lib/toast";
 import { shareLink } from "@/lib/shareHelper";
@@ -302,9 +303,13 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
                             </div>
                         </div>
 
-                        {/* Rating Pie Chart */}
-                        <div className="flex items-center justify-center md:justify-start mb-1">
-                            <RatingPieChart rating={artist.rating} />
+                        {/* Top Interactive User Rating & MusicBrainz Rating */}
+                        <div className="flex items-center justify-center md:justify-start mb-3">
+                            <UserRatingWidget
+                                id={artist.id || id}
+                                type="artist"
+                                musicbrainzRating={artist.rating}
+                            />
                         </div>
                     </div>
                     

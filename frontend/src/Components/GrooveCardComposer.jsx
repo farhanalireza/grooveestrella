@@ -35,6 +35,8 @@ import {
     Music,
     Columns,
     Maximize2,
+    Clock,
+    Hash,
     Image as ImageIcon
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
@@ -259,11 +261,6 @@ const CARD_TYPES = {
         label: 'Classic Artwork',
         desc: 'Square cover artwork focus with clean metadata',
     },
-    tracklist: {
-        id: 'tracklist',
-        label: 'Full Tracklist Edition',
-        desc: 'Complete album/playlist tracklist with single or double column layout',
-    },
     scannable_qr: {
         id: 'scannable_qr',
         label: 'Scannable QR Focus',
@@ -284,6 +281,53 @@ const QR_COLORS = [
     { label: 'Rose', hex: 'ec4899', class: 'bg-rose-500 border-transparent' },
     { label: 'Amber', hex: 'f59e0b', class: 'bg-amber-500 border-transparent' }
 ];
+
+// ─── Modern Polished Toggle Switch Component ────────────────────────────────
+function ToggleSwitch({ checked, onChange, label, description, icon, disabled = false }) {
+    return (
+        <button
+            type="button"
+            role="switch"
+            aria-checked={checked}
+            disabled={disabled}
+            onClick={() => !disabled && onChange(!checked)}
+            className={`flex items-center justify-between w-full py-2 px-2.5 rounded-xl transition-all text-left group select-none ${
+                disabled ? 'opacity-40 cursor-not-allowed' : 'hover:bg-white/5 cursor-pointer active:scale-[0.99]'
+            }`}
+        >
+            <div className="flex items-center gap-2.5 min-w-0 pr-3">
+                {icon && (
+                    <span className={`shrink-0 transition-colors ${checked ? 'text-[var(--theme-accent,#E8A87C)]' : 'text-white/40 group-hover:text-white/70'}`}>
+                        {icon}
+                    </span>
+                )}
+                <div className="min-w-0">
+                    <span className="text-xs text-white/90 font-medium block truncate group-hover:text-white transition-colors">
+                        {label}
+                    </span>
+                    {description && (
+                        <span className="text-[10px] text-white/40 block truncate">
+                            {description}
+                        </span>
+                    )}
+                </div>
+            </div>
+            <div
+                className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors duration-200 ease-in-out border ${
+                    checked 
+                        ? 'bg-[var(--theme-accent,#E8A87C)] border-[var(--theme-accent,#E8A87C)]' 
+                        : 'bg-white/10 border-white/15 group-hover:border-white/25'
+                }`}
+            >
+                <span
+                    className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow-sm transition-transform duration-200 ease-in-out ${
+                        checked ? 'translate-x-4.5 bg-black' : 'translate-x-0.5'
+                    }`}
+                />
+            </div>
+        </button>
+    );
+}
 
 // ─── Custom Color Picker Component ──────────────────────────────────────────
 function ColorPicker({ value, onChange, label }) {
@@ -497,7 +541,8 @@ export default function GrooveCardComposer({
     
     // Core design & style presets
     const [designStyle, setDesignStyle] = useState('modern'); // 'modern' | 'library' | 'vinyl' | 'museum' | 'cassette' | 'ticket'
-    const [cardType, setCardType] = useState('standard'); // 'standard' | 'tracklist' | 'scannable_qr' | 'mini_poster'
+    const [cardType, setCardType] = useState('standard'); // 'standard' | 'scannable_qr' | 'mini_poster'
+    const [showTracklist, setShowTracklist] = useState(false); // Controls tracklist display on card
     
     // Background and color states
     const [cardTheme, setCardTheme] = useState('obsidian'); // key of THEMES or 'solid'
@@ -1136,17 +1181,17 @@ export default function GrooveCardComposer({
                             { id: 'designs', label: 'Designs', icon: <Layers size={13} /> },
                             { id: 'formats', label: 'Formats', icon: <Maximize2 size={13} /> },
                             { id: 'elements', label: 'Elements', icon: <Sliders size={13} /> },
+                            { id: 'tracks', label: 'Tracks', icon: <ListMusic size={13} /> },
                             { id: 'colors', label: 'Colors', icon: <Palette size={13} /> },
-                            { id: 'tracklist', label: 'Tracklist', icon: <ListMusic size={13} /> },
                             { id: 'annotation', label: 'Note', icon: <MessageSquare size={13} /> },
                             { id: 'layout', label: 'Align & QR', icon: <AlignLeft size={13} /> },
                         ].map(t => (
                             <button
                                 key={t.id}
                                 type="button"
-                                onClick={() => { setActiveTab(t.id); if (t.id === 'tracklist') setCardType('tracklist'); }}
+                                onClick={() => setActiveTab(t.id)}
                                 className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer whitespace-nowrap ${
-                                    activeTab === t.id 
+                                    activeTab === t.id || (t.id === 'tracks' && activeTab === 'tracklist')
                                         ? 'bg-white/15 text-white shadow-sm border border-white/10' 
                                         : 'text-white/50 hover:text-white/80'
                                 }`}
@@ -1197,7 +1242,7 @@ export default function GrooveCardComposer({
                             <div className="space-y-4">
                                 <div>
                                     <h3 className="text-xs font-bold uppercase tracking-wider text-white/50">Card Content Format</h3>
-                                    <p className="text-[11px] text-white/40 mt-0.5">Choose classic artwork, full tracklist, or big scannable QR</p>
+                                    <p className="text-[11px] text-white/40 mt-0.5">Select visual presentation: Classic Artwork, QR Focus, or Mini Poster</p>
                                 </div>
                                 <div className="space-y-2">
                                     {Object.values(CARD_TYPES).map(cType => {
@@ -1222,36 +1267,6 @@ export default function GrooveCardComposer({
                                         );
                                     })}
                                 </div>
-
-                                {cardType === 'tracklist' && (
-                                    <div className="space-y-2 pt-2 border-t border-white/10">
-                                        <label className="text-xs font-bold text-white/70">Tracklist Cover Art Presentation</label>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <button
-                                                type="button"
-                                                onClick={() => setTracklistArtMode('square_top')}
-                                                className={`p-2 rounded-xl border text-xs font-semibold text-center transition cursor-pointer ${
-                                                    tracklistArtMode === 'square_top'
-                                                        ? 'bg-white text-black font-bold border-white'
-                                                        : 'bg-white/5 text-white/60 border-white/10 hover:text-white'
-                                                }`}
-                                            >
-                                                Square Art Above Tracks
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => setTracklistArtMode('compact_header')}
-                                                className={`p-2 rounded-xl border text-xs font-semibold text-center transition cursor-pointer ${
-                                                    tracklistArtMode === 'compact_header'
-                                                        ? 'bg-white text-black font-bold border-white'
-                                                        : 'bg-white/5 text-white/60 border-white/10 hover:text-white'
-                                                }`}
-                                            >
-                                                Compact Header Banner
-                                            </button>
-                                        </div>
-                                    </div>
-                                )}
                             </div>
                         )}
 
@@ -1264,44 +1279,22 @@ export default function GrooveCardComposer({
                                 </div>
 
                                 {/* Core Element Toggles */}
-                                <div className="space-y-1.5 p-3 bg-white/5 rounded-2xl border border-white/10">
-                                    <span className="text-[10px] font-bold uppercase tracking-wider text-white/40 block mb-1">Core Info Toggles</span>
-                                    
-                                    <label className="flex items-center justify-between py-1.5 cursor-pointer">
-                                        <span className="text-xs text-white/80 font-medium">Square Cover Artwork</span>
-                                        <input type="checkbox" checked={showCoverArt} onChange={e => setShowCoverArt(e.target.checked)} className="accent-[var(--theme-accent,#E8A87C)] w-4 h-4 cursor-pointer" />
-                                    </label>
-
-                                    <label className="flex items-center justify-between py-1.5 cursor-pointer border-t border-white/5">
-                                        <span className="text-xs text-white/80 font-medium">Song / Album Title</span>
-                                        <input type="checkbox" checked={showTitle} onChange={e => setShowTitle(e.target.checked)} className="accent-[var(--theme-accent,#E8A87C)] w-4 h-4 cursor-pointer" />
-                                    </label>
-
-                                    <label className="flex items-center justify-between py-1.5 cursor-pointer border-t border-white/5">
-                                        <span className="text-xs text-white/80 font-medium">Artist Name</span>
-                                        <input type="checkbox" checked={showArtist} onChange={e => setShowArtist(e.target.checked)} className="accent-[var(--theme-accent,#E8A87C)] w-4 h-4 cursor-pointer" />
-                                    </label>
-
-                                    <label className="flex items-center justify-between py-1.5 cursor-pointer border-t border-white/5">
-                                        <span className="text-xs text-white/80 font-medium">Album Subtitle</span>
-                                        <input type="checkbox" checked={showAlbum} onChange={e => setShowAlbum(e.target.checked)} className="accent-[var(--theme-accent,#E8A87C)] w-4 h-4 cursor-pointer" />
-                                    </label>
-
-                                    <label className="flex items-center justify-between py-1.5 cursor-pointer border-t border-white/5">
-                                        <span className="text-xs text-white/80 font-medium">Header Groove Logo & Indicator</span>
-                                        <input type="checkbox" checked={showHeaderLogo} onChange={e => setShowHeaderLogo(e.target.checked)} className="accent-[var(--theme-accent,#E8A87C)] w-4 h-4 cursor-pointer" />
-                                    </label>
+                                <div className="space-y-1 p-2 bg-white/5 rounded-2xl border border-white/10">
+                                    <span className="text-[10px] font-bold uppercase tracking-wider text-white/40 block px-2.5 pt-1.5 pb-1">Core Info Toggles</span>
+                                    <ToggleSwitch checked={showCoverArt} onChange={setShowCoverArt} label="Square Cover Artwork" icon={<ImageIcon size={13} />} />
+                                    <ToggleSwitch checked={showTitle} onChange={setShowTitle} label="Song / Album Title" icon={<Type size={13} />} />
+                                    <ToggleSwitch checked={showArtist} onChange={setShowArtist} label="Artist Name" icon={<Music size={13} />} />
+                                    <ToggleSwitch checked={showAlbum} onChange={setShowAlbum} label="Album Subtitle" icon={<Disc size={13} />} />
+                                    <ToggleSwitch checked={showHeaderLogo} onChange={setShowHeaderLogo} label="Header Groove Logo & Indicator" icon={<Sparkles size={13} />} />
                                 </div>
 
                                 {/* Release Date Settings */}
-                                <div className="p-3 bg-white/5 rounded-2xl border border-white/10 space-y-2.5">
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-xs font-bold text-white/90">Release Date</span>
-                                        <input type="checkbox" checked={showReleaseDate} onChange={e => setShowReleaseDate(e.target.checked)} className="accent-[var(--theme-accent,#E8A87C)] w-4 h-4 cursor-pointer" />
-                                    </div>
+                                <div className="p-2.5 bg-white/5 rounded-2xl border border-white/10 space-y-2">
+                                    <ToggleSwitch checked={showReleaseDate} onChange={setShowReleaseDate} label="Release Date" icon={<Calendar size={13} />} />
                                     {showReleaseDate && (
-                                        <>
-                                            <div className="grid grid-cols-3 gap-1 pt-1 border-t border-white/10">
+                                        <div className="space-y-2 pt-2 border-t border-white/10 px-1">
+                                            <span className="text-[10px] text-white/40 font-semibold uppercase tracking-wider block">Date Format</span>
+                                            <div className="grid grid-cols-3 gap-1">
                                                 {['year', 'monthYear', 'full'].map(m => (
                                                     <button
                                                         key={m}
@@ -1315,6 +1308,7 @@ export default function GrooveCardComposer({
                                                     </button>
                                                 ))}
                                             </div>
+                                            <span className="text-[10px] text-white/40 font-semibold uppercase tracking-wider block pt-1">Placement</span>
                                             <div className="grid grid-cols-3 gap-1">
                                                 {[
                                                     { id: 'inline', label: 'In Metadata' },
@@ -1333,19 +1327,17 @@ export default function GrooveCardComposer({
                                                     </button>
                                                 ))}
                                             </div>
-                                        </>
+                                        </div>
                                     )}
                                 </div>
 
                                 {/* Genre Tags Settings */}
-                                <div className="p-3 bg-white/5 rounded-2xl border border-white/10 space-y-2.5">
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-xs font-bold text-white/90">Genre Tags</span>
-                                        <input type="checkbox" checked={showGenres} onChange={e => setShowGenres(e.target.checked)} className="accent-[var(--theme-accent,#E8A87C)] w-4 h-4 cursor-pointer" />
-                                    </div>
+                                <div className="p-2.5 bg-white/5 rounded-2xl border border-white/10 space-y-2">
+                                    <ToggleSwitch checked={showGenres} onChange={setShowGenres} label="Genre Tags" icon={<Tag size={13} />} />
                                     {showGenres && (
-                                        <>
-                                            <div className="grid grid-cols-3 gap-1 pt-1 border-t border-white/10">
+                                        <div className="space-y-2 pt-2 border-t border-white/10 px-1">
+                                            <span className="text-[10px] text-white/40 font-semibold uppercase tracking-wider block">Placement</span>
+                                            <div className="grid grid-cols-3 gap-1">
                                                 {[
                                                     { id: 'below_artist', label: 'Below Artist' },
                                                     { id: 'top_header', label: 'Top Header' },
@@ -1364,52 +1356,53 @@ export default function GrooveCardComposer({
                                                 ))}
                                             </div>
                                             {allGenres.length > 1 && (
-                                                <div className="pt-1 border-t border-white/10 space-y-1.5">
+                                                <div className="pt-1.5 border-t border-white/10 space-y-1.5">
                                                     <span className="text-[10px] font-semibold text-white/40 uppercase tracking-wider block">Which genres to show</span>
                                                     <div className="flex flex-wrap gap-1.5">
-                                                        {allGenres.map(g => (
-                                                            <button
-                                                                key={g}
-                                                                type="button"
-                                                                onClick={() => {
-                                                                    setSelectedGenres(prev =>
-                                                                        prev.includes(g) ? prev.filter(x => x !== g) : [...prev, g]
-                                                                    );
-                                                                }}
-                                                                className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border transition cursor-pointer ${
-                                                                    selectedGenres.length === 0 || selectedGenres.includes(g)
-                                                                        ? 'bg-white text-black border-white'
-                                                                        : 'bg-white/5 text-white/50 border-white/10'
-                                                                }`}
-                                                            >
-                                                                {g}
-                                                            </button>
-                                                        ))}
+                                                        {allGenres.map(g => {
+                                                            const isIncluded = selectedGenres.length === 0 || selectedGenres.includes(g);
+                                                            return (
+                                                                <button
+                                                                    key={g}
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        setSelectedGenres(prev =>
+                                                                            prev.includes(g) ? prev.filter(x => x !== g) : [...prev, g]
+                                                                        );
+                                                                    }}
+                                                                    className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border transition cursor-pointer ${
+                                                                        isIncluded
+                                                                            ? 'bg-white text-black border-white'
+                                                                            : 'bg-white/5 text-white/50 border-white/10 hover:border-white/20'
+                                                                    }`}
+                                                                >
+                                                                    {g}
+                                                                </button>
+                                                            );
+                                                        })}
                                                         {selectedGenres.length > 0 && (
                                                             <button
                                                                 type="button"
                                                                 onClick={() => setSelectedGenres([])}
                                                                 className="px-2 py-0.5 rounded-full text-[10px] text-white/40 border border-white/10 transition cursor-pointer hover:text-white/70"
                                                             >
-                                                                All
+                                                                Show All
                                                             </button>
                                                         )}
                                                     </div>
                                                 </div>
                                             )}
-                                        </>
+                                        </div>
                                     )}
                                 </div>
 
                                 {/* Ratings Display Settings */}
-                                <div className="p-3 bg-white/5 rounded-2xl border border-white/10 space-y-2.5">
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-xs font-bold text-white/90">Music Rating</span>
-                                        <input type="checkbox" checked={showRating} onChange={e => setShowRating(e.target.checked)} className="accent-[var(--theme-accent,#E8A87C)] w-4 h-4 cursor-pointer" />
-                                    </div>
+                                <div className="p-2.5 bg-white/5 rounded-2xl border border-white/10 space-y-2">
+                                    <ToggleSwitch checked={showRating} onChange={setShowRating} label="Music Rating" icon={<Star size={13} />} />
                                     {showRating && (
-                                        <>
-                                            <div className="grid grid-cols-3 gap-1 pt-1 border-t border-white/10">
+                                        <div className="space-y-2 pt-2 border-t border-white/10 px-1">
+                                            <span className="text-[10px] text-white/40 font-semibold uppercase tracking-wider block">Placement</span>
+                                            <div className="grid grid-cols-3 gap-1">
                                                 {[
                                                     { id: 'corner', label: 'Corner Pie' },
                                                     { id: 'header', label: 'Header Pill' },
@@ -1427,7 +1420,7 @@ export default function GrooveCardComposer({
                                                     </button>
                                                 ))}
                                             </div>
-                                            <div className="pt-1 border-t border-white/10 space-y-1.5">
+                                            <div className="pt-1.5 border-t border-white/10 space-y-1.5">
                                                 <span className="text-[10px] font-semibold text-white/40 uppercase tracking-wider block">Rating Source</span>
                                                 <div className="grid grid-cols-3 gap-1">
                                                     {[
@@ -1464,21 +1457,15 @@ export default function GrooveCardComposer({
                                                     </div>
                                                 )}
                                             </div>
-                                        </>
+                                        </div>
                                     )}
                                 </div>
 
                                 {/* Audio Durations & Discs Info */}
-                                <div className="space-y-1.5 p-3 bg-white/5 rounded-2xl border border-white/10">
-                                    <span className="text-[10px] font-bold uppercase tracking-wider text-white/40 block mb-1">Audio Specs</span>
-                                    <label className="flex items-center justify-between py-1.5 cursor-pointer">
-                                        <span className="text-xs text-white/80 font-medium">Show Duration</span>
-                                        <input type="checkbox" checked={showDuration} onChange={e => setShowDuration(e.target.checked)} className="accent-[var(--theme-accent,#E8A87C)] w-4 h-4 cursor-pointer" />
-                                    </label>
-                                    <label className="flex items-center justify-between py-1.5 cursor-pointer border-t border-white/5">
-                                        <span className="text-xs text-white/80 font-medium">Show Discs & Tracks Count</span>
-                                        <input type="checkbox" checked={showDiscs} onChange={e => setShowDiscs(e.target.checked)} className="accent-[var(--theme-accent,#E8A87C)] w-4 h-4 cursor-pointer" />
-                                    </label>
+                                <div className="space-y-1 p-2 bg-white/5 rounded-2xl border border-white/10">
+                                    <span className="text-[10px] font-bold uppercase tracking-wider text-white/40 block px-2.5 pt-1.5 pb-1">Audio Specs</span>
+                                    <ToggleSwitch checked={showDuration} onChange={setShowDuration} label="Show Duration" icon={<Clock size={13} />} />
+                                    <ToggleSwitch checked={showDiscs} onChange={setShowDiscs} label="Show Discs & Tracks Count" icon={<Disc3 size={13} />} />
                                 </div>
                             </div>
                         )}
@@ -1650,45 +1637,130 @@ export default function GrooveCardComposer({
                             </div>
                         )}
 
-                        {/* TAB 5: FULL TRACKLIST SETTINGS */}
-                        {activeTab === 'tracklist' && (
+                        {/* TAB 5: TRACKS & FULL TRACKLIST SETTINGS */}
+                        {(activeTab === 'tracks' || activeTab === 'tracklist') && (
                             <div className="space-y-4">
                                 <div>
-                                    <h3 className="text-xs font-bold uppercase tracking-wider text-white/50">Full Tracklist Configuration</h3>
-                                    <p className="text-[11px] text-white/40 mt-0.5">Showing all {fullTracksList.length} tracks on the card</p>
+                                    <h3 className="text-xs font-bold uppercase tracking-wider text-white/50">Tracks & Tracklist</h3>
+                                    <p className="text-[11px] text-white/40 mt-0.5">Control tracklist layout, presentation, and audio metadata on the card</p>
                                 </div>
 
-                                <div className="space-y-2">
-                                    <label className="text-xs font-bold text-white/70">Columns Layout</label>
-                                    <div className="grid grid-cols-3 gap-2">
-                                        {[
-                                            { id: 'auto', label: 'Auto' },
-                                            { id: '1', label: '1 Column' },
-                                            { id: '2', label: '2 Columns' },
-                                        ].map(col => (
+                                {/* Master Switch: Show Tracklist on Card */}
+                                <div className="p-3 bg-white/5 rounded-2xl border border-white/10">
+                                    <ToggleSwitch
+                                        checked={showTracklist}
+                                        onChange={setShowTracklist}
+                                        label="Show Tracklist on Card"
+                                        description={`Display complete tracklist (${fullTracksList.length} tracks)`}
+                                        icon={<ListMusic size={15} />}
+                                    />
+                                </div>
+
+                                {/* All Tracklist Configuration Options */}
+                                <div className="space-y-3.5">
+                                    {/* Cover Art Presentation */}
+                                    <div className="p-3 bg-white/5 rounded-2xl border border-white/10 space-y-2.5">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-xs font-bold text-white/90">Tracklist Cover Art Presentation</span>
+                                            <span className="text-[10px] text-white/40 font-medium">Layout</span>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-2">
                                             <button
-                                                key={col.id}
                                                 type="button"
-                                                onClick={() => setTracklistColumns(col.id)}
-                                                className={`py-2 px-3 rounded-xl border text-xs font-bold transition cursor-pointer text-center ${
-                                                    tracklistColumns === col.id ? 'bg-white text-black font-bold border-white' : 'bg-white/5 text-white/60 border-white/10 hover:text-white'
+                                                onClick={() => {
+                                                    setTracklistArtMode('compact_header');
+                                                    if (!showTracklist) setShowTracklist(true);
+                                                }}
+                                                className={`p-2.5 rounded-xl border text-left transition cursor-pointer flex flex-col justify-between gap-1.5 ${
+                                                    tracklistArtMode === 'compact_header'
+                                                        ? 'bg-white/15 border-[var(--theme-accent,#E8A87C)] ring-1 ring-[var(--theme-accent,#E8A87C)]'
+                                                        : 'bg-white/5 border-white/10 hover:bg-white/10'
                                                 }`}
                                             >
-                                                {col.label}
+                                                <span className="text-xs font-bold text-white">Compact Header Banner</span>
+                                                <span className="text-[10px] text-white/50 leading-relaxed">Mini art beside title. Gives maximum room for tracks.</span>
                                             </button>
-                                        ))}
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setTracklistArtMode('square_top');
+                                                    if (!showTracklist) setShowTracklist(true);
+                                                }}
+                                                className={`p-2.5 rounded-xl border text-left transition cursor-pointer flex flex-col justify-between gap-1.5 ${
+                                                    tracklistArtMode === 'square_top'
+                                                        ? 'bg-white/15 border-[var(--theme-accent,#E8A87C)] ring-1 ring-[var(--theme-accent,#E8A87C)]'
+                                                        : 'bg-white/5 border-white/10 hover:bg-white/10'
+                                                }`}
+                                            >
+                                                <span className="text-xs font-bold text-white">Square Art Above Tracks</span>
+                                                <span className="text-[10px] text-white/50 leading-relaxed">Full square cover art placed right above tracklist.</span>
+                                            </button>
+                                        </div>
                                     </div>
-                                </div>
 
-                                <div className="space-y-1.5 p-3 bg-white/5 rounded-2xl border border-white/10">
-                                    <label className="flex items-center justify-between py-1.5 cursor-pointer">
-                                        <span className="text-xs text-white/80 font-medium">Show Track Durations</span>
-                                        <input type="checkbox" checked={showTrackDurations} onChange={e => setShowTrackDurations(e.target.checked)} className="accent-[var(--theme-accent,#E8A87C)] w-4 h-4 cursor-pointer" />
-                                    </label>
-                                    <label className="flex items-center justify-between py-1.5 cursor-pointer border-t border-white/5">
-                                        <span className="text-xs text-white/80 font-medium">Show Track Numbers</span>
-                                        <input type="checkbox" checked={showTrackNumbers} onChange={e => setShowTrackNumbers(e.target.checked)} className="accent-[var(--theme-accent,#E8A87C)] w-4 h-4 cursor-pointer" />
-                                    </label>
+                                    {/* Columns Layout */}
+                                    <div className="p-3 bg-white/5 rounded-2xl border border-white/10 space-y-2">
+                                        <span className="text-xs font-bold text-white/90 block">Columns Layout</span>
+                                        <div className="grid grid-cols-3 gap-2">
+                                            {[
+                                                { id: 'auto', label: 'Auto' },
+                                                { id: '1', label: '1 Column' },
+                                                { id: '2', label: '2 Columns' },
+                                            ].map(col => (
+                                                <button
+                                                    key={col.id}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setTracklistColumns(col.id);
+                                                        if (!showTracklist) setShowTracklist(true);
+                                                    }}
+                                                    className={`py-2 px-3 rounded-xl border text-xs font-bold transition cursor-pointer text-center ${
+                                                        tracklistColumns === col.id 
+                                                            ? 'bg-white text-black font-bold border-white' 
+                                                            : 'bg-white/5 text-white/60 border-white/10 hover:text-white'
+                                                    }`}
+                                                >
+                                                    {col.label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Track Detail Toggles */}
+                                    <div className="space-y-1 p-2 bg-white/5 rounded-2xl border border-white/10">
+                                        <span className="text-[10px] font-bold uppercase tracking-wider text-white/40 block px-2.5 pt-1.5 pb-1">Track Detail Elements</span>
+                                        <ToggleSwitch
+                                            checked={showTrackDurations}
+                                            onChange={(val) => {
+                                                setShowTrackDurations(val);
+                                                if (!showTracklist) setShowTracklist(true);
+                                            }}
+                                            label="Show Track Durations"
+                                            description="Display audio duration MM:SS"
+                                            icon={<Clock size={13} />}
+                                        />
+                                        <ToggleSwitch
+                                            checked={showTrackNumbers}
+                                            onChange={(val) => {
+                                                setShowTrackNumbers(val);
+                                                if (!showTracklist) setShowTracklist(true);
+                                            }}
+                                            label="Show Track Numbers"
+                                            description="Display numbering prefix 01, 02..."
+                                            icon={<Hash size={13} />}
+                                        />
+                                    </div>
+
+                                    {/* Summary Status Chip */}
+                                    <div className="p-3 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between text-xs text-white/60">
+                                        <div className="flex items-center gap-2">
+                                            <ListMusic size={14} className="text-[var(--theme-accent,#E8A87C)]" />
+                                            <span>{fullTracksList.length} Tracks ready</span>
+                                        </div>
+                                        <span className="text-[10px] text-white/40 font-mono">
+                                            {useTwoColumns ? '2-Column Mode' : 'Single Column'}
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
                         )}
@@ -1701,15 +1773,15 @@ export default function GrooveCardComposer({
                                     <p className="text-[11px] text-white/40 mt-0.5">Type your own personal note, memory, quote, or review snippet</p>
                                 </div>
 
-                                <label className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition cursor-pointer">
-                                    <span className="text-xs font-bold text-white/90">Display Annotation on Card</span>
-                                    <input
-                                        type="checkbox"
+                                <div className="p-3 rounded-2xl bg-white/5 border border-white/10">
+                                    <ToggleSwitch
                                         checked={showAnnotation}
-                                        onChange={(e) => setShowAnnotation(e.target.checked)}
-                                        className="w-4 h-4 accent-[var(--theme-accent,#E8A87C)] cursor-pointer"
+                                        onChange={setShowAnnotation}
+                                        label="Display Annotation on Card"
+                                        description="Add a personalized memory or review badge"
+                                        icon={<MessageSquare size={14} />}
                                     />
-                                </label>
+                                </div>
 
                                 {showAnnotation && (
                                     <div className="space-y-3">
@@ -1941,7 +2013,7 @@ export default function GrooveCardComposer({
                         className={`relative w-full max-w-[320px] xs:max-w-[340px] sm:max-w-[360px] my-auto p-4 sm:p-5 rounded-2xl flex flex-col justify-between shadow-2xl border transition-colors duration-200 select-none overflow-hidden ${
                             designStyle === 'library' ? 'font-mono' : designStyle === 'museum' ? 'tracking-wide' : 'font-sans'
                         } ${
-                            cardType === 'tracklist' ? 'h-auto min-h-0' : 'h-auto min-h-[480px] sm:min-h-[500px]'
+                            (showTracklist || cardType === 'tracklist') ? 'h-auto min-h-0' : 'h-auto min-h-[480px] sm:min-h-[500px]'
                         }`}
                     >
                         {/* Film Grain Texture Overlay */}
@@ -2054,7 +2126,7 @@ export default function GrooveCardComposer({
                                     <div className="relative z-10 w-full aspect-[4/3] rounded-xl overflow-hidden shadow-lg border border-white/10 bg-black/40 mb-3">
                                         <img src={imageUrl || "/placeholder.jpg"} alt={title} className="w-full h-full object-cover" crossOrigin="anonymous" />
                                     </div>
-                                ) : cardType === 'tracklist' && tracklistArtMode === 'compact_header' ? (
+                                ) : (showTracklist || cardType === 'tracklist') && tracklistArtMode === 'compact_header' ? (
                                     <div className="relative z-10 w-full flex items-center gap-3 p-2.5 rounded-xl bg-white/5 border border-white/10 mb-3">
                                         <div className="w-14 h-14 aspect-square rounded-lg overflow-hidden shrink-0 border border-white/10 bg-black/30">
                                             <img src={imageUrl || "/placeholder.jpg"} alt={title} className="w-full h-full object-cover" crossOrigin="anonymous" />
@@ -2092,14 +2164,14 @@ export default function GrooveCardComposer({
                         {showAnnotation && annotationPlacement === 'under_art' && renderAnnotation()}
 
                         {/* BOTTOM TITLE POSITION (Default Classic) */}
-                        {titlePlacement === 'bottom' && !(cardType === 'tracklist' && tracklistArtMode === 'compact_header') && (
+                        {titlePlacement === 'bottom' && !((showTracklist || cardType === 'tracklist') && tracklistArtMode === 'compact_header') && (
                             <div className="relative z-10 mb-3">
                                 {renderTitleBlock()}
                             </div>
                         )}
 
                         {/* FULL TRACKLIST SECTION (Includes all tracks, 1 or 2 columns, free height) */}
-                        {cardType === 'tracklist' && (
+                        {(showTracklist || cardType === 'tracklist') && (
                             <div className="relative z-10 w-full mb-3 space-y-1.5">
                                 <div className="flex justify-between items-center text-[8px] font-bold uppercase tracking-wider pb-1 border-b" style={{ borderColor: textColors.faint, color: textColors.muted }}>
                                     <span>TRACKLIST ({fullTracksList.length} TRACKS)</span>
@@ -2336,30 +2408,21 @@ export default function GrooveCardComposer({
                             {activeTab === 'elements' && (
                                 <div className="space-y-3">
                                     {/* Core toggles */}
-                                    <div className="space-y-1 p-3 bg-white/5 rounded-2xl border border-white/10">
-                                        <span className="text-[10px] font-bold uppercase tracking-wider text-white/40 block mb-1">Core Elements</span>
-                                        {[
-                                            { label: 'Cover Artwork', val: showCoverArt, set: setShowCoverArt },
-                                            { label: 'Song / Album Title', val: showTitle, set: setShowTitle },
-                                            { label: 'Artist Name', val: showArtist, set: setShowArtist },
-                                            { label: 'Album Subtitle', val: showAlbum, set: setShowAlbum },
-                                            { label: 'Header Logo', val: showHeaderLogo, set: setShowHeaderLogo },
-                                        ].map((el, i) => (
-                                            <label key={el.label} className={`flex items-center justify-between py-1.5 cursor-pointer ${i > 0 ? 'border-t border-white/5' : ''}`}>
-                                                <span className="text-xs text-white/80 font-medium">{el.label}</span>
-                                                <input type="checkbox" checked={el.val} onChange={e => el.set(e.target.checked)} className="accent-[var(--theme-accent,#E8A87C)] w-4 h-4 cursor-pointer" />
-                                            </label>
-                                        ))}
+                                    <div className="space-y-1 p-2 bg-white/5 rounded-2xl border border-white/10">
+                                        <span className="text-[10px] font-bold uppercase tracking-wider text-white/40 block px-2 pt-1 pb-0.5">Core Elements</span>
+                                        <ToggleSwitch checked={showCoverArt} onChange={setShowCoverArt} label="Cover Artwork" icon={<ImageIcon size={13} />} />
+                                        <ToggleSwitch checked={showTitle} onChange={setShowTitle} label="Song / Album Title" icon={<Type size={13} />} />
+                                        <ToggleSwitch checked={showArtist} onChange={setShowArtist} label="Artist Name" icon={<Music size={13} />} />
+                                        <ToggleSwitch checked={showAlbum} onChange={setShowAlbum} label="Album Subtitle" icon={<Disc size={13} />} />
+                                        <ToggleSwitch checked={showHeaderLogo} onChange={setShowHeaderLogo} label="Header Logo" icon={<Sparkles size={13} />} />
                                     </div>
+
                                     {/* Release Date */}
-                                    <div className="p-3 bg-white/5 rounded-2xl border border-white/10 space-y-2">
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-xs font-bold text-white/90">Release Date</span>
-                                            <input type="checkbox" checked={showReleaseDate} onChange={e => setShowReleaseDate(e.target.checked)} className="accent-[var(--theme-accent,#E8A87C)] w-4 h-4 cursor-pointer" />
-                                        </div>
+                                    <div className="p-2.5 bg-white/5 rounded-2xl border border-white/10 space-y-2">
+                                        <ToggleSwitch checked={showReleaseDate} onChange={setShowReleaseDate} label="Release Date" icon={<Calendar size={13} />} />
                                         {showReleaseDate && (
-                                            <>
-                                                <div className="grid grid-cols-3 gap-1 pt-1 border-t border-white/10">
+                                            <div className="space-y-2 pt-1.5 border-t border-white/10 px-1">
+                                                <div className="grid grid-cols-3 gap-1">
                                                     {['year', 'monthYear', 'full'].map(m => (
                                                         <button key={m} type="button" onClick={() => setDateMode(m)}
                                                             className={`py-1 text-[10px] font-semibold rounded-lg transition cursor-pointer text-center ${dateMode === m ? 'bg-white text-black font-bold shadow' : 'bg-white/5 text-white/60 hover:text-white'}`}>
@@ -2375,18 +2438,16 @@ export default function GrooveCardComposer({
                                                         </button>
                                                     ))}
                                                 </div>
-                                            </>
+                                            </div>
                                         )}
                                     </div>
+
                                     {/* Genres */}
-                                    <div className="p-3 bg-white/5 rounded-2xl border border-white/10 space-y-2">
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-xs font-bold text-white/90">Genre Tags</span>
-                                            <input type="checkbox" checked={showGenres} onChange={e => setShowGenres(e.target.checked)} className="accent-[var(--theme-accent,#E8A87C)] w-4 h-4 cursor-pointer" />
-                                        </div>
+                                    <div className="p-2.5 bg-white/5 rounded-2xl border border-white/10 space-y-2">
+                                        <ToggleSwitch checked={showGenres} onChange={setShowGenres} label="Genre Tags" icon={<Tag size={13} />} />
                                         {showGenres && (
-                                            <>
-                                                <div className="grid grid-cols-3 gap-1 pt-1 border-t border-white/10">
+                                            <div className="space-y-2 pt-1.5 border-t border-white/10 px-1">
+                                                <div className="grid grid-cols-3 gap-1">
                                                     {[{id:'below_artist',label:'Below Artist'},{id:'top_header',label:'Top Header'},{id:'footer',label:'Footer'}].map(gp => (
                                                         <button key={gp.id} type="button" onClick={() => setGenresPlacement(gp.id)}
                                                             className={`py-1 text-[10px] font-semibold rounded-lg transition cursor-pointer text-center ${genresPlacement === gp.id ? 'bg-white text-black font-bold shadow' : 'bg-white/5 text-white/60 hover:text-white'}`}>
@@ -2411,18 +2472,16 @@ export default function GrooveCardComposer({
                                                         </div>
                                                     </div>
                                                 )}
-                                            </>
+                                            </div>
                                         )}
                                     </div>
+
                                     {/* Rating */}
-                                    <div className="p-3 bg-white/5 rounded-2xl border border-white/10 space-y-2">
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-xs font-bold text-white/90">Music Rating</span>
-                                            <input type="checkbox" checked={showRating} onChange={e => setShowRating(e.target.checked)} className="accent-[var(--theme-accent,#E8A87C)] w-4 h-4 cursor-pointer" />
-                                        </div>
+                                    <div className="p-2.5 bg-white/5 rounded-2xl border border-white/10 space-y-2">
+                                        <ToggleSwitch checked={showRating} onChange={setShowRating} label="Music Rating" icon={<Star size={13} />} />
                                         {showRating && (
-                                            <>
-                                                <div className="grid grid-cols-3 gap-1 pt-1 border-t border-white/10">
+                                            <div className="space-y-2 pt-1.5 border-t border-white/10 px-1">
+                                                <div className="grid grid-cols-3 gap-1">
                                                     {[{id:'corner',label:'Corner Pie'},{id:'header',label:'Header Pill'},{id:'inline',label:'Inline Star'}].map(rp => (
                                                         <button key={rp.id} type="button" onClick={() => setRatingPlacement(rp.id)}
                                                             className={`py-1 text-[10px] font-semibold rounded-lg transition cursor-pointer text-center ${ratingPlacement === rp.id ? 'bg-white text-black font-bold shadow' : 'bg-white/5 text-white/60 hover:text-white'}`}>
@@ -2441,28 +2500,22 @@ export default function GrooveCardComposer({
                                                         ))}
                                                     </div>
                                                     {ratingSource === 'custom' && (
-                                                        <div className="flex items-center gap-2">
+                                                        <div className="flex items-center gap-2 pt-1">
                                                             <input type="range" min={1} max={10} step={0.1} value={customRating} onChange={e => setCustomRating(Number(e.target.value))}
                                                                 className="flex-1 h-1.5 rounded-full appearance-none cursor-pointer bg-white/15 accent-[var(--theme-accent,#E8A87C)]" />
                                                             <span className="text-xs font-bold min-w-[28px] text-right" style={{ color: customRating >= 8 ? '#10B981' : customRating >= 5 ? '#F59E0B' : '#EF4444' }}>{customRating.toFixed(1)}</span>
                                                         </div>
                                                     )}
                                                 </div>
-                                            </>
+                                            </div>
                                         )}
                                     </div>
+
                                     {/* Duration + Discs */}
-                                    <div className="space-y-1 p-3 bg-white/5 rounded-2xl border border-white/10">
-                                        <span className="text-[10px] font-bold uppercase tracking-wider text-white/40 block mb-1">Audio Specs</span>
-                                        {[
-                                            { label: 'Show Duration', val: showDuration, set: setShowDuration },
-                                            { label: 'Discs & Track Count', val: showDiscs, set: setShowDiscs },
-                                        ].map((el, i) => (
-                                            <label key={el.label} className={`flex items-center justify-between py-1.5 cursor-pointer ${i > 0 ? 'border-t border-white/5' : ''}`}>
-                                                <span className="text-xs text-white/80 font-medium">{el.label}</span>
-                                                <input type="checkbox" checked={el.val} onChange={e => el.set(e.target.checked)} className="accent-[var(--theme-accent,#E8A87C)] w-4 h-4 cursor-pointer" />
-                                            </label>
-                                        ))}
+                                    <div className="space-y-1 p-2 bg-white/5 rounded-2xl border border-white/10">
+                                        <span className="text-[10px] font-bold uppercase tracking-wider text-white/40 block px-2 pt-1 pb-0.5">Audio Specs</span>
+                                        <ToggleSwitch checked={showDuration} onChange={setShowDuration} label="Show Duration" icon={<Clock size={13} />} />
+                                        <ToggleSwitch checked={showDiscs} onChange={setShowDiscs} label="Discs & Track Count" icon={<Disc3 size={13} />} />
                                     </div>
                                 </div>
                             )}
@@ -2533,53 +2586,116 @@ export default function GrooveCardComposer({
                                 </div>
                             )}
 
-                            {/* TRACKLIST TAB */}
-                            {activeTab === 'tracklist' && (
+                            {/* TRACKS TAB */}
+                            {(activeTab === 'tracks' || activeTab === 'tracklist') && (
                                 <div className="space-y-3">
-                                    <div className="flex items-center justify-between">
-                                        <p className="text-[10px] font-bold uppercase tracking-wider text-white/40">Tracklist — {fullTracksList.length} tracks</p>
-                                        {cardType !== 'tracklist' && (
-                                            <button type="button" onClick={() => setCardType('tracklist')}
-                                                className="px-2.5 py-1 rounded-full bg-[var(--theme-accent,#E8A87C)] text-black text-[10px] font-bold cursor-pointer">
-                                                Enable Format
-                                            </button>
-                                        )}
+                                    {/* Master Switch: Show Tracklist on Card */}
+                                    <div className="p-2.5 bg-white/5 rounded-2xl border border-white/10">
+                                        <ToggleSwitch
+                                            checked={showTracklist}
+                                            onChange={setShowTracklist}
+                                            label="Show Tracklist on Card"
+                                            description={`${fullTracksList.length} tracks available`}
+                                            icon={<ListMusic size={14} />}
+                                        />
                                     </div>
-                                    {/* Art mode */}
-                                    <div className="space-y-1.5">
-                                        <label className="text-xs font-bold text-white/70">Artwork Mode</label>
+
+                                    {/* Tracklist Cover Art Presentation */}
+                                    <div className="p-2.5 bg-white/5 rounded-2xl border border-white/10 space-y-2">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-xs font-bold text-white/90">Cover Art Presentation</span>
+                                            <span className="text-[10px] text-white/40">Layout</span>
+                                        </div>
                                         <div className="grid grid-cols-2 gap-2">
-                                            {[{id:'square_top',label:'Square Above Tracks'},{id:'compact_header',label:'Compact Header'}].map(am => (
-                                                <button key={am.id} type="button" onClick={() => setTracklistArtMode(am.id)}
-                                                    className={`p-2 rounded-xl border text-xs font-semibold text-center transition cursor-pointer ${tracklistArtMode === am.id ? 'bg-white text-black font-bold border-white' : 'bg-white/5 text-white/60 border-white/10 hover:text-white'}`}>
-                                                    {am.label}
-                                                </button>
-                                            ))}
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setTracklistArtMode('compact_header');
+                                                    if (!showTracklist) setShowTracklist(true);
+                                                }}
+                                                className={`p-2.5 rounded-xl border text-left transition cursor-pointer flex flex-col justify-between gap-1 ${
+                                                    tracklistArtMode === 'compact_header'
+                                                        ? 'bg-white/15 border-[var(--theme-accent,#E8A87C)] ring-1 ring-[var(--theme-accent,#E8A87C)]'
+                                                        : 'bg-white/5 border-white/10'
+                                                }`}
+                                            >
+                                                <span className="text-xs font-bold text-white">Compact Header</span>
+                                                <span className="text-[9px] text-white/50">Header banner + mini art</span>
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setTracklistArtMode('square_top');
+                                                    if (!showTracklist) setShowTracklist(true);
+                                                }}
+                                                className={`p-2.5 rounded-xl border text-left transition cursor-pointer flex flex-col justify-between gap-1 ${
+                                                    tracklistArtMode === 'square_top'
+                                                        ? 'bg-white/15 border-[var(--theme-accent,#E8A87C)] ring-1 ring-[var(--theme-accent,#E8A87C)]'
+                                                        : 'bg-white/5 border-white/10'
+                                                }`}
+                                            >
+                                                <span className="text-xs font-bold text-white">Square Art Above</span>
+                                                <span className="text-[9px] text-white/50">Full cover art on top</span>
+                                            </button>
                                         </div>
                                     </div>
-                                    {/* Columns */}
-                                    <div className="space-y-1.5">
-                                        <label className="text-xs font-bold text-white/70">Column Layout</label>
+
+                                    {/* Columns Layout */}
+                                    <div className="p-2.5 bg-white/5 rounded-2xl border border-white/10 space-y-2">
+                                        <span className="text-xs font-bold text-white/90 block">Columns Layout</span>
                                         <div className="grid grid-cols-3 gap-2">
                                             {[{id:'auto',label:'Auto'},{id:'1',label:'1 Column'},{id:'2',label:'2 Columns'}].map(col => (
-                                                <button key={col.id} type="button" onClick={() => setTracklistColumns(col.id)}
-                                                    className={`py-2 px-3 rounded-xl border text-xs font-bold transition cursor-pointer text-center ${tracklistColumns === col.id ? 'bg-white text-black font-bold border-white' : 'bg-white/5 text-white/60 border-white/10 hover:text-white'}`}>
+                                                <button
+                                                    key={col.id}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setTracklistColumns(col.id);
+                                                        if (!showTracklist) setShowTracklist(true);
+                                                    }}
+                                                    className={`py-2 px-3 rounded-xl border text-xs font-bold transition cursor-pointer text-center ${
+                                                        tracklistColumns === col.id 
+                                                            ? 'bg-white text-black font-bold border-white' 
+                                                            : 'bg-white/5 text-white/60 border-white/10 hover:text-white'
+                                                    }`}
+                                                >
                                                     {col.label}
                                                 </button>
                                             ))}
                                         </div>
                                     </div>
-                                    {/* Track display options */}
-                                    <div className="space-y-1 p-3 bg-white/5 rounded-2xl border border-white/10">
-                                        {[
-                                            { label: 'Show Track Durations', val: showTrackDurations, set: setShowTrackDurations },
-                                            { label: 'Show Track Numbers', val: showTrackNumbers, set: setShowTrackNumbers },
-                                        ].map((el, i) => (
-                                            <label key={el.label} className={`flex items-center justify-between py-1.5 cursor-pointer ${i > 0 ? 'border-t border-white/5' : ''}`}>
-                                                <span className="text-xs text-white/80 font-medium">{el.label}</span>
-                                                <input type="checkbox" checked={el.val} onChange={e => el.set(e.target.checked)} className="accent-[var(--theme-accent,#E8A87C)] w-4 h-4 cursor-pointer" />
-                                            </label>
-                                        ))}
+
+                                    {/* Track detail toggles */}
+                                    <div className="space-y-1 p-2 bg-white/5 rounded-2xl border border-white/10">
+                                        <span className="text-[10px] font-bold uppercase tracking-wider text-white/40 block px-2 pt-1 pb-0.5">Track Items</span>
+                                        <ToggleSwitch
+                                            checked={showTrackDurations}
+                                            onChange={(val) => {
+                                                setShowTrackDurations(val);
+                                                if (!showTracklist) setShowTracklist(true);
+                                            }}
+                                            label="Show Track Durations"
+                                            icon={<Clock size={13} />}
+                                        />
+                                        <ToggleSwitch
+                                            checked={showTrackNumbers}
+                                            onChange={(val) => {
+                                                setShowTrackNumbers(val);
+                                                if (!showTracklist) setShowTracklist(true);
+                                            }}
+                                            label="Show Track Numbers"
+                                            icon={<Hash size={13} />}
+                                        />
+                                    </div>
+
+                                    {/* Status chip */}
+                                    <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between text-xs text-white/60">
+                                        <div className="flex items-center gap-1.5">
+                                            <ListMusic size={13} className="text-[var(--theme-accent,#E8A87C)]" />
+                                            <span>{fullTracksList.length} Tracks ready</span>
+                                        </div>
+                                        <span className="text-[10px] text-white/40 font-mono">
+                                            {useTwoColumns ? '2-Cols' : '1-Col'}
+                                        </span>
                                     </div>
                                 </div>
                             )}
@@ -2587,10 +2703,15 @@ export default function GrooveCardComposer({
                             {/* ANNOTATION TAB */}
                             {activeTab === 'annotation' && (
                                 <div className="space-y-3">
-                                    <label className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/10 cursor-pointer">
-                                        <span className="text-xs font-bold text-white/90">Show Note on Card</span>
-                                        <input type="checkbox" checked={showAnnotation} onChange={e => setShowAnnotation(e.target.checked)} className="w-4 h-4 accent-[var(--theme-accent,#E8A87C)] cursor-pointer" />
-                                    </label>
+                                    <div className="p-2.5 rounded-2xl bg-white/5 border border-white/10">
+                                        <ToggleSwitch
+                                            checked={showAnnotation}
+                                            onChange={setShowAnnotation}
+                                            label="Show Note on Card"
+                                            description="Add personalized note or quote"
+                                            icon={<MessageSquare size={13} />}
+                                        />
+                                    </div>
                                     {showAnnotation && (
                                         <>
                                             <div>
@@ -2724,22 +2845,21 @@ export default function GrooveCardComposer({
                         { id: 'designs', label: 'Designs', icon: <Layers size={16} /> },
                         { id: 'formats', label: 'Formats', icon: <Maximize2 size={16} /> },
                         { id: 'elements', label: 'Elements', icon: <Sliders size={16} /> },
+                        { id: 'tracks', label: 'Tracks', icon: <ListMusic size={16} /> },
                         { id: 'colors', label: 'Colors', icon: <Palette size={16} /> },
-                        { id: 'tracklist', label: 'Tracks', icon: <ListMusic size={16} /> },
                         { id: 'annotation', label: 'Note', icon: <MessageSquare size={16} /> },
                         { id: 'layout', label: 'Layout', icon: <AlignLeft size={16} /> },
                     ].map(tab => {
-                        const isActive = activeTab === tab.id && mobileSheetOpen;
+                        const isActive = (activeTab === tab.id || (tab.id === 'tracks' && activeTab === 'tracklist')) && mobileSheetOpen;
                         return (
                             <button
                                 key={tab.id}
                                 type="button"
                                 onClick={() => {
-                                    if (activeTab === tab.id && mobileSheetOpen) {
+                                    if ((activeTab === tab.id || (tab.id === 'tracks' && activeTab === 'tracklist')) && mobileSheetOpen) {
                                         setMobileSheetOpen(false);
                                     } else {
                                         setActiveTab(tab.id);
-                                        if (tab.id === 'tracklist') setCardType('tracklist');
                                         setMobileSheetOpen(true);
                                     }
                                 }}
