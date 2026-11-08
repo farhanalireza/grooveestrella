@@ -263,14 +263,15 @@ export default function PlaylistDetailClient({ id, initialPlaylist }) {
             <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
                 {ambientCoverUrl ? (
                     <div 
-                        className="absolute inset-0 bg-cover bg-center scale-110 blur-2xl opacity-75 dark:opacity-60 saturate-150 contrast-110 transition-all duration-700"
+                        className="absolute inset-0 bg-cover bg-center scale-110 blur-3xl opacity-35 dark:opacity-30 saturate-150 contrast-110 transition-all duration-700"
                         style={{ backgroundImage: `url(${ambientCoverUrl})` }}
                     />
                 ) : (
                     <div className="absolute inset-0 bg-gradient-to-br from-[#E8A87C]/25 via-[#C38D9E]/20 to-[#41B3A3]/20 blur-3xl opacity-60" />
                 )}
-                <div className="absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-black/25 via-transparent to-transparent" />
-                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[var(--theme-bg)]/50 to-[var(--theme-bg)]" />
+                <div className="absolute inset-x-0 top-0 h-64 bg-gradient-to-b from-black/60 via-black/30 to-transparent" />
+                <div className="absolute inset-0 bg-black/55 dark:bg-black/65" />
+                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[var(--theme-bg)]/80 to-[var(--theme-bg)]" />
             </div>
 
             {/* Top Bar for Mobile (compact pill with blurred bg, back button, logo + wordmark, and share) */}
@@ -407,9 +408,9 @@ export default function PlaylistDetailClient({ id, initialPlaylist }) {
                         {playlist.description.length > 80 && (
                             <button
                                 onClick={() => setExpandedHeroDesc(!expandedHeroDesc)}
-                                className="font-black text-white hover:underline uppercase text-xs ml-1 tracking-wider cursor-pointer inline"
+                                className="font-bold text-white hover:underline text-xs ml-1.5 cursor-pointer inline"
                             >
-                                {expandedHeroDesc ? "LESS" : "MORE"}
+                                {expandedHeroDesc ? "Show less" : "Read more"}
                             </button>
                         )}
                     </div>

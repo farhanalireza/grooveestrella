@@ -2,7 +2,6 @@
 "use client";
 
 import { useState, useEffect, useTransition } from "react";
-import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { MoreVertical, Bookmark, BookmarkCheck, Share2, Copy } from "lucide-react";
 import {
@@ -38,6 +37,14 @@ export const ArtistCard = ({
       startTransition(() => {
         router.push(`/artist/${id}`);
       });
+    }
+  };
+
+  const handlePrefetch = () => {
+    if (id) {
+      try {
+        router.prefetch(`/artist/${id}`);
+      } catch (_) {}
     }
   };
 
@@ -94,7 +101,7 @@ export const ArtistCard = ({
         <DropdownMenuTrigger asChild>
           <button
             type="button"
-            className="p-1 rounded-lg hover:bg-[var(--theme-surface)] text-[var(--theme-muted)] hover:text-[var(--theme-fg)] transition-colors cursor-pointer active:scale-95"
+            className="p-1.5 rounded-lg hover:bg-[var(--theme-surface)] text-[var(--theme-muted)] hover:text-[var(--theme-fg)] transition-colors cursor-pointer active:scale-95"
             title="Artist Actions"
           >
             <MoreVertical size={15} />
@@ -136,13 +143,11 @@ export const ArtistCard = ({
     <>
       {/* Mobile List Row (active on mobile unless layout is 'grid') */}
       {!isAlwaysGrid && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          whileTap={{ scale: 0.98 }}
+        <div
+          onMouseEnter={handlePrefetch}
+          onTouchStart={handlePrefetch}
           onClick={handleCardClick}
-          className={`${isAlwaysList ? "flex" : "flex md:hidden"} items-center justify-between gap-3 p-2.5 sm:p-3 rounded-2xl bg-[var(--theme-card)]/80 backdrop-blur-xl border border-[var(--theme-border)] hover:border-[var(--theme-accent)]/40 hover:bg-[var(--theme-surface)] transition-all duration-300 w-full select-none shadow-md ${isPending ? 'opacity-70 pointer-events-none cursor-wait' : 'cursor-pointer'} ${className}`}
+          className={`${isAlwaysList ? "flex" : "flex md:hidden"} items-center justify-between gap-3 p-2.5 sm:p-3 rounded-2xl bg-[var(--theme-card)]/90 border border-[var(--theme-border)] hover:border-[var(--theme-accent)]/50 hover:bg-[var(--theme-card)] transition-all duration-200 active:scale-[0.98] w-full select-none shadow-xs hover:shadow-md ${isPending ? 'opacity-70 pointer-events-none cursor-wait' : 'cursor-pointer'} ${className}`}
         >
           <div className="flex items-center gap-3 min-w-0">
             <div className="relative w-12 h-12 rounded-full overflow-hidden bg-[var(--theme-surface)] ring-1 ring-[var(--theme-border)] shrink-0">
@@ -160,53 +165,60 @@ export const ArtistCard = ({
                 </div>
               )}
             </div>
-            <h3 className="text-sm font-bold text-[var(--theme-fg)] truncate hover:text-[var(--theme-accent)] transition-colors" title={artistName}>
-              {artistName}
-            </h3>
+            <div className="min-w-0 flex flex-col justify-center">
+              <h3 className="text-sm font-bold text-[var(--theme-fg)] truncate hover:text-[var(--theme-accent)] transition-colors" title={artistName}>
+                {artistName}
+              </h3>
+              <p className="text-xs text-[var(--theme-muted)] truncate mt-0.5">
+                Artist
+              </p>
+            </div>
           </div>
           {renderDropdown()}
-        </motion.div>
+        </div>
       )}
 
       {/* Desktop Grid Card (active on desktop unless layout is 'list') */}
       {!isAlwaysList && (
-        <motion.div
-          initial={{ opacity: 0, y: 15 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-30px" }}
-          whileHover={{ y: -4 }}
-          whileTap={{ scale: 0.98 }}
+        <div
+          onMouseEnter={handlePrefetch}
+          onTouchStart={handlePrefetch}
           onClick={handleCardClick}
-          className={`${isAlwaysGrid ? "flex" : "hidden md:flex"} group relative w-full bg-[var(--theme-card)]/80 backdrop-blur-xl border border-[var(--theme-border)] hover:border-[var(--theme-accent)]/40 rounded-2xl sm:rounded-3xl p-4 sm:p-5 transition-all duration-300 flex-col items-center justify-center gap-3 shadow-md hover:shadow-xl select-none ${isPending ? 'opacity-70 scale-[0.98] pointer-events-none cursor-wait' : 'cursor-pointer'} ${className}`}
+          className={`${isAlwaysGrid ? "flex" : "hidden md:flex"} group relative w-full bg-[var(--theme-card)]/90 border border-[var(--theme-border)] hover:border-[var(--theme-accent)]/50 hover:-translate-y-1 rounded-2xl sm:rounded-3xl p-3 sm:p-3.5 transition-all duration-200 flex-col items-center text-center gap-2.5 shadow-xs hover:shadow-lg active:scale-[0.98] select-none ${isPending ? 'opacity-70 scale-[0.98] pointer-events-none cursor-wait' : 'cursor-pointer'} ${className}`}
         >
-          {/* 100% Clear Avatar Photo */}
-          <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden bg-[var(--theme-surface)] ring-2 ring-[var(--theme-border)] group-hover:ring-[var(--theme-accent)]/50 shadow-md transition-all duration-500">
+          {/* Circular Artist Image */}
+          <div className="relative w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden bg-[var(--theme-surface)] ring-2 ring-[var(--theme-border)] group-hover:ring-[var(--theme-accent)]/60 shadow-xs transition-all duration-300">
             <img
-              src={url || "https://placehold.co/300x300/17020B/E8A87C?text=Artist"}
+              src={url || "https://placehold.co/400x400/17020B/E8A87C?text=Artist"}
               alt={artistName}
               className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
               onError={(e) => {
-                e.currentTarget.src = "https://placehold.co/300x300/17020B/E8A87C?text=Artist";
+                e.currentTarget.src = "https://placehold.co/400x400/17020B/E8A87C?text=Artist";
               }}
             />
             {isPending && (
               <div className="absolute inset-0 bg-black/50 backdrop-blur-[1px] flex items-center justify-center animate-fade-in">
-                <div className="w-7 h-7 rounded-full border-2 border-[var(--theme-accent)] border-t-transparent animate-spin" />
+                <div className="w-8 h-8 rounded-full border-2 border-[var(--theme-accent)] border-t-transparent animate-spin" />
               </div>
             )}
           </div>
 
-          {/* Name & Actions Row below Avatar */}
-          <div className="w-full flex items-center justify-between gap-1 px-1 pt-1">
-            <h3
-              className="text-xs sm:text-sm font-bold text-[var(--theme-fg)] truncate group-hover:text-[var(--theme-accent)] transition-colors flex-1 text-center"
-              title={artistName}
-            >
-              {artistName}
-            </h3>
+          {/* Details & Actions Row below Image */}
+          <div className="flex items-center justify-between w-full min-w-0 px-1 pt-0.5">
+            <div className="flex flex-col min-w-0 flex-1 text-center">
+              <h3
+                className="text-xs sm:text-sm font-bold text-[var(--theme-fg)] truncate group-hover:text-[var(--theme-accent)] transition-colors leading-tight"
+                title={artistName}
+              >
+                {artistName}
+              </h3>
+              <p className="text-[11px] sm:text-xs text-[var(--theme-muted)] truncate mt-0.5 font-medium">
+                Artist
+              </p>
+            </div>
             {renderDropdown()}
           </div>
-        </motion.div>
+        </div>
       )}
     </>
   );

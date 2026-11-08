@@ -341,6 +341,8 @@ export default function Home() {
                 <div
                   key={alb.id}
                   onClick={() => handleOpenAlbum(alb.id)}
+                  onMouseEnter={() => router.prefetch(`/album/${alb.id}`)}
+                  onTouchStart={() => router.prefetch(`/album/${alb.id}`)}
                   className={`group bg-[var(--theme-card)]/80 hover:bg-[var(--theme-card)] border border-[var(--theme-border)] hover:border-[var(--theme-accent)]/50 rounded-3xl p-3 sm:p-3.5 shadow-md hover:shadow-xl transition-all duration-300 flex flex-col text-left ${
                     isCurrentNavigating ? "opacity-75 pointer-events-none cursor-wait" : "cursor-pointer"
                   }`}
@@ -422,6 +424,8 @@ export default function Home() {
                 <div
                   key={art.id}
                   onClick={() => handleOpenArtist(art.id)}
+                  onMouseEnter={() => router.prefetch(`/artist/${art.id}`)}
+                  onTouchStart={() => router.prefetch(`/artist/${art.id}`)}
                   className={`group flex flex-col items-center text-center p-2.5 rounded-2xl hover:bg-[var(--theme-card)]/60 transition-all duration-200 ${
                     isCurrentNavigating ? "opacity-75 pointer-events-none cursor-wait" : "cursor-pointer"
                   }`}
@@ -474,6 +478,8 @@ export default function Home() {
                   key={g.label}
                   type="button"
                   onClick={() => handleOpenGenre(g.query)}
+                  onMouseEnter={() => router.prefetch(`/search?q=${encodeURIComponent(g.query)}&type=album`)}
+                  onTouchStart={() => router.prefetch(`/search?q=${encodeURIComponent(g.query)}&type=album`)}
                   disabled={isPending}
                   className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] border border-[var(--theme-border)] hover:border-[var(--theme-accent)]/50 text-[var(--theme-fg)] hover:text-[var(--theme-accent)] text-xs font-bold transition active:scale-95 shadow-sm cursor-pointer disabled:opacity-75 disabled:cursor-wait"
                 >

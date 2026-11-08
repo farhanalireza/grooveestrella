@@ -3,7 +3,7 @@ import axios from 'axios';
 
 const USER_AGENT = 'GrooveEstrella/2.0 ( https://github.com/farhanalireza/grooveestrella )';
 const MUSICBRAINZ_BASE = 'https://musicbrainz.org/ws/2';
-const CACHE_TTL_MS = 1000 * 60 * 60 * 4; // 4 hours in-memory cache
+const CACHE_TTL_MS = 1000 * 60 * 60 * 24; // 24 hours in-memory cache
 
 // In-memory cache
 const memoryCache = new Map();
@@ -21,8 +21,8 @@ function getCached(key) {
 }
 
 function setCached(key, data) {
-  // Cap cache size at 500 items to conserve memory
-  if (memoryCache.size > 500) {
+  // Cap cache size at 3000 items to conserve memory while maximizing cache hits
+  if (memoryCache.size > 3000) {
     const oldestKey = memoryCache.keys().next().value;
     memoryCache.delete(oldestKey);
   }
@@ -846,13 +846,13 @@ export async function resolveDescription(name, title, artist, wikidataId, annota
               format: 'json',
             },
             headers: { 'User-Agent': USER_AGENT },
-            timeout: 1200,
+            timeout: 750,
           });
           const wikiTitle = wdRes.data?.entities?.[wikidataId]?.sitelinks?.enwiki?.title;
           if (wikiTitle) {
             const sumRes = await axios.get(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(wikiTitle)}`, {
               headers: { 'User-Agent': USER_AGENT },
-              timeout: 1200,
+              timeout: 750,
             });
             const ext = sumRes.data?.extract;
             if (ext && sumRes.data?.type !== 'disambiguation') {
@@ -874,7 +874,7 @@ export async function resolveDescription(name, title, artist, wikidataId, annota
               format: 'json',
             },
             headers: { 'User-Agent': USER_AGENT },
-            timeout: 1200,
+            timeout: 750,
           });
 
           const items = searchRes.data?.query?.search || [];
@@ -898,7 +898,7 @@ export async function resolveDescription(name, title, artist, wikidataId, annota
             if (best) {
               const sumRes = await axios.get(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(best.title)}`, {
                 headers: { 'User-Agent': USER_AGENT },
-                timeout: 1200,
+                timeout: 750,
               });
               const ext = sumRes.data?.extract || '';
               // Verify it's music-related and not a disambiguation page
@@ -929,7 +929,7 @@ export async function resolveDescription(name, title, artist, wikidataId, annota
 
     const extract = await Promise.race([
       fetchWikiExtract(),
-      new Promise((res) => setTimeout(() => res(null), 1500)),
+      new Promise((res) => setTimeout(() => res(null), 850)),
     ]);
 
     if (extract) {

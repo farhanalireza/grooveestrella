@@ -220,15 +220,17 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
 
     return (
         <div className="relative min-h-screen bg-[var(--theme-bg)] text-[var(--theme-fg)] p-4 pb-32 sm:p-6 md:pl-20 md:pr-20 lg:pl-40 lg:pr-40 pt-5 sm:pt-8 overflow-hidden transition-colors duration-300">
-            {/* Full Screen Dynamic Ambient Artist Picture Gradient Backdrop */}
+            {/* Full Screen Dynamic Ambient Artist Picture Gradient Backdrop with Adaptive Contrast Protection */}
             <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
                 <div 
-                    className="absolute inset-0 bg-cover bg-center scale-110 blur-2xl opacity-80 dark:opacity-65 saturate-150 contrast-110 transition-all duration-700"
+                    className="absolute inset-0 bg-cover bg-center scale-110 blur-3xl opacity-35 dark:opacity-30 saturate-150 contrast-110 transition-all duration-700"
                     style={{ backgroundImage: `url(${coverUrl})` }}
                 />
-                <div className="absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-black/25 via-transparent to-transparent" />
+                {/* Darkening Scrim layer preventing bright photos from washing out typography */}
+                <div className="absolute inset-0 bg-black/55 dark:bg-black/65" />
+                <div className="absolute inset-x-0 top-0 h-64 bg-gradient-to-b from-black/60 via-black/30 to-transparent" />
                 <div 
-                    className="absolute inset-0 bg-gradient-to-b from-transparent via-[var(--theme-bg)]/50 to-[var(--theme-bg)]"
+                    className="absolute inset-0 bg-gradient-to-b from-transparent via-[var(--theme-bg)]/80 to-[var(--theme-bg)]"
                 />
             </div>
 
@@ -740,13 +742,13 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
                     </div>
 
                     {/* Button: Discover whole discography & releases */}
-                    <div className="mt-10 flex justify-center">
+                    <div className="mt-8 flex justify-center">
                         <Link
                             href={`/artist/${artist.id || id}/discography`}
-                            className="inline-flex items-center gap-2.5 px-6 py-3 rounded-full bg-[var(--theme-card)]/90 hover:bg-[var(--theme-surface)] text-[var(--theme-fg)] hover:text-[var(--theme-accent)] border border-[var(--theme-border)] hover:border-[var(--theme-accent)] text-xs sm:text-sm font-bold uppercase tracking-wider transition-all duration-300 shadow-md group cursor-pointer hover:scale-105 active:scale-95"
+                            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[var(--theme-card)]/90 hover:bg-[var(--theme-surface)] text-[var(--theme-fg)] hover:text-[var(--theme-accent)] border border-[var(--theme-border)] hover:border-[var(--theme-accent)] text-xs sm:text-sm font-semibold transition-all duration-200 shadow-md group cursor-pointer active:scale-95"
                         >
-                            <span>Discover whole discography & releases</span>
-                            <ChevronRight size={16} className="text-[var(--theme-accent)] group-hover:translate-x-1 transition-transform" />
+                            <span>Explore complete discography & releases</span>
+                            <ChevronRight size={15} className="text-[var(--theme-accent)] group-hover:translate-x-0.5 transition-transform" />
                         </Link>
                     </div>
                 </div>

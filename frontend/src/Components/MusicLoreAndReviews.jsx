@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { 
   Star, ExternalLink, Tag, BookOpen, MessageSquare, 
-  Send, Sparkles, CheckCircle2, ChevronDown, ChevronUp, Globe, Award, Trash2
+  Send, Sparkles, CheckCircle2, ChevronDown, ChevronUp, ChevronRight, Globe, Award, Trash2
 } from "lucide-react";
 import { toast } from "@/lib/toast";
 
@@ -182,48 +182,74 @@ export default function MusicLoreAndReviews({
     }));
   }, [reviews, realReviewsCount]);
 
-  // Derive categorized sections
+  // Derive curated, noise-filtered musical categories
   const resolvedCategorized = useMemo(() => {
-    if (categorizedTags && (categorizedTags.genres?.length || categorizedTags.styles?.length || categorizedTags.themes?.length || categorizedTags.eras?.length)) {
-      return categorizedTags;
-    }
+    const NOISE_TAGS = new Set([
+      "album", "albums", "ep", "single", "singles", "lp", "cd", "vinyl", "audio",
+      "favorite", "favourites", "favorites", "favourite", "seen live",
+      "owned", "wishlist", "my collection", "all time favorite",
+      "british", "uk", "united states", "usa", "american", "german", "french", "canadian", "swedish", "japanese",
+      "actor", "actors", "arranger", "arrangers", "composer", "composers", "singers", "singer",
+      "musicians", "musician", "producer", "producers", "executive", "executives",
+      "sound recording executives and producers", "sound recording", "recording"
+    ]);
+
+    const formatTag = (str) => {
+      if (!str) return "";
+      let clean = String(str).replace(/^#+/, "").trim();
+      clean = clean.replace(/\s+(music|musicians)$/i, "").trim();
+      if (/^r&b$/i.test(clean)) return "R&B";
+      if (/^edm$/i.test(clean)) return "EDM";
+      if (/^idm$/i.test(clean)) return "IDM";
+      if (/^k-?pop$/i.test(clean)) return "K-Pop";
+      if (/^j-?pop$/i.test(clean)) return "J-Pop";
+      if (/^lo-?fi$/i.test(clean)) return "Lo-Fi";
+      if (/^hip-?hop$/i.test(clean)) return "Hip Hop";
+      return clean
+        .split(/[\s-]+/)
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+        .join(" ");
+    };
 
     const genreList = Array.isArray(genres) ? genres : [];
     const rawList = (allTags && allTags.length > 0) ? allTags : (tags || []).map((t) => ({ name: t, count: 1 }));
 
-    const genreItems = genreList.map((g) => {
-      const name = typeof g === "string" ? g : g?.name;
+    const genreItems = [];
+    const seenGenres = new Set();
+    genreList.forEach((g) => {
+      const rawName = typeof g === "string" ? g : g?.name;
       const count = (typeof g === "object" && g.count) || null;
-      return { name, count };
-    }).filter((g) => g.name);
+      const formatted = formatTag(rawName);
+      const lower = formatted.toLowerCase();
+      if (formatted && !seenGenres.has(lower) && !NOISE_TAGS.has(lower)) {
+        seenGenres.add(lower);
+        genreItems.push({ name: formatted, count });
+      }
+    });
 
     const styles = [];
     const themes = [];
     const eras = [];
-    const others = [];
-
-    const genreNames = new Set(genreItems.map((g) => g.name.toLowerCase()));
+    const seenOther = new Set(seenGenres);
 
     for (const t of rawList) {
       const raw = typeof t === "string" ? t : t?.name;
       if (!raw) continue;
-      const clean = raw.trim();
-      const lower = clean.toLowerCase();
+      const formatted = formatTag(raw);
+      const lower = formatted.toLowerCase();
       const count = (typeof t === "object" && t.count) || null;
 
-      if (genreNames.has(lower)) continue;
+      if (!formatted || seenOther.has(lower) || NOISE_TAGS.has(lower)) continue;
+      if (/executives|arrangers|producers|actors|sound recording/i.test(lower)) continue;
 
-      if (/^#?\d{2,4}s?$/i.test(clean) || /^\d{4}$/.test(clean)) {
-        eras.push({ name: clean.replace(/^#/, ""), count });
+      seenOther.add(lower);
+
+      if (/^\d{2,4}s?$/i.test(formatted) || /^\d{4}$/.test(formatted)) {
+        eras.push({ name: formatted, count });
       } else if (/concept|masterpiece|soundtrack|audiophile|acoustic|live|instrumental|vocal|guitar|bass|solo|melanchol|dark|psychedelic|trippy|philosoph|space|lyric/i.test(lower)) {
-        themes.push({ name: clean.replace(/^#/, ""), count });
+        themes.push({ name: formatted, count });
       } else if (/rock|pop|jazz|metal|folk|blues|wave|punk|electronic|ambient|reggae|disco|funk|soul|indie|alternative|prog|hop|rap|dance|r&b|techno|house|trance|country/i.test(lower)) {
-        styles.push({ name: clean.replace(/^#/, ""), count });
-      } else {
-        const ignored = new Set(["album", "albums", "ep", "single", "singles", "lp", "cd", "vinyl", "owned", "wishlist"]);
-        if (!ignored.has(lower)) {
-          others.push({ name: clean.replace(/^#/, ""), count });
-        }
+        styles.push({ name: formatted, count });
       }
     }
 
@@ -232,15 +258,13 @@ export default function MusicLoreAndReviews({
       styles,
       themes,
       eras,
-      others,
     };
-  }, [categorizedTags, genres, tags, allTags]);
+  }, [genres, tags, allTags]);
 
   const hasAnyTags = resolvedCategorized.genres.length > 0 ||
     resolvedCategorized.styles.length > 0 ||
     resolvedCategorized.themes.length > 0 ||
-    resolvedCategorized.eras.length > 0 ||
-    resolvedCategorized.others.length > 0;
+    resolvedCategorized.eras.length > 0;
 
   // Separate editorial / review external links
   const reviewLinks = (externalLinks || []).filter(l => l.category === "review");
@@ -251,11 +275,11 @@ export default function MusicLoreAndReviews({
     <div className="relative z-10 w-full mt-12 space-y-10">
       {/* 1. Categorized Genres & Musical Lore Section */}
       {hasAnyTags && (
-        <section className="bg-[var(--theme-card)]/75 backdrop-blur-xl border border-[var(--theme-border)] rounded-3xl p-6 sm:p-8 shadow-xl space-y-6">
-          <div className="flex items-center justify-between flex-wrap gap-2 border-b border-[var(--theme-border)] pb-4">
-            <div className="flex items-center gap-2.5 text-xs font-bold text-[var(--theme-accent)] uppercase tracking-widest">
-              <Tag size={16} />
-              <span>Genres, Styles & Music Lore</span>
+        <section className="bg-[var(--theme-card)]/75 backdrop-blur-xl border border-[var(--theme-border)] rounded-3xl p-5 sm:p-7 shadow-xl space-y-5">
+          <div className="flex items-center justify-between flex-wrap gap-2 border-b border-[var(--theme-border)]/60 pb-3.5">
+            <div className="flex items-center gap-2 text-sm font-bold text-[var(--theme-fg)]">
+              <Tag size={16} className="text-[var(--theme-accent)]" />
+              <span>Genres & Musical Lore</span>
             </div>
             {primaryGenre && (
               <span className="text-xs text-[var(--theme-accent)] font-semibold px-3 py-1 rounded-full bg-[var(--theme-accent)]/10 border border-[var(--theme-accent)]/20">
@@ -266,20 +290,20 @@ export default function MusicLoreAndReviews({
 
           {/* Official Curated Genres */}
           {resolvedCategorized.genres.length > 0 && (
-            <div className="space-y-2.5">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--theme-fg)]/70 flex items-center gap-1.5">
+            <div className="space-y-2">
+              <span className="text-xs font-semibold text-[var(--theme-muted)] flex items-center gap-1.5">
                 <Sparkles size={13} className="text-[var(--theme-accent)]" />
-                <span>Primary Genres</span>
+                <span>Core Genres</span>
               </span>
               <div className="flex flex-wrap gap-2">
                 {resolvedCategorized.genres.map((g, idx) => (
                   <span
                     key={`genre-${idx}`}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--theme-accent)]/15 border border-[var(--theme-accent)]/30 text-[var(--theme-fg)] font-semibold text-xs transition shadow-sm hover:border-[var(--theme-accent)]"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--theme-accent)]/12 border border-[var(--theme-accent)]/25 text-[var(--theme-fg)] font-medium text-xs transition shadow-xs hover:border-[var(--theme-accent)]"
                   >
                     <span>{g.name}</span>
                     {g.count > 1 && (
-                      <span className="text-[10px] text-[var(--theme-accent)] bg-black/20 dark:bg-white/10 px-1.5 py-0.2 rounded-full font-mono">
+                      <span className="text-[10px] text-[var(--theme-accent)] opacity-80 font-mono">
                         {g.count}
                       </span>
                     )}
@@ -291,19 +315,19 @@ export default function MusicLoreAndReviews({
 
           {/* Styles & Subgenres */}
           {resolvedCategorized.styles.length > 0 && (
-            <div className="space-y-2.5">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--theme-fg)]/60">
+            <div className="space-y-2">
+              <span className="text-xs font-semibold text-[var(--theme-muted)]">
                 Styles & Subgenres
               </span>
               <div className="flex flex-wrap gap-2">
                 {resolvedCategorized.styles.map((s, idx) => (
                   <span
                     key={`style-${idx}`}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--theme-surface)] border border-[var(--theme-border)] text-[var(--theme-fg)]/90 text-xs font-medium hover:border-[var(--theme-accent)] transition"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--theme-surface)]/80 border border-[var(--theme-border)] text-[var(--theme-fg)]/90 text-xs font-medium hover:border-[var(--theme-accent)] transition shadow-xs"
                   >
-                    <span>#{s.name}</span>
+                    <span>{s.name}</span>
                     {s.count > 1 && (
-                      <span className="text-[10px] text-[var(--theme-muted)] bg-[var(--theme-card)] px-1.5 py-0.2 rounded-full font-mono">
+                      <span className="text-[10px] text-[var(--theme-muted)] font-mono">
                         {s.count}
                       </span>
                     )}
@@ -315,19 +339,19 @@ export default function MusicLoreAndReviews({
 
           {/* Themes & Moods */}
           {resolvedCategorized.themes.length > 0 && (
-            <div className="space-y-2.5">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--theme-fg)]/60">
+            <div className="space-y-2">
+              <span className="text-xs font-semibold text-[var(--theme-muted)]">
                 Themes & Moods
               </span>
               <div className="flex flex-wrap gap-2">
                 {resolvedCategorized.themes.map((th, idx) => (
                   <span
                     key={`theme-${idx}`}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--theme-surface)] border border-[var(--theme-border)] text-amber-300/90 text-xs font-medium hover:border-amber-400 transition"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-200/90 text-xs font-medium hover:border-amber-400 transition shadow-xs"
                   >
-                    <span>#{th.name}</span>
+                    <span>{th.name}</span>
                     {th.count > 1 && (
-                      <span className="text-[10px] text-amber-200/70 bg-[var(--theme-card)] px-1.5 py-0.2 rounded-full font-mono">
+                      <span className="text-[10px] text-amber-300/70 font-mono">
                         {th.count}
                       </span>
                     )}
@@ -339,44 +363,20 @@ export default function MusicLoreAndReviews({
 
           {/* Eras & Timeline */}
           {resolvedCategorized.eras.length > 0 && (
-            <div className="space-y-2.5">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--theme-fg)]/60">
+            <div className="space-y-2">
+              <span className="text-xs font-semibold text-[var(--theme-muted)]">
                 Era & Timeline
               </span>
               <div className="flex flex-wrap gap-2">
                 {resolvedCategorized.eras.map((er, idx) => (
                   <span
                     key={`era-${idx}`}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--theme-surface)] border border-[var(--theme-border)] text-sky-300/90 text-xs font-medium hover:border-sky-400 transition"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-sky-500/10 border border-sky-500/20 text-sky-200/90 text-xs font-medium hover:border-sky-400 transition shadow-xs"
                   >
                     <span>{er.name}</span>
                     {er.count > 1 && (
-                      <span className="text-[10px] text-sky-200/70 bg-[var(--theme-card)] px-1.5 py-0.2 rounded-full font-mono">
+                      <span className="text-[10px] text-sky-300/70 font-mono">
                         {er.count}
-                      </span>
-                    )}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Community Folksonomy */}
-          {resolvedCategorized.others.length > 0 && (
-            <div className="space-y-2.5">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--theme-fg)]/60">
-                Community Folksonomy
-              </span>
-              <div className="flex flex-wrap gap-2">
-                {resolvedCategorized.others.slice(0, 16).map((ot, idx) => (
-                  <span
-                    key={`other-${idx}`}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[var(--theme-surface)]/60 border border-[var(--theme-border)] text-[var(--theme-muted)] text-xs transition"
-                  >
-                    <span>#{ot.name}</span>
-                    {ot.count > 1 && (
-                      <span className="text-[10px] text-[var(--theme-muted)] font-mono">
-                        ({ot.count})
                       </span>
                     )}
                   </span>
@@ -389,12 +389,12 @@ export default function MusicLoreAndReviews({
 
       {/* 2. Description & Lore Section */}
       {description && (
-        <section className="bg-[var(--theme-card)]/75 backdrop-blur-xl border border-[var(--theme-border)] rounded-3xl p-6 sm:p-8 shadow-xl">
-          <div className="flex items-center gap-2.5 text-xs font-bold text-[var(--theme-accent)] uppercase tracking-widest mb-3">
+        <section className="bg-[var(--theme-card)]/75 backdrop-blur-xl border border-[var(--theme-border)] rounded-3xl p-5 sm:p-7 shadow-xl">
+          <div className="flex items-center gap-2 text-xs font-semibold text-[var(--theme-accent)] mb-2">
             <BookOpen size={16} />
             <span>{type === "artist" ? "Artist Biography & Lore" : type === "album" ? "Album Overview & Background" : "Track Information & Lore"}</span>
           </div>
-          <h2 className="text-xl sm:text-2xl font-extrabold text-[var(--theme-fg)] mb-4">
+          <h2 className="text-xl sm:text-2xl font-extrabold text-[var(--theme-fg)] mb-3">
             About {title || artist}
           </h2>
           <div className="text-sm sm:text-base text-[var(--theme-muted)] leading-relaxed font-body">
@@ -404,7 +404,7 @@ export default function MusicLoreAndReviews({
             {description.length > 320 && (
               <button
                 onClick={() => setExpandedDesc(!expandedDesc)}
-                className="mt-3 inline-flex items-center gap-1.5 text-xs font-bold text-[var(--theme-accent)] hover:opacity-80 transition cursor-pointer"
+                className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--theme-accent)] hover:opacity-80 transition cursor-pointer"
               >
                 <span>{expandedDesc ? "Show less" : "Read full overview"}</span>
                 {expandedDesc ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
@@ -415,15 +415,15 @@ export default function MusicLoreAndReviews({
       )}
 
       {/* 3. Revamped Ratings & Reviews Section */}
-      <section className="bg-[var(--theme-card)]/75 backdrop-blur-xl border border-[var(--theme-border)] rounded-3xl p-6 sm:p-8 shadow-xl space-y-6">
-        <div className="flex items-center justify-between flex-wrap gap-3 border-b border-[var(--theme-border)] pb-4">
-          <div className="flex items-center gap-2.5 text-xs font-bold text-[var(--theme-accent)] uppercase tracking-widest">
-            <MessageSquare size={16} />
-            <span>Ratings & Reviews</span>
+      <section className="bg-[var(--theme-card)]/75 backdrop-blur-xl border border-[var(--theme-border)] rounded-3xl p-5 sm:p-7 shadow-xl space-y-6">
+        <div className="flex items-center justify-between flex-wrap gap-3 border-b border-[var(--theme-border)]/60 pb-3.5">
+          <div className="flex items-center gap-2 text-sm font-bold text-[var(--theme-fg)]">
+            <MessageSquare size={16} className="text-[var(--theme-accent)]" />
+            <span>Community Ratings & Reviews</span>
           </div>
           <button
             onClick={() => setShowForm(!showForm)}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[var(--theme-accent)] hover:opacity-90 text-[var(--theme-bg)] text-xs font-bold uppercase tracking-wider transition cursor-pointer shadow-md"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[var(--theme-accent)] hover:opacity-90 text-[var(--theme-bg)] text-xs font-semibold transition cursor-pointer shadow-md"
           >
             <Star size={14} fill="currentColor" />
             <span>{showForm ? "Cancel Review" : "Write a Review"}</span>
@@ -700,31 +700,53 @@ export default function MusicLoreAndReviews({
       </section>
 
       {/* 4. External Web Links & Catalog Resources */}
-      {(reviewLinks.length > 0 || referenceLinks.length > 0 || streamingLinks.length > 0) && (
-        <section className="bg-[var(--theme-card)]/75 backdrop-blur-xl border border-[var(--theme-border)] rounded-3xl p-6 sm:p-8 shadow-xl space-y-6">
-          <div className="flex items-center gap-2.5 text-xs font-bold text-[var(--theme-accent)] uppercase tracking-widest border-b border-[var(--theme-border)] pb-4">
-            <Globe size={16} />
-            <span>External Catalog Resources & Links</span>
+      {externalLinks && externalLinks.length > 0 && (
+        <section className="bg-[var(--theme-card)]/75 backdrop-blur-xl border border-[var(--theme-border)] rounded-3xl p-5 sm:p-7 shadow-xl space-y-5">
+          <div className="flex items-center justify-between flex-wrap gap-2 border-b border-[var(--theme-border)]/60 pb-3.5">
+            <div className="flex items-center gap-2 text-sm font-bold text-[var(--theme-fg)]">
+              <Globe size={16} className="text-[var(--theme-accent)]" />
+              <span>Catalog & Web Resources</span>
+            </div>
+            <span className="text-xs text-[var(--theme-muted)] font-medium">
+              {externalLinks.length} verified links
+            </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-            {externalLinks.map((link, idx) => (
-              <a
-                key={`link-${idx}`}
-                href={link.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-between p-3 rounded-xl bg-[var(--theme-surface)] border border-[var(--theme-border)] hover:border-[var(--theme-accent)] text-xs font-medium text-[var(--theme-fg)] transition group cursor-pointer shadow-sm"
-              >
-                <div className="flex items-center gap-2 truncate pr-2">
-                  <ExternalLink size={13} className="text-[var(--theme-muted)] group-hover:text-[var(--theme-accent)] shrink-0 transition" />
-                  <span className="truncate">{link.label || link.name || "Web Link"}</span>
-                </div>
-                <span className="text-[10px] text-[var(--theme-muted)] uppercase tracking-wider font-semibold shrink-0">
-                  {link.category || "Link"}
-                </span>
-              </a>
-            ))}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+            {externalLinks.map((link, idx) => {
+              const label = link.label || link.name || "Web Link";
+              let domain = "";
+              try {
+                domain = new URL(link.url).hostname.replace(/^www\./, "");
+              } catch (_) {
+                domain = link.category || "web";
+              }
+
+              return (
+                <a
+                  key={`link-${idx}`}
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-between p-3 rounded-2xl bg-[var(--theme-surface)]/70 border border-[var(--theme-border)] hover:border-[var(--theme-accent)] hover:bg-[var(--theme-surface)] text-xs text-[var(--theme-fg)] transition-all duration-200 group cursor-pointer shadow-xs active:scale-98"
+                >
+                  <div className="flex items-center gap-3 truncate pr-2">
+                    <div className="w-8 h-8 rounded-xl bg-[var(--theme-card)] border border-[var(--theme-border)] flex items-center justify-center shrink-0 group-hover:border-[var(--theme-accent)] transition-colors">
+                      <ExternalLink size={13} className="text-[var(--theme-muted)] group-hover:text-[var(--theme-accent)] transition-colors" />
+                    </div>
+                    <div className="flex flex-col min-w-0">
+                      <span className="font-semibold text-xs text-[var(--theme-fg)] group-hover:text-[var(--theme-accent)] transition-colors truncate">
+                        {label}
+                      </span>
+                      <span className="text-[10px] text-[var(--theme-muted)] truncate font-mono">
+                        {domain}
+                      </span>
+                    </div>
+                  </div>
+                  <ChevronRight size={14} className="text-[var(--theme-muted)] group-hover:text-[var(--theme-accent)] group-hover:translate-x-0.5 transition-all shrink-0" />
+                </a>
+              );
+            })}
           </div>
         </section>
       )}

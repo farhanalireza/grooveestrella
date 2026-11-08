@@ -2,7 +2,6 @@
 "use client";
 
 import { useState, useEffect, useTransition } from "react";
-import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { MoreVertical, Bookmark, BookmarkCheck, Share2, Copy, ListMusic } from "lucide-react";
 import {
@@ -43,6 +42,14 @@ export const TrackCard = ({
       startTransition(() => {
         router.push(`/track/${actualId}`);
       });
+    }
+  };
+
+  const handlePrefetch = () => {
+    if (actualId) {
+      try {
+        router.prefetch(`/track/${actualId}`);
+      } catch (_) {}
     }
   };
 
@@ -116,7 +123,7 @@ export const TrackCard = ({
         <DropdownMenuTrigger asChild>
           <button
             type="button"
-            className="p-1 rounded-lg hover:bg-[var(--theme-surface)] text-[var(--theme-muted)] hover:text-[var(--theme-fg)] transition-colors cursor-pointer active:scale-95"
+            className="p-1.5 rounded-lg hover:bg-[var(--theme-surface)] text-[var(--theme-muted)] hover:text-[var(--theme-fg)] transition-colors cursor-pointer active:scale-95"
             title="Track Actions"
           >
             <MoreVertical size={15} />
@@ -165,13 +172,11 @@ export const TrackCard = ({
     <>
       {/* Mobile List Row (active on mobile unless layout is 'grid') */}
       {!isAlwaysGrid && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          whileTap={{ scale: 0.98 }}
+        <div
+          onMouseEnter={handlePrefetch}
+          onTouchStart={handlePrefetch}
           onClick={handleCardClick}
-          className={`${isAlwaysList ? "flex" : "flex md:hidden"} items-center justify-between gap-3 p-2.5 sm:p-3 rounded-2xl bg-[var(--theme-card)]/80 backdrop-blur-xl border border-[var(--theme-border)] hover:border-[var(--theme-accent)]/40 hover:bg-[var(--theme-card)] transition-all duration-300 w-full select-none shadow-md ${isPending ? 'opacity-70 pointer-events-none cursor-wait' : 'cursor-pointer'} ${className}`}
+          className={`${isAlwaysList ? "flex" : "flex md:hidden"} items-center justify-between gap-3 p-2.5 sm:p-3 rounded-2xl bg-[var(--theme-card)]/90 border border-[var(--theme-border)] hover:border-[var(--theme-accent)]/50 hover:bg-[var(--theme-card)] transition-all duration-200 active:scale-[0.98] w-full select-none shadow-xs hover:shadow-md ${isPending ? 'opacity-70 pointer-events-none cursor-wait' : 'cursor-pointer'} ${className}`}
         >
           <div className="flex items-center gap-3 min-w-0">
             <div className="relative w-12 h-12 rounded-xl overflow-hidden bg-[var(--theme-surface)] ring-1 ring-[var(--theme-border)] shrink-0">
@@ -201,22 +206,19 @@ export const TrackCard = ({
             </div>
           </div>
           {renderDropdown()}
-        </motion.div>
+        </div>
       )}
 
       {/* Desktop Grid Card (active on desktop unless layout is 'list') */}
       {!isAlwaysList && (
-        <motion.div
-          initial={{ opacity: 0, y: 15 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-30px" }}
-          whileHover={{ y: -4 }}
-          whileTap={{ scale: 0.98 }}
+        <div
+          onMouseEnter={handlePrefetch}
+          onTouchStart={handlePrefetch}
           onClick={handleCardClick}
-          className={`${isAlwaysGrid ? "flex" : "hidden md:flex"} group relative w-full bg-[var(--theme-card)]/80 backdrop-blur-xl border border-[var(--theme-border)] hover:border-[var(--theme-accent)]/40 rounded-2xl sm:rounded-3xl p-3 sm:p-3.5 transition-all duration-300 flex-col gap-2.5 shadow-md hover:shadow-xl select-none ${isPending ? 'opacity-70 scale-[0.98] pointer-events-none cursor-wait' : 'cursor-pointer'} ${className}`}
+          className={`${isAlwaysGrid ? "flex" : "hidden md:flex"} group relative w-full bg-[var(--theme-card)]/90 border border-[var(--theme-border)] hover:border-[var(--theme-accent)]/50 hover:-translate-y-1 rounded-2xl sm:rounded-3xl p-3 sm:p-3.5 transition-all duration-200 flex-col gap-2.5 shadow-xs hover:shadow-lg active:scale-[0.98] select-none ${isPending ? 'opacity-70 scale-[0.98] pointer-events-none cursor-wait' : 'cursor-pointer'} ${className}`}
         >
           {/* 100% Clear Cover Image */}
-          <div className="relative aspect-square w-full rounded-xl sm:rounded-2xl overflow-hidden bg-[var(--theme-surface)] ring-1 ring-[var(--theme-border)] shadow-sm">
+          <div className="relative aspect-square w-full rounded-xl sm:rounded-2xl overflow-hidden bg-[var(--theme-surface)] ring-1 ring-[var(--theme-border)] shadow-xs">
             <img
               src={url || "https://placehold.co/400x400/17020B/E8A87C?text=Track"}
               alt={title || "Track"}
@@ -249,7 +251,7 @@ export const TrackCard = ({
             </div>
             {renderDropdown()}
           </div>
-        </motion.div>
+        </div>
       )}
     </>
   );

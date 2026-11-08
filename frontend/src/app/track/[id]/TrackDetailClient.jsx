@@ -230,15 +230,17 @@ export default function TrackDetailClient({ id, initialData }) {
 
     return (
         <div className="relative min-h-screen bg-[var(--theme-bg)] text-[var(--theme-fg)] p-4 pb-32 sm:p-6 md:pl-20 md:pr-20 lg:pl-40 lg:pr-40 pt-5 sm:pt-8 overflow-hidden transition-colors duration-300">
-            {/* Full Screen Dynamic Ambient Art-Cover Gradient Backdrop */}
+            {/* Full Screen Dynamic Ambient Art-Cover Gradient Backdrop with Adaptive Contrast Protection */}
             <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
                 <div 
-                    className="absolute inset-0 bg-cover bg-center scale-110 blur-2xl opacity-80 dark:opacity-65 saturate-150 contrast-110 transition-all duration-700"
+                    className="absolute inset-0 bg-cover bg-center scale-110 blur-3xl opacity-35 dark:opacity-30 saturate-150 contrast-110 transition-all duration-700"
                     style={{ backgroundImage: `url(${coverUrl})` }}
                 />
-                <div className="absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-black/25 via-transparent to-transparent" />
+                {/* Darkening Scrim layer preventing bright/white album covers from washing out typography */}
+                <div className="absolute inset-0 bg-black/55 dark:bg-black/65" />
+                <div className="absolute inset-x-0 top-0 h-64 bg-gradient-to-b from-black/60 via-black/30 to-transparent" />
                 <div 
-                    className="absolute inset-0 bg-gradient-to-b from-transparent via-[var(--theme-bg)]/50 to-[var(--theme-bg)]"
+                    className="absolute inset-0 bg-gradient-to-b from-transparent via-[var(--theme-bg)]/80 to-[var(--theme-bg)]"
                 />
             </div>
 
@@ -443,9 +445,9 @@ export default function TrackDetailClient({ id, initialData }) {
                         {track.description.length > 80 && (
                             <button
                                 onClick={() => setExpandedHeroDesc(!expandedHeroDesc)}
-                                className="font-black text-[var(--theme-accent)] hover:underline uppercase text-xs ml-1 tracking-wider cursor-pointer inline"
+                                className="font-bold text-[var(--theme-accent)] hover:underline text-xs ml-1.5 cursor-pointer inline"
                             >
-                                {expandedHeroDesc ? "LESS" : "MORE"}
+                                {expandedHeroDesc ? "Show less" : "Read more"}
                             </button>
                         )}
                     </div>

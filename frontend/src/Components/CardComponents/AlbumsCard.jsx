@@ -2,7 +2,6 @@
 "use client";
 
 import { useState, useEffect, useTransition } from "react";
-import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { MoreVertical, Bookmark, BookmarkCheck, Share2, Copy } from "lucide-react";
 import {
@@ -59,6 +58,14 @@ export const AlbumCard = ({
     }
   };
 
+  const handlePrefetch = () => {
+    if (id) {
+      try {
+        router.prefetch(`/album/${id}`);
+      } catch (_) {}
+    }
+  };
+
   const toggleSave = (e) => {
     e?.stopPropagation();
     const savedAlbums = JSON.parse(localStorage.getItem("savedAlbums")) || [];
@@ -102,17 +109,14 @@ export const AlbumCard = ({
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 15 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-30px" }}
-      whileHover={{ y: -4 }}
-      whileTap={{ scale: 0.98 }}
+    <div
+      onMouseEnter={handlePrefetch}
+      onTouchStart={handlePrefetch}
       onClick={handleCardClick}
-      className={`group relative w-full bg-[var(--theme-card)]/80 backdrop-blur-xl border border-[var(--theme-border)] hover:border-[var(--theme-accent)]/40 rounded-2xl sm:rounded-3xl p-3 sm:p-3.5 transition-all duration-300 flex flex-col gap-2.5 shadow-md hover:shadow-xl select-none ${isPending ? 'opacity-70 scale-[0.98] pointer-events-none cursor-wait' : 'cursor-pointer'} ${className}`}
+      className={`group relative w-full bg-[var(--theme-card)]/90 border border-[var(--theme-border)] hover:border-[var(--theme-accent)]/50 hover:-translate-y-1 rounded-2xl sm:rounded-3xl p-3 sm:p-3.5 transition-all duration-200 flex flex-col gap-2.5 shadow-xs hover:shadow-lg active:scale-[0.98] select-none ${isPending ? 'opacity-70 scale-[0.98] pointer-events-none cursor-wait' : 'cursor-pointer'} ${className}`}
     >
       {/* 100% Clear & Unobstructed Cover Art */}
-      <div className="relative aspect-square w-full rounded-xl sm:rounded-2xl overflow-hidden bg-[var(--theme-surface)] ring-1 ring-[var(--theme-border)] shadow-sm">
+      <div className="relative aspect-square w-full rounded-xl sm:rounded-2xl overflow-hidden bg-[var(--theme-surface)] ring-1 ring-[var(--theme-border)] shadow-xs">
         <img
           src={url || "https://placehold.co/400x400/17020B/E8A87C?text=Album"}
           alt={title || "Album"}
@@ -153,7 +157,7 @@ export const AlbumCard = ({
             <DropdownMenuTrigger asChild>
               <button
                 type="button"
-                className="p-1 rounded-lg hover:bg-[var(--theme-surface)] text-[var(--theme-muted)] hover:text-[var(--theme-fg)] transition-colors cursor-pointer active:scale-95"
+                className="p-1.5 rounded-lg hover:bg-[var(--theme-surface)] text-[var(--theme-muted)] hover:text-[var(--theme-fg)] transition-colors cursor-pointer active:scale-95"
                 title="Album Actions"
               >
                 <MoreVertical size={15} />
@@ -190,6 +194,6 @@ export const AlbumCard = ({
           </DropdownMenu>
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 };

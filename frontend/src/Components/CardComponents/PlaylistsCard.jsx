@@ -1,5 +1,4 @@
 // src/Components/CardComponents/PlaylistsCard.jsx
-import { motion } from "framer-motion";
 import { Bookmark, BookmarkCheck, User, ListMusic } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -65,24 +64,30 @@ export const PlaylistCard = ({
     router.push(`/playlist/${id}`);
   };
 
+  const handlePrefetch = () => {
+    if (id) {
+      try {
+        router.prefetch(`/playlist/${id}`);
+      } catch (_) {}
+    }
+  };
+
   const truncatedDesc =
     description?.length > 70 ? description.slice(0, 67) + "..." : description;
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-50px" }}
-      whileHover={{ y: -6 }}
+    <div
+      onMouseEnter={handlePrefetch}
+      onTouchStart={handlePrefetch}
       onClick={handleCardClick}
-      className="group relative w-full sm:w-64 mx-auto bg-[var(--theme-card)]/80 backdrop-blur-xl border border-[var(--theme-border)] hover:border-[var(--theme-accent)]/40 rounded-3xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-500 cursor-pointer flex flex-col justify-between"
+      className="group relative w-full bg-[var(--theme-card)]/90 border border-[var(--theme-border)] hover:border-[var(--theme-accent)]/50 hover:-translate-y-1 rounded-2xl sm:rounded-3xl overflow-hidden shadow-xs hover:shadow-lg transition-all duration-200 cursor-pointer flex flex-col justify-between select-none active:scale-[0.98]"
     >
       {/* Cover Image Section */}
       <div className="relative aspect-square w-full overflow-hidden bg-[var(--theme-surface)]">
         <img
           src={url || "https://placehold.co/300x300?text=No+Cover"}
           alt={title || "Untitled Playlist"}
-          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-[var(--theme-bg)]/80 via-[var(--theme-bg)]/20 to-transparent opacity-60" />
         
@@ -97,7 +102,7 @@ export const PlaylistCard = ({
           />
           <button
             onClick={handleSave}
-            className={`p-2 rounded-full backdrop-blur-md transition-all duration-300 shadow-md ${
+            className={`p-2 rounded-full backdrop-blur-md transition-all duration-200 shadow-md ${
               saved 
                 ? "bg-[var(--theme-accent)] text-[var(--theme-bg)] scale-110" 
                 : "bg-[var(--theme-surface)]/80 text-[var(--theme-muted)] hover:text-[var(--theme-fg)]"
@@ -118,7 +123,7 @@ export const PlaylistCard = ({
       </div>
 
       {/* Content Section */}
-      <div className="p-4 flex flex-col justify-between flex-grow gap-2">
+      <div className="p-3.5 sm:p-4 flex flex-col justify-between flex-grow gap-2">
         <div className="space-y-1">
           <h3 
             className="text-sm sm:text-base font-bold text-[var(--theme-fg)] truncate group-hover:text-[var(--theme-accent)] transition-colors" 
@@ -142,6 +147,6 @@ export const PlaylistCard = ({
           </div>
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 };

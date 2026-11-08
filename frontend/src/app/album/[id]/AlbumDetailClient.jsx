@@ -385,21 +385,34 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
         });
     }, [tracks, showVinylSides]);
 
+    const discCount = useMemo(() => {
+        const discs = new Set();
+        if (tracks && tracks.length > 0) {
+            tracks.forEach((t) => {
+                if (t.disc) discs.add(Number(t.disc));
+            });
+        }
+        const fromEditions = album?.mediaCount || album?.editions?.[0]?.discCount || 0;
+        return Math.max(discs.size, trackSections?.length || 0, fromEditions, 1);
+    }, [tracks, trackSections, album]);
+
     const hasAnySides = useMemo(() => {
         return tracks && tracks.some((t) => t.side);
     }, [tracks]);
 
     return (
         <div className="relative min-h-screen bg-[var(--theme-bg)] text-[var(--theme-fg)] p-4 pb-32 sm:p-6 md:pl-20 md:pr-20 lg:pl-40 lg:pr-40 pt-5 sm:pt-8 overflow-hidden transition-colors duration-300">
-            {/* Full Screen Dynamic Ambient Art-Cover Gradient Backdrop */}
+            {/* Full Screen Dynamic Ambient Art-Cover Gradient Backdrop with Adaptive Contrast Protection */}
             <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
                 <div 
-                    className="absolute inset-0 bg-cover bg-center scale-110 blur-2xl opacity-75 dark:opacity-60 saturate-150 contrast-110 transition-all duration-700"
+                    className="absolute inset-0 bg-cover bg-center scale-110 blur-3xl opacity-35 dark:opacity-30 saturate-150 contrast-110 transition-all duration-700"
                     style={{ backgroundImage: `url(${coverUrl})` }}
                 />
-                <div className="absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-black/10 dark:from-black/25 via-transparent to-transparent" />
+                {/* Darkening Scrim layer preventing bright/white album covers from washing out typography */}
+                <div className="absolute inset-0 bg-black/55 dark:bg-black/65" />
+                <div className="absolute inset-x-0 top-0 h-64 bg-gradient-to-b from-black/60 via-black/30 to-transparent" />
                 <div 
-                    className="absolute inset-0 bg-gradient-to-b from-transparent via-[var(--theme-bg)]/60 to-[var(--theme-bg)]"
+                    className="absolute inset-0 bg-gradient-to-b from-transparent via-[var(--theme-bg)]/80 to-[var(--theme-bg)]"
                 />
             </div>
 
@@ -491,7 +504,7 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
 
                 {/* Album Title with Inline Explicit [E] badge */}
                 <div className="mt-4 sm:mt-5 flex items-center justify-center gap-2 flex-wrap max-w-lg">
-                    <h1 className="text-2xl sm:text-3xl md:text-4xl font-black leading-tight text-[var(--theme-fg)] tracking-tight font-display text-center inline-flex items-center gap-2 flex-wrap justify-center">
+                    <h1 className="text-2xl sm:text-3xl md:text-4xl font-black leading-tight text-[var(--theme-fg)] tracking-tight font-display text-center inline-flex items-center gap-2 flex-wrap justify-center drop-shadow-[0_2px_12px_rgba(0,0,0,0.85)]">
                         <span>{album.name || album.title}</span>
                         <span className="inline-flex items-center justify-center w-4 h-4 rounded-[3px] text-[10px] font-bold bg-white/10 text-white/80 shrink-0 select-none align-middle" title="Explicit Content">
                             E
@@ -504,7 +517,7 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
                     {artistsList.map((a, i) => (
                         <span
                             key={`${a.id || 'artist'}-${i}`}
-                            className="text-base sm:text-lg font-semibold text-[var(--theme-fg)]/90 hover:text-[var(--theme-accent)] transition cursor-pointer inline-flex items-center gap-1"
+                            className="text-base sm:text-lg font-semibold text-[var(--theme-fg)]/90 hover:text-[var(--theme-accent)] transition cursor-pointer inline-flex items-center gap-1 drop-shadow-[0_1px_6px_rgba(0,0,0,0.7)]"
                             onClick={() => {
                                 if (a.id && !isPending) {
                                     setNavigatingArtistId(a.id);
@@ -522,37 +535,44 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
                     ))}
                 </div>
 
-                {/* Fun & Minimalist Unified Metadata Line (Year • Genre • Tracks/Duration • Editions) */}
-                <div className="mt-2.5 flex items-center justify-center gap-2 text-xs font-semibold text-[var(--theme-muted)] flex-wrap select-none">
-                    {releaseYear && <span>{releaseYear}</span>}
-                    {displayGenre && (
-                        <>
-                            <span className="opacity-30">•</span>
-                            <span className="text-[var(--theme-fg)]/90">{displayGenre}</span>
-                        </>
+                {/* Refined Responsive Metadata (Year & Genre • Songs, Duration, Discs & Editions) */}
+                <div className="mt-2.5 flex flex-col items-center justify-center gap-2 select-none max-w-md mx-auto">
+                    {/* Primary Musical Lore */}
+                    {(releaseYear || displayGenre) && (
+                        <div className="flex items-center justify-center gap-2 text-xs font-semibold text-[var(--theme-muted)] flex-wrap">
+                            {releaseYear && <span className="font-mono">{releaseYear}</span>}
+                            {releaseYear && displayGenre && <span className="opacity-40">·</span>}
+                            {displayGenre && <span className="text-[var(--theme-fg)]/90 font-medium">{displayGenre}</span>}
+                        </div>
                     )}
-                    {tracks.length > 0 && (
-                        <>
-                            <span className="opacity-30">•</span>
-                            <span className="inline-flex items-center gap-1">
+
+                    {/* Secondary Metrics & Badges Row (Clean dot separator, NO comma between songs and length!) */}
+                    <div className="flex items-center justify-center gap-2 flex-wrap text-xs">
+                        {tracks.length > 0 && (
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--theme-card)]/80 backdrop-blur-md border border-[var(--theme-border)] text-[var(--theme-muted)] text-[11px] font-medium shadow-xs">
                                 <Clock size={11} className="text-[var(--theme-accent)] shrink-0" />
-                                <span>{tracks.length} songs{formattedTotalTime ? `, ${formattedTotalTime}` : ''}</span>
+                                <span>{tracks.length} songs{formattedTotalTime ? ` · ${formattedTotalTime}` : ''}</span>
                             </span>
-                        </>
-                    )}
-                    {album.editions && album.editions.length > 1 && (
-                        <>
-                            <span className="opacity-30">•</span>
+                        )}
+
+                        {discCount > 1 && (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[var(--theme-card)]/80 backdrop-blur-md border border-[var(--theme-border)] text-[var(--theme-fg)] text-[11px] font-semibold shadow-xs">
+                                <Disc size={11} className="text-[var(--theme-accent)] shrink-0" />
+                                <span>{discCount} Discs</span>
+                            </span>
+                        )}
+
+                        {album.editions && album.editions.length > 1 && (
                             <button
                                 onClick={() => setIsEditionsDrawerOpen(true)}
-                                className="inline-flex items-center gap-1 text-[var(--theme-accent)] hover:underline cursor-pointer font-bold transition-colors"
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[var(--theme-accent)]/15 hover:bg-[var(--theme-accent)]/25 text-[var(--theme-accent)] border border-[var(--theme-accent)]/30 text-[11px] font-bold transition-all shadow-xs cursor-pointer active:scale-95"
                                 title="Explore pressings & editions"
                             >
-                                <Layers size={11} />
+                                <Layers size={11} className="shrink-0" />
                                 <span>{album.editions.length} Editions</span>
                             </button>
-                        </>
-                    )}
+                        )}
+                    </div>
                 </div>
 
                 {/* Compact Floating Dual-Rating Capsule */}
@@ -640,9 +660,9 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
                         {album.description.length > 80 && (
                             <button
                                 onClick={() => setExpandedHeroDesc(!expandedHeroDesc)}
-                                className="font-black text-[var(--theme-accent)] hover:underline uppercase text-xs ml-1 tracking-wider cursor-pointer inline"
+                                className="font-bold text-[var(--theme-accent)] hover:underline text-xs ml-1.5 cursor-pointer inline"
                             >
-                                {expandedHeroDesc ? "LESS" : "MORE"}
+                                {expandedHeroDesc ? "Show less" : "Read more"}
                             </button>
                         )}
                     </div>
@@ -761,7 +781,9 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
                                                                         {isPending && navigatingTrackId === (track.id || track.trackID) ? (
                                                                             <span className="w-3.5 h-3.5 rounded-full border-2 border-[var(--theme-accent)] border-t-transparent animate-spin inline-block" />
                                                                         ) : (
-                                                                            track.trackNumber || track.pos || index + 1
+                                                                            showVinylSides 
+                                                                                ? (track.trackNumber || track.pos || index + 1) 
+                                                                                : (index + 1)
                                                                         )}
                                                                     </span>
 
