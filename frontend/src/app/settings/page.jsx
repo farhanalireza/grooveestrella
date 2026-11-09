@@ -27,7 +27,11 @@ export default function SettingsPage() {
 
   const handleSelectTheme = (mode) => {
     setTheme(mode);
-    toast.success(`${mode === 'dark' ? 'Dark' : 'Light'} theme activated`);
+    if (mode === 'adaptive') {
+      toast.success("Album-Adaptive mode activated! Detail pages will match album colors with contrast lock.");
+    } else {
+      toast.success(`${mode === 'dark' ? 'Dark' : 'Light'} theme activated`);
+    }
   };
 
   const handleBack = () => {
@@ -192,18 +196,18 @@ export default function SettingsPage() {
             Select your preferred display theme for GrooveEstrella.
           </p>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
             {/* Dark Theme Card */}
             <button
               onClick={() => handleSelectTheme('dark')}
               className={`flex items-center justify-between p-4 rounded-2xl border text-left transition-all duration-300 cursor-pointer ${
-                isDark
+                theme === 'dark'
                   ? "bg-[var(--theme-card)] border-[var(--theme-accent)] text-[var(--theme-fg)] shadow-lg ring-1 ring-[var(--theme-accent)]/50"
                   : "bg-[var(--theme-card)]/60 border-[var(--theme-border)] text-[var(--theme-fg)]/80 hover:border-[var(--theme-accent)]/50"
               }`}
             >
               <div className="flex items-center gap-3">
-                <div className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors ${isDark ? "bg-[var(--theme-accent)] text-[var(--theme-accent-fg)]" : "bg-[var(--theme-surface)] text-[var(--theme-muted)]"}`}>
+                <div className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors ${theme === 'dark' ? "bg-[var(--theme-accent)] text-[var(--theme-accent-fg)]" : "bg-[var(--theme-surface)] text-[var(--theme-muted)]"}`}>
                   <Moon size={16} />
                 </div>
                 <div>
@@ -211,7 +215,7 @@ export default function SettingsPage() {
                   <p className="text-xs text-[var(--theme-muted)]">Warm dark aesthetic</p>
                 </div>
               </div>
-              {isDark && (
+              {theme === 'dark' && (
                 <div className="w-5 h-5 rounded-full bg-[var(--theme-accent)] text-[var(--theme-accent-fg)] flex items-center justify-center shrink-0">
                   <Check className="w-3.5 h-3.5" />
                 </div>
@@ -222,13 +226,13 @@ export default function SettingsPage() {
             <button
               onClick={() => handleSelectTheme('light')}
               className={`flex items-center justify-between p-4 rounded-2xl border text-left transition-all duration-300 cursor-pointer ${
-                !isDark
+                theme === 'light'
                   ? "bg-[var(--theme-card)] border-[var(--theme-accent)] text-[var(--theme-fg)] shadow-lg ring-1 ring-[var(--theme-accent)]/50"
                   : "bg-[var(--theme-card)]/60 border-[var(--theme-border)] text-[var(--theme-fg)]/80 hover:border-[var(--theme-accent)]/50"
               }`}
             >
               <div className="flex items-center gap-3">
-                <div className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors ${!isDark ? "bg-[var(--theme-accent)] text-[var(--theme-accent-fg)]" : "bg-[var(--theme-surface)] text-[var(--theme-muted)]"}`}>
+                <div className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors ${theme === 'light' ? "bg-[var(--theme-accent)] text-[var(--theme-accent-fg)]" : "bg-[var(--theme-surface)] text-[var(--theme-muted)]"}`}>
                   <Sun size={16} />
                 </div>
                 <div>
@@ -236,7 +240,32 @@ export default function SettingsPage() {
                   <p className="text-xs text-[var(--theme-muted)]">Clean bright aesthetic</p>
                 </div>
               </div>
-              {!isDark && (
+              {theme === 'light' && (
+                <div className="w-5 h-5 rounded-full bg-[var(--theme-accent)] text-[var(--theme-accent-fg)] flex items-center justify-center shrink-0">
+                  <Check className="w-3.5 h-3.5" />
+                </div>
+              )}
+            </button>
+
+            {/* Album-Adaptive Mode Card */}
+            <button
+              onClick={() => handleSelectTheme('adaptive')}
+              className={`flex items-center justify-between p-4 rounded-2xl border text-left transition-all duration-300 cursor-pointer ${
+                theme === 'adaptive'
+                  ? "bg-[var(--theme-card)] border-[var(--theme-accent)] text-[var(--theme-fg)] shadow-lg ring-1 ring-[var(--theme-accent)]/50"
+                  : "bg-[var(--theme-card)]/60 border-[var(--theme-border)] text-[var(--theme-fg)]/80 hover:border-[var(--theme-accent)]/50"
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <div className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors ${theme === 'adaptive' ? "bg-[var(--theme-accent)] text-[var(--theme-accent-fg)]" : "bg-[var(--theme-surface)] text-[var(--theme-muted)]"}`}>
+                  <Sparkles size={16} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-[var(--theme-fg)]">Album-Adaptive</h3>
+                  <p className="text-xs text-[var(--theme-muted)]">Morphs to album cover art</p>
+                </div>
+              </div>
+              {theme === 'adaptive' && (
                 <div className="w-5 h-5 rounded-full bg-[var(--theme-accent)] text-[var(--theme-accent-fg)] flex items-center justify-center shrink-0">
                   <Check className="w-3.5 h-3.5" />
                 </div>
@@ -370,7 +399,7 @@ export default function SettingsPage() {
           </button>
         </div>
 
-        {/* SECTION 2: LIBRARY DATA MANAGER */}
+        {/* SECTION 4: LIBRARY DATA MANAGER */}
         <div className="border-t border-[var(--theme-border)] pt-8 space-y-4">
           <div className="flex items-center gap-2">
             <ListMusic className="w-5 h-5 text-[var(--theme-accent)]" />

@@ -15,8 +15,14 @@ import {
     ChevronRight, 
     Award, 
     Clock, 
-    Music 
+    Music,
+    BookOpen,
+    Tag,
+    Star,
+    Globe
 } from "lucide-react";
+import { useTheme } from "@/contexts/ThemeContext";
+import { extractAdaptivePalette } from "@/lib/colorExtractor";
 import GrooveLinkModal from "@/Components/GrooveLinkModal";
 import GrooveCardComposer from "@/Components/GrooveCardComposer";
 import MusicLoreAndReviews from "@/Components/MusicLoreAndReviews";
@@ -39,6 +45,15 @@ export default function TrackDetailClient({ id, initialData }) {
     const [expandedHeroDesc, setExpandedHeroDesc] = useState(false);
     const [isGrooveLinkOpen, setIsGrooveLinkOpen] = useState(false);
     const [isGrooveCardOpen, setIsGrooveCardOpen] = useState(false);
+    const [activeTab, setActiveTab] = useState("story");
+    const { theme, setAdaptivePalette, clearAdaptivePalette } = useTheme();
+
+    const TRACK_TABS = useMemo(() => [
+        { id: 'story', label: 'Story & Lore', icon: BookOpen },
+        { id: 'lore', label: 'Genres & Moods', icon: Tag },
+        { id: 'reviews', label: 'Ratings & Reviews', icon: Star },
+        { id: 'links', label: 'Streaming & Links', icon: Globe },
+    ], []);
 
     useEffect(() => {
         if (typeof window !== "undefined") {
@@ -131,6 +146,18 @@ export default function TrackDetailClient({ id, initialData }) {
 
     const artistsList = Array.isArray(track?.artists) ? track.artists : [{ name: track?.artist || 'Unknown Artist' }];
     const coverUrl = track?.album?.images?.[0]?.url || track?.coverArt || track?.url || 'https://placehold.co/600x600/17020B/E8A87C?text=No+Cover';
+
+    // Dynamic Album-Adaptive Theme Effect
+    useEffect(() => {
+        if (theme === "adaptive" && coverUrl) {
+            extractAdaptivePalette(coverUrl, track?.name || track?.title || "track").then((palette) => {
+                setAdaptivePalette(palette);
+            });
+        }
+        return () => {
+            clearAdaptivePalette();
+        };
+    }, [theme, coverUrl, track?.name, track?.title, setAdaptivePalette, clearAdaptivePalette]);
     const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=350x350&color=d4af37&bgcolor=ffffff&ecc=H&data=${encodeURIComponent(currentUrl)}`;
 
     const handleNativeShare = async () => {
@@ -435,60 +462,47 @@ export default function TrackDetailClient({ id, initialData }) {
                     <RatingPieChart rating={track.rating || { value: (track.popularity ? (track.popularity / 20) : 4.5) }} />
                 </div>
 
-                {/* Description / Editorial Notes / Lore */}
-                {track.description && (
-                    <div className="mt-6 w-full text-left text-xs sm:text-sm text-[var(--theme-muted)] leading-relaxed font-body">
-                        <strong className="font-extrabold text-[var(--theme-fg)] mr-1.5">Overview & Lore</strong>
-                        <span className={!expandedHeroDesc ? "line-clamp-2" : ""}>
-                            {track.description}
-                        </span>
-                        {track.description.length > 80 && (
-                            <button
-                                onClick={() => setExpandedHeroDesc(!expandedHeroDesc)}
-                                className="font-bold text-[var(--theme-accent)] hover:underline text-xs ml-1.5 cursor-pointer inline"
-                            >
-                                {expandedHeroDesc ? "Show less" : "Read more"}
-                            </button>
-                        )}
-                    </div>
-                )}
             </div>
 
-            {/* Full-screen QR Modal */}
-            {qrFullScreen && (
-                <div 
-                    className="fixed inset-0 bg-black/90 backdrop-blur-md z-[500] flex flex-col items-center justify-center p-6 animate-fade-in"
-                    onClick={() => setQrFullScreen(false)}
-                >
-                    <div className="max-w-md w-full flex flex-col items-center gap-6" onClick={(e) => e.stopPropagation()}>
-                        <h3 className="text-lg font-bold text-white uppercase tracking-widest font-display">Scan QR Code</h3>
-                        <div className="relative w-72 h-72 sm:w-80 sm:h-80 p-5 bg-white rounded-3xl flex items-center justify-center shadow-2xl border border-white/20">
-                            <img src={qrCodeUrl} alt="QR Code" className="w-full h-full object-contain rounded-xl" />
-                            <div className="absolute w-14 h-14 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-xl p-2">
-                                <img src="/in.svg" alt="Groove Logo" className="w-full h-full object-contain" />
-                            </div>
-                        </div>
-                        <p className="text-sm text-gray-300 text-center max-w-[280px]">
-                            Scan with your phone&apos;s camera to instantly view and share this track card.
-                        </p>
-                        <button
-                            onClick={() => setQrFullScreen(false)}
-                            className="px-6 py-2.5 bg-[var(--theme-accent)] hover:opacity-90 text-[var(--theme-accent-fg)] font-bold text-xs uppercase tracking-wider rounded-xl transition cursor-pointer shadow-lg active:scale-95"
-                        >
-                            Close
-                        </button>
-                    </div>
+            {/* Segmented Navigation Tabs */}
+            <div className="sticky top-0 sm:top-2 z-30 py-2.5 -mx-4 px-4 sm:mx-0 sm:px-0 bg-[var(--theme-bg)]/85 backdrop-blur-2xl border-y border-[var(--theme-border)]/50 mb-8 mt-4 transition-colors">
+                <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar max-w-xl mx-auto justify-start sm:justify-center">
+                    {TRACK_TABS.map((tab) => {
+                        const isActive = activeTab === tab.id;
+                        const TabIcon = tab.icon;
+                        return (
+                            <button
+                                key={tab.id}
+                                onClick={() => setActiveTab(tab.id)}
+                                className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all duration-200 cursor-pointer whitespace-nowrap flex items-center gap-1.5 select-none ${
+                                    isActive
+                                        ? 'bg-[var(--theme-accent)] text-[var(--theme-accent-fg)] shadow-md shadow-[var(--theme-accent)]/20'
+                                        : 'text-[var(--theme-muted)] hover:text-[var(--theme-fg)] hover:bg-[var(--theme-surface)]'
+                                }`}
+                            >
+                                <TabIcon size={14} />
+                                <span>{tab.label}</span>
+                            </button>
+                        );
+                    })}
                 </div>
-            )}
+            </div>
 
-            {/* Music Lore, Community Reviews, Tags & Deep Catalog Metadata */}
-            <div className="relative z-10 border-t border-[var(--theme-border)] pt-8 mb-12">
+            {/* Tab Content Container */}
+            <div className="relative z-10 mb-12 animate-fade-in max-w-4xl mx-auto">
                 <MusicLoreAndReviews
                     id={track.id || id}
                     type="track"
                     title={track.name || track.title}
                     artist={artistsList.map(a => a.name).join(', ')}
                     description={track.description}
+                    artistDescription={track.artistDescription}
+                    releaseDetails={{
+                        releaseDate: track.releaseDate || track.album?.release_date || (track.releaseYear ? String(track.releaseYear) : null),
+                        label: track.label || track.album?.label,
+                        format: 'Track Audio',
+                        barcode: track.isrc || track.album?.barcode
+                    }}
                     primaryGenre={track.primaryGenre || displayGenre}
                     genres={track.genres || []}
                     categorizedTags={track.categorizedTags || null}
@@ -497,6 +511,7 @@ export default function TrackDetailClient({ id, initialData }) {
                     rating={track.rating}
                     externalLinks={track.externalLinks || []}
                     totalDurationMs={durationMs}
+                    activeTab={activeTab === 'story' ? 'about' : activeTab}
                 />
             </div>
 

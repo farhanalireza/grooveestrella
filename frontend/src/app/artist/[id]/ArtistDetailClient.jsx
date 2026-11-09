@@ -4,7 +4,9 @@
 import { useEffect, useState, useMemo, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Bookmark, BookmarkCheck, Users, User, Award, Music, ChevronRight, MoreHorizontal, Play, Share2, ListPlus, Sparkles, Link2, Info, MapPin, Calendar, Clock } from "lucide-react";
+import { ArrowLeft, Bookmark, BookmarkCheck, Users, User, Award, Music, ChevronRight, MoreHorizontal, Play, Share2, ListPlus, Sparkles, Link2, Info, MapPin, Calendar, Clock, ListMusic, BookOpen, Tag, Star, Globe, Disc } from "lucide-react";
+import { useTheme } from "@/contexts/ThemeContext";
+import { extractAdaptivePalette } from "@/lib/colorExtractor";
 import {
     DropdownMenu,
     DropdownMenuTrigger,
@@ -64,6 +66,18 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
             return (b.releaseDate || '').localeCompare(a.releaseDate || '');
         });
     }, [albums]);
+
+    const [activeTab, setActiveTab] = useState("songs");
+    const { theme, setAdaptivePalette, clearAdaptivePalette } = useTheme();
+
+    const ARTIST_TABS = useMemo(() => [
+        { id: 'songs', label: 'Top Songs', count: topTracks.length, icon: ListMusic },
+        { id: 'discography', label: 'Albums', count: studioAlbums.length, icon: Disc },
+        { id: 'about', label: 'Bio & Lineup', icon: BookOpen },
+        { id: 'lore', label: 'Genres & Roots', icon: Tag },
+        { id: 'reviews', label: 'Ratings & Reviews', icon: Star },
+        { id: 'links', label: 'External Links', icon: Globe },
+    ], [topTracks.length, studioAlbums.length]);
 
     useEffect(() => {
         if (typeof window !== "undefined") {
@@ -163,6 +177,18 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
     }
 
     const coverUrl = artist.images?.[0]?.url || artist.coverArt || artist.url || 'https://placehold.co/600x600/17020B/E8A87C?text=Artist';
+
+    // Dynamic Artist-Adaptive Theme Effect
+    useEffect(() => {
+        if (theme === "adaptive" && coverUrl) {
+            extractAdaptivePalette(coverUrl, artist?.name || "artist").then((palette) => {
+                setAdaptivePalette(palette);
+            });
+        }
+        return () => {
+            clearAdaptivePalette();
+        };
+    }, [theme, coverUrl, artist?.name, setAdaptivePalette, clearAdaptivePalette]);
     const genres = useMemo(() => {
         const rawList = artist.genres || artist.tags || [];
         const valid = [];
@@ -486,10 +512,41 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
                 </div>
             </div>
 
-            {/* Top Songs - Embedded Apple Music Style List (Matching Image 1) */}
-            {topTracks.length > 0 && (
-                <div className="relative z-10 mt-6 sm:mt-10 border-t border-[var(--theme-border)]/50 pt-6 sm:pt-8">
-                    <div className="flex items-center justify-between mb-3 px-1">
+            {/* Segmented Navigation Tabs */}
+            <div className="sticky top-0 sm:top-2 z-30 py-2.5 -mx-4 px-4 sm:mx-0 sm:px-0 bg-[var(--theme-bg)]/85 backdrop-blur-2xl border-y border-[var(--theme-border)]/50 mb-8 mt-4 transition-colors">
+                <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar max-w-xl mx-auto justify-start sm:justify-center">
+                    {ARTIST_TABS.map((tab) => {
+                        const isActive = activeTab === tab.id;
+                        const TabIcon = tab.icon;
+                        return (
+                            <button
+                                key={tab.id}
+                                onClick={() => setActiveTab(tab.id)}
+                                className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all duration-200 cursor-pointer whitespace-nowrap flex items-center gap-1.5 select-none ${
+                                    isActive
+                                        ? 'bg-[var(--theme-accent)] text-[var(--theme-accent-fg)] shadow-md shadow-[var(--theme-accent)]/20'
+                                        : 'text-[var(--theme-muted)] hover:text-[var(--theme-fg)] hover:bg-[var(--theme-surface)]'
+                                }`}
+                            >
+                                <TabIcon size={14} />
+                                <span>{tab.label}</span>
+                                {tab.count !== undefined && (
+                                    <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold ${
+                                        isActive ? 'bg-black/20 text-current' : 'bg-[var(--theme-surface)] text-[var(--theme-muted)]'
+                                    }`}>
+                                        {tab.count}
+                                    </span>
+                                )}
+                            </button>
+                        );
+                    })}
+                </div>
+            </div>
+
+            {/* TAB 1: TOP SONGS */}
+            {activeTab === "songs" && topTracks.length > 0 && (
+                <div className="relative z-10 mb-12 animate-fade-in">
+                    <div className="flex items-center justify-between mb-4 px-1">
                         <h2 className="text-xl sm:text-2xl font-extrabold flex items-center gap-1.5 text-[var(--theme-fg)]">
                             <span>Top Songs</span>
                             <ChevronRight size={20} className="text-[var(--theme-muted)]" />
@@ -676,13 +733,13 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
                 </div>
             )}
 
-            {/* Discography - Only Studio Albums in Reverse Chronological Order (Matching Image 2) */}
-            {studioAlbums.length > 0 && (
-                <div className="relative z-10 mt-12 sm:mt-16 border-t border-[var(--theme-border)]/50 pt-8 mb-12">
+            {/* TAB 2: DISCOGRAPHY */}
+            {activeTab === "discography" && studioAlbums.length > 0 && (
+                <div className="relative z-10 mb-12 animate-fade-in">
                     <div className="flex items-center justify-between mb-5 px-1">
                         <Link href={`/artist/${artist.id || id}/discography`} className="group flex items-center gap-1.5">
                             <h2 className="text-xl sm:text-2xl font-extrabold text-[var(--theme-fg)] group-hover:text-[var(--theme-accent)] transition flex items-center gap-1.5">
-                                <span>Albums</span>
+                                <span>Studio Albums & Pressings</span>
                                 <ChevronRight size={20} className="text-[var(--theme-muted)] group-hover:text-[var(--theme-accent)] transition-transform group-hover:translate-x-0.5" />
                             </h2>
                         </Link>
@@ -754,21 +811,32 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
                 </div>
             )}
 
-            {/* Reviews, Descriptions, Lore, All Tags & External Links */}
-            <MusicLoreAndReviews
-                id={artist.id || id}
-                type="artist"
-                title={artist.name}
-                artist={artist.name}
-                description={artist.description}
-                primaryGenre={genres[0] || null}
-                genres={artist.genres || genres || []}
-                categorizedTags={artist.categorizedTags || null}
-                tags={artist.tags || artist.genres || []}
-                allTags={artist.allTags || []}
-                rating={artist.rating}
-                externalLinks={artist.externalLinks || []}
-            />
+            {/* OTHER TABS: Bio & Lineup, Genres & Roots, Ratings & Reviews, External Sources */}
+            {activeTab !== "songs" && activeTab !== "discography" && (
+                <div className="relative z-10 mb-12 animate-fade-in max-w-4xl mx-auto">
+                    <MusicLoreAndReviews
+                        id={artist.id || id}
+                        type="artist"
+                        title={artist.name}
+                        artist={artist.name}
+                        description={artist.description}
+                        releaseDetails={{
+                            releaseDate: artist.beginDate ? `Active since ${artist.beginDate}` : null,
+                            country: artist.country || artist.area,
+                            format: isGroup ? 'Musical Band / Group' : 'Solo Artist',
+                            label: artist.type
+                        }}
+                        primaryGenre={genres[0] || null}
+                        genres={artist.genres || genres || []}
+                        categorizedTags={artist.categorizedTags || null}
+                        tags={artist.tags || artist.genres || []}
+                        allTags={artist.allTags || []}
+                        rating={artist.rating}
+                        externalLinks={artist.externalLinks || []}
+                        activeTab={activeTab}
+                    />
+                </div>
+            )}
 
             {/* GrooveLink Modal */}
             <GrooveLinkModal

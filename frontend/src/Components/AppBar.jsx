@@ -13,6 +13,7 @@ import {
   UserRound,
   Sun,
   Moon,
+  Sparkles,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -61,7 +62,7 @@ const MOBILE_NAV_ITEMS = NAV_ITEMS.filter((item) => item.label !== "Review");
 const AppBar = ({ selectedSection, setSection }) => {
   const router = useRouter();
   const pathname = usePathname();
-  const { isDark, toggleTheme } = useTheme();
+  const { theme, isDark, toggleTheme } = useTheme();
 
   // Instant route-to-section resolution without waiting for useEffect
   const activeSection = useMemo(() => {
@@ -165,10 +166,16 @@ const AppBar = ({ selectedSection, setSection }) => {
             <button
               onClick={toggleTheme}
               className="p-2.5 rounded-full border border-[var(--theme-border)] bg-[var(--theme-card)] text-[var(--theme-fg)] hover:border-[var(--theme-accent)] transition-all duration-300 cursor-pointer shadow-sm hover:scale-105 active:scale-95"
-              title={isDark ? "Switch to Light Theme" : "Switch to Dark Theme"}
+              title={`Current theme: ${theme === 'adaptive' ? 'Album-Adaptive' : isDark ? 'Dark' : 'Light'}. Click to cycle.`}
               aria-label="Toggle Theme"
             >
-              {isDark ? <Sun size={16} className="text-[var(--theme-accent)]" /> : <Moon size={16} className="text-[var(--theme-accent)]" />}
+              {theme === 'adaptive' ? (
+                <Sparkles size={16} className="text-[var(--theme-accent)]" />
+              ) : isDark ? (
+                <Sun size={16} className="text-[var(--theme-accent)]" />
+              ) : (
+                <Moon size={16} className="text-[var(--theme-accent)]" />
+              )}
             </button>
           </div>
 
@@ -230,14 +237,20 @@ const AppBar = ({ selectedSection, setSection }) => {
             whileTap={{ scale: 0.92 }}
             onClick={toggleTheme}
             className="relative py-1.5 px-2 flex flex-col justify-center items-center gap-1 text-[var(--theme-muted)] hover:text-[var(--theme-fg)] transition-colors duration-200 cursor-pointer"
-            title={isDark ? "Switch to Light Theme" : "Switch to Dark Theme"}
+            title={`Current theme: ${theme === 'adaptive' ? 'Album-Adaptive' : isDark ? 'Dark' : 'Light'}. Click to cycle.`}
             aria-label="Toggle Theme"
           >
             <div className="relative z-10">
-              {isDark ? <Sun size={17} className="text-[var(--theme-accent)]" /> : <Moon size={17} className="text-[var(--theme-accent)]" />}
+              {theme === "adaptive" ? (
+                <Sparkles size={17} className="text-[var(--theme-accent)]" />
+              ) : isDark ? (
+                <Sun size={17} className="text-[var(--theme-accent)]" />
+              ) : (
+                <Moon size={17} className="text-[var(--theme-accent)]" />
+              )}
             </div>
             <span className="relative z-10 text-[9px] font-bold tracking-wider uppercase leading-none">
-              {isDark ? "Light" : "Dark"}
+              {theme === "adaptive" ? "Auto" : isDark ? "Light" : "Dark"}
             </span>
           </motion.button>
         </nav>

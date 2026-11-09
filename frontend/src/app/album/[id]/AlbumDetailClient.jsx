@@ -4,7 +4,9 @@
 import { useEffect, useState, useMemo, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Bookmark, BookmarkCheck, Disc, ChevronRight, Clock, Layers, Sparkles, Plus, Check, MoreHorizontal, Copy, Play, Share2, ListPlus } from "lucide-react";
+import { ArrowLeft, Bookmark, BookmarkCheck, Disc, ChevronRight, Clock, Layers, Sparkles, Plus, Check, MoreHorizontal, Copy, Play, Share2, ListPlus, ListMusic, BookOpen, Tag, Star, Globe } from "lucide-react";
+import { useTheme } from "@/contexts/ThemeContext";
+import { extractAdaptivePalette } from "@/lib/colorExtractor";
 import {
     DropdownMenu,
     DropdownMenuTrigger,
@@ -41,24 +43,27 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
     const [selectedTrackForGrooveLink, setSelectedTrackForGrooveLink] = useState(null);
     const [selectedTrackForGrooveCard, setSelectedTrackForGrooveCard] = useState(null);
     const [showVinylSides, setShowVinylSides] = useState(true);
+    const [activeTab, setActiveTab] = useState("tracks");
+    const { theme, setAdaptivePalette, clearAdaptivePalette } = useTheme();
 
     useEffect(() => {
         if (typeof window !== "undefined") {
             const savedPref = localStorage.getItem("groove_show_vinyl_sides");
             if (savedPref !== null) {
                 setShowVinylSides(savedPref === "true");
+            } else {
+                setShowVinylSides(true);
             }
         }
     }, []);
 
-    const toggleVinylSides = () => {
-        const nextVal = !showVinylSides;
-        setShowVinylSides(nextVal);
-        if (typeof window !== "undefined") {
-            localStorage.setItem("groove_show_vinyl_sides", String(nextVal));
-        }
-        toast.info(nextVal ? "Vinyl side dividers enabled" : "Vinyl side dividers disabled");
-    };
+    const ALBUM_TABS = useMemo(() => [
+        { id: 'tracks', label: 'Tracks', count: tracks.length, icon: ListMusic },
+        { id: 'about', label: 'About & Info', icon: BookOpen },
+        { id: 'lore', label: 'Genres & Lore', icon: Tag },
+        { id: 'reviews', label: 'Ratings & Reviews', icon: Star },
+        { id: 'links', label: 'Links & Editions', icon: Globe },
+    ], [tracks.length]);
 
     useEffect(() => {
         if (typeof window !== "undefined") {
@@ -233,6 +238,18 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
 
     const artistsList = Array.isArray(album.artists) ? album.artists : [{ name: album.artist || 'Various Artists' }];
     const coverUrl = album.images?.[0]?.url || album.coverArt || album.url || 'https://placehold.co/600x600/17020B/E8A87C?text=No+Cover';
+
+    // Dynamic Album-Adaptive Theme Effect
+    useEffect(() => {
+        if (theme === "adaptive" && coverUrl) {
+            extractAdaptivePalette(coverUrl, album.name || album.title || "album").then((palette) => {
+                setAdaptivePalette(palette);
+            });
+        }
+        return () => {
+            clearAdaptivePalette();
+        };
+    }, [theme, coverUrl, album.name, album.title, setAdaptivePalette, clearAdaptivePalette]);
 
     const totalDurationMs = album.totalDurationMs || tracks.reduce((acc, t) => acc + (t.duration || t.duration_ms || 0), 0);
     function formatTotalDuration(ms) {
@@ -650,48 +667,59 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
                     </button>
                 </div>
 
-                {/* Description / Editorial Notes (Matching Image 3) */}
-                {album.description && (
-                    <div className="mt-6 w-full text-left text-xs sm:text-sm text-[var(--theme-muted)] leading-relaxed font-body p-4 rounded-2xl bg-[var(--theme-card)]/40 border border-[var(--theme-border)] backdrop-blur-sm">
-                        <strong className="font-extrabold text-[var(--theme-fg)] mr-1.5">Editor's Notes</strong>
-                        <span className={!expandedHeroDesc ? "line-clamp-2" : ""}>
-                            {album.description}
-                        </span>
-                        {album.description.length > 80 && (
+            </div>
+
+            {/* Segmented Navigation Tabs */}
+            <div className="sticky top-0 sm:top-2 z-30 py-2.5 -mx-4 px-4 sm:mx-0 sm:px-0 bg-[var(--theme-bg)]/85 backdrop-blur-2xl border-y border-[var(--theme-border)]/50 mb-8 mt-2 transition-colors">
+                <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar max-w-xl mx-auto justify-start sm:justify-center">
+                    {ALBUM_TABS.map((tab) => {
+                        const isActive = activeTab === tab.id;
+                        const TabIcon = tab.icon;
+                        return (
                             <button
-                                onClick={() => setExpandedHeroDesc(!expandedHeroDesc)}
-                                className="font-bold text-[var(--theme-accent)] hover:underline text-xs ml-1.5 cursor-pointer inline"
+                                key={tab.id}
+                                onClick={() => setActiveTab(tab.id)}
+                                className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all duration-200 cursor-pointer whitespace-nowrap flex items-center gap-1.5 select-none ${
+                                    isActive
+                                        ? 'bg-[var(--theme-accent)] text-[var(--theme-accent-fg)] shadow-md shadow-[var(--theme-accent)]/20'
+                                        : 'text-[var(--theme-muted)] hover:text-[var(--theme-fg)] hover:bg-[var(--theme-surface)]'
+                                }`}
                             >
-                                {expandedHeroDesc ? "Show less" : "Read more"}
+                                <TabIcon size={14} />
+                                <span>{tab.label}</span>
+                                {tab.count !== undefined && (
+                                    <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold ${
+                                        isActive ? 'bg-black/20 text-current' : 'bg-[var(--theme-surface)] text-[var(--theme-muted)]'
+                                    }`}>
+                                        {tab.count}
+                                    </span>
+                                )}
+                            </button>
+                        );
+                    })}
+                </div>
+            </div>
+
+            {/* TAB 1: TRACKS */}
+            {activeTab === "tracks" && (
+                <div className="relative z-10 mb-12 animate-fade-in">
+                    {/* Header row with Tracklist title */}
+                    <div className="flex items-center justify-between mb-5 px-1">
+                        <h2 className="text-xl sm:text-2xl font-extrabold text-[var(--theme-fg)] tracking-tight">
+                            Tracklist
+                        </h2>
+
+                        {album.editions && album.editions.length > 1 && (
+                            <button
+                                onClick={() => setIsEditionsDrawerOpen(true)}
+                                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] border border-[var(--theme-border)] text-xs font-semibold text-[var(--theme-fg)] transition cursor-pointer shadow-xs"
+                                title="Explore pressings & alternate editions"
+                            >
+                                <Layers size={13} className="text-[var(--theme-accent)]" />
+                                <span>{album.editions.length} Editions</span>
                             </button>
                         )}
                     </div>
-                )}
-            </div>
-
-            {/* Tracks Section */}
-            <div className="relative z-10 border-t border-[var(--theme-border)] pt-8 mb-12">
-                {/* Header row with Tracklist title and Vinyl Sides toggle */}
-                <div className="flex items-center justify-between mb-5 px-1">
-                    <h2 className="text-xl sm:text-2xl font-extrabold text-[var(--theme-fg)] tracking-tight">
-                        Tracks
-                    </h2>
-
-                    {hasAnySides && (
-                        <button
-                            onClick={toggleVinylSides}
-                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold tracking-wide uppercase transition cursor-pointer border ${
-                                showVinylSides 
-                                    ? 'bg-[var(--theme-card)] border-[var(--theme-accent)] text-[var(--theme-accent)] shadow-sm' 
-                                    : 'bg-[var(--theme-surface)] border-[var(--theme-border)] text-[var(--theme-muted)] hover:text-[var(--theme-fg)]'
-                            }`}
-                            title="Toggle vinyl side grouping (Side A, Side B, etc.)"
-                        >
-                            <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: showVinylSides ? 'var(--theme-accent)' : 'var(--theme-muted)' }} />
-                            <span>Sides: {showVinylSides ? 'On' : 'Off'}</span>
-                        </button>
-                    )}
-                </div>
 
                 {/* Switching edition banner */}
                 {loadingTracks && (
@@ -979,24 +1007,38 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
                         })}
                     </div>
                 )}
-            </div>
+                </div>
+            )}
 
-            {/* Reviews, Descriptions, Lore, Categorized Tags & External Links */}
-            <MusicLoreAndReviews
-                id={album.id || id}
-                type="album"
-                title={album.name || album.title}
-                artist={artistsList.map(a => a.name).join(', ')}
-                description={album.description}
-                primaryGenre={displayGenre}
-                genres={album.genres || []}
-                categorizedTags={album.categorizedTags || null}
-                tags={album.tags || album.genres || []}
-                allTags={album.allTags || []}
-                rating={album.rating}
-                externalLinks={album.externalLinks || []}
-                totalDurationMs={totalDurationMs}
-            />
+            {/* OTHER TABS: About & Info, Genres & Lore, Ratings & Reviews, Links & Editions */}
+            {activeTab !== "tracks" && (
+                <div className="relative z-10 mb-12 animate-fade-in max-w-4xl mx-auto">
+                    <MusicLoreAndReviews
+                        id={album.id || id}
+                        type="album"
+                        title={album.name || album.title}
+                        artist={artistsList.map(a => a.name).join(', ')}
+                        description={album.description}
+                        artistDescription={album.artistDescription || (artistsList?.[0]?.description)}
+                        releaseDetails={{
+                            releaseDate: album.releaseDate || (releaseYear ? String(releaseYear) : null),
+                            label: album.label || (album.labels && album.labels[0]?.name),
+                            country: album.country,
+                            format: album.format || (album.editions && album.editions[0]?.format),
+                            barcode: album.barcode
+                        }}
+                        primaryGenre={displayGenre}
+                        genres={album.genres || []}
+                        categorizedTags={album.categorizedTags || null}
+                        tags={album.tags || album.genres || []}
+                        allTags={album.allTags || []}
+                        rating={album.rating}
+                        externalLinks={album.externalLinks || []}
+                        totalDurationMs={totalDurationMs}
+                        activeTab={activeTab}
+                    />
+                </div>
+            )}
 
             {/* GrooveLink Modal */}
             <GrooveLinkModal
