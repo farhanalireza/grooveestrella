@@ -373,39 +373,48 @@ export default function LibraryPage() {
       </div>
 
       {/* SECTION SPECIFIC CONTENT */}
-      {/* 1. MUSIC JOURNAL TAB (Authentic Notebook Logbook Feel) */}
+      {/* 1. MUSIC JOURNAL TAB (Spacious, Elegant Personal Archive) */}
       {activeTab === 'journal' ? (
-        <div className="space-y-6 animate-fade-in max-w-4xl mx-auto">
-          {/* Notebook Header Banner */}
-          <div 
-            className="p-5 sm:p-6 rounded-3xl border border-[var(--theme-border)] shadow-xl relative overflow-hidden"
-            style={{
-              backgroundColor: "rgba(23, 2, 11, 0.6)",
-              backgroundImage: "repeating-linear-gradient(transparent, transparent 27px, rgba(255, 248, 240, 0.06) 28px)",
-              backgroundAttachment: "local"
-            }}
-          >
-            {/* Red notebook margin rule */}
-            <div className="absolute top-0 bottom-0 left-6 sm:left-8 w-[2px] bg-rose-500/40 pointer-events-none" />
-
-            <div className="pl-6 sm:pl-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <span className="text-[10px] uppercase font-bold tracking-widest text-amber-300 font-mono">
-                  Personal Listening Diary
-                </span>
-                <h2 className="text-xl sm:text-2xl font-black text-[var(--theme-fg)] tracking-tight font-display mt-0.5">
-                  My Music Listening Journal
-                </h2>
-                <p className="text-xs text-[var(--theme-muted)] mt-1 max-w-lg">
-                  Every listen, 10-star rating stamp, and personal reflection recorded in your private notebook.
-                </p>
+        <div className="space-y-8 animate-fade-in max-w-4xl mx-auto">
+          {/* Header Banner */}
+          <div className="p-6 sm:p-8 rounded-3xl bg-[var(--theme-card)]/80 backdrop-blur-xl border border-[var(--theme-border)] shadow-xl relative overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400/10 border border-amber-400/20 text-amber-300 text-xs font-bold uppercase tracking-wider mb-2">
+                <BookOpen size={13} />
+                <span>Personal Music Diary</span>
               </div>
+              <h2 className="text-2xl sm:text-3xl font-black text-[var(--theme-fg)] tracking-tight font-display">
+                Music Listening Journal
+              </h2>
+              <p className="text-xs sm:text-sm text-[var(--theme-muted)] mt-1 max-w-lg leading-relaxed">
+                Log every listen, record critical scores, track your mood, and write down your musical reflections with plenty of breathing room.
+              </p>
+            </div>
 
-              <div className="flex items-center gap-2 shrink-0">
-                <span className="text-xs font-mono text-[var(--theme-muted)]">
-                  {journalEntries.length} {journalEntries.length === 1 ? 'Page' : 'Pages'} Logged
-                </span>
-              </div>
+            <div className="flex items-center gap-3 shrink-0">
+              <Link
+                href="/journal"
+                className="px-4 py-2 rounded-2xl bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] border border-[var(--theme-border)] text-xs font-bold text-[var(--theme-fg)] hover:text-amber-300 transition-all flex items-center gap-1.5 shadow-sm"
+              >
+                <span>Full Archive</span>
+                <ArrowRight size={13} />
+              </Link>
+              <button
+                onClick={() => {
+                  setJournalModalItem({
+                    id: `log_${Date.now()}`,
+                    type: 'album',
+                    title: 'New Album Listen',
+                    subtitle: '',
+                    image: '',
+                  });
+                  setIsJournalModalOpen(true);
+                }}
+                className="px-4 py-2 rounded-2xl bg-gradient-to-r from-amber-400 to-amber-300 text-zinc-950 text-xs font-black hover:scale-105 active:scale-95 transition-all shadow-md flex items-center gap-1.5 cursor-pointer"
+              >
+                <Plus size={14} />
+                <span>Log Listen</span>
+              </button>
             </div>
           </div>
 
@@ -415,14 +424,14 @@ export default function LibraryPage() {
               <div className="w-16 h-16 rounded-full bg-amber-400/10 border border-amber-400/20 flex items-center justify-center text-amber-300 mx-auto mb-4">
                 <BookOpen size={28} />
               </div>
-              <h3 className="text-lg font-bold text-[var(--theme-fg)] mb-2">Your Journal Pages are Blank</h3>
+              <h3 className="text-lg font-bold text-[var(--theme-fg)] mb-2">Your Journal is Waiting</h3>
               <p className="text-sm text-[var(--theme-muted)] mb-6 leading-relaxed">
-                Rate albums, score tracks on the 10-star scale, and jot down your listening reflections to fill your personal notebook!
+                Rate albums, score tracks, and jot down your listening reflections to fill your personal music archive!
               </p>
               <button
                 onClick={() => {
                   setJournalModalItem({
-                    id: 'new_log',
+                    id: `log_${Date.now()}`,
                     type: 'album',
                     title: 'New Album Listen',
                     subtitle: '',
@@ -437,37 +446,39 @@ export default function LibraryPage() {
               </button>
             </div>
           ) : (
-            <div className="space-y-5">
+            <div className="space-y-6">
               {journalEntries.map((entry) => {
                 const targetHref = entry.targetId 
                   ? `/${entry.targetType || 'album'}/${entry.targetId}` 
                   : '#';
 
                 return (
-                  <div
+                  <article
                     key={entry.id}
-                    className="relative rounded-3xl border border-[var(--theme-border)] p-5 sm:p-6 shadow-xl transition-all duration-200 hover:border-amber-400/40 overflow-hidden group"
-                    style={{
-                      backgroundColor: "rgba(23, 2, 11, 0.55)",
-                      backgroundImage: "repeating-linear-gradient(transparent, transparent 27px, rgba(255, 248, 240, 0.07) 28px)",
-                      backgroundAttachment: "local"
-                    }}
+                    className="rounded-3xl bg-[var(--theme-card)]/80 backdrop-blur-xl border border-[var(--theme-border)]/80 hover:border-amber-400/40 p-6 sm:p-7 shadow-xl transition-all duration-200 space-y-5 group"
                   >
-                    {/* Vertical Red Margin Rule down the notebook page */}
-                    <div className="absolute top-0 bottom-0 left-6 sm:left-8 w-[2px] bg-rose-500/35 pointer-events-none" />
-
-                    <div className="pl-6 sm:pl-8 space-y-4">
-                      {/* Top Row: Date Stamp & Score Badge & Actions */}
-                      <div className="flex items-center justify-between flex-wrap gap-2">
-                        {/* Vintage Date Stamp */}
-                        <div className="flex items-center gap-1.5 text-xs text-[var(--theme-muted)] font-mono">
-                          <Calendar size={13} className="text-[var(--theme-accent)]" />
-                          <span className="font-bold tracking-tight uppercase">
+                    {/* Top Row: Date Stamp & Score Badge & Mood & Actions */}
+                    <div className="flex items-center justify-between flex-wrap gap-2.5">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {/* Date Stamp */}
+                        <div className="flex items-center gap-1.5 text-xs text-[var(--theme-muted)] font-mono font-semibold">
+                          <Calendar size={13} className="text-amber-300" />
+                          <span>
                             {entry.date ? new Date(entry.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) : 'LOGGED'}
                           </span>
                         </div>
 
-                        {/* 10-Star Rating Stamp */}
+                        {/* Mood badge */}
+                        {entry.mood && (
+                          <span className="text-xs px-2.5 py-0.5 rounded-full bg-amber-400/10 border border-amber-400/25 text-amber-300 font-semibold">
+                            {entry.mood}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Score & Controls */}
+                      <div className="flex items-center gap-3">
+                        {/* Rating Badge */}
                         {entry.rating > 0 && (
                           <div className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-amber-400/15 border border-amber-400/30 text-amber-300 font-bold font-mono text-xs shadow-xs">
                             <Star size={13} fill="currentColor" className="text-amber-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.8)]" />
@@ -476,7 +487,7 @@ export default function LibraryPage() {
                         )}
 
                         {/* Controls: Edit & Delete */}
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1">
                           <button
                             onClick={() => {
                               setJournalModalItem({
@@ -505,64 +516,62 @@ export default function LibraryPage() {
                           </button>
                         </div>
                       </div>
-
-                      {/* Music Item Reference Card (Clickable to visit) */}
-                      <Link
-                        href={targetHref}
-                        className="flex items-center gap-3.5 p-3 rounded-2xl bg-[var(--theme-surface)]/80 hover:bg-[var(--theme-card)] border border-[var(--theme-border)]/60 transition group/link cursor-pointer max-w-xl"
-                      >
-                        {entry.image ? (
-                          <img 
-                            src={entry.image} 
-                            alt={entry.title}
-                            className="w-12 h-12 rounded-xl object-cover shrink-0 shadow-sm ring-1 ring-[var(--theme-border)]"
-                            onError={(e) => { e.currentTarget.src = FALLBACK_COVER_SVG; }}
-                          />
-                        ) : (
-                          <div className="w-12 h-12 rounded-xl bg-[var(--theme-card)] flex items-center justify-center text-[var(--theme-muted)] shrink-0 border border-[var(--theme-border)]">
-                            <Disc size={20} />
-                          </div>
-                        )}
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className="text-[10px] uppercase font-bold tracking-wider text-[var(--theme-accent)]">
-                              {entry.targetType || 'Release'}
-                            </span>
-                          </div>
-                          <h4 className="text-sm font-extrabold text-[var(--theme-fg)] group-hover/link:text-[var(--theme-accent)] transition-colors truncate">
-                            {entry.title}
-                          </h4>
-                          {entry.subtitle && (
-                            <p className="text-xs text-[var(--theme-muted)] truncate mt-0.5">
-                              {entry.subtitle}
-                            </p>
-                          )}
-                        </div>
-                        <ArrowRight size={14} className="text-[var(--theme-muted)] group-hover/link:text-[var(--theme-accent)] transition-transform group-hover/link:translate-x-1 shrink-0 mr-1" />
-                      </Link>
-
-                      {/* Personal Reflection Text on Ruled Lines */}
-                      {entry.review && (
-                        <div className="pt-2 text-sm sm:text-base leading-[28px] text-[var(--theme-fg)] font-body whitespace-pre-line max-w-2xl">
-                          {entry.review}
-                        </div>
-                      )}
-
-                      {/* Context / Vibe Tags */}
-                      {entry.tags && entry.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5 pt-2">
-                          {entry.tags.map((tag, idx) => (
-                            <span
-                              key={idx}
-                              className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-[var(--theme-surface)] border border-[var(--theme-border)] text-[var(--theme-muted)]"
-                            >
-                              #{tag}
-                            </span>
-                          ))}
-                        </div>
-                      )}
                     </div>
-                  </div>
+
+                    {/* Music Item Reference Card (Clickable to visit) */}
+                    <Link
+                      href={targetHref}
+                      className="flex items-center gap-3.5 p-3 rounded-2xl bg-[var(--theme-surface)]/80 hover:bg-[var(--theme-surface)] border border-[var(--theme-border)]/60 transition group/link max-w-xl"
+                    >
+                      {entry.image ? (
+                        <img 
+                          src={entry.image} 
+                          alt={entry.title}
+                          className="w-13 h-13 rounded-xl object-cover shrink-0 shadow-sm ring-1 ring-[var(--theme-border)]"
+                          onError={(e) => { e.currentTarget.src = FALLBACK_COVER_SVG; }}
+                        />
+                      ) : (
+                        <div className="w-13 h-13 rounded-xl bg-[var(--theme-card)] flex items-center justify-center text-[var(--theme-muted)] shrink-0 border border-[var(--theme-border)]">
+                          <Disc size={20} />
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <span className="text-[10px] uppercase font-bold tracking-wider text-[var(--theme-accent)]">
+                          {entry.targetType || 'Release'}
+                        </span>
+                        <h4 className="text-sm font-extrabold text-[var(--theme-fg)] group-hover/link:text-amber-300 transition-colors truncate">
+                          {entry.title}
+                        </h4>
+                        {entry.subtitle && (
+                          <p className="text-xs text-[var(--theme-muted)] truncate mt-0.5">
+                            {entry.subtitle}
+                          </p>
+                        )}
+                      </div>
+                      <ArrowRight size={14} className="text-[var(--theme-muted)] group-hover/link:text-amber-300 transition-transform group-hover/link:translate-x-1 shrink-0 mr-1" />
+                    </Link>
+
+                    {/* Personal Reflection Text with Generous Line Height & Breathing Space */}
+                    {entry.review && (
+                      <div className="text-sm sm:text-base leading-relaxed text-[var(--theme-fg)] font-body whitespace-pre-line pt-1">
+                        {entry.review}
+                      </div>
+                    )}
+
+                    {/* Context / Vibe Tags */}
+                    {entry.tags && entry.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 pt-1">
+                        {entry.tags.map((tag, idx) => (
+                          <span
+                            key={idx}
+                            className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-[var(--theme-surface)] border border-[var(--theme-border)] text-[var(--theme-muted)]"
+                          >
+                            #{tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </article>
                 );
               })}
             </div>

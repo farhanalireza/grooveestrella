@@ -1,22 +1,17 @@
 // src/lib/colorExtractor.js
 /**
- * Browser-native adaptive color extractor with true atmospheric coloration
- * and guaranteed contrast protection.
+ * Browser-native adaptive color extractor with multi-bin hue clustering,
+ * true atmospheric coloration, dynamic accent vibrance, and guaranteed contrast.
  *
- * In Album-Adaptive mode, the background visibly adopts the rich, resonant colors
- * of the album cover art (deep sapphire, emerald, ruby wine, desert amber, indigo),
- * NEVER a flat pitch black!
- *
- * For light/white covers (e.g. Pink Floyd's 'Wish You Were Here' or The Beatles' 'White Album'):
- * It samples the non-white colored pixels (sky cyan, fire amber, sand terracotta)
- * and creates a rich, dark tinted background (lightness ~16%, saturation ~40%)
- * with crisp cream/white text (contrast ratio > 10:1).
+ * In Album-Adaptive mode, the background dynamically adopts the dominant rich hue
+ * of the album cover art (deep sapphire, emerald pine, ruby wine, desert amber,
+ * warm terracotta, electric cyan, royal blue, etc.), NEVER defaulting to purple!
  */
 
 const paletteCache = new Map();
 
 /**
- * Converts RGB to HSL
+ * Converts RGB to HSL [0-360, 0-100, 0-100]
  */
 function rgbToHsl(r, g, b) {
   r /= 255;
@@ -42,11 +37,12 @@ function rgbToHsl(r, g, b) {
 }
 
 /**
- * Converts HSL to RGB hex string
+ * Converts HSL to RGB hex string (#RRGGBB)
  */
 function hslToHex(h, s, l) {
-  s /= 100;
-  l /= 100;
+  h = ((h % 360) + 360) % 360;
+  s = Math.max(0, Math.min(100, s)) / 100;
+  l = Math.max(0, Math.min(100, l)) / 100;
   const k = n => (n + h / 30) % 12;
   const a = s * Math.min(l, 1 - l);
   const f = n => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
@@ -66,21 +62,40 @@ function getLuminance(r, g, b) {
 }
 
 /**
- * Fast deterministic fallback palette derived from title/string hash
+ * Vibrant and varied color wheel fallback for when cover image is unavailable or blocked.
+ * Produces diverse, distinct color identities (terracotta, oceanic teal, emerald, gold, indigo, crimson)
+ * rather than hardcoded purple.
  */
+const VIBRANT_COLOR_FAMILIES = [
+  { name: "Oceanic Azure", hue: 205, accentHue: 190 },
+  { name: "Amber Gold", hue: 38, accentHue: 44 },
+  { name: "Emerald Forest", hue: 155, accentHue: 145 },
+  { name: "Sunset Terracotta", hue: 18, accentHue: 28 },
+  { name: "Crimson Velvet", hue: 350, accentHue: 12 },
+  { name: "Midnight Cobalt", hue: 225, accentHue: 210 },
+  { name: "Electric Cyan", hue: 180, accentHue: 175 },
+  { name: "Neon Lime", hue: 85, accentHue: 75 },
+  { name: "Warm Bronze", hue: 28, accentHue: 36 },
+  { name: "Deep Indigo", hue: 245, accentHue: 255 },
+  { name: "Wildberry Plum", hue: 320, accentHue: 335 },
+  { name: "Nordic Slate", hue: 210, accentHue: 195 },
+];
+
 export function getHarmoniousFallback(seedString = "groove") {
   let hash = 0;
   for (let i = 0; i < seedString.length; i++) {
     hash = seedString.charCodeAt(i) + ((hash << 5) - hash);
   }
-  const hue = Math.abs(hash) % 360;
+  const index = Math.abs(hash) % VIBRANT_COLOR_FAMILIES.length;
+  const family = VIBRANT_COLOR_FAMILIES[index];
+  const hue = family.hue;
+  const accentHue = family.accentHue;
 
-  // Visibly colored background (15% lightness, 45% saturation - rich and colorful!)
-  const bg = hslToHex(hue, 45, 14);
-  const ambientTop = hslToHex(hue, 60, 24);
-  const deepBase = hslToHex(hue, 40, 9);
-  const accent = hslToHex(hue, 85, 68);
-  const accentBg = hslToHex(hue, 70, 52);
+  const bg = hslToHex(hue, 38, 12);
+  const ambientTop = hslToHex(hue, 55, 22);
+  const deepBase = hslToHex(hue, 32, 8);
+  const accent = hslToHex(accentHue, 88, 64);
+  const accentBg = hslToHex(accentHue, 75, 48);
 
   const rNum = parseInt(bg.slice(1, 3), 16);
   const gNum = parseInt(bg.slice(3, 5), 16);
@@ -90,24 +105,24 @@ export function getHarmoniousFallback(seedString = "groove") {
     bg,
     ambientTop,
     deepBase,
-    fg: "#FFF8F0",
+    fg: "#FFFDF9",
     accent,
     accentBg,
-    accentFg: "#101116",
-    surface: `rgba(${rNum + 20}, ${gNum + 20}, ${bNum + 20}, 0.55)`,
-    surfaceElevated: `rgba(${rNum + 35}, ${gNum + 35}, ${bNum + 35}, 0.85)`,
-    card: `rgba(${rNum + 25}, ${gNum + 25}, ${bNum + 25}, 0.65)`,
-    border: "rgba(255, 248, 240, 0.16)",
+    accentFg: "#0F1115",
+    surface: `rgba(${rNum + 24}, ${gNum + 24}, ${bNum + 24}, 0.60)`,
+    surfaceElevated: `rgba(${rNum + 38}, ${gNum + 38}, ${bNum + 38}, 0.88)`,
+    card: `rgba(${rNum + 28}, ${gNum + 28}, ${bNum + 28}, 0.68)`,
+    border: "rgba(255, 253, 249, 0.14)",
     borderActive: accent,
-    muted: "rgba(255, 248, 240, 0.75)",
+    muted: "rgba(255, 253, 249, 0.72)",
     plum: ambientTop,
-    gradient: `radial-gradient(ellipse at 50% -15%, ${ambientTop} 0%, ${bg} 65%, ${deepBase} 100%)`,
+    gradient: `radial-gradient(ellipse at 50% -10%, ${ambientTop} 0%, ${bg} 62%, ${deepBase} 100%)`,
   };
 }
 
 /**
- * Main color extractor for album / artist / track cover images.
- * Returns a Promise that resolves to a rich, colorful, accessible adaptive palette.
+ * 24-Bin Hue Clustering with Perceptual Weighting.
+ * Identifies the authentic artistic dominant color and vibrant accents from cover artwork.
  */
 export async function extractAdaptivePalette(imageUrl, fallbackTitle = "groove") {
   if (!imageUrl) {
@@ -130,25 +145,42 @@ export async function extractAdaptivePalette(imageUrl, fallbackTitle = "groove")
       const fallback = getHarmoniousFallback(fallbackTitle);
       paletteCache.set(imageUrl, fallback);
       resolve(fallback);
-    }, 1800);
+    }, 2200);
 
     img.onload = () => {
       clearTimeout(timeout);
       try {
         const canvas = document.createElement("canvas");
         const ctx = canvas.getContext("2d", { willReadFrequently: true });
+        if (!ctx) throw new Error("Could not get 2d context");
 
-        // Downscale to 32x32 for ultra-fast sampling
-        canvas.width = 32;
-        canvas.height = 32;
-        ctx.drawImage(img, 0, 0, 32, 32);
+        // Downsample to 48x48 for balanced speed and color accuracy
+        const sampleSize = 48;
+        canvas.width = sampleSize;
+        canvas.height = sampleSize;
+        ctx.drawImage(img, 0, 0, sampleSize, sampleSize);
 
-        const imgData = ctx.getImageData(0, 0, 32, 32).data;
-        const totalPixels = 32 * 32;
+        const imgData = ctx.getImageData(0, 0, sampleSize, sampleSize).data;
+        const totalPixels = sampleSize * sampleSize;
 
-        let totalR = 0, totalG = 0, totalB = 0;
+        // 24 Hue Bins (15 degrees each)
+        const BIN_COUNT = 24;
+        const bins = Array.from({ length: BIN_COUNT }, () => ({
+          count: 0,
+          totalS: 0,
+          totalL: 0,
+          totalR: 0,
+          totalG: 0,
+          totalB: 0,
+          maxSat: 0,
+          vividSample: null,
+        }));
+
+        let validColoredPixels = 0;
         let whitePixelsCount = 0;
-        let saturatedSwatches = [];
+        let blackPixelsCount = 0;
+        let mostVibrantPixel = null;
+        let maxVibrancyScore = -1;
 
         for (let i = 0; i < imgData.length; i += 4) {
           const r = imgData[i];
@@ -156,70 +188,114 @@ export async function extractAdaptivePalette(imageUrl, fallbackTitle = "groove")
           const b = imgData[i + 2];
           const a = imgData[i + 3];
 
-          if (a < 128) continue; // Skip transparent
-
-          totalR += r;
-          totalG += g;
-          totalB += b;
+          if (a < 128) continue; // Skip transparency
 
           const lum = getLuminance(r, g, b);
           const [h, s, l] = rgbToHsl(r, g, b);
 
-          // Track white or near-white pixels (e.g. Wish You Were Here album border)
-          if (lum > 0.70 || l > 80) {
+          if (lum > 0.85 || l > 90) {
             whitePixelsCount++;
+            continue;
+          }
+          if (lum < 0.05 || l < 8) {
+            blackPixelsCount++;
+            continue;
           }
 
-          // Collect non-white, non-black, colored pixels for true color extraction
-          if (s >= 18 && l >= 15 && l <= 85) {
-            saturatedSwatches.push({ r, g, b, h, s, l });
+          // We count pixels with noticeable saturation as candidates for color theme
+          if (s >= 14 && l >= 10 && l <= 90) {
+            validColoredPixels++;
+
+            const binIndex = Math.min(Math.floor(h / (360 / BIN_COUNT)), BIN_COUNT - 1);
+            const bin = bins[binIndex];
+            bin.count++;
+            bin.totalS += s;
+            bin.totalL += l;
+            bin.totalR += r;
+            bin.totalG += g;
+            bin.totalB += b;
+
+            if (s > bin.maxSat) {
+              bin.maxSat = s;
+              bin.vividSample = { r, g, b, h, s, l };
+            }
+
+            // Vibrancy scoring: high saturation, medium-light luminance, avoids pure black or white
+            const vibrancyScore = (s * 1.5) * (1 - Math.abs(l - 55) / 55);
+            if (vibrancyScore > maxVibrancyScore) {
+              maxVibrancyScore = vibrancyScore;
+              mostVibrantPixel = { r, g, b, h, s, l };
+            }
           }
         }
 
-        const avgR = Math.round(totalR / totalPixels);
-        const avgG = Math.round(totalG / totalPixels);
-        const avgB = Math.round(totalB / totalPixels);
+        // Check if artwork is predominantly achromatic (B&W or monochrome)
+        const isMonochrome = validColoredPixels < totalPixels * 0.06;
 
-        const isPredominantlyWhiteOrLight = (whitePixelsCount / totalPixels) > 0.35;
-        const [avgH, avgS, avgL] = rgbToHsl(avgR, avgG, avgB);
+        let dominantHue = 210; // Default cool slate
+        let dominantSat = 35;
+        let accentHue = 40;   // Warm gold accent
+        let accentSat = 85;
+        let accentLight = 66;
 
-        let finalHue = avgH;
-        let finalSat = avgS;
-        let accentColor = "#E8A87C";
+        if (!isMonochrome) {
+          // Score each bin: pixelCount * (avgSat^1.2) * lightness balance
+          let bestBinIndex = -1;
+          let highestScore = -1;
 
-        // Prioritize colorful swatches over white/gray borders
-        if (saturatedSwatches.length > 0) {
-          // Sort by highest saturation
-          saturatedSwatches.sort((a, b) => b.s - a.s);
-          const topSwatch = saturatedSwatches[0];
-          finalHue = topSwatch.h;
-          finalSat = Math.max(topSwatch.s, 40);
-          accentColor = hslToHex(topSwatch.h, Math.min(topSwatch.s + 15, 95), 68);
+          bins.forEach((bin, idx) => {
+            if (bin.count === 0) return;
+            const avgS = bin.totalS / bin.count;
+            const avgL = bin.totalL / bin.count;
+            // Prefer saturated, lively hues over washed out colors
+            const lightnessFactor = 1 - Math.abs(avgL - 50) / 75;
+            const score = bin.count * Math.pow(avgS, 1.25) * Math.max(0.2, lightnessFactor);
+
+            if (score > highestScore) {
+              highestScore = score;
+              bestBinIndex = idx;
+            }
+          });
+
+          if (bestBinIndex >= 0) {
+            const bestBin = bins[bestBinIndex];
+            const avgS = Math.round(bestBin.totalS / bestBin.count);
+            dominantHue = Math.round((bestBinIndex + 0.5) * (360 / BIN_COUNT));
+            dominantSat = Math.max(28, Math.min(65, avgS));
+
+            // Select accent: use the most vibrant pixel from the art, or complementary/analogous
+            if (mostVibrantPixel && mostVibrantPixel.s >= 40) {
+              accentHue = mostVibrantPixel.h;
+              accentSat = Math.max(mostVibrantPixel.s, 75);
+              accentLight = Math.max(58, Math.min(72, mostVibrantPixel.l));
+            } else {
+              accentHue = (dominantHue + 35) % 360;
+              accentSat = 85;
+              accentLight = 66;
+            }
+          }
         } else {
-          accentColor = "#E8A87C";
+          // Monochrome / Black & White cover:
+          // Give it a sleek, luxurious deep obsidian slate with warm gold/champagne accent
+          dominantHue = 220;
+          dominantSat = 16;
+          accentHue = 42;
+          accentSat = 88;
+          accentLight = 68;
         }
 
-        let bgHex;
-        let ambientTop;
-        let deepBase;
-
-        if (isPredominantlyWhiteOrLight) {
-          // Artwork has a light/white background (like Wish You Were Here)
-          // We use the sampled accent hue (e.g. sandy orange/fire or sky cyan)
-          // to create a rich, visible warm dark background (lightness ~15-17%), NEVER pure black!
-          const activeHue = saturatedSwatches.length > 0 ? finalHue : 30; // Warm amber default
-          bgHex = hslToHex(activeHue, 40, 15);
-          ambientTop = hslToHex(activeHue, 55, 23);
-          deepBase = hslToHex(activeHue, 35, 10);
-        } else {
-          // Full rich colored artwork: set background lightness to 14-16% with rich saturation
-          const clampedSat = Math.max(Math.min(finalSat, 55), 35);
-          bgHex = hslToHex(finalHue, clampedSat, 14);
-          ambientTop = hslToHex(finalHue, Math.min(clampedSat + 15, 65), 25);
-          deepBase = hslToHex(finalHue, Math.min(clampedSat, 40), 9);
-        }
-
-        const accentBg = hslToHex(finalHue, Math.min(finalSat + 20, 75), 50);
+        // Synthesize rich, distinct background colors directly from the extracted hue!
+        // Never hardcoded purple:
+        // - Blue covers -> Deep midnight navy
+        // - Green covers -> Deep emerald pine
+        // - Orange/Red covers -> Rich dark terracotta / mahogany
+        // - Yellow/Amber covers -> Rich dark bronze / espresso gold
+        // - Cyan covers -> Deep ocean teal
+        const bgHex = hslToHex(dominantHue, Math.min(dominantSat, 42), 11);
+        const ambientTop = hslToHex(dominantHue, Math.min(dominantSat + 18, 58), 22);
+        const deepBase = hslToHex(dominantHue, Math.min(dominantSat, 32), 7);
+        const accentColor = hslToHex(accentHue, accentSat, accentLight);
+        const accentBg = hslToHex(accentHue, Math.max(45, accentSat - 15), 48);
 
         const rNum = parseInt(bgHex.slice(1, 3), 16);
         const gNum = parseInt(bgHex.slice(3, 5), 16);
@@ -229,23 +305,23 @@ export async function extractAdaptivePalette(imageUrl, fallbackTitle = "groove")
           bg: bgHex,
           ambientTop,
           deepBase,
-          fg: "#FFF8F0",
+          fg: "#FFFDF9",
           accent: accentColor,
           accentBg,
-          accentFg: "#101116",
-          surface: `rgba(${rNum + 20}, ${gNum + 20}, ${bNum + 20}, 0.55)`,
-          surfaceElevated: `rgba(${rNum + 35}, ${gNum + 35}, ${bNum + 35}, 0.85)`,
-          card: `rgba(${rNum + 25}, ${gNum + 25}, ${bNum + 25}, 0.65)`,
-          border: "rgba(255, 248, 240, 0.16)",
+          accentFg: "#0D0F14",
+          surface: `rgba(${rNum + 24}, ${gNum + 24}, ${bNum + 24}, 0.60)`,
+          surfaceElevated: `rgba(${rNum + 38}, ${gNum + 38}, ${bNum + 38}, 0.88)`,
+          card: `rgba(${rNum + 28}, ${gNum + 28}, ${bNum + 28}, 0.68)`,
+          border: "rgba(255, 253, 249, 0.15)",
           borderActive: accentColor,
-          muted: "rgba(255, 248, 240, 0.75)",
+          muted: "rgba(255, 253, 249, 0.72)",
           plum: ambientTop,
-          gradient: `radial-gradient(ellipse at 50% -15%, ${ambientTop} 0%, ${bgHex} 65%, ${deepBase} 100%)`,
+          gradient: `radial-gradient(ellipse at 50% -10%, ${ambientTop} 0%, ${bgHex} 62%, ${deepBase} 100%)`,
         };
 
         paletteCache.set(imageUrl, resultPalette);
         resolve(resultPalette);
-      } catch (err) {
+      } catch (_) {
         const fallback = getHarmoniousFallback(fallbackTitle);
         paletteCache.set(imageUrl, fallback);
         resolve(fallback);
@@ -259,6 +335,11 @@ export async function extractAdaptivePalette(imageUrl, fallbackTitle = "groove")
       resolve(fallback);
     };
 
-    img.src = imageUrl;
+    // Use our local cover-proxy for external images to guarantee CORS-compliant canvas reads!
+    if (imageUrl.startsWith("http://") || imageUrl.startsWith("https://")) {
+      img.src = `/api/cover-proxy?url=${encodeURIComponent(imageUrl)}`;
+    } else {
+      img.src = imageUrl;
+    }
   });
 }

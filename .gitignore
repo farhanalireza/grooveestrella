@@ -47,3 +47,6 @@ ENV/
 env/
 /venv
 /env
+
+supabase/.temp/
+.temp/

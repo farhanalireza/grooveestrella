@@ -14,6 +14,7 @@ import {
   Sun,
   Moon,
   Sparkles,
+  BookOpen,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -32,16 +33,22 @@ const NAV_ITEMS = [
     route: "/search"
   },
   {
-    label: "Account",
-    icon: <UserRound size={18} />, 
-    section: "Account",
-    route: "/account"
+    label: "Journal",
+    icon: <BookOpen size={18} />, 
+    section: "Journal",
+    route: "/journal"
   },
   {
     label: "Library",
     icon: <ListMusic size={18} />, 
     section: "Playlist",
     route: "/library"
+  },
+  {
+    label: "Account",
+    icon: <UserRound size={18} />, 
+    section: "Account",
+    route: "/account"
   },
   {
     label: "Settings",
@@ -57,7 +64,7 @@ const NAV_ITEMS = [
   }
 ];
 
-const MOBILE_NAV_ITEMS = NAV_ITEMS.filter((item) => item.label !== "Review");
+const MOBILE_NAV_ITEMS = NAV_ITEMS.filter((item) => item.label !== "Review" && item.label !== "Settings");
 
 const AppBar = ({ selectedSection, setSection }) => {
   const router = useRouter();
@@ -69,7 +76,8 @@ const AppBar = ({ selectedSection, setSection }) => {
     const path = pathname || "";
     if (path === "/") return "Music";
     if (path.startsWith("/search")) return "Search";
-    if (path.startsWith("/account")) return "Account";
+    if (path.startsWith("/journal")) return "Journal";
+    if (path.startsWith("/account") || path.startsWith("/profile")) return "Account";
     if (path.startsWith("/feedback")) return "Review";
     if (path.startsWith("/settings")) return "Settings";
     if (path.startsWith("/library")) return "Playlist";

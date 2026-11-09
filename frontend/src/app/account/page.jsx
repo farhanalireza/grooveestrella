@@ -7,13 +7,14 @@ import {
   Music, Heart, Disc, Users, User, Share2, 
   Sparkles, Settings, ArrowRight, Dice5, Edit3, Check, 
   X, Trash2, Download, MessageSquare, Plus, ExternalLink,
-  ChevronRight, Bookmark
+  ChevronRight, Bookmark, LogIn, LogOut, BookOpen, Globe
 } from 'lucide-react';
 import GrooveLoader from '@/Components/GrooveLoader';
 import Link from 'next/link';
 import { toast } from '@/lib/toast';
 import { generateRandomName, getOrSetUserName } from '@/lib/nameGenerator';
 import UserAvatarIcon, { AVAILABLE_AVATARS } from '@/Components/UserAvatarIcon';
+import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext';
 
 const AVAILABLE_GENRES = [
   "Rock", "Pop", "Indie", "Electronic", "Hip Hop", 
@@ -23,6 +24,7 @@ const AVAILABLE_GENRES = [
 
 function UserDashboardContent() {
   const router = useRouter();
+  const { user, profile: authProfile, signOut, isConfigured } = useSupabaseAuth();
   const [userName, setUserName] = useState('');
   const [userAvatar, setUserAvatar] = useState('');
   const [isEditingName, setIsEditingName] = useState(false);
@@ -37,13 +39,13 @@ function UserDashboardContent() {
   const [savedPlaylists, setSavedPlaylists] = useState([]);
   const [userReviews, setUserReviews] = useState([]);
 
-  // Load all user data from localStorage
+  // Load all user data from localStorage & Supabase profile
   const loadData = () => {
     if (typeof window === 'undefined') return;
-    const currentName = getOrSetUserName();
+    const currentName = authProfile?.display_name || authProfile?.username || getOrSetUserName();
     setUserName(currentName);
     setTempName(currentName);
-    setUserAvatar(localStorage.getItem('userAvatar') || '');
+    setUserAvatar(authProfile?.avatar_url || localStorage.getItem('userAvatar') || '');
 
     try {
       setFavoriteGenres(JSON.parse(localStorage.getItem('favoriteGenres') || '[]'));
@@ -226,6 +228,87 @@ function UserDashboardContent() {
       
       <div className='relative z-10 w-full max-w-5xl mx-auto space-y-8'>
         
+        {/* Supabase Account & Music Journal Bar */}
+        <div className="p-4 sm:p-5 rounded-3xl bg-[var(--theme-card)]/80 border border-[var(--theme-border)] backdrop-blur-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-amber-400/15 border border-amber-400/30 flex items-center justify-center text-amber-300 shrink-0">
+              <Sparkles size={20} />
+            </div>
+            <div>
+              {user ? (
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-[var(--theme-fg)]">
+                      {user.email}
+                    </span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 font-bold border border-emerald-500/30">
+                      Cloud Connected
+                    </span>
+                  </div>
+                  <p className="text-xs text-[var(--theme-muted)]">
+                    Profile: <Link href={`/profile/${authProfile?.username || userName}`} className="text-amber-300 font-mono font-bold hover:underline">@{authProfile?.username || userName}</Link>
+                  </p>
+                </div>
+              ) : (
+                <div>
+                  <h3 className="text-xs sm:text-sm font-bold text-[var(--theme-fg)]">
+                    Music Journal & Critic Accounts
+                  </h3>
+                  <p className="text-xs text-[var(--theme-muted)]">
+                    Sign in to backup ratings, sync journal entries, and share your profile.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
+            <Link
+              href="/journal"
+              className="px-4 py-2 rounded-2xl bg-gradient-to-r from-amber-400 to-amber-300 text-zinc-950 text-xs font-extrabold hover:scale-105 active:scale-95 transition-all shadow-sm flex items-center gap-1.5"
+            >
+              <BookOpen size={14} />
+              <span>Music Journal</span>
+            </Link>
+
+            {user ? (
+              <div className="flex items-center gap-2">
+                <Link
+                  href={`/profile/${authProfile?.username || userName}`}
+                  className="px-3.5 py-2 rounded-2xl bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] border border-[var(--theme-border)] text-xs font-bold text-[var(--theme-fg)] transition flex items-center gap-1.5"
+                >
+                  <Globe size={13} />
+                  <span>Public View</span>
+                </Link>
+                <button
+                  onClick={signOut}
+                  className="px-3 py-2 rounded-2xl text-xs font-bold text-rose-400 hover:bg-rose-500/10 border border-transparent transition cursor-pointer flex items-center gap-1.5"
+                  title="Sign out"
+                >
+                  <LogOut size={13} />
+                  <span>Sign Out</span>
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <Link
+                  href="/login"
+                  className="px-3.5 py-2 rounded-2xl bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] border border-[var(--theme-border)] text-xs font-bold text-[var(--theme-fg)] transition flex items-center gap-1.5"
+                >
+                  <LogIn size={13} />
+                  <span>Sign In</span>
+                </Link>
+                <Link
+                  href="/signup"
+                  className="px-3.5 py-2 rounded-2xl bg-amber-400/20 text-amber-300 border border-amber-400/40 text-xs font-extrabold hover:bg-amber-400/30 transition"
+                >
+                  Sign Up
+                </Link>
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* Profile Card with Adj+Noun Generator and Live Edit */}
         <div className='bg-[var(--theme-card)]/80 border border-[var(--theme-border)] backdrop-blur-xl rounded-3xl p-6 sm:p-8 shadow-md'>
           <div className='flex flex-col sm:flex-row items-center sm:items-start gap-6'>
