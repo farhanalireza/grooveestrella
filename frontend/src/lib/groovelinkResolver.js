@@ -5,6 +5,8 @@ import {
   searchMusicBrainzAlbumsServer,
   searchMusicBrainzArtistsServer,
 } from './musicbrainzServer.js';
+import { createClient, isSupabaseServerConfigured } from './supabase/server.js';
+import { formatPlatformLink, saveGrooveLinksForEntity } from './supabase/musicEntities.js';
 
 // In-memory cache for resolved links and platform entities
 const resolverCache = new Map();
@@ -769,6 +771,39 @@ export async function resolveDirectPlatformLinks({ title, artist, type = 'track'
   const links = {};
   const isDirect = {};
 
+  // 0. Check PostgreSQL music_entities.data.groovelink cache
+  let dbEntity = null;
+  if (isSupabaseServerConfigured()) {
+    try {
+      const supabase = await createClient();
+      let query = supabase
+        .from('music_entities')
+        .select('id, mbid, type, title, artist_credit, year, cover_art_url, data');
+      if (mbid) {
+        query = query.eq('mbid', mbid);
+      } else if (cleanTitle) {
+        query = query.ilike('title', cleanTitle);
+        if (cleanArtist) query = query.ilike('artist_credit', `%${cleanArtist}%`);
+      }
+      const { data } = await query.maybeSingle();
+      dbEntity = data;
+    } catch (_) {}
+  }
+
+  if (dbEntity?.data) {
+    const storedGrooveLinks = dbEntity.data.groovelink || dbEntity.data || {};
+    const platforms = ['spotify', 'apple_music', 'youtube_music', 'deezer', 'tidal', 'youtube', 'soundcloud', 'musicbrainz'];
+    for (const p of platforms) {
+      const rawVal = storedGrooveLinks[p] || storedGrooveLinks[`${p}_url`] || storedGrooveLinks[`${p}_id`];
+      if (rawVal) {
+        const directUrl = formatPlatformLink(p, rawVal, type);
+        if (directUrl) {
+          links[p] = directUrl;
+          isDirect[p] = true;
+        }
+      }
+    }
+  }
   // 1. Populate from known external links / MusicBrainz URL relations
   for (const item of externalLinks || []) {
     const url = typeof item === 'string' ? item : item?.url;
@@ -837,11 +872,25 @@ export async function resolveDirectPlatformLinks({ title, artist, type = 'track'
   }
 
   // 3. MusicBrainz canonical direct link
-  if (mbid) {
-    links.musicbrainz = `https://musicbrainz.org/${type === 'album' ? 'release-group' : type === 'artist' ? 'artist' : 'recording'}/${mbid}`;
+  const effectiveMbid = mbid || dbEntity?.mbid;
+  if (effectiveMbid) {
+    links.musicbrainz = `https://musicbrainz.org/${type === 'album' ? 'release-group' : type === 'artist' ? 'artist' : 'recording'}/${effectiveMbid}`;
     isDirect.musicbrainz = true;
   }
 
+  // 4. If any newly verified direct links were found, persist them into PostgreSQL
+  const newlyVerified = {};
+  for (const [p, direct] of Object.entries(isDirect)) {
+    if (direct && links[p] && !links[p].includes('/search')) {
+      newlyVerified[p] = links[p];
+    }
+  }
+
+  if (effectiveMbid && Object.keys(newlyVerified).length > 0 && isSupabaseServerConfigured()) {
+    saveGrooveLinksForEntity(effectiveMbid, newlyVerified).catch((err) => {
+      console.warn('Could not persist GrooveLinks to PostgreSQL:', err?.message);
+    });
+  }
   // 4. Fallback search URLs for services without direct matches
   const encodedQuery = encodeURIComponent(`${cleanTitle} ${cleanArtist}`.trim());
   if (!links.spotify) {

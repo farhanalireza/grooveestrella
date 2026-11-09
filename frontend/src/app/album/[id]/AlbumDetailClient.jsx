@@ -601,6 +601,7 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
                         itemTitle={album.name || album.title}
                         itemSubtitle={artistsList.map(a => a.name).join(", ")}
                         itemImage={coverUrl}
+                        itemYear={album.originalReleaseYear || album.releaseYear}
                     />
                 </div>
 

@@ -112,6 +112,7 @@ export default async function EntityPage({ params, searchParams }) {
                 itemTitle={entity.title}
                 itemSubtitle={entity.artist_credit || ""}
                 itemImage={entity.cover_art_url || ""}
+                itemYear={entity.year}
                 showMusicbrainz={true}
               />
 

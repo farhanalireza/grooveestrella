@@ -403,6 +403,7 @@ export default function TrackDetailClient({ id, initialData }) {
                         itemTitle={track.name || track.title}
                         itemSubtitle={artistsList.map(a => a.name).join(', ')}
                         itemImage={coverUrl}
+                        itemYear={track.releaseYear}
                     />
                 </div>
 

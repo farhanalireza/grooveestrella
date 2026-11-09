@@ -384,6 +384,7 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
                                 itemTitle={artist.name}
                                 itemSubtitle={artist.country || artist.area || "Artist Profile"}
                                 itemImage={coverUrl}
+                                itemYear={artist.lifeSpan?.begin ? parseInt(String(artist.lifeSpan.begin).slice(0, 4), 10) : null}
                             />
                         </div>
                     </div>

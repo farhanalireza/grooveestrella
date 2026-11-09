@@ -59,6 +59,8 @@ export default function RatingAndJournalModal({
   title = "Untitled",
   subtitle = "",
   image = "",
+  year = null,
+  itemYear = null,
   initialRating = 0,
   initialReview = "",
   journalEntryId = null,
@@ -259,30 +261,66 @@ export default function RatingAndJournalModal({
       if (user && isSupabaseConfigured()) {
         try {
           const supabase = createClient();
-          // Step A: Ensure entity exists in music_entities
+          // Step A: Ensure entity exists in music_entities with full year and metadata
           let entityRecordId = null;
-          const { data: existingEntity } = await supabase
-            .from("music_entities")
-            .select("id")
-            .eq("mbid", id)
-            .maybeSingle();
+          const effectiveYear = Number.isInteger(year) ? year : Number.isInteger(itemYear) ? itemYear : null;
 
-          if (existingEntity) {
-            entityRecordId = existingEntity.id;
-          } else {
-            const { data: insertedEntity } = await supabase
-              .from("music_entities")
-              .insert({
+          // Attempt sync via /api/entity/sync to guarantee complete MusicBrainz data, year, and groovelinks
+          try {
+            const syncRes = await fetch('/api/entity/sync', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
                 mbid: id,
                 type: type === "track" ? "track" : type === "artist" ? "artist" : "album",
                 title: title || "Untitled",
-                artist_credit: subtitle || "",
+                artist: subtitle || "",
+                year: effectiveYear,
                 cover_art_url: image || null,
-                data: {},
-              })
-              .select("id")
-              .single();
-            if (insertedEntity) entityRecordId = insertedEntity.id;
+              }),
+            });
+            if (syncRes.ok) {
+              const syncData = await syncRes.json();
+              if (syncData?.entity?.id) {
+                entityRecordId = syncData.entity.id;
+              }
+            }
+          } catch (syncErr) {
+            console.warn("Entity sync API skipped or offline:", syncErr?.message);
+          }
+
+          // Fallback if API was unavailable: direct database lookup / clean upsert
+          if (!entityRecordId) {
+            const { data: existingEntity } = await supabase
+              .from("music_entities")
+              .select("id, year")
+              .eq("mbid", id)
+              .maybeSingle();
+
+            if (existingEntity) {
+              entityRecordId = existingEntity.id;
+              if (existingEntity.year === null && effectiveYear) {
+                await supabase
+                  .from("music_entities")
+                  .update({ year: effectiveYear })
+                  .eq("id", existingEntity.id);
+              }
+            } else {
+              const { data: insertedEntity } = await supabase
+                .from("music_entities")
+                .insert({
+                  mbid: id,
+                  type: type === "track" ? "track" : type === "artist" ? "artist" : "album",
+                  title: title || "Untitled",
+                  artist_credit: subtitle || "",
+                  year: effectiveYear,
+                  cover_art_url: image || null,
+                  data: { groovelink: {} },
+                })
+                .select("id")
+                .single();
+              if (insertedEntity) entityRecordId = insertedEntity.id;
+            }
           }
 
           if (entityRecordId) {

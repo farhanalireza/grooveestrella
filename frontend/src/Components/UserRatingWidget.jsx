@@ -13,6 +13,8 @@ export default function UserRatingWidget({
   itemTitle = "Untitled",
   itemSubtitle = "",
   itemImage = "",
+  itemYear = null,
+  year = null,
   compact = false,
   showMusicbrainz = true,
   className = "",
@@ -190,6 +192,7 @@ export default function UserRatingWidget({
         title={itemTitle}
         subtitle={itemSubtitle}
         image={itemImage}
+        year={itemYear || year}
         initialRating={userRating}
       />
     </>
