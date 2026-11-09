@@ -68,7 +68,7 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
     }, [albums]);
 
     const [activeTab, setActiveTab] = useState("songs");
-    const { theme, setAdaptivePalette, clearAdaptivePalette } = useTheme();
+    const { theme, setAdaptivePalette, clearAdaptivePalette, colors } = useTheme();
 
     const ARTIST_TABS = useMemo(() => [
         { id: 'songs', label: 'Top Songs', count: topTracks.length, icon: ListMusic },
@@ -245,18 +245,18 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
     };
 
     return (
-        <div className="relative min-h-screen bg-[var(--theme-bg)] text-[var(--theme-fg)] p-4 pb-32 sm:p-6 md:pl-20 md:pr-20 lg:pl-40 lg:pr-40 pt-5 sm:pt-8 overflow-hidden transition-colors duration-300">
-            {/* Full Screen Dynamic Ambient Artist Picture Gradient Backdrop with Adaptive Contrast Protection */}
+        <div 
+            className="relative min-h-screen bg-[var(--theme-bg)] text-[var(--theme-fg)] p-4 pb-32 sm:p-6 md:pl-20 md:pr-20 lg:pl-40 lg:pr-40 pt-5 sm:pt-8 overflow-hidden transition-colors duration-300"
+            style={{ background: theme === 'adaptive' && colors?.gradient ? colors.gradient : undefined }}
+        >
+            {/* Full Screen Dynamic Ambient Artist Picture Backdrop with Natural Theme Gradient Integration */}
             <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
                 <div 
-                    className="absolute inset-0 bg-cover bg-center scale-110 blur-3xl opacity-35 dark:opacity-30 saturate-150 contrast-110 transition-all duration-700"
+                    className="absolute inset-0 bg-cover bg-center scale-125 blur-3xl opacity-40 saturate-150 transition-all duration-700"
                     style={{ backgroundImage: `url(${coverUrl})` }}
                 />
-                {/* Darkening Scrim layer preventing bright photos from washing out typography */}
-                <div className="absolute inset-0 bg-black/55 dark:bg-black/65" />
-                <div className="absolute inset-x-0 top-0 h-64 bg-gradient-to-b from-black/60 via-black/30 to-transparent" />
                 <div 
-                    className="absolute inset-0 bg-gradient-to-b from-transparent via-[var(--theme-bg)]/80 to-[var(--theme-bg)]"
+                    className="absolute inset-0 bg-gradient-to-b from-[var(--theme-bg)]/20 via-[var(--theme-bg)]/70 to-[var(--theme-bg)]"
                 />
             </div>
 
@@ -321,7 +321,7 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
 
                 <div className="flex-1 min-w-0 text-center md:text-left flex flex-col justify-center">
                     <div>
-                        {/* Distinguished Group vs. Solo Badge & Quick Access Chips */}
+                        {/* Distinguished Group vs. Solo Badge */}
                         <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mb-2.5">
                             <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider border shadow-sm ${
                                 isGroup 
@@ -331,46 +331,6 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
                                 {isGroup ? <Users size={13} /> : <User size={13} />}
                                 <span>{entityTypeLabel}</span>
                             </div>
-
-                            {isGroup && (totalLineupCount > 0 || ogCount > 0) && (
-                                <button
-                                    type="button"
-                                    onClick={() => setIsDetailsDrawerOpen(true)}
-                                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--theme-card)] hover:bg-[var(--theme-surface)] active:scale-95 text-[var(--theme-fg)] text-[11px] font-bold border border-[var(--theme-border)] transition cursor-pointer shadow-sm group"
-                                    title="View band lineup"
-                                >
-                                    <span>{totalLineupCount || currentMembersCount} Members</span>
-                                    {ogCount > 0 && (
-                                        <span className="text-[10px] text-amber-400 font-mono font-bold">({ogCount} OG)</span>
-                                    )}
-                                    <ChevronRight size={12} className="text-[var(--theme-muted)] group-hover:text-[var(--theme-accent)] transition-transform group-hover:translate-x-0.5" />
-                                </button>
-                            )}
-
-                            {!isGroup && bands.length > 0 && (
-                                <button
-                                    type="button"
-                                    onClick={() => setIsDetailsDrawerOpen(true)}
-                                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--theme-card)] hover:bg-[var(--theme-surface)] active:scale-95 text-[var(--theme-fg)] text-[11px] font-bold border border-[var(--theme-border)] transition cursor-pointer shadow-sm group"
-                                    title="View artist groups"
-                                >
-                                    <span>In {bands.length} Bands</span>
-                                    <ChevronRight size={12} className="text-[var(--theme-muted)] group-hover:text-[var(--theme-accent)] transition-transform group-hover:translate-x-0.5" />
-                                </button>
-                            )}
-
-                            {externalLinks.length > 0 && (
-                                <button
-                                    type="button"
-                                    onClick={() => setIsLinksDrawerOpen(true)}
-                                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--theme-card)] hover:bg-[var(--theme-surface)] active:scale-95 text-[var(--theme-fg)] text-[11px] font-bold border border-[var(--theme-border)] transition cursor-pointer shadow-sm group"
-                                    title="Open external links drawer"
-                                >
-                                    <Link2 size={12} className="text-[var(--theme-accent)]" />
-                                    <span>{externalLinks.length} Links</span>
-                                    <ChevronRight size={12} className="text-[var(--theme-muted)] group-hover:text-[var(--theme-accent)] transition-transform group-hover:translate-x-0.5" />
-                                </button>
-                            )}
                         </div>
 
                         {/* Artist Title */}
@@ -415,12 +375,15 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
                             )}
                         </div>
 
-                        {/* Top Interactive User Rating & MusicBrainz Rating Capsule */}
+                        {/* Golden Rate Button & 10-Star Rating Capsule */}
                         <div className="flex items-center justify-center md:justify-start mb-3">
                             <UserRatingWidget
                                 id={artist.id || id}
                                 type="artist"
                                 musicbrainzRating={artist.rating}
+                                itemTitle={artist.name}
+                                itemSubtitle={artist.country || artist.area || "Artist Profile"}
+                                itemImage={coverUrl}
                             />
                         </div>
                     </div>
@@ -514,7 +477,7 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
 
             {/* Segmented Navigation Tabs */}
             <div className="sticky top-0 sm:top-2 z-30 py-2.5 -mx-4 px-4 sm:mx-0 sm:px-0 bg-[var(--theme-bg)]/85 backdrop-blur-2xl border-y border-[var(--theme-border)]/50 mb-8 mt-4 transition-colors">
-                <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar max-w-xl mx-auto justify-start sm:justify-center">
+                <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden scrollb-none no-scrollbar max-w-xl mx-auto justify-start sm:justify-center">
                     {ARTIST_TABS.map((tab) => {
                         const isActive = activeTab === tab.id;
                         const TabIcon = tab.icon;
@@ -811,8 +774,183 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
                 </div>
             )}
 
-            {/* OTHER TABS: Bio & Lineup, Genres & Roots, Ratings & Reviews, External Sources */}
-            {activeTab !== "songs" && activeTab !== "discography" && (
+            {/* TAB 3: BIO & LINEUP (Directly Embedded Full Lineup & Biography) */}
+            {activeTab === "about" && (
+                <div className="relative z-10 mb-12 animate-fade-in max-w-4xl mx-auto space-y-10">
+                    {/* Band Lineup Section */}
+                    {(isGroup || members.current?.length > 0 || members.og?.length > 0 || members.past?.length > 0 || bands?.length > 0) && (
+                        <div className="space-y-6">
+                            <div className="border-b border-[var(--theme-border)]/50 pb-3">
+                                <div className="flex items-center gap-2 text-xs font-bold text-[var(--theme-accent)] uppercase tracking-widest font-mono">
+                                    <Users size={15} />
+                                    <span>{isGroup ? "Band Personnel & Lineup History" : "Musical Projects & Bands"}</span>
+                                </div>
+                                <h2 className="text-2xl font-black text-[var(--theme-fg)] tracking-tight font-display mt-0.5">
+                                    {isGroup ? `${artist.name} Lineup` : `Groups & Projects with ${artist.name}`}
+                                </h2>
+                            </div>
+
+                            {/* Active / Current Lineup */}
+                            {members.current && members.current.length > 0 && (
+                                <div className="space-y-3">
+                                    <h3 className="text-xs font-bold text-emerald-400 uppercase tracking-wider font-mono flex items-center gap-1.5">
+                                        <CheckCircle2 size={14} />
+                                        <span>Current Active Lineup ({members.current.length})</span>
+                                    </h3>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                                        {members.current.map((m, idx) => (
+                                            <Link
+                                                key={`${m.id || idx}-current`}
+                                                href={m.id ? `/artist/${m.id}` : '#'}
+                                                className="p-3.5 rounded-2xl bg-[var(--theme-surface)]/70 hover:bg-[var(--theme-card)] border border-[var(--theme-border)] hover:border-[var(--theme-accent)] transition-all flex items-center justify-between group cursor-pointer shadow-xs"
+                                            >
+                                                <div className="min-w-0 pr-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-sm font-bold text-[var(--theme-fg)] group-hover:text-[var(--theme-accent)] transition-colors truncate">
+                                                            {m.name}
+                                                        </span>
+                                                        {m.roles?.some(r => /original|founder/i.test(r)) && (
+                                                            <span className="text-[9px] font-bold uppercase px-2 py-0.5 rounded-full bg-amber-400/15 text-amber-300 border border-amber-400/30 shrink-0">
+                                                                Founder
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    {m.roles && m.roles.length > 0 && (
+                                                        <p className="text-[11px] text-[var(--theme-muted)] truncate mt-0.5">
+                                                            {m.roles.filter(r => !/original|founder/i.test(r)).join(", ") || "Member"}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                                <ChevronRight size={14} className="text-[var(--theme-muted)] group-hover:text-[var(--theme-accent)] transition-transform group-hover:translate-x-0.5 shrink-0" />
+                                            </Link>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Founding Members */}
+                            {members.og && members.og.length > 0 && (
+                                <div className="space-y-3">
+                                    <h3 className="text-xs font-bold text-amber-300 uppercase tracking-wider font-mono flex items-center gap-1.5">
+                                        <Sparkles size={14} />
+                                        <span>Founding Members ({members.og.length})</span>
+                                    </h3>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                                        {members.og.map((m, idx) => (
+                                            <Link
+                                                key={`${m.id || idx}-founder`}
+                                                href={m.id ? `/artist/${m.id}` : '#'}
+                                                className="p-3.5 rounded-2xl bg-[var(--theme-surface)]/70 hover:bg-[var(--theme-card)] border border-amber-400/25 hover:border-amber-400 transition-all flex items-center justify-between group cursor-pointer shadow-xs"
+                                            >
+                                                <div className="min-w-0 pr-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-sm font-bold text-[var(--theme-fg)] group-hover:text-amber-300 transition-colors truncate">
+                                                            {m.name}
+                                                        </span>
+                                                        <span className="text-[9px] font-bold uppercase px-2 py-0.5 rounded-full bg-amber-400/15 text-amber-300 border border-amber-400/30 shrink-0">
+                                                            Founder
+                                                        </span>
+                                                    </div>
+                                                    <p className="text-[11px] text-[var(--theme-muted)] truncate mt-0.5">
+                                                        {m.roles?.filter(r => !/original|founder/i.test(r)).join(", ") || (m.ended ? "Former Member" : "Current Member")}
+                                                        {m.begin || m.end ? ` (${m.begin?.split("-")[0] || ""} – ${m.end?.split("-")[0] || (m.ended ? "" : "Present")})` : ""}
+                                                    </p>
+                                                </div>
+                                                <ChevronRight size={14} className="text-[var(--theme-muted)] group-hover:text-amber-300 transition-transform group-hover:translate-x-0.5 shrink-0" />
+                                            </Link>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Past Members */}
+                            {members.past && members.past.length > 0 && (
+                                <div className="space-y-3">
+                                    <h3 className="text-xs font-bold text-[var(--theme-muted)] uppercase tracking-wider font-mono">
+                                        Past Members & Lineup History ({members.past.length})
+                                    </h3>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                                        {members.past.map((m, idx) => (
+                                            <Link
+                                                key={`${m.id || idx}-past`}
+                                                href={m.id ? `/artist/${m.id}` : '#'}
+                                                className="p-3 rounded-2xl bg-[var(--theme-surface)]/50 hover:bg-[var(--theme-card)] border border-[var(--theme-border)]/70 hover:border-[var(--theme-border)] transition-all flex items-center justify-between group cursor-pointer"
+                                            >
+                                                <div className="min-w-0 pr-2">
+                                                    <span className="text-xs sm:text-sm font-semibold text-[var(--theme-fg)]/90 group-hover:text-[var(--theme-fg)] truncate block">
+                                                        {m.name}
+                                                    </span>
+                                                    <p className="text-[11px] text-[var(--theme-muted)] truncate mt-0.5">
+                                                        {m.roles?.join(", ") || "Former Member"}
+                                                        {m.begin || m.end ? ` (${m.begin?.split("-")[0] || ""} – ${m.end?.split("-")[0] || "Past"})` : ""}
+                                                    </p>
+                                                </div>
+                                                <ChevronRight size={13} className="text-[var(--theme-muted)] group-hover:text-[var(--theme-fg)] shrink-0" />
+                                            </Link>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Solo Artist Bands */}
+                            {!isGroup && bands && bands.length > 0 && (
+                                <div className="space-y-3">
+                                    <h3 className="text-xs font-bold text-[var(--theme-muted)] uppercase tracking-wider font-mono">
+                                        Member of Bands ({bands.length})
+                                    </h3>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                                        {bands.map((b, idx) => (
+                                            <Link
+                                                key={`${b.id || idx}-band`}
+                                                href={b.id ? `/artist/${b.id}` : '#'}
+                                                className="p-3.5 rounded-2xl bg-[var(--theme-surface)]/70 hover:bg-[var(--theme-card)] border border-[var(--theme-border)] hover:border-[var(--theme-accent)] transition-all flex items-center justify-between group cursor-pointer"
+                                            >
+                                                <div className="min-w-0 pr-2">
+                                                    <span className="text-sm font-bold text-[var(--theme-fg)] group-hover:text-[var(--theme-accent)] transition-colors truncate block">
+                                                        {b.name}
+                                                    </span>
+                                                    {b.roles && b.roles.length > 0 && (
+                                                        <p className="text-[11px] text-[var(--theme-muted)] truncate mt-0.5">
+                                                            {b.roles.join(", ")}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                                <ChevronRight size={14} className="text-[var(--theme-muted)] group-hover:text-[var(--theme-accent)] shrink-0" />
+                                            </Link>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Biography & Lore */}
+                    <MusicLoreAndReviews
+                        id={artist.id || id}
+                        type="artist"
+                        title={artist.name}
+                        artist={artist.name}
+                        description={artist.description}
+                        releaseDetails={{
+                            releaseDate: artist.beginDate ? `Active since ${artist.beginDate}` : null,
+                            country: artist.country || artist.area,
+                            format: isGroup ? 'Musical Band / Group' : 'Solo Artist',
+                            label: artist.type
+                        }}
+                        primaryGenre={genres[0] || null}
+                        genres={artist.genres || genres || []}
+                        categorizedTags={artist.categorizedTags || null}
+                        tags={artist.tags || artist.genres || []}
+                        allTags={artist.allTags || []}
+                        rating={artist.rating}
+                        externalLinks={artist.externalLinks || []}
+                        activeTab="about"
+                    />
+                </div>
+            )}
+
+            {/* OTHER TABS: Genres & Roots, Ratings & Reviews, External Sources */}
+            {activeTab !== "songs" && activeTab !== "discography" && activeTab !== "about" && (
                 <div className="relative z-10 mb-12 animate-fade-in max-w-4xl mx-auto">
                     <MusicLoreAndReviews
                         id={artist.id || id}

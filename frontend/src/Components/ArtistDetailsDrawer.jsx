@@ -279,7 +279,7 @@ export default function ArtistDetailsDrawer({
                                 </span>
                                 {m.roles?.some(r => /original|founder/i.test(r)) && (
                                   <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30 shrink-0">
-                                    OG
+                                    Founder
                                   </span>
                                 )}
                               </div>
@@ -302,7 +302,7 @@ export default function ArtistDetailsDrawer({
                       <div className="flex items-center gap-2 mb-3">
                         <Sparkles size={16} className="text-amber-400" />
                         <h3 className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-[var(--theme-fg)]">
-                          Founding / OG Members ({ogMembersList.length})
+                          Founding Members ({ogMembersList.length})
                         </h3>
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">

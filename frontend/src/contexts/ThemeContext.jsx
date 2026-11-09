@@ -77,6 +77,10 @@ export function ThemeProvider({ children }) {
         "--background", "--foreground"
       ];
       keys.forEach((k) => root.style.removeProperty(k));
+      if (document.body) {
+        document.body.style.removeProperty("background-image");
+        document.body.style.removeProperty("background-attachment");
+      }
       return;
     }
 
@@ -97,6 +101,10 @@ export function ThemeProvider({ children }) {
     root.style.setProperty("--theme-plum", palette.plum || palette.bg);
     if (palette.gradient) {
       root.style.setProperty("--theme-gradient", palette.gradient);
+      if (document.body) {
+        document.body.style.backgroundImage = palette.gradient;
+        document.body.style.backgroundAttachment = "fixed";
+      }
     }
   }, []);
 

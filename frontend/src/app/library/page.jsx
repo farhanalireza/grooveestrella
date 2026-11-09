@@ -6,13 +6,14 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { 
   Music, Disc, Users, Heart, FolderHeart, Trash2, ArrowRight, 
-  Plus, UploadCloud, Layers, LayoutGrid, List
+  Plus, UploadCloud, Layers, LayoutGrid, List, BookOpen, Star, Calendar, Sparkles, Edit3
 } from 'lucide-react';
 import { toast } from '@/lib/toast';
 import ImportPlaylistModal from '@/Components/ImportPlaylistModal';
 import PlaylistCover from '@/Components/PlaylistCover';
 import LibraryTouchSlider from '@/Components/LibraryTouchSlider';
 import LibraryCoverImage, { FALLBACK_COVER_SVG } from '@/Components/LibraryCoverImage';
+import RatingAndJournalModal from '@/Components/RatingAndJournalModal';
 
 export default function LibraryPage() {
   const router = useRouter();
@@ -27,19 +28,25 @@ export default function LibraryPage() {
   const [artists, setArtists] = useState([]);
   const [playlists, setPlaylists] = useState([]);
   const [customPlaylists, setCustomPlaylists] = useState([]);
+  const [journalEntries, setJournalEntries] = useState([]);
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [newPlName, setNewPlName] = useState('');
   const [newPlDesc, setNewPlDesc] = useState('');
 
-  useEffect(() => {
+  // Journal modal states for edit / new log
+  const [isJournalModalOpen, setIsJournalModalOpen] = useState(false);
+  const [journalModalItem, setJournalModalItem] = useState(null);
+
+  const loadData = useCallback(() => {
     try {
       setSongs(JSON.parse(localStorage.getItem('savedSongs') || '[]'));
       setAlbums(JSON.parse(localStorage.getItem('savedAlbums') || '[]'));
       setArtists(JSON.parse(localStorage.getItem('savedArtists') || '[]'));
       setPlaylists(JSON.parse(localStorage.getItem('savedPlaylists') || '[]'));
       setCustomPlaylists(JSON.parse(localStorage.getItem('customPlaylists') || '[]'));
+      setJournalEntries(JSON.parse(localStorage.getItem('groove_journal_logs') || '[]'));
 
       const savedView = localStorage.getItem('groove_library_view_mode');
       if (savedView === 'slider' || savedView === 'grid' || savedView === 'list') {
@@ -47,6 +54,23 @@ export default function LibraryPage() {
       }
     } catch (_) {}
   }, []);
+
+  useEffect(() => {
+    loadData();
+
+    const handleJournalSync = () => {
+      try {
+        setJournalEntries(JSON.parse(localStorage.getItem('groove_journal_logs') || '[]'));
+      } catch (_) {}
+    };
+
+    window.addEventListener('groove-journal-updated', handleJournalSync);
+    window.addEventListener('groove-rating-changed', handleJournalSync);
+    return () => {
+      window.removeEventListener('groove-journal-updated', handleJournalSync);
+      window.removeEventListener('groove-rating-changed', handleJournalSync);
+    };
+  }, [loadData]);
 
   const handleChangeViewMode = (mode) => {
     setViewMode(mode);
@@ -98,25 +122,32 @@ export default function LibraryPage() {
 
   const handleDeleteCustomPlaylist = (id) => {
     try {
-      const savedCustom = JSON.parse(localStorage.getItem('customPlaylists') || '[]');
-      const target = savedCustom.find(p => p.id === id);
-      const title = target ? target.name : 'Playlist';
-      
-      const updated = savedCustom.filter(p => p.id !== id);
+      const custom = JSON.parse(localStorage.getItem('customPlaylists') || '[]');
+      const target = custom.find(p => p.id === id);
+      const updated = custom.filter(p => p.id !== id);
       localStorage.setItem('customPlaylists', JSON.stringify(updated));
       setCustomPlaylists(updated);
-      const remainingCount = updated.length + playlists.length;
-      setSliderIndex((prev) => Math.max(0, Math.min(prev, remainingCount - 1)));
-      toast.info(`"${title}" deleted.`);
+      toast.info(`Playlist "${target?.name || 'Custom'}" removed.`);
     } catch (_) {}
   };
 
-  // Combined playlist items for playlists tab
+  const handleDeleteJournalEntry = (entryId) => {
+    try {
+      const updated = journalEntries.filter(e => e.id !== entryId);
+      localStorage.setItem('groove_journal_logs', JSON.stringify(updated));
+      setJournalEntries(updated);
+      window.dispatchEvent(new CustomEvent('groove-journal-updated', { detail: { entryId } }));
+      toast.info("Journal log removed");
+    } catch (_) {}
+  };
+
+  // Combine regular and custom playlists
   const allPlaylists = useMemo(() => {
-    const custom = customPlaylists.map(p => ({ ...p, isCustom: true }));
-    const bookmarked = playlists.map(p => ({ ...p, isCustom: false }));
-    return [...custom, ...bookmarked];
-  }, [customPlaylists, playlists]);
+    return [
+      ...customPlaylists.map(p => ({ ...p, isCustom: true })),
+      ...playlists
+    ];
+  }, [playlists, customPlaylists]);
 
   // Current list based on active tab
   const currentList = useMemo(() => {
@@ -124,14 +155,16 @@ export default function LibraryPage() {
     if (activeTab === 'albums') return albums;
     if (activeTab === 'artists') return artists;
     if (activeTab === 'playlists') return allPlaylists;
+    if (activeTab === 'journal') return journalEntries;
     return [];
-  }, [activeTab, songs, albums, artists, allPlaylists]);
+  }, [activeTab, songs, albums, artists, allPlaylists, journalEntries]);
 
   const tabs = [
     { id: 'songs', label: 'Songs', count: songs.length, icon: Music },
     { id: 'albums', label: 'Albums', count: albums.length, icon: Disc },
     { id: 'artists', label: 'Artists', count: artists.length, icon: Users },
-    { id: 'playlists', label: 'Playlists', count: allPlaylists.length, icon: Heart }
+    { id: 'playlists', label: 'Playlists', count: allPlaylists.length, icon: Heart },
+    { id: 'journal', label: 'Music Journal', count: journalEntries.length, icon: BookOpen }
   ];
 
   // Helper functions to normalize item properties across types
@@ -157,14 +190,15 @@ export default function LibraryPage() {
       }
       return `By ${item?.owner || 'Spotify'}`;
     }
+    if (activeTab === 'journal') {
+      return item?.subtitle || `${item?.targetType ? item.targetType.toUpperCase() : 'MUSIC'} LOG`;
+    }
     return '';
   }, [activeTab]);
 
-  // Resolution-aware image selector (optimizes bandwidth and prevents loading large assets for small thumbnails)
   const getItemImage = useCallback((item, size = 'large') => {
     if (!item) return FALLBACK_COVER_SVG;
 
-    // Spotify images array: [0: large, 1: medium, 2: small]
     if (Array.isArray(item.images) && item.images.length > 0) {
       if (size === 'small') {
         const smallUrl = item.images[item.images.length - 1]?.url || item.images[0]?.url;
@@ -180,104 +214,41 @@ export default function LibraryPage() {
     if (direct && typeof direct === 'string' && !direct.includes('placehold.co')) {
       return direct;
     }
-
     return FALLBACK_COVER_SVG;
   }, []);
 
-  // Preload initial set of images for immediate display without flash
-  useEffect(() => {
-    if (!currentList || currentList.length === 0) return;
-    const initialBatch = currentList.slice(0, 8);
-    initialBatch.forEach(item => {
-      const url = getItemImage(item, viewMode === 'list' ? 'small' : viewMode === 'grid' ? 'medium' : 'large');
-      if (url && typeof url === 'string' && !url.startsWith('data:') && !url.includes('placehold.co')) {
-        const img = new Image();
-        img.src = url;
-      }
-    });
-  }, [currentList, viewMode, getItemImage]);
-
-  const getItemMeta = useCallback((item) => {
-    if (!item) return null;
+  const getItemHref = useCallback((item) => {
+    if (!item) return '#';
     if (activeTab === 'songs') {
-      return item.release_date || (item.popularity ? `Score: ${item.popularity}` : null);
+      const trackId = item.trackId || item.id || (item.trackURI ? item.trackURI.split(':').pop() : null);
+      return trackId ? `/track/${trackId}` : '#';
     }
     if (activeTab === 'albums') {
-      return item.tracksCount ? `${item.tracksCount} tracks` : (item.release_date ? new Date(item.release_date).getFullYear() : null);
+      return item.id ? `/album/${item.id}` : '#';
     }
     if (activeTab === 'artists') {
-      return item.followers ? `${item.followers.toLocaleString()} followers` : null;
+      return item.id ? `/artist/${item.id}` : '#';
     }
     if (activeTab === 'playlists') {
-      return item.isCustom ? 'Custom Playlist' : 'Bookmarked Spotify Playlist';
+      return item.id ? `/playlist/${item.id}` : '#';
     }
-    return null;
+    if (activeTab === 'journal') {
+      const type = item.targetType || 'album';
+      return item.targetId ? `/${type}/${item.targetId}` : '#';
+    }
+    return '#';
   }, [activeTab]);
 
-  // Automatically self-heal and resolve missing cover portrait photography for saved artists
-  useEffect(() => {
-    if (!artists || artists.length === 0) return;
-    let isCancelled = false;
-
-    const resolveMissingArtistImages = async () => {
-      let changed = false;
-      const updated = [...artists];
-
-      for (let i = 0; i < updated.length; i++) {
-        const art = updated[i];
-        const valid = art.image && typeof art.image === 'string' && !art.image.includes('placehold.co') && !art.image.startsWith('data:');
-        if (!valid) {
-          const q = art.name || art.title || '';
-          if (!q) continue;
-          try {
-            const res = await fetch(`/api/search?q=${encodeURIComponent(q)}&type=artist&limit=1`);
-            if (res.ok) {
-              const data = await res.json();
-              const found = data.results?.[0];
-              if (found && (found.image || found.url)) {
-                updated[i] = {
-                  ...art,
-                  id: art.id || found.id,
-                  image: found.image || found.url,
-                  coverArt: found.image || found.url,
-                };
-                changed = true;
-              }
-            }
-          } catch (_) {}
-        }
-      }
-
-      if (changed && !isCancelled) {
-        setArtists(updated);
-        try {
-          localStorage.setItem('savedArtists', JSON.stringify(updated));
-        } catch (_) {}
-      }
-    };
-
-    resolveMissingArtistImages();
-    return () => { isCancelled = true; };
-  }, [artists.length]);
-
   const openItem = useCallback((item) => {
-    if (!item) return;
-    const targetId = item.id || item.trackId || item.trackURI;
-    setNavigatingId(targetId);
-
-    startTransition(() => {
-      if (activeTab === 'songs') {
-        const trackTarget = item.trackId || item.id;
-        if (trackTarget) router.push(`/track/${trackTarget}`);
-      } else if (activeTab === 'albums') {
-        if (item.id) router.push(`/album/${item.id}`);
-      } else if (activeTab === 'artists') {
-        if (item.id) router.push(`/artist/${item.id}`);
-      } else if (activeTab === 'playlists') {
-        if (item.id) router.push(`/playlist/${item.id}`);
-      }
-    });
-  }, [activeTab, router]);
+    const href = getItemHref(item);
+    if (href && href !== '#' && !isPending) {
+      const targetNavId = item.id || item.trackId || item.targetId;
+      setNavigatingId(targetNavId);
+      startTransition(() => {
+        router.push(href);
+      });
+    }
+  }, [getItemHref, isPending, router]);
 
   const deleteItem = useCallback((item) => {
     if (!item) return;
@@ -293,6 +264,8 @@ export default function LibraryPage() {
       } else {
         handleClearItem('playlists', item.id, setPlaylists);
       }
+    } else if (activeTab === 'journal') {
+      handleDeleteJournalEntry(item.id);
     }
   }, [activeTab]);
 
@@ -301,19 +274,41 @@ export default function LibraryPage() {
     if (activeTab === 'albums') return 'View Album';
     if (activeTab === 'artists') return 'View Artist';
     if (activeTab === 'playlists') return 'Open Playlist';
+    if (activeTab === 'journal') return 'View Music';
     return 'View';
   }, [activeTab]);
 
   return (
     <div className="min-h-screen bg-[var(--theme-bg)] text-[var(--theme-fg)] p-4 sm:p-6 pb-28 md:pl-20 md:pr-20 lg:pl-40 lg:pr-40 pt-8 sm:pt-12 transition-colors duration-300">
       {/* Title */}
-      <div className="flex items-center gap-3 mb-6 sm:mb-8">
-        <FolderHeart className="w-8 h-8 text-[var(--theme-accent)]" />
-        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Your Library Collection</h1>
+      <div className="flex items-center justify-between gap-3 mb-6 sm:mb-8 flex-wrap">
+        <div className="flex items-center gap-3">
+          <FolderHeart className="w-8 h-8 text-[var(--theme-accent)]" />
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Your Library Collection</h1>
+        </div>
+
+        {activeTab === 'journal' && (
+          <button
+            onClick={() => {
+              setJournalModalItem({
+                id: 'custom_log',
+                type: 'album',
+                title: 'Personal Listen',
+                subtitle: '',
+                image: '',
+              });
+              setIsJournalModalOpen(true);
+            }}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-amber-400 via-amber-300 to-amber-400 text-zinc-950 font-extrabold text-xs sm:text-sm shadow-md active:scale-95 cursor-pointer"
+          >
+            <Plus size={15} />
+            <span>New Journal Log</span>
+          </button>
+        )}
       </div>
 
-      {/* Library Statistics Panel */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-8">
+      {/* Library Statistics Panel (5 Responsive Metric Cards) */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 mb-8">
         <div className="bg-[var(--theme-card)]/80 backdrop-blur-xl border border-[var(--theme-border)] rounded-2xl p-3.5 sm:p-4 flex flex-col justify-between shadow-md">
           <div className="flex items-center justify-between text-[var(--theme-muted)] mb-1.5">
             <span className="text-xs font-bold uppercase tracking-wider">Tracks</span>
@@ -342,10 +337,17 @@ export default function LibraryPage() {
           </div>
           <span className="text-xl sm:text-2xl font-extrabold text-[var(--theme-fg)]">{allPlaylists.length}</span>
         </div>
+        <div className="bg-[var(--theme-card)]/80 backdrop-blur-xl border border-amber-400/30 rounded-2xl p-3.5 sm:p-4 flex flex-col justify-between shadow-md">
+          <div className="flex items-center justify-between text-amber-300 mb-1.5">
+            <span className="text-xs font-bold uppercase tracking-wider">Journal Logs</span>
+            <BookOpen size={15} />
+          </div>
+          <span className="text-xl sm:text-2xl font-extrabold text-amber-300 font-mono">{journalEntries.length}</span>
+        </div>
       </div>
 
-      {/* Navigation Tabs */}
-      <div className="flex gap-2 overflow-x-auto pb-3 mb-6 border-b border-[var(--theme-border)]">
+      {/* Navigation Tabs (With cross-browser hidden scrollbar) */}
+      <div className="flex gap-2 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden scrollb-none no-scrollbar pb-3 mb-6 border-b border-[var(--theme-border)]">
         {tabs.map(tab => {
           const Icon = tab.icon;
           return (
@@ -370,274 +372,465 @@ export default function LibraryPage() {
         })}
       </div>
 
-      {/* View Options Switcher: Slider (Touch Deck of Cards) | Grid Box | List */}
-      <div className="flex items-center justify-between gap-3 mb-8 flex-wrap">
-        {/* If playlists tab, display Create and Import buttons */}
-        {activeTab === 'playlists' ? (
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setIsImportModalOpen(true)}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] text-[var(--theme-fg)] border border-[var(--theme-border)] font-bold text-xs rounded-full transition active:scale-95 shadow-sm cursor-pointer"
-              title="Import playlist from file"
-            >
-              <UploadCloud size={14} />
-              <span>Import</span>
-            </button>
-            <button
-              onClick={() => setIsCreateModalOpen(true)}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 bg-[var(--theme-accent)] hover:opacity-90 text-[var(--theme-accent-fg)] font-bold text-xs rounded-full transition active:scale-95 shadow-md cursor-pointer"
-            >
-              <Plus size={14} />
-              <span>Create</span>
-            </button>
+      {/* SECTION SPECIFIC CONTENT */}
+      {/* 1. MUSIC JOURNAL TAB (Authentic Notebook Logbook Feel) */}
+      {activeTab === 'journal' ? (
+        <div className="space-y-6 animate-fade-in max-w-4xl mx-auto">
+          {/* Notebook Header Banner */}
+          <div 
+            className="p-5 sm:p-6 rounded-3xl border border-[var(--theme-border)] shadow-xl relative overflow-hidden"
+            style={{
+              backgroundColor: "rgba(23, 2, 11, 0.6)",
+              backgroundImage: "repeating-linear-gradient(transparent, transparent 27px, rgba(255, 248, 240, 0.06) 28px)",
+              backgroundAttachment: "local"
+            }}
+          >
+            {/* Red notebook margin rule */}
+            <div className="absolute top-0 bottom-0 left-6 sm:left-8 w-[2px] bg-rose-500/40 pointer-events-none" />
+
+            <div className="pl-6 sm:pl-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <span className="text-[10px] uppercase font-bold tracking-widest text-amber-300 font-mono">
+                  Personal Listening Diary
+                </span>
+                <h2 className="text-xl sm:text-2xl font-black text-[var(--theme-fg)] tracking-tight font-display mt-0.5">
+                  My Music Listening Journal
+                </h2>
+                <p className="text-xs text-[var(--theme-muted)] mt-1 max-w-lg">
+                  Every listen, 10-star rating stamp, and personal reflection recorded in your private notebook.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="text-xs font-mono text-[var(--theme-muted)]">
+                  {journalEntries.length} {journalEntries.length === 1 ? 'Page' : 'Pages'} Logged
+                </span>
+              </div>
+            </div>
           </div>
-        ) : (
-          <div className="text-xs font-bold uppercase tracking-wider text-[var(--theme-muted)]">
-            Explore {activeTab}
-          </div>
-        )}
 
-        {/* View Mode Segmented Control */}
-        <div className="flex items-center gap-1 p-1 bg-[var(--theme-surface)] border border-[var(--theme-border)] rounded-full shadow-inner ml-auto">
-          <button
-            onClick={() => handleChangeViewMode('slider')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition cursor-pointer ${
-              viewMode === 'slider'
-                ? 'bg-[var(--theme-accent)] text-[var(--theme-accent-fg)] shadow-sm'
-                : 'text-[var(--theme-muted)] hover:text-[var(--theme-fg)]'
-            }`}
-            title="Interactive Touch Slider (Swipe or Drag cards 1 by 1)"
-          >
-            <Layers size={13} />
-            <span>Touch Slider</span>
-          </button>
+          {/* Journal Entries List */}
+          {journalEntries.length === 0 ? (
+            <div className="text-center py-16 bg-[var(--theme-card)]/70 border border-[var(--theme-border)] rounded-3xl p-8 max-w-md mx-auto">
+              <div className="w-16 h-16 rounded-full bg-amber-400/10 border border-amber-400/20 flex items-center justify-center text-amber-300 mx-auto mb-4">
+                <BookOpen size={28} />
+              </div>
+              <h3 className="text-lg font-bold text-[var(--theme-fg)] mb-2">Your Journal Pages are Blank</h3>
+              <p className="text-sm text-[var(--theme-muted)] mb-6 leading-relaxed">
+                Rate albums, score tracks on the 10-star scale, and jot down your listening reflections to fill your personal notebook!
+              </p>
+              <button
+                onClick={() => {
+                  setJournalModalItem({
+                    id: 'new_log',
+                    type: 'album',
+                    title: 'New Album Listen',
+                    subtitle: '',
+                    image: '',
+                  });
+                  setIsJournalModalOpen(true);
+                }}
+                className="inline-flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-amber-400 via-amber-300 to-amber-400 text-zinc-950 font-extrabold text-sm rounded-full hover:scale-105 active:scale-95 transition-all shadow-md cursor-pointer"
+              >
+                <Sparkles size={16} />
+                <span>Write First Journal Log</span>
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-5">
+              {journalEntries.map((entry) => {
+                const targetHref = entry.targetId 
+                  ? `/${entry.targetType || 'album'}/${entry.targetId}` 
+                  : '#';
 
-          <button
-            onClick={() => handleChangeViewMode('grid')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition cursor-pointer ${
-              viewMode === 'grid'
-                ? 'bg-[var(--theme-accent)] text-[var(--theme-accent-fg)] shadow-sm'
-                : 'text-[var(--theme-muted)] hover:text-[var(--theme-fg)]'
-            }`}
-            title="Grid Box format"
-          >
-            <LayoutGrid size={13} />
-            <span>Grid</span>
-          </button>
+                return (
+                  <div
+                    key={entry.id}
+                    className="relative rounded-3xl border border-[var(--theme-border)] p-5 sm:p-6 shadow-xl transition-all duration-200 hover:border-amber-400/40 overflow-hidden group"
+                    style={{
+                      backgroundColor: "rgba(23, 2, 11, 0.55)",
+                      backgroundImage: "repeating-linear-gradient(transparent, transparent 27px, rgba(255, 248, 240, 0.07) 28px)",
+                      backgroundAttachment: "local"
+                    }}
+                  >
+                    {/* Vertical Red Margin Rule down the notebook page */}
+                    <div className="absolute top-0 bottom-0 left-6 sm:left-8 w-[2px] bg-rose-500/35 pointer-events-none" />
 
-          <button
-            onClick={() => handleChangeViewMode('list')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition cursor-pointer ${
-              viewMode === 'list'
-                ? 'bg-[var(--theme-accent)] text-[var(--theme-accent-fg)] shadow-sm'
-                : 'text-[var(--theme-muted)] hover:text-[var(--theme-fg)]'
-            }`}
-            title="Compact List format"
-          >
-            <List size={13} />
-            <span>List</span>
-          </button>
-        </div>
-      </div>
+                    <div className="pl-6 sm:pl-8 space-y-4">
+                      {/* Top Row: Date Stamp & Score Badge & Actions */}
+                      <div className="flex items-center justify-between flex-wrap gap-2">
+                        {/* Vintage Date Stamp */}
+                        <div className="flex items-center gap-1.5 text-xs text-[var(--theme-muted)] font-mono">
+                          <Calendar size={13} className="text-[var(--theme-accent)]" />
+                          <span className="font-bold tracking-tight uppercase">
+                            {entry.date ? new Date(entry.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) : 'LOGGED'}
+                          </span>
+                        </div>
 
-      {/* Main Content Area */}
-      <div>
-        {currentList.length === 0 ? (
-          <EmptyState type={activeTab} />
-        ) : (
-          <>
-            {/* VIEW MODE 1: ACTUAL TOUCH SLIDER (Physics drag, spring animations, card deck stack) */}
-            {viewMode === 'slider' && (
-              <LibraryTouchSlider
-                items={currentList}
-                currentIndex={sliderIndex}
-                onIndexChange={setSliderIndex}
-                activeTab={activeTab}
-                onOpenItem={openItem}
-                onDeleteItem={deleteItem}
-                getActionLabel={getActionLabel}
-                getItemTitle={getItemTitle}
-                getItemSubtitle={getItemSubtitle}
-                getItemMeta={getItemMeta}
-                getItemImage={getItemImage}
-                isNavigating={isPending}
-                navigatingId={navigatingId}
-              />
-            )}
-
-            {/* VIEW MODE 2: GRID (Responsive layout with optimized images & shimmer loading) */}
-            {viewMode === 'grid' && (
-              <div className="flex flex-col gap-4 max-w-xl mx-auto w-full">
-                {currentList.map((item, idx) => {
-                  const itemId = item.id || item.trackId || item.trackURI;
-                  const isItemNavigating = isPending && navigatingId === itemId;
-
-                  return (
-                    <div
-                      key={itemId || idx}
-                      className="group bg-[var(--theme-card)]/80 hover:bg-[var(--theme-card)] border border-[var(--theme-border)] hover:border-[var(--theme-accent)]/40 rounded-3xl p-4 sm:p-5 shadow-md transition duration-300 flex flex-col sm:flex-row items-center gap-4 sm:gap-5"
-                    >
-                      <div 
-                        onClick={() => openItem(item)}
-                        className="relative w-28 h-28 sm:w-32 sm:h-32 aspect-square rounded-2xl overflow-hidden border border-[var(--theme-border)] shrink-0 shadow-sm cursor-pointer"
-                      >
-                        {activeTab === 'playlists' && item.isCustom ? (
-                          <PlaylistCover 
-                            tracks={item.tracks?.items || []} 
-                            name={item.name} 
-                            defaultCover={item.image} 
-                          />
-                        ) : (
-                          <LibraryCoverImage
-                            src={getItemImage(item, 'medium')}
-                            alt={getItemTitle(item)}
-                            isCircle={activeTab === 'artists'}
-                            priority={idx < 4}
-                            className="w-full h-full"
-                          />
-                        )}
-                        {isItemNavigating && (
-                          <div className="absolute inset-0 bg-black/60 backdrop-blur-[1px] flex flex-col items-center justify-center gap-1.5 animate-fade-in z-20">
-                            <div className="w-7 h-7 rounded-full border-2 border-[var(--theme-accent)] border-t-transparent animate-spin" />
-                            <span className="text-[9px] font-bold text-white tracking-widest uppercase font-mono">Opening...</span>
+                        {/* 10-Star Rating Stamp */}
+                        {entry.rating > 0 && (
+                          <div className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-amber-400/15 border border-amber-400/30 text-amber-300 font-bold font-mono text-xs shadow-xs">
+                            <Star size={13} fill="currentColor" className="text-amber-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.8)]" />
+                            <span>{entry.rating}/10</span>
                           </div>
                         )}
+
+                        {/* Controls: Edit & Delete */}
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => {
+                              setJournalModalItem({
+                                id: entry.targetId,
+                                type: entry.targetType || 'album',
+                                title: entry.title,
+                                subtitle: entry.subtitle,
+                                image: entry.image,
+                                initialRating: entry.rating,
+                                initialReview: entry.review,
+                                journalEntryId: entry.id,
+                              });
+                              setIsJournalModalOpen(true);
+                            }}
+                            className="p-1.5 rounded-lg text-[var(--theme-muted)] hover:text-amber-300 hover:bg-amber-400/10 transition cursor-pointer"
+                            title="Edit this journal entry"
+                          >
+                            <Edit3 size={15} />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteJournalEntry(entry.id)}
+                            className="p-1.5 rounded-lg text-[var(--theme-muted)] hover:text-rose-400 hover:bg-rose-500/10 transition cursor-pointer"
+                            title="Delete this journal entry"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
                       </div>
 
-                      <div className="flex-1 min-w-0 text-center sm:text-left">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--theme-accent)] bg-[var(--theme-surface)] px-2 py-0.5 rounded-full border border-[var(--theme-border)]">
-                          {activeTab.slice(0, -1)}
-                        </span>
-                        <h3
-                          onClick={() => openItem(item)}
-                          className="text-base sm:text-lg font-bold text-[var(--theme-fg)] group-hover:text-[var(--theme-accent)] transition truncate mt-1.5 cursor-pointer"
-                        >
-                          {getItemTitle(item)}
-                        </h3>
-                        <p className="text-xs sm:text-sm text-[var(--theme-muted)] truncate mt-0.5">
-                          {getItemSubtitle(item)}
-                        </p>
-                        {getItemMeta(item) && (
-                          <p className="text-[11px] text-[var(--theme-muted)] mt-1 font-mono">
-                            {getItemMeta(item)}
-                          </p>
+                      {/* Music Item Reference Card (Clickable to visit) */}
+                      <Link
+                        href={targetHref}
+                        className="flex items-center gap-3.5 p-3 rounded-2xl bg-[var(--theme-surface)]/80 hover:bg-[var(--theme-card)] border border-[var(--theme-border)]/60 transition group/link cursor-pointer max-w-xl"
+                      >
+                        {entry.image ? (
+                          <img 
+                            src={entry.image} 
+                            alt={entry.title}
+                            className="w-12 h-12 rounded-xl object-cover shrink-0 shadow-sm ring-1 ring-[var(--theme-border)]"
+                            onError={(e) => { e.currentTarget.src = FALLBACK_COVER_SVG; }}
+                          />
+                        ) : (
+                          <div className="w-12 h-12 rounded-xl bg-[var(--theme-card)] flex items-center justify-center text-[var(--theme-muted)] shrink-0 border border-[var(--theme-border)]">
+                            <Disc size={20} />
+                          </div>
                         )}
-                      </div>
-
-                      <div className="flex sm:flex-col items-center justify-end gap-2 shrink-0 border-t sm:border-t-0 sm:border-l border-[var(--theme-border)] pt-3 sm:pt-0 sm:pl-4 w-full sm:w-auto">
-                        <button
-                          onClick={() => openItem(item)}
-                          disabled={isPending}
-                          className="flex-1 sm:flex-none px-4 py-2 bg-[var(--theme-accent)] text-[var(--theme-accent-fg)] font-bold text-xs rounded-full hover:opacity-90 transition cursor-pointer flex items-center justify-center gap-1.5 shadow-sm active:scale-95 disabled:opacity-75 disabled:cursor-wait"
-                        >
-                          {isItemNavigating ? (
-                            <>
-                              <div className="w-3.5 h-3.5 rounded-full border-2 border-current border-t-transparent animate-spin" />
-                              <span>Opening...</span>
-                            </>
-                          ) : (
-                            <>
-                              <span>{getActionLabel()}</span>
-                              <ArrowRight size={12} />
-                            </>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] uppercase font-bold tracking-wider text-[var(--theme-accent)]">
+                              {entry.targetType || 'Release'}
+                            </span>
+                          </div>
+                          <h4 className="text-sm font-extrabold text-[var(--theme-fg)] group-hover/link:text-[var(--theme-accent)] transition-colors truncate">
+                            {entry.title}
+                          </h4>
+                          {entry.subtitle && (
+                            <p className="text-xs text-[var(--theme-muted)] truncate mt-0.5">
+                              {entry.subtitle}
+                            </p>
                           )}
-                        </button>
-                        <button
-                          onClick={() => deleteItem(item)}
-                          className="p-2 text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 rounded-xl transition cursor-pointer active:scale-95"
-                          title="Remove from Library"
-                          aria-label="Remove item"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
+                        </div>
+                        <ArrowRight size={14} className="text-[var(--theme-muted)] group-hover/link:text-[var(--theme-accent)] transition-transform group-hover/link:translate-x-1 shrink-0 mr-1" />
+                      </Link>
+
+                      {/* Personal Reflection Text on Ruled Lines */}
+                      {entry.review && (
+                        <div className="pt-2 text-sm sm:text-base leading-[28px] text-[var(--theme-fg)] font-body whitespace-pre-line max-w-2xl">
+                          {entry.review}
+                        </div>
+                      )}
+
+                      {/* Context / Vibe Tags */}
+                      {entry.tags && entry.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 pt-2">
+                          {entry.tags.map((tag, idx) => (
+                            <span
+                              key={idx}
+                              className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-[var(--theme-surface)] border border-[var(--theme-border)] text-[var(--theme-muted)]"
+                            >
+                              #{tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  );
-                })}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      ) : (
+        /* STANDARD BOOKMARKS: SONGS, ALBUMS, ARTISTS, PLAYLISTS */
+        <>
+          {/* View Options Switcher: Slider (Touch Deck of Cards) | Grid Box | List */}
+          <div className="flex items-center justify-between gap-3 mb-8 flex-wrap">
+            {/* If playlists tab, display Create and Import buttons */}
+            {activeTab === 'playlists' ? (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setIsImportModalOpen(true)}
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] text-[var(--theme-fg)] border border-[var(--theme-border)] font-bold text-xs rounded-full transition active:scale-95 shadow-sm cursor-pointer"
+                  title="Import from Spotify"
+                >
+                  <UploadCloud size={14} className="text-[var(--theme-accent)]" />
+                  <span>Import Playlist</span>
+                </button>
+                <button
+                  onClick={() => setIsCreateModalOpen(true)}
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 bg-[var(--theme-accent)] text-[var(--theme-accent-fg)] font-bold text-xs rounded-full hover:opacity-90 transition active:scale-95 shadow-sm cursor-pointer"
+                >
+                  <Plus size={14} />
+                  <span>Create Playlist</span>
+                </button>
+              </div>
+            ) : (
+              <div className="text-xs text-[var(--theme-muted)] font-medium">
+                {currentList.length} {currentList.length === 1 ? 'item' : 'items'} saved
               </div>
             )}
 
-            {/* VIEW MODE 3: LIST (Compact rows with low-res optimized images & instant render) */}
-            {viewMode === 'list' && (
-              <div className="flex flex-col gap-2 max-w-2xl mx-auto w-full">
-                {currentList.map((item, idx) => {
-                  const itemId = item.id || item.trackId || item.trackURI;
-                  const isItemNavigating = isPending && navigatingId === itemId;
+            {/* View Mode Toggle Pill (Slider, Grid, List) */}
+            {currentList.length > 0 && (
+              <div className="inline-flex items-center p-1 rounded-full bg-[var(--theme-surface)] border border-[var(--theme-border)] shadow-inner">
+                <button
+                  onClick={() => handleChangeViewMode('slider')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                    viewMode === 'slider'
+                      ? 'bg-[var(--theme-accent)] text-[var(--theme-accent-fg)] shadow-sm'
+                      : 'text-[var(--theme-muted)] hover:text-[var(--theme-fg)]'
+                  }`}
+                  title="Card Deck Swiper"
+                >
+                  <Layers size={13} />
+                  <span className="hidden sm:inline">Deck</span>
+                </button>
+                <button
+                  onClick={() => handleChangeViewMode('grid')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                    viewMode === 'grid'
+                      ? 'bg-[var(--theme-accent)] text-[var(--theme-accent-fg)] shadow-sm'
+                      : 'text-[var(--theme-muted)] hover:text-[var(--theme-fg)]'
+                  }`}
+                  title="Grid Gallery"
+                >
+                  <LayoutGrid size={13} />
+                  <span className="hidden sm:inline">Grid</span>
+                </button>
+                <button
+                  onClick={() => handleChangeViewMode('list')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                    viewMode === 'list'
+                      ? 'bg-[var(--theme-accent)] text-[var(--theme-accent-fg)] shadow-sm'
+                      : 'text-[var(--theme-muted)] hover:text-[var(--theme-fg)]'
+                  }`}
+                  title="Compact List"
+                >
+                  <List size={13} />
+                  <span className="hidden sm:inline">List</span>
+                </button>
+              </div>
+            )}
+          </div>
 
-                  return (
-                    <div
-                      key={itemId || idx}
-                      className="group bg-[var(--theme-card)]/50 hover:bg-[var(--theme-card)] border border-[var(--theme-border)] rounded-2xl p-2.5 sm:p-3 flex items-center justify-between gap-3 transition duration-150 cursor-pointer"
-                      onClick={() => openItem(item)}
-                    >
-                      <div className="flex items-center gap-3 min-w-0 flex-1">
-                        <div className="relative w-12 h-12 rounded-xl aspect-square overflow-hidden border border-[var(--theme-border)] shrink-0 shadow-sm">
-                          {activeTab === 'playlists' && item.isCustom ? (
-                            <PlaylistCover 
-                              tracks={item.tracks?.items || []} 
-                              name={item.name} 
-                              defaultCover={item.image} 
+          {currentList.length === 0 ? (
+            <EmptyState type={activeTab} />
+          ) : (
+            <>
+              {/* VIEW MODE 1: INTERACTIVE 3D SWIPEABLE CARDS */}
+              {viewMode === 'slider' && (
+                <div className="w-full flex flex-col items-center justify-center my-4 animate-fade-in">
+                  <LibraryTouchSlider
+                    items={currentList}
+                    activeIndex={sliderIndex}
+                    onChangeIndex={setSliderIndex}
+                    activeTab={activeTab}
+                    getItemImage={getItemImage}
+                    getItemTitle={getItemTitle}
+                    getItemSubtitle={getItemSubtitle}
+                    onOpenItem={openItem}
+                    onDeleteItem={deleteItem}
+                    actionLabel={getActionLabel()}
+                  />
+                </div>
+              )}
+
+              {/* VIEW MODE 2: RESPONSIVE GRID BOXES */}
+              {viewMode === 'grid' && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6 animate-fade-in">
+                  {currentList.map((item, idx) => {
+                    const isItemNavigating = isPending && (navigatingId === item.id || navigatingId === item.trackId);
+                    return (
+                      <div
+                        key={item.id || item.trackId || idx}
+                        onClick={() => openItem(item)}
+                        className={`group relative flex flex-col bg-[var(--theme-card)]/80 hover:bg-[var(--theme-card)] border border-[var(--theme-border)] hover:border-[var(--theme-accent)]/50 rounded-2xl sm:rounded-3xl p-3 transition-all duration-300 shadow-md hover:shadow-xl ${
+                          isItemNavigating ? 'opacity-75 pointer-events-none cursor-wait' : 'cursor-pointer'
+                        }`}
+                      >
+                        <div className={`aspect-square w-full relative mb-3 overflow-hidden shadow-sm ${activeTab === 'artists' ? 'rounded-full' : 'rounded-xl'}`}>
+                          {activeTab === 'playlists' ? (
+                            <PlaylistCover
+                              images={item.images}
+                              isCustom={item.isCustom}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                             />
                           ) : (
                             <LibraryCoverImage
-                              src={getItemImage(item, 'small')}
+                              src={getItemImage(item, 'medium')}
                               alt={getItemTitle(item)}
                               isCircle={activeTab === 'artists'}
-                              priority={idx < 8}
-                              className="w-full h-full"
+                              priority={idx < 6}
+                              className="w-full h-full group-hover:scale-105 transition-transform duration-500"
                             />
                           )}
+
                           {isItemNavigating && (
-                            <div className="absolute inset-0 bg-black/60 backdrop-blur-[1px] flex items-center justify-center animate-fade-in z-20">
-                              <div className="w-5 h-5 rounded-full border-2 border-[var(--theme-accent)] border-t-transparent animate-spin" />
+                            <div className="absolute inset-0 bg-black/60 backdrop-blur-[1px] flex flex-col items-center justify-center gap-1.5 animate-fade-in z-20">
+                              <div className="w-6 h-6 rounded-full border-2 border-[var(--theme-accent)] border-t-transparent animate-spin" />
+                              <span className="text-[9px] font-bold text-white tracking-widest uppercase font-mono">Routing...</span>
                             </div>
                           )}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <h4 className="text-sm font-bold text-[var(--theme-fg)] group-hover:text-[var(--theme-accent)] transition truncate">
-                            {getItemTitle(item)}
-                          </h4>
-                          <p className="text-xs text-[var(--theme-muted)] truncate">
-                            {getItemSubtitle(item)}
-                          </p>
-                        </div>
-                      </div>
 
-                      <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
-                        <button
-                          onClick={() => openItem(item)}
-                          disabled={isPending}
-                          className="px-3 py-1.5 bg-[var(--theme-accent)] text-[var(--theme-accent-fg)] font-bold text-xs rounded-full hover:opacity-90 transition cursor-pointer flex items-center gap-1.5 shadow-sm active:scale-95 disabled:opacity-75 disabled:cursor-wait"
-                        >
-                          {isItemNavigating ? (
-                            <>
-                              <div className="w-3 h-3 rounded-full border-2 border-current border-t-transparent animate-spin" />
-                              <span>Routing...</span>
-                            </>
-                          ) : (
-                            <>
-                              <span>Open</span>
-                              <ArrowRight size={12} />
-                            </>
-                          )}
-                        </button>
-                        <button
-                          onClick={() => deleteItem(item)}
-                          className="p-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-xl transition cursor-pointer active:scale-95"
-                          title="Remove from Library"
-                          aria-label="Remove item"
-                        >
-                          <Trash2 size={14} />
-                        </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteItem(item);
+                            }}
+                            className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/60 hover:bg-red-600 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer shadow-md z-10"
+                            title="Remove from Library"
+                            aria-label="Remove item"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+
+                        <div className="min-w-0 flex-1 flex flex-col justify-between">
+                          <div>
+                            <h4 className="text-sm font-bold text-[var(--theme-fg)] group-hover:text-[var(--theme-accent)] transition truncate">
+                              {getItemTitle(item)}
+                            </h4>
+                            <p className="text-xs text-[var(--theme-muted)] truncate mt-0.5">
+                              {getItemSubtitle(item)}
+                            </p>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </>
-        )}
-      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* VIEW MODE 3: COMPACT LIST */}
+              {viewMode === 'list' && (
+                <div className="flex flex-col gap-2 animate-fade-in max-w-3xl mx-auto w-full">
+                  {currentList.map((item, idx) => {
+                    const isItemNavigating = isPending && (navigatingId === item.id || navigatingId === item.trackId);
+                    return (
+                      <div
+                        key={item.id || item.trackId || idx}
+                        onClick={() => openItem(item)}
+                        className={`flex items-center justify-between p-3 rounded-2xl bg-[var(--theme-card)]/70 hover:bg-[var(--theme-card)] border border-[var(--theme-border)] hover:border-[var(--theme-accent)]/50 transition-all shadow-xs group ${
+                          isItemNavigating ? 'opacity-75 pointer-events-none cursor-wait' : 'cursor-pointer'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3 min-w-0 flex-1 pr-3">
+                          <div className={`w-12 h-12 relative overflow-hidden shrink-0 shadow-xs ${activeTab === 'artists' ? 'rounded-full' : 'rounded-xl'}`}>
+                            {activeTab === 'playlists' ? (
+                              <PlaylistCover
+                                images={item.images}
+                                isCustom={item.isCustom}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <LibraryCoverImage
+                                src={getItemImage(item, 'small')}
+                                alt={getItemTitle(item)}
+                                isCircle={activeTab === 'artists'}
+                                priority={idx < 8}
+                                className="w-full h-full"
+                              />
+                            )}
+                            {isItemNavigating && (
+                              <div className="absolute inset-0 bg-black/60 backdrop-blur-[1px] flex items-center justify-center animate-fade-in z-20">
+                                <div className="w-5 h-5 rounded-full border-2 border-[var(--theme-accent)] border-t-transparent animate-spin" />
+                              </div>
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <h4 className="text-sm font-bold text-[var(--theme-fg)] group-hover:text-[var(--theme-accent)] transition truncate">
+                              {getItemTitle(item)}
+                            </h4>
+                            <p className="text-xs text-[var(--theme-muted)] truncate">
+                              {getItemSubtitle(item)}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            onClick={() => openItem(item)}
+                            disabled={isPending}
+                            className="px-3 py-1.5 bg-[var(--theme-accent)] text-[var(--theme-accent-fg)] font-bold text-xs rounded-full hover:opacity-90 transition cursor-pointer flex items-center gap-1.5 shadow-sm active:scale-95 disabled:opacity-75 disabled:cursor-wait"
+                          >
+                            {isItemNavigating ? (
+                              <>
+                                <div className="w-3 h-3 rounded-full border-2 border-current border-t-transparent animate-spin" />
+                                <span>Routing...</span>
+                              </>
+                            ) : (
+                              <>
+                                <span>Open</span>
+                                <ArrowRight size={12} />
+                              </>
+                            )}
+                          </button>
+                          <button
+                            onClick={() => deleteItem(item)}
+                            className="p-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-xl transition cursor-pointer active:scale-95"
+                            title="Remove from Library"
+                            aria-label="Remove item"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </>
+          )}
+        </>
+      )}
+
+      {/* Rating & Journal Modal for Library */}
+      {isJournalModalOpen && journalModalItem && (
+        <RatingAndJournalModal
+          isOpen={isJournalModalOpen}
+          onClose={() => {
+            setIsJournalModalOpen(false);
+            setJournalModalItem(null);
+            loadData();
+          }}
+          id={journalModalItem.id}
+          type={journalModalItem.type || 'album'}
+          title={journalModalItem.title}
+          subtitle={journalModalItem.subtitle}
+          image={journalModalItem.image}
+          initialRating={journalModalItem.initialRating || 0}
+          initialReview={journalModalItem.initialReview || ''}
+          journalEntryId={journalModalItem.journalEntryId || null}
+        />
+      )}
 
       {/* Create Playlist Modal */}
       {isCreateModalOpen && (

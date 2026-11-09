@@ -44,7 +44,7 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
     const [selectedTrackForGrooveCard, setSelectedTrackForGrooveCard] = useState(null);
     const [showVinylSides, setShowVinylSides] = useState(true);
     const [activeTab, setActiveTab] = useState("tracks");
-    const { theme, setAdaptivePalette, clearAdaptivePalette } = useTheme();
+    const { theme, setAdaptivePalette, clearAdaptivePalette, colors } = useTheme();
 
     useEffect(() => {
         if (typeof window !== "undefined") {
@@ -418,18 +418,18 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
     }, [tracks]);
 
     return (
-        <div className="relative min-h-screen bg-[var(--theme-bg)] text-[var(--theme-fg)] p-4 pb-32 sm:p-6 md:pl-20 md:pr-20 lg:pl-40 lg:pr-40 pt-5 sm:pt-8 overflow-hidden transition-colors duration-300">
-            {/* Full Screen Dynamic Ambient Art-Cover Gradient Backdrop with Adaptive Contrast Protection */}
+        <div 
+            className="relative min-h-screen bg-[var(--theme-bg)] text-[var(--theme-fg)] p-4 pb-32 sm:p-6 md:pl-20 md:pr-20 lg:pl-40 lg:pr-40 pt-5 sm:pt-8 overflow-hidden transition-colors duration-300"
+            style={{ background: theme === 'adaptive' && colors?.gradient ? colors.gradient : undefined }}
+        >
+            {/* Full Screen Dynamic Ambient Art-Cover Backdrop with Natural Theme Gradient Integration */}
             <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
                 <div 
-                    className="absolute inset-0 bg-cover bg-center scale-110 blur-3xl opacity-35 dark:opacity-30 saturate-150 contrast-110 transition-all duration-700"
+                    className="absolute inset-0 bg-cover bg-center scale-125 blur-3xl opacity-40 saturate-150 transition-all duration-700"
                     style={{ backgroundImage: `url(${coverUrl})` }}
                 />
-                {/* Darkening Scrim layer preventing bright/white album covers from washing out typography */}
-                <div className="absolute inset-0 bg-black/55 dark:bg-black/65" />
-                <div className="absolute inset-x-0 top-0 h-64 bg-gradient-to-b from-black/60 via-black/30 to-transparent" />
                 <div 
-                    className="absolute inset-0 bg-gradient-to-b from-transparent via-[var(--theme-bg)]/80 to-[var(--theme-bg)]"
+                    className="absolute inset-0 bg-gradient-to-b from-[var(--theme-bg)]/20 via-[var(--theme-bg)]/70 to-[var(--theme-bg)]"
                 />
             </div>
 
@@ -592,12 +592,15 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
                     </div>
                 </div>
 
-                {/* Compact Floating Dual-Rating Capsule */}
+                {/* Golden Rate Button & 10-Star Rating Widget */}
                 <div className="mt-3.5 flex items-center justify-center">
                     <UserRatingWidget
                         id={album.id || id}
                         type="album"
                         musicbrainzRating={album.rating}
+                        itemTitle={album.name || album.title}
+                        itemSubtitle={artistsList.map(a => a.name).join(", ")}
+                        itemImage={coverUrl}
                     />
                 </div>
 
@@ -671,7 +674,7 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
 
             {/* Segmented Navigation Tabs */}
             <div className="sticky top-0 sm:top-2 z-30 py-2.5 -mx-4 px-4 sm:mx-0 sm:px-0 bg-[var(--theme-bg)]/85 backdrop-blur-2xl border-y border-[var(--theme-border)]/50 mb-8 mt-2 transition-colors">
-                <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar max-w-xl mx-auto justify-start sm:justify-center">
+                <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden scrollb-none no-scrollbar max-w-xl mx-auto justify-start sm:justify-center">
                     {ALBUM_TABS.map((tab) => {
                         const isActive = activeTab === tab.id;
                         const TabIcon = tab.icon;
@@ -1025,7 +1028,9 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
                             label: album.label || (album.labels && album.labels[0]?.name),
                             country: album.country,
                             format: album.format || (album.editions && album.editions[0]?.format),
-                            barcode: album.barcode
+                            barcode: album.barcode,
+                            trackCount: tracks.length,
+                            discCount: discCount,
                         }}
                         primaryGenre={displayGenre}
                         genres={album.genres || []}

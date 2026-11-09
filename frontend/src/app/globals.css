@@ -128,11 +128,11 @@ h1, h2, h3, h4, h5, h6, .font-display {
   }
 }
 
-.scrollb-none {
+.scrollb-none, .no-scrollbar {
   scrollbar-width: none; /* Hide scrollbar on Firefox */
   -ms-overflow-style: none;
 }
-.scrollb-none::-webkit-scrollbar {
+.scrollb-none::-webkit-scrollbar, .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
 

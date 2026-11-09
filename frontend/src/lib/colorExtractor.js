@@ -1,17 +1,18 @@
 // src/lib/colorExtractor.js
 /**
- * Browser-native adaptive color extractor with guaranteed contrast protection.
- * Extracts dominant tones from an image URL and produces an accessible,
- * atmospheric dark palette.
+ * Browser-native adaptive color extractor with true atmospheric coloration
+ * and guaranteed contrast protection.
  *
- * CRITICAL CONTRAST PROTECTION:
- * Regardless of whether the album cover is 100% white (e.g. Pink Floyd's 'Wish You Were Here'
- * or The Beatles' 'White Album') or pastel, the background luminance is strictly clamped
- * to deep obsidian/midnight tones (lightness <= 9%) and the text is locked to high-contrast
- * warm cream/white.
+ * In Album-Adaptive mode, the background visibly adopts the rich, resonant colors
+ * of the album cover art (deep sapphire, emerald, ruby wine, desert amber, indigo),
+ * NEVER a flat pitch black!
+ *
+ * For light/white covers (e.g. Pink Floyd's 'Wish You Were Here' or The Beatles' 'White Album'):
+ * It samples the non-white colored pixels (sky cyan, fire amber, sand terracotta)
+ * and creates a rich, dark tinted background (lightness ~16%, saturation ~40%)
+ * with crisp cream/white text (contrast ratio > 10:1).
  */
 
-// In-memory cache to avoid re-extracting for the same cover URL
 const paletteCache = new Map();
 
 /**
@@ -54,7 +55,7 @@ function hslToHex(h, s, l) {
 }
 
 /**
- * Calculate relative luminance (W3C formula)
+ * Relative luminance (W3C formula)
  */
 function getLuminance(r, g, b) {
   const [rs, gs, bs] = [r, g, b].map(c => {
@@ -74,31 +75,39 @@ export function getHarmoniousFallback(seedString = "groove") {
   }
   const hue = Math.abs(hash) % 360;
 
-  // Deep dark background with subtle tint of the hue
-  const bg = hslToHex(hue, 35, 6); // 6% lightness
-  const accent = hslToHex(hue, 75, 65); // vibrant readable accent
-  const accentBg = hslToHex(hue, 65, 52);
+  // Visibly colored background (15% lightness, 45% saturation - rich and colorful!)
+  const bg = hslToHex(hue, 45, 14);
+  const ambientTop = hslToHex(hue, 60, 24);
+  const deepBase = hslToHex(hue, 40, 9);
+  const accent = hslToHex(hue, 85, 68);
+  const accentBg = hslToHex(hue, 70, 52);
+
+  const rNum = parseInt(bg.slice(1, 3), 16);
+  const gNum = parseInt(bg.slice(3, 5), 16);
+  const bNum = parseInt(bg.slice(5, 7), 16);
 
   return {
     bg,
-    fg: "#FFF5EA",
+    ambientTop,
+    deepBase,
+    fg: "#FFF8F0",
     accent,
     accentBg,
     accentFg: "#101116",
-    surface: `rgba(${parseInt(bg.slice(1,3), 16)}, ${parseInt(bg.slice(3,5), 16)}, ${parseInt(bg.slice(5,7), 16)}, 0.45)`,
-    surfaceElevated: `rgba(${parseInt(bg.slice(1,3), 16)}, ${parseInt(bg.slice(3,5), 16)}, ${parseInt(bg.slice(5,7), 16)}, 0.75)`,
-    card: `rgba(${parseInt(bg.slice(1,3), 16)}, ${parseInt(bg.slice(3,5), 16)}, ${parseInt(bg.slice(5,7), 16)}, 0.55)`,
-    border: "rgba(255, 245, 234, 0.14)",
+    surface: `rgba(${rNum + 20}, ${gNum + 20}, ${bNum + 20}, 0.55)`,
+    surfaceElevated: `rgba(${rNum + 35}, ${gNum + 35}, ${bNum + 35}, 0.85)`,
+    card: `rgba(${rNum + 25}, ${gNum + 25}, ${bNum + 25}, 0.65)`,
+    border: "rgba(255, 248, 240, 0.16)",
     borderActive: accent,
-    muted: "rgba(255, 245, 234, 0.72)",
-    plum: bg,
-    gradient: `linear-gradient(135deg, ${bg} 0%, ${accentBg} 50%, #FFEDD5 100%)`,
+    muted: "rgba(255, 248, 240, 0.75)",
+    plum: ambientTop,
+    gradient: `radial-gradient(ellipse at 50% -15%, ${ambientTop} 0%, ${bg} 65%, ${deepBase} 100%)`,
   };
 }
 
 /**
  * Main color extractor for album / artist / track cover images.
- * Returns a Promise that resolves to an accessible, atmospheric dark palette.
+ * Returns a Promise that resolves to a rich, colorful, accessible adaptive palette.
  */
 export async function extractAdaptivePalette(imageUrl, fallbackTitle = "groove") {
   if (!imageUrl) {
@@ -128,7 +137,7 @@ export async function extractAdaptivePalette(imageUrl, fallbackTitle = "groove")
       try {
         const canvas = document.createElement("canvas");
         const ctx = canvas.getContext("2d", { willReadFrequently: true });
-        
+
         // Downscale to 32x32 for ultra-fast sampling
         canvas.width = 32;
         canvas.height = 32;
@@ -157,12 +166,12 @@ export async function extractAdaptivePalette(imageUrl, fallbackTitle = "groove")
           const [h, s, l] = rgbToHsl(r, g, b);
 
           // Track white or near-white pixels (e.g. Wish You Were Here album border)
-          if (lum > 0.75 || l > 85) {
+          if (lum > 0.70 || l > 80) {
             whitePixelsCount++;
           }
 
-          // Collect saturated colorful pixels for accent selection
-          if (s > 25 && l > 20 && l < 85) {
+          // Collect non-white, non-black, colored pixels for true color extraction
+          if (s >= 18 && l >= 15 && l <= 85) {
             saturatedSwatches.push({ r, g, b, h, s, l });
           }
         }
@@ -171,37 +180,46 @@ export async function extractAdaptivePalette(imageUrl, fallbackTitle = "groove")
         const avgG = Math.round(totalG / totalPixels);
         const avgB = Math.round(totalB / totalPixels);
 
-        const isPredominantlyWhiteOrLight = (whitePixelsCount / totalPixels) > 0.40;
+        const isPredominantlyWhiteOrLight = (whitePixelsCount / totalPixels) > 0.35;
         const [avgH, avgS, avgL] = rgbToHsl(avgR, avgG, avgB);
 
         let finalHue = avgH;
+        let finalSat = avgS;
         let accentColor = "#E8A87C";
 
-        // Pick most vibrant swatch for accent
+        // Prioritize colorful swatches over white/gray borders
         if (saturatedSwatches.length > 0) {
           // Sort by highest saturation
           saturatedSwatches.sort((a, b) => b.s - a.s);
-          const best = saturatedSwatches[0];
-          finalHue = best.h;
-          // Ensure accent has good contrast on dark background
-          accentColor = hslToHex(best.h, Math.min(best.s + 15, 90), 65);
+          const topSwatch = saturatedSwatches[0];
+          finalHue = topSwatch.h;
+          finalSat = Math.max(topSwatch.s, 40);
+          accentColor = hslToHex(topSwatch.h, Math.min(topSwatch.s + 15, 95), 68);
         } else {
-          accentColor = "#E8A87C"; // Default warm golden copper
+          accentColor = "#E8A87C";
         }
 
-        // CONTRAST SAFEGUARD:
-        // Clamping background lightness to deep obsidian/midnight (6% - 8% lightness)
-        // If the cover is predominantly white, use a subtle deep charcoal-slate (#0d0f14)
-        // so white covers NEVER wash out text or background!
         let bgHex;
-        if (isPredominantlyWhiteOrLight || avgS < 12) {
-          bgHex = "#0e1017"; // Ultra-deep obsidian slate with pristine contrast
+        let ambientTop;
+        let deepBase;
+
+        if (isPredominantlyWhiteOrLight) {
+          // Artwork has a light/white background (like Wish You Were Here)
+          // We use the sampled accent hue (e.g. sandy orange/fire or sky cyan)
+          // to create a rich, visible warm dark background (lightness ~15-17%), NEVER pure black!
+          const activeHue = saturatedSwatches.length > 0 ? finalHue : 30; // Warm amber default
+          bgHex = hslToHex(activeHue, 40, 15);
+          ambientTop = hslToHex(activeHue, 55, 23);
+          deepBase = hslToHex(activeHue, 35, 10);
         } else {
-          // Deep atmospheric dark tone carrying the album's dominant hue
-          bgHex = hslToHex(finalHue, Math.min(avgS, 45), 7);
+          // Full rich colored artwork: set background lightness to 14-16% with rich saturation
+          const clampedSat = Math.max(Math.min(finalSat, 55), 35);
+          bgHex = hslToHex(finalHue, clampedSat, 14);
+          ambientTop = hslToHex(finalHue, Math.min(clampedSat + 15, 65), 25);
+          deepBase = hslToHex(finalHue, Math.min(clampedSat, 40), 9);
         }
 
-        const accentBg = hslToHex(finalHue, Math.min(avgS + 20, 75), 45);
+        const accentBg = hslToHex(finalHue, Math.min(finalSat + 20, 75), 50);
 
         const rNum = parseInt(bgHex.slice(1, 3), 16);
         const gNum = parseInt(bgHex.slice(3, 5), 16);
@@ -209,24 +227,25 @@ export async function extractAdaptivePalette(imageUrl, fallbackTitle = "groove")
 
         const resultPalette = {
           bg: bgHex,
-          fg: "#FFF5EA",
+          ambientTop,
+          deepBase,
+          fg: "#FFF8F0",
           accent: accentColor,
           accentBg,
           accentFg: "#101116",
-          surface: `rgba(${rNum + 15}, ${gNum + 15}, ${bNum + 15}, 0.55)`,
-          surfaceElevated: `rgba(${rNum + 25}, ${gNum + 25}, ${bNum + 25}, 0.85)`,
-          card: `rgba(${rNum + 20}, ${gNum + 20}, ${bNum + 20}, 0.65)`,
-          border: "rgba(255, 245, 234, 0.16)",
+          surface: `rgba(${rNum + 20}, ${gNum + 20}, ${bNum + 20}, 0.55)`,
+          surfaceElevated: `rgba(${rNum + 35}, ${gNum + 35}, ${bNum + 35}, 0.85)`,
+          card: `rgba(${rNum + 25}, ${gNum + 25}, ${bNum + 25}, 0.65)`,
+          border: "rgba(255, 248, 240, 0.16)",
           borderActive: accentColor,
-          muted: "rgba(255, 245, 234, 0.72)",
-          plum: bgHex,
-          gradient: `linear-gradient(135deg, ${bgHex} 0%, ${accentBg} 50%, #FFEDD5 100%)`,
+          muted: "rgba(255, 248, 240, 0.75)",
+          plum: ambientTop,
+          gradient: `radial-gradient(ellipse at 50% -15%, ${ambientTop} 0%, ${bgHex} 65%, ${deepBase} 100%)`,
         };
 
         paletteCache.set(imageUrl, resultPalette);
         resolve(resultPalette);
       } catch (err) {
-        // In case of CORS or canvas security violation, return harmonious fallback
         const fallback = getHarmoniousFallback(fallbackTitle);
         paletteCache.set(imageUrl, fallback);
         resolve(fallback);

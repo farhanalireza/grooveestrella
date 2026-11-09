@@ -5,9 +5,10 @@ import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { 
   Star, ExternalLink, Tag, BookOpen, MessageSquare, 
   Send, Sparkles, CheckCircle2, ChevronRight, Globe, Award, Trash2,
-  Disc, Calendar, MapPin, Building, Hash, Info
+  Disc, Calendar, MapPin, Building, Hash, Info, Layers
 } from "lucide-react";
 import { toast } from "@/lib/toast";
+import RatingAndJournalModal from "./RatingAndJournalModal";
 
 export default function MusicLoreAndReviews({
   id,
@@ -16,7 +17,7 @@ export default function MusicLoreAndReviews({
   artist = "",
   description = null,
   artistDescription = null,
-  releaseDetails = null, // { releaseDate, label, country, barcode, format }
+  releaseDetails = null, // { releaseDate, label, country, barcode, format, trackCount, discCount }
   primaryGenre = null,
   genres = [],
   categorizedTags = null,
@@ -33,6 +34,7 @@ export default function MusicLoreAndReviews({
   const [reviewComment, setReviewComment] = useState("");
   const [reviews, setReviews] = useState([]);
   const [showForm, setShowForm] = useState(false);
+  const [isJournalModalOpen, setIsJournalModalOpen] = useState(false);
 
   // Storage keys
   const reviewStorageKey = `groove_reviews_${id}`;
@@ -75,11 +77,21 @@ export default function MusicLoreAndReviews({
       }
     };
 
+    const handleJournalSync = (e) => {
+      if (e.detail?.targetId === id) {
+        loadStoredData();
+      }
+    };
+
     window.addEventListener("groove-rating-changed", handleRatingSync);
-    return () => window.removeEventListener("groove-rating-changed", handleRatingSync);
+    window.addEventListener("groove-journal-updated", handleJournalSync);
+    return () => {
+      window.removeEventListener("groove-rating-changed", handleRatingSync);
+      window.removeEventListener("groove-journal-updated", handleJournalSync);
+    };
   }, [id, type, loadStoredData]);
 
-  // Handle setting user rating locally
+  // Handle setting user rating locally (10-star scale)
   const handleRateLocally = (score) => {
     const newScore = userRating === score ? 0 : score;
     setUserRating(newScore);
@@ -87,7 +99,7 @@ export default function MusicLoreAndReviews({
     try {
       if (newScore > 0) {
         localStorage.setItem(ratingStorageKey, JSON.stringify({ score: newScore, updatedAt: Date.now() }));
-        toast.success(`You rated this ${type} ${newScore}/5 ⭐`);
+        toast.success(`You scored this ${type} ${newScore}/10 ⭐`);
       } else {
         localStorage.removeItem(ratingStorageKey);
         toast.info("Rating cleared");
@@ -111,11 +123,11 @@ export default function MusicLoreAndReviews({
       return;
     }
 
-    const reviewScore = userRating > 0 ? userRating : 5;
+    const reviewScore = userRating > 0 ? userRating : 8;
 
     const newReview = {
       id: `usr-${Date.now()}`,
-      author: reviewerName.trim() || "Groove Listener",
+      author: reviewerName.trim() || "Groove Explorer",
       score: reviewScore,
       date: new Date().toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }),
       text: reviewComment.trim(),
@@ -127,6 +139,29 @@ export default function MusicLoreAndReviews({
 
     try {
       localStorage.setItem(reviewStorageKey, JSON.stringify(updated));
+      
+      // Also automatically create/update a journal entry in groove_journal_logs!
+      const rawJournal = localStorage.getItem("groove_journal_logs");
+      let logs = rawJournal ? JSON.parse(rawJournal) : [];
+      const journalEntryId = `journal_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+      const newJournalLog = {
+        id: journalEntryId,
+        targetId: id,
+        targetType: type,
+        title: title || "Untitled",
+        subtitle: artist || "",
+        rating: reviewScore,
+        date: new Date().toISOString().split("T")[0],
+        review: reviewComment.trim(),
+        tags: ["Community Review"],
+        updatedAt: Date.now(),
+        createdAt: Date.now(),
+      };
+      logs = logs.filter(l => !(l.targetId === id && l.targetType === type));
+      logs.unshift(newJournalLog);
+      localStorage.setItem("groove_journal_logs", JSON.stringify(logs));
+      window.dispatchEvent(new CustomEvent("groove-journal-updated", { detail: { targetId: id } }));
+
       if (userRating === 0) {
         setUserRating(reviewScore);
         localStorage.setItem(ratingStorageKey, JSON.stringify({ score: reviewScore, updatedAt: Date.now() }));
@@ -140,7 +175,7 @@ export default function MusicLoreAndReviews({
 
     setReviewComment("");
     setShowForm(false);
-    toast.success("Thank you for sharing your review! ⭐");
+    toast.success("Review logged to Music Journal! 📓⭐");
   };
 
   // Delete review
@@ -153,55 +188,30 @@ export default function MusicLoreAndReviews({
     } catch (_) {}
   };
 
-  // MusicBrainz Rating Data
-  const mbScore = rating?.value !== undefined 
+  // MusicBrainz Rating Data (Converted to 10-star scale)
+  const rawMbScore = rating?.value !== undefined 
     ? Number(rating.value) 
     : typeof rating === "number" 
       ? rating 
       : null;
   const mbVotes = rating?.votesCount || rating?.votes_count || null;
+  
+  const mbScore10 = rawMbScore !== null && rawMbScore > 0
+    ? (rawMbScore <= 5 ? (rawMbScore * 2).toFixed(1) : rawMbScore.toFixed(1))
+    : null;
 
-  // Real reviews statistics
+  // Real reviews statistics (10-star scale)
   const realReviewsCount = reviews.length;
   const realAverageScore = realReviewsCount > 0
     ? (reviews.reduce((acc, r) => acc + (Number(r.score) || 0), 0) / realReviewsCount).toFixed(1)
     : null;
 
-  const realDistribution = useMemo(() => {
-    if (realReviewsCount === 0) return null;
-    const counts = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
-    reviews.forEach((r) => {
-      const s = Math.round(Number(r.score)) || 5;
-      if (counts[s] !== undefined) counts[s] += 1;
-    });
-    return [5, 4, 3, 2, 1].map((s) => ({
-      star: String(s),
-      count: counts[s],
-      pct: Math.round((counts[s] / realReviewsCount) * 100),
-    }));
-  }, [reviews, realReviewsCount]);
-
-  // Derive curated, noise-filtered musical categories
+  // FULL GENRES & COMMUNITY FOLKSONOMY (NO aggressive stripping!)
+  // User explicitly wants FULL genre tags, community folksonomy, styles, and subgenres shown
   const resolvedCategorized = useMemo(() => {
-    const NOISE_TAGS = new Set([
-      "album", "albums", "ep", "single", "singles", "lp", "cd", "vinyl", "audio",
-      "favorite", "favourites", "favorites", "favourite", "seen live",
-      "owned", "wishlist", "my collection", "all time favorite",
-      "british", "uk", "united states", "usa", "american", "german", "french", "canadian", "swedish", "japanese",
-      "actor", "actors", "arranger", "arrangers", "composer", "composers", "singers", "singer",
-      "musicians", "musician", "producer", "producers", "executive", "executives",
-      "sound recording executives and producers", "sound recording", "recording"
-    ]);
-
     const formatTag = (str) => {
       if (!str) return "";
       let clean = String(str).replace(/^#+/, "").trim();
-      clean = clean.replace(/\s+(music|musicians)$/i, "").trim();
-
-      // Filter out discogs shelf titles, url-like strings, or sentences
-      if (/discogs|released every year|most popular|\/|\\/i.test(clean) || clean.length > 28) {
-        return "";
-      }
 
       if (/^r&b$/i.test(clean)) return "R&B";
       if (/^edm$/i.test(clean)) return "EDM";
@@ -220,24 +230,25 @@ export default function MusicLoreAndReviews({
     const genreList = Array.isArray(genres) ? genres : [];
     const rawList = (allTags && allTags.length > 0) ? allTags : (tags || []).map((t) => ({ name: t, count: 1 }));
 
-    const genreItems = [];
-    const seenGenres = new Set();
+    const coreGenres = [];
+    const styles = [];
+    const folksonomy = [];
+    const eras = [];
+    const seen = new Set();
+
+    // 1. Process Core Genres
     genreList.forEach((g) => {
       const rawName = typeof g === "string" ? g : g?.name;
       const count = (typeof g === "object" && g.count) || null;
       const formatted = formatTag(rawName);
       const lower = formatted.toLowerCase();
-      if (formatted && !seenGenres.has(lower) && !NOISE_TAGS.has(lower)) {
-        seenGenres.add(lower);
-        genreItems.push({ name: formatted, count });
+      if (formatted && !seen.has(lower)) {
+        seen.add(lower);
+        coreGenres.push({ name: formatted, count });
       }
     });
 
-    const styles = [];
-    const themes = [];
-    const eras = [];
-    const seenOther = new Set(seenGenres);
-
+    // 2. Process All Tags & Folksonomy (Keep EVERYTHING the user asked for)
     for (const t of rawList) {
       const raw = typeof t === "string" ? t : t?.name;
       if (!raw) continue;
@@ -247,31 +258,30 @@ export default function MusicLoreAndReviews({
       const lower = formatted.toLowerCase();
       const count = (typeof t === "object" && t.count) || null;
 
-      if (seenOther.has(lower) || NOISE_TAGS.has(lower)) continue;
-      if (/executives|arrangers|producers|actors|sound recording/i.test(lower)) continue;
-
-      seenOther.add(lower);
+      if (seen.has(lower)) continue;
+      seen.add(lower);
 
       if (/^\d{2,4}s?$/i.test(formatted) || /^\d{4}$/.test(formatted)) {
         eras.push({ name: formatted, count });
-      } else if (/concept|masterpiece|soundtrack|audiophile|acoustic|live|instrumental|vocal|guitar|bass|solo|melanchol|dark|psychedelic|trippy|philosoph|space|lyric/i.test(lower)) {
-        themes.push({ name: formatted, count });
       } else if (/rock|pop|jazz|metal|folk|blues|wave|punk|electronic|ambient|reggae|disco|funk|soul|indie|alternative|prog|hop|rap|dance|r&b|techno|house|trance|country/i.test(lower)) {
         styles.push({ name: formatted, count });
+      } else {
+        // Community folksonomy: origins, movements, roles, themes (British, UK, Actors, Composers, Arrangers, etc.)
+        folksonomy.push({ name: formatted, count });
       }
     }
 
     return {
-      genres: genreItems,
+      coreGenres,
       styles,
-      themes,
+      folksonomy,
       eras,
     };
   }, [genres, tags, allTags]);
 
-  const hasAnyTags = resolvedCategorized.genres.length > 0 ||
+  const hasAnyTags = resolvedCategorized.coreGenres.length > 0 ||
     resolvedCategorized.styles.length > 0 ||
-    resolvedCategorized.themes.length > 0 ||
+    resolvedCategorized.folksonomy.length > 0 ||
     resolvedCategorized.eras.length > 0;
 
   // Decide which sections to render based on activeTab
@@ -292,7 +302,7 @@ export default function MusicLoreAndReviews({
             <div className="space-y-3">
               <div className="flex items-center gap-2 text-xs font-bold text-[var(--theme-accent)] uppercase tracking-widest font-mono">
                 <BookOpen size={15} />
-                <span>{type === "artist" ? "Artist Biography" : type === "album" ? "Album History & Lore" : "Track Information"}</span>
+                <span>{type === "artist" ? "Artist Biography" : type === "album" ? "Album Overview & Background" : "Track Information"}</span>
               </div>
               <h2 className="text-2xl sm:text-3xl font-black text-[var(--theme-fg)] tracking-tight font-display">
                 About {title || artist}
@@ -332,7 +342,7 @@ export default function MusicLoreAndReviews({
                   <div className="space-y-1">
                     <span className="text-[11px] font-semibold text-[var(--theme-muted)] flex items-center gap-1.5">
                       <MapPin size={13} className="text-[var(--theme-accent)]" />
-                      <span>Release Territory</span>
+                      <span>Release Country</span>
                     </span>
                     <p className="text-sm font-bold text-[var(--theme-fg)]">{releaseDetails.country}</p>
                   </div>
@@ -355,6 +365,24 @@ export default function MusicLoreAndReviews({
                     <p className="text-xs font-mono font-bold text-[var(--theme-fg)] truncate">{releaseDetails.barcode}</p>
                   </div>
                 )}
+                {releaseDetails.trackCount && (
+                  <div className="space-y-1">
+                    <span className="text-[11px] font-semibold text-[var(--theme-muted)] flex items-center gap-1.5">
+                      <Disc size={13} className="text-[var(--theme-accent)]" />
+                      <span>Tracks</span>
+                    </span>
+                    <p className="text-sm font-bold text-[var(--theme-fg)]">{releaseDetails.trackCount} Tracks</p>
+                  </div>
+                )}
+                {releaseDetails.discCount > 1 && (
+                  <div className="space-y-1">
+                    <span className="text-[11px] font-semibold text-[var(--theme-muted)] flex items-center gap-1.5">
+                      <Layers size={13} className="text-[var(--theme-accent)]" />
+                      <span>Discs / Media</span>
+                    </span>
+                    <p className="text-sm font-bold text-[var(--theme-fg)]">{releaseDetails.discCount} Discs</p>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -365,7 +393,7 @@ export default function MusicLoreAndReviews({
               <h3 className="text-xs font-bold text-[var(--theme-accent)] uppercase tracking-wider font-mono">
                 Artist Context · {artist}
               </h3>
-              <p className="text-xs sm:text-sm text-[var(--theme-muted)] leading-relaxed max-w-3xl">
+              <p className="text-xs sm:text-sm text-[var(--theme-muted)] leading-relaxed max-w-3xl whitespace-pre-line">
                 {artistDescription}
               </p>
             </div>
@@ -373,17 +401,17 @@ export default function MusicLoreAndReviews({
         </section>
       )}
 
-      {/* 2. GENRES & LORE TAB (Open Tag Clouds - NO HEAVY CARD BOX!) */}
+      {/* 2. GENRES & LORE TAB (Full Genres & Folksonomy - NO AGGRESSIVE FILTERING!) */}
       {renderLore && hasAnyTags && (
         <section className="space-y-8 animate-fade-in">
           <div className="flex items-center justify-between flex-wrap gap-2 border-b border-[var(--theme-border)]/50 pb-3">
             <div>
               <div className="flex items-center gap-2 text-xs font-bold text-[var(--theme-accent)] uppercase tracking-widest font-mono">
                 <Tag size={15} />
-                <span>Musical Genealogy</span>
+                <span>Musical Lore & Taxonomy</span>
               </div>
               <h2 className="text-2xl font-black text-[var(--theme-fg)] tracking-tight font-display mt-0.5">
-                Genres, Styles & Roots
+                Genres, Styles & Community Lore
               </h2>
             </div>
             {primaryGenre && (
@@ -394,14 +422,14 @@ export default function MusicLoreAndReviews({
           </div>
 
           {/* Core Official Genres */}
-          {resolvedCategorized.genres.length > 0 && (
+          {resolvedCategorized.coreGenres.length > 0 && (
             <div className="space-y-3">
               <h3 className="text-xs font-bold text-[var(--theme-muted)] uppercase tracking-wider font-mono flex items-center gap-1.5">
                 <Sparkles size={13} className="text-[var(--theme-accent)]" />
                 <span>Core Genres</span>
               </h3>
               <div className="flex flex-wrap gap-2">
-                {resolvedCategorized.genres.map((g, idx) => (
+                {resolvedCategorized.coreGenres.map((g, idx) => (
                   <span
                     key={`genre-${idx}`}
                     className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[var(--theme-accent)]/15 border border-[var(--theme-accent)]/30 text-[var(--theme-fg)] font-medium text-xs transition hover:border-[var(--theme-accent)] select-none"
@@ -442,22 +470,22 @@ export default function MusicLoreAndReviews({
             </div>
           )}
 
-          {/* Themes & Musical Moods */}
-          {resolvedCategorized.themes.length > 0 && (
+          {/* Community Folksonomy (British, UK, Arrangers, Composers, Cultural tags) */}
+          {resolvedCategorized.folksonomy.length > 0 && (
             <div className="space-y-3">
               <h3 className="text-xs font-bold text-[var(--theme-muted)] uppercase tracking-wider font-mono">
-                Themes & Moods
+                Community Folksonomy & Cultural Context
               </h3>
               <div className="flex flex-wrap gap-2">
-                {resolvedCategorized.themes.map((th, idx) => (
+                {resolvedCategorized.folksonomy.map((f, idx) => (
                   <span
-                    key={`theme-${idx}`}
-                    className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-200/90 text-xs font-medium hover:border-amber-400 transition select-none"
+                    key={`folk-${idx}`}
+                    className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--theme-card)] border border-[var(--theme-border)] text-[var(--theme-muted)] hover:text-[var(--theme-fg)] text-xs font-medium hover:border-[var(--theme-accent)] transition select-none"
                   >
-                    <span>{th.name}</span>
-                    {th.count > 1 && (
-                      <span className="text-[10px] text-amber-300/70 font-mono">
-                        {th.count}
+                    <span>#{f.name}</span>
+                    {f.count > 1 && (
+                      <span className="text-[10px] text-[var(--theme-accent)] font-mono">
+                        ({f.count})
                       </span>
                     )}
                   </span>
@@ -470,7 +498,7 @@ export default function MusicLoreAndReviews({
           {resolvedCategorized.eras.length > 0 && (
             <div className="space-y-3">
               <h3 className="text-xs font-bold text-[var(--theme-muted)] uppercase tracking-wider font-mono">
-                Era & Musical Era
+                Era & Decade
               </h3>
               <div className="flex flex-wrap gap-2">
                 {resolvedCategorized.eras.map((er, idx) => (
@@ -492,57 +520,65 @@ export default function MusicLoreAndReviews({
         </section>
       )}
 
-      {/* 3. RATINGS & REVIEWS TAB (Breathing Open Layout - NOT NESTED CARDS!) */}
+      {/* 3. RATINGS & REVIEWS TAB (10-Star Scale & Music Journal Integration) */}
       {renderReviews && (
         <section className="space-y-8 animate-fade-in">
-          {/* Header & Write Review Action */}
+          {/* Header & Write Review / Journal Action */}
           <div className="flex items-center justify-between flex-wrap gap-3 border-b border-[var(--theme-border)]/50 pb-3">
             <div>
               <div className="flex items-center gap-2 text-xs font-bold text-[var(--theme-accent)] uppercase tracking-widest font-mono">
                 <MessageSquare size={15} />
-                <span>Community Pulse</span>
+                <span>Community Pulse & Personal Journal</span>
               </div>
               <h2 className="text-2xl font-black text-[var(--theme-fg)] tracking-tight font-display mt-0.5">
-                Ratings & Reviews
+                Ratings & Listening Journal
               </h2>
             </div>
-            <button
-              onClick={() => setShowForm(!showForm)}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[var(--theme-accent)] hover:opacity-90 text-[var(--theme-accent-fg)] text-xs font-bold transition cursor-pointer shadow-md active:scale-95"
-            >
-              <Star size={14} fill="currentColor" />
-              <span>{showForm ? "Cancel Review" : "Write a Review"}</span>
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setIsJournalModalOpen(true)}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-amber-400 via-amber-300 to-amber-400 hover:opacity-90 text-zinc-950 text-xs font-extrabold transition cursor-pointer shadow-md active:scale-95"
+              >
+                <Star size={14} fill="currentColor" />
+                <span>Rate & Log Journal</span>
+              </button>
+              <button
+                onClick={() => setShowForm(!showForm)}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] border border-[var(--theme-border)] text-[var(--theme-fg)] text-xs font-semibold transition cursor-pointer"
+              >
+                <span>{showForm ? "Cancel" : "Quick Comment"}</span>
+              </button>
+            </div>
           </div>
 
-          {/* Dual Score Overview (Open Grid - No Nested Cards) */}
+          {/* Dual Score Overview on 10-Star Scale */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 py-2">
-            {/* Column 1: MusicBrainz Verified Community Rating */}
+            {/* Column 1: MusicBrainz Verified Community Rating (out of 10) */}
             <div className="space-y-2 border-b sm:border-b-0 sm:border-r border-[var(--theme-border)]/50 pb-5 sm:pb-0 sm:pr-6">
               <div className="flex items-center gap-2 text-purple-400 text-xs font-bold uppercase tracking-wider font-mono">
                 <Award size={15} />
-                <span>MusicBrainz Registry Score</span>
+                <span>MusicBrainz Registry Rating</span>
               </div>
-              {mbScore !== null && mbScore > 0 ? (
+              {mbScore10 !== null && Number(mbScore10) > 0 ? (
                 <div>
                   <div className="flex items-baseline gap-2 mb-1">
                     <span className="text-4xl sm:text-5xl font-black text-[var(--theme-fg)] font-display">
-                      {mbScore.toFixed(1)}
+                      {mbScore10}
                     </span>
-                    <span className="text-sm font-semibold text-[var(--theme-muted)]">/ 5.0</span>
+                    <span className="text-sm font-semibold text-[var(--theme-muted)]">/ 10.0</span>
                   </div>
                   <div className="flex items-center gap-1 text-purple-400 mb-1.5">
-                    {[1, 2, 3, 4, 5].map((star) => (
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((star) => (
                       <Star
                         key={star}
-                        size={18}
-                        fill={star <= Math.round(mbScore) ? "currentColor" : "none"}
-                        className={star <= Math.round(mbScore) ? "text-purple-400" : "text-zinc-600"}
+                        size={15}
+                        fill={star <= Math.round(Number(mbScore10)) ? "currentColor" : "none"}
+                        className={star <= Math.round(Number(mbScore10)) ? "text-purple-400" : "text-zinc-700"}
                       />
                     ))}
                   </div>
                   <p className="text-xs text-[var(--theme-muted)]">
-                    {mbVotes ? `Calculated from ${mbVotes} verified catalog ratings` : "Verified open music registry score"}
+                    {mbVotes ? `Calculated from ${mbVotes} verified catalog community ratings` : "Verified open music registry score"}
                   </p>
                 </div>
               ) : (
@@ -553,12 +589,12 @@ export default function MusicLoreAndReviews({
               )}
             </div>
 
-            {/* Column 2: Personal User Rating */}
+            {/* Column 2: Personal User Rating (10-Star Interactive Scale) */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-amber-400 text-xs font-bold uppercase tracking-wider font-mono">
                   <Star size={15} fill="currentColor" />
-                  <span>Your Personal Score</span>
+                  <span>Your Personal Score (10★ Scale)</span>
                 </div>
                 {userRating > 0 && (
                   <button
@@ -570,8 +606,9 @@ export default function MusicLoreAndReviews({
                 )}
               </div>
 
-              <div className="flex items-center gap-2 my-1" onMouseLeave={() => setHoverRating(0)}>
-                {[1, 2, 3, 4, 5].map((star) => {
+              {/* 10 Interactive Stars */}
+              <div className="flex items-center gap-1.5 my-1 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden" onMouseLeave={() => setHoverRating(0)}>
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((star) => {
                   const isFilled = (hoverRating || userRating) >= star;
                   return (
                     <button
@@ -579,15 +616,15 @@ export default function MusicLoreAndReviews({
                       type="button"
                       onMouseEnter={() => setHoverRating(star)}
                       onClick={() => handleRateLocally(star)}
-                      className="p-1 cursor-pointer transition-transform duration-150 hover:scale-125 focus:outline-none"
-                      title={`Rate ${star} star${star > 1 ? 's' : ''}`}
+                      className="p-1 cursor-pointer transition-transform duration-150 hover:scale-130 focus:outline-none"
+                      title={`Rate ${star} / 10`}
                     >
                       <Star
-                        size={26}
+                        size={22}
                         fill={isFilled ? "currentColor" : "none"}
                         className={
                           isFilled 
-                            ? "text-amber-400 drop-shadow-[0_0_10px_rgba(251,191,36,0.6)]" 
+                            ? "text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.7)]" 
                             : "text-zinc-600 hover:text-amber-300"
                         }
                       />
@@ -598,215 +635,146 @@ export default function MusicLoreAndReviews({
 
               <p className="text-xs text-[var(--theme-muted)]">
                 {userRating > 0 ? (
-                  <span>You rated this <strong className="text-amber-400 font-bold">{userRating} / 5 stars</strong> (saved locally)</span>
+                  <span className="font-semibold text-amber-300">
+                    You scored this {type} {userRating}/10 stars · Saved to your local library & journal
+                  </span>
                 ) : (
-                  <span>Tap any star above to add your score</span>
+                  <span>Click any star above or tap &quot;Rate & Log Journal&quot; to score this release.</span>
                 )}
               </p>
             </div>
           </div>
 
-          {/* Rating Distribution Bar (if reviews exist) */}
-          {realReviewsCount > 0 && realDistribution && (
-            <div className="pt-6 border-t border-[var(--theme-border)]/50 space-y-3">
-              <div className="flex items-center justify-between text-xs font-bold text-[var(--theme-fg)]">
-                <span>Rating Breakdown ({realReviewsCount} listener reviews)</span>
-                <span className="text-amber-400">Average: {realAverageScore} / 5.0</span>
-              </div>
-              <div className="space-y-1.5 max-w-md">
-                {realDistribution.map((row) => (
-                  <div key={row.star} className="flex items-center gap-3 text-xs text-[var(--theme-muted)]">
-                    <span className="w-8 font-bold text-right text-[11px] font-mono">{row.star} ★</span>
-                    <div className="flex-1 h-2 rounded-full bg-[var(--theme-surface)] overflow-hidden border border-[var(--theme-border)]">
-                      <div 
-                        className="h-full bg-amber-400 rounded-full transition-all duration-500" 
-                        style={{ width: `${row.pct}%` }} 
-                      />
-                    </div>
-                    <span className="w-12 text-right text-[10px] font-mono">{row.count} ({row.pct}%)</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Write Review Form */}
+          {/* Inline Quick Review Form (If Toggled) */}
           {showForm && (
-            <form onSubmit={handleSubmitReview} className="p-5 rounded-2xl bg-[var(--theme-surface)] border border-[var(--theme-accent)]/40 shadow-xl space-y-4 animate-fade-in max-w-2xl">
-              <h4 className="text-xs font-bold text-[var(--theme-fg)] uppercase tracking-wider font-mono">
-                Write a Review for {title || artist}
-              </h4>
-
-              <div className="flex items-center gap-2.5">
-                <span className="text-xs text-[var(--theme-muted)] font-semibold">Your Score:</span>
-                <div className="flex items-center gap-1" onMouseLeave={() => setHoverRating(0)}>
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <button
-                      key={star}
-                      type="button"
-                      onMouseEnter={() => setHoverRating(star)}
-                      onClick={() => handleRateLocally(star)}
-                      className="p-1 cursor-pointer transition transform hover:scale-115"
-                    >
-                      <Star
-                        size={18}
-                        fill={(hoverRating || userRating || 5) >= star ? "currentColor" : "none"}
-                        className={(hoverRating || userRating || 5) >= star ? "text-amber-400" : "text-zinc-600"}
-                      />
-                    </button>
-                  ))}
-                </div>
-                <span className="text-xs font-bold text-amber-400 ml-1">
-                  {(userRating || 5)} / 5
-                </span>
+            <form onSubmit={handleSubmitReview} className="space-y-4 pt-4 border-t border-[var(--theme-border)]/50 animate-fade-in max-w-2xl">
+              <h3 className="text-sm font-bold text-[var(--theme-fg)]">
+                Write a Community Review & Journal Entry
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <input
+                  type="text"
+                  placeholder="Your Name / Explorer Handle (optional)"
+                  value={reviewerName}
+                  onChange={(e) => setReviewerName(e.target.value)}
+                  className="px-3.5 py-2.5 rounded-xl bg-[var(--theme-surface)] border border-[var(--theme-border)] text-xs text-[var(--theme-fg)] placeholder:text-[var(--theme-muted)] focus:outline-none focus:border-[var(--theme-accent)]"
+                />
               </div>
-
-              <input
-                type="text"
-                placeholder="Your Name or Handle (optional)"
-                value={reviewerName}
-                onChange={(e) => setReviewerName(e.target.value)}
-                className="w-full px-4 py-2 rounded-xl bg-[var(--theme-card)] border border-[var(--theme-border)] text-[var(--theme-fg)] placeholder-[var(--theme-muted)] text-xs focus:outline-none focus:border-[var(--theme-accent)]"
-              />
-
               <textarea
-                placeholder="Share your thoughts on track highlights, sound production, or memories with this release..."
+                placeholder="Share your thoughts on the instrumentation, mixing, lyrical themes, or overall mood..."
                 value={reviewComment}
                 onChange={(e) => setReviewComment(e.target.value)}
                 rows={3}
-                className="w-full px-4 py-3 rounded-xl bg-[var(--theme-card)] border border-[var(--theme-border)] text-[var(--theme-fg)] placeholder-[var(--theme-muted)] text-xs focus:outline-none focus:border-[var(--theme-accent)] resize-none"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--theme-surface)] border border-[var(--theme-border)] text-xs text-[var(--theme-fg)] placeholder:text-[var(--theme-muted)] focus:outline-none focus:border-[var(--theme-accent)] resize-none"
               />
-
-              <div className="flex justify-end gap-2 pt-1">
+              <div className="flex items-center justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setShowForm(false)}
-                  className="px-4 py-1.5 rounded-full border border-[var(--theme-border)] text-xs font-semibold text-[var(--theme-muted)] hover:text-[var(--theme-fg)] transition cursor-pointer"
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-[var(--theme-muted)] hover:text-[var(--theme-fg)]"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="inline-flex items-center gap-2 px-5 py-1.5 rounded-full bg-[var(--theme-accent)] hover:opacity-90 text-[var(--theme-accent-fg)] text-xs font-bold transition cursor-pointer shadow-md"
+                  className="px-5 py-2 rounded-xl bg-[var(--theme-accent)] text-[var(--theme-accent-fg)] text-xs font-bold hover:opacity-90 transition shadow-md flex items-center gap-1.5 cursor-pointer"
                 >
-                  <Send size={12} />
-                  <span>Post Review</span>
+                  <Send size={13} />
+                  <span>Publish Review</span>
                 </button>
               </div>
             </form>
           )}
 
-          {/* User Reviews List */}
-          {reviews.length > 0 ? (
-            <div className="space-y-4 pt-2">
+          {/* Real Stored User Reviews List */}
+          {reviews.length > 0 && (
+            <div className="pt-6 border-t border-[var(--theme-border)]/50 space-y-4">
               <h3 className="text-xs font-bold text-[var(--theme-muted)] uppercase tracking-wider font-mono">
-                Listener Reviews
+                Recent Reviews ({reviews.length})
               </h3>
-              <div className="divide-y divide-[var(--theme-border)]/40">
+              <div className="space-y-3">
                 {reviews.map((rev) => (
-                  <div key={rev.id} className="py-4 space-y-2 first:pt-0">
+                  <div
+                    key={rev.id}
+                    className="p-4 rounded-2xl bg-[var(--theme-surface)]/60 border border-[var(--theme-border)]/60 space-y-2"
+                  >
                     <div className="flex items-center justify-between flex-wrap gap-2">
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-bold text-[var(--theme-fg)]">{rev.author}</span>
-                        {rev.verified && (
-                          <span className="inline-flex items-center gap-1 text-[10px] text-[var(--theme-accent)] bg-[var(--theme-accent)]/10 px-2 py-0.5 rounded-full border border-[var(--theme-accent)]/20">
-                            <CheckCircle2 size={10} />
-                            Verified
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 text-xs text-[var(--theme-muted)]">
-                        <div className="flex items-center gap-0.5 text-amber-400">
-                          {[1, 2, 3, 4, 5].map((s) => (
-                            <Star
-                              key={s}
-                              size={12}
-                              fill={s <= rev.score ? "currentColor" : "none"}
-                              className={s <= rev.score ? "text-amber-400" : "text-zinc-700"}
-                            />
-                          ))}
+                        <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-400/15 border border-amber-400/30 text-amber-300 text-[11px] font-bold font-mono">
+                          <Star size={11} fill="currentColor" />
+                          <span>{rev.score}/10</span>
                         </div>
-                        <span>·</span>
-                        <span>{rev.date}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] text-[var(--theme-muted)]">{rev.date}</span>
                         <button
-                          type="button"
                           onClick={() => handleDeleteReview(rev.id)}
-                          className="ml-2 text-zinc-500 hover:text-rose-400 transition cursor-pointer p-0.5"
-                          title="Remove review"
+                          className="text-[var(--theme-muted)] hover:text-rose-400 p-1 cursor-pointer transition"
+                          title="Delete Review"
                         >
-                          <Trash2 size={12} />
+                          <Trash2 size={13} />
                         </button>
                       </div>
                     </div>
-                    <p className="text-xs sm:text-sm text-[var(--theme-fg)]/90 font-body leading-relaxed max-w-2xl">
-                      &ldquo;{rev.text}&rdquo;
+                    <p className="text-xs sm:text-sm text-[var(--theme-muted)] leading-relaxed">
+                      {rev.text}
                     </p>
                   </div>
                 ))}
               </div>
             </div>
-          ) : (
-            <div className="py-8 flex flex-col items-center text-center gap-2 max-w-md mx-auto">
-              <MessageSquare size={24} className="text-[var(--theme-muted)]/60" />
-              <h4 className="text-sm font-bold text-[var(--theme-fg)]">No Community Reviews Yet</h4>
-              <p className="text-xs text-[var(--theme-muted)]">
-                Be the first to rate and write a review for {title || artist}.
-              </p>
-            </div>
           )}
         </section>
       )}
 
-      {/* 4. EXTERNAL LINKS TAB */}
-      {renderLinks && externalLinks && externalLinks.length > 0 && (
+      {/* 4. EXTERNAL LINKS & CATALOG TAB */}
+      {renderLinks && externalLinks.length > 0 && (
         <section className="space-y-6 animate-fade-in">
-          <div className="flex items-center justify-between flex-wrap gap-2 border-b border-[var(--theme-border)]/50 pb-3">
-            <div>
-              <div className="flex items-center gap-2 text-xs font-bold text-[var(--theme-accent)] uppercase tracking-widest font-mono">
-                <Globe size={15} />
-                <span>External Directory</span>
-              </div>
-              <h2 className="text-2xl font-black text-[var(--theme-fg)] tracking-tight font-display mt-0.5">
-                Streaming & Catalog Sources
-              </h2>
+          <div className="border-b border-[var(--theme-border)]/50 pb-3">
+            <div className="flex items-center gap-2 text-xs font-bold text-[var(--theme-accent)] uppercase tracking-widest font-mono">
+              <Globe size={15} />
+              <span>External Catalog References</span>
             </div>
-            <span className="text-xs text-[var(--theme-muted)] font-mono">
-              {externalLinks.length} services
-            </span>
+            <h2 className="text-2xl font-black text-[var(--theme-fg)] tracking-tight font-display mt-0.5">
+              Streaming & Open Music Sources
+            </h2>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
             {externalLinks.map((link, idx) => {
-              const label = link.label || link.name || "Web Link";
-              let domain = "";
-              try {
-                domain = new URL(link.url).hostname.replace(/^www\./, "");
-              } catch (_) {
-                domain = link.category || "web";
-              }
+              const url = typeof link === "string" ? link : link.url;
+              const sourceName = typeof link === "object" && link.source 
+                ? link.source 
+                : url.includes("spotify") 
+                  ? "Spotify" 
+                  : url.includes("apple") 
+                    ? "Apple Music" 
+                    : url.includes("discogs") 
+                      ? "Discogs" 
+                      : url.includes("musicbrainz") 
+                        ? "MusicBrainz" 
+                        : url.includes("wikidata") 
+                          ? "Wikidata" 
+                          : "Web Link";
 
               return (
                 <a
                   key={`link-${idx}`}
-                  href={link.url}
+                  href={url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-between p-3 rounded-2xl bg-[var(--theme-surface)] border border-[var(--theme-border)] hover:border-[var(--theme-accent)] hover:bg-[var(--theme-card)] text-xs text-[var(--theme-fg)] transition-all duration-200 group cursor-pointer shadow-xs active:scale-98"
+                  className="p-3.5 rounded-2xl bg-[var(--theme-surface)]/60 hover:bg-[var(--theme-card)] border border-[var(--theme-border)] hover:border-[var(--theme-accent)] transition-all duration-200 flex items-center justify-between group cursor-pointer"
                 >
-                  <div className="flex items-center gap-3 truncate pr-2">
-                    <div className="w-8 h-8 rounded-xl bg-[var(--theme-card)] border border-[var(--theme-border)] flex items-center justify-center shrink-0 group-hover:border-[var(--theme-accent)] transition-colors">
-                      <ExternalLink size={13} className="text-[var(--theme-muted)] group-hover:text-[var(--theme-accent)] transition-colors" />
-                    </div>
-                    <div className="flex flex-col min-w-0">
-                      <span className="font-semibold text-xs text-[var(--theme-fg)] group-hover:text-[var(--theme-accent)] transition-colors truncate">
-                        {label}
-                      </span>
-                      <span className="text-[10px] text-[var(--theme-muted)] truncate font-mono">
-                        {domain}
-                      </span>
-                    </div>
+                  <div className="min-w-0 pr-2">
+                    <span className="text-xs font-bold text-[var(--theme-fg)] group-hover:text-[var(--theme-accent)] transition-colors block truncate">
+                      {sourceName}
+                    </span>
+                    <span className="text-[10px] text-[var(--theme-muted)] truncate block font-mono">
+                      {url.replace(/^https?:\/\/(www\.)?/, "")}
+                    </span>
                   </div>
-                  <ChevronRight size={14} className="text-[var(--theme-muted)] group-hover:text-[var(--theme-accent)] group-hover:translate-x-0.5 transition-all shrink-0" />
+                  <ExternalLink size={14} className="text-[var(--theme-muted)] group-hover:text-[var(--theme-accent)] transition-colors shrink-0" />
                 </a>
               );
             })}
@@ -814,6 +782,16 @@ export default function MusicLoreAndReviews({
         </section>
       )}
 
+      {/* Rating & Journal Modal triggerable from Reviews tab */}
+      <RatingAndJournalModal
+        isOpen={isJournalModalOpen}
+        onClose={() => setIsJournalModalOpen(false)}
+        id={id}
+        type={type}
+        title={title}
+        subtitle={artist}
+        initialRating={userRating}
+      />
     </div>
   );
 }
