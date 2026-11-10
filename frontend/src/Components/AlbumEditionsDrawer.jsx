@@ -168,7 +168,7 @@ export default function AlbumEditionsDrawer({
                 <div className="min-w-0">
                   <h2 className="text-base sm:text-lg font-bold text-[var(--theme-fg)] truncate flex items-center gap-2">
                     <span>Editions & Pressings</span>
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--theme-accent)]/20 text-[var(--theme-accent)] font-mono font-bold shrink-0">
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--theme-accent)]/20 text-[var(--theme-accent)] font-sans font-bold shrink-0">
                       {editions.length}
                     </span>
                   </h2>
@@ -261,7 +261,7 @@ export default function AlbumEditionsDrawer({
                       }`}
                     >
                       <span>{tab.label}</span>
-                      <span className={`text-[10px] font-mono px-1 rounded-full ${
+                      <span className={`text-[10px] font-sans font-semibold px-1 rounded-full ${
                         isActive ? "bg-black/20 text-[var(--theme-bg)]" : "bg-white/5 text-[var(--theme-muted)]"
                       }`}>
                         {tab.count}
@@ -405,7 +405,7 @@ export default function AlbumEditionsDrawer({
                                   {ed.countries.slice(0, 5).map((c) => (
                                     <span
                                       key={c}
-                                      className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded bg-white/5 border border-white/5 text-[10px] font-mono text-[var(--theme-fg)]/90"
+                                      className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded bg-white/5 border border-white/5 text-[10px] font-sans font-medium text-[var(--theme-fg)]/90"
                                       title={c}
                                     >
                                       <span>{getCountryFlag(c)}</span>
@@ -413,7 +413,7 @@ export default function AlbumEditionsDrawer({
                                     </span>
                                   ))}
                                   {ed.countries.length > 5 && (
-                                    <span className="text-[10px] text-[var(--theme-muted)] font-mono">
+                                    <span className="text-[10px] text-[var(--theme-muted)] font-sans">
                                       +{ed.countries.length - 5} more
                                     </span>
                                   )}

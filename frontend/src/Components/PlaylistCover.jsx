@@ -79,7 +79,7 @@ export default function PlaylistCover({
       <div className="relative z-10 font-display font-black text-white text-base sm:text-xl md:text-2xl leading-tight line-clamp-3 drop-shadow-md">
         {name}
       </div>
-      <div className="relative z-10 mt-2 text-[10px] sm:text-xs font-semibold text-white/80 uppercase tracking-widest font-mono">
+      <div className="relative z-10 mt-2 text-[10px] sm:text-xs font-semibold text-white/80 uppercase tracking-widest font-sans">
         Groove Playlist
       </div>
     </div>

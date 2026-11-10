@@ -79,7 +79,7 @@ export default function RatingPieChart({ rating, size = "md", className = "" }) 
 
         {/* Center Score */}
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-          <span className="text-[11px] font-black font-mono leading-none" style={{ color }}>
+          <span className="text-[11px] font-black font-sans leading-none" style={{ color }}>
             {score10}
           </span>
         </div>
@@ -91,7 +91,7 @@ export default function RatingPieChart({ rating, size = "md", className = "" }) 
           <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--theme-muted)]">
             Groove Score
           </span>
-          <span className="text-[9px] font-mono text-[var(--theme-muted)]">
+          <span className="text-[9px] font-sans text-[var(--theme-muted)]">
             {score10}/10
           </span>
         </div>

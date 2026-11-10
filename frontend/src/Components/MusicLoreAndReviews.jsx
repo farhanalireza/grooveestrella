@@ -300,7 +300,7 @@ export default function MusicLoreAndReviews({
           {/* Main Editorial Background */}
           {description && (
             <div className="space-y-3">
-              <div className="flex items-center gap-2 text-xs font-bold text-[var(--theme-accent)] uppercase tracking-widest font-mono">
+              <div className="flex items-center gap-2 text-xs font-bold text-[var(--theme-accent)] uppercase tracking-widest">
                 <BookOpen size={15} />
                 <span>{type === "artist" ? "Artist Biography" : type === "album" ? "Album Overview & Background" : "Track Information"}</span>
               </div>
@@ -316,7 +316,7 @@ export default function MusicLoreAndReviews({
           {/* Release Specifications Grid (Clean 2-Column Specs - No Box Card!) */}
           {releaseDetails && (
             <div className="pt-6 border-t border-[var(--theme-border)]/50 space-y-4">
-              <h3 className="text-xs font-bold text-[var(--theme-fg)] uppercase tracking-wider font-mono">
+              <h3 className="text-xs font-bold text-[var(--theme-fg)] uppercase tracking-wider">
                 Release Metadata & Archival Specs
               </h3>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 max-w-3xl">
@@ -362,7 +362,7 @@ export default function MusicLoreAndReviews({
                       <Hash size={13} className="text-[var(--theme-accent)]" />
                       <span>Catalog / Barcode</span>
                     </span>
-                    <p className="text-xs font-mono font-bold text-[var(--theme-fg)] truncate">{releaseDetails.barcode}</p>
+                    <p className="text-xs font-sans font-bold text-[var(--theme-fg)] truncate">{releaseDetails.barcode}</p>
                   </div>
                 )}
                 {releaseDetails.trackCount && (
@@ -390,7 +390,7 @@ export default function MusicLoreAndReviews({
           {/* Artist Background Snippet */}
           {artistDescription && type !== "artist" && (
             <div className="pt-6 border-t border-[var(--theme-border)]/50 space-y-2">
-              <h3 className="text-xs font-bold text-[var(--theme-accent)] uppercase tracking-wider font-mono">
+              <h3 className="text-xs font-bold text-[var(--theme-accent)] uppercase tracking-wider">
                 Artist Context · {artist}
               </h3>
               <p className="text-xs sm:text-sm text-[var(--theme-muted)] leading-relaxed max-w-3xl whitespace-pre-line">
@@ -406,7 +406,7 @@ export default function MusicLoreAndReviews({
         <section className="space-y-8 animate-fade-in">
           <div className="flex items-center justify-between flex-wrap gap-2 border-b border-[var(--theme-border)]/50 pb-3">
             <div>
-              <div className="flex items-center gap-2 text-xs font-bold text-[var(--theme-accent)] uppercase tracking-widest font-mono">
+              <div className="flex items-center gap-2 text-xs font-bold text-[var(--theme-accent)] uppercase tracking-widest">
                 <Tag size={15} />
                 <span>Musical Lore & Taxonomy</span>
               </div>
@@ -424,7 +424,7 @@ export default function MusicLoreAndReviews({
           {/* Core Official Genres */}
           {resolvedCategorized.coreGenres.length > 0 && (
             <div className="space-y-3">
-              <h3 className="text-xs font-bold text-[var(--theme-muted)] uppercase tracking-wider font-mono flex items-center gap-1.5">
+              <h3 className="text-xs font-bold text-[var(--theme-muted)] uppercase tracking-wider flex items-center gap-1.5">
                 <Sparkles size={13} className="text-[var(--theme-accent)]" />
                 <span>Core Genres</span>
               </h3>
@@ -436,7 +436,7 @@ export default function MusicLoreAndReviews({
                   >
                     <span>{g.name}</span>
                     {g.count > 1 && (
-                      <span className="text-[10px] text-[var(--theme-accent)] font-mono font-bold opacity-80">
+                      <span className="text-[10px] text-[var(--theme-accent)] font-sans font-bold opacity-80">
                         {g.count}
                       </span>
                     )}
@@ -449,7 +449,7 @@ export default function MusicLoreAndReviews({
           {/* Styles & Subgenres */}
           {resolvedCategorized.styles.length > 0 && (
             <div className="space-y-3">
-              <h3 className="text-xs font-bold text-[var(--theme-muted)] uppercase tracking-wider font-mono">
+              <h3 className="text-xs font-bold text-[var(--theme-muted)] uppercase tracking-wider">
                 Styles & Subgenres
               </h3>
               <div className="flex flex-wrap gap-2">
@@ -460,7 +460,7 @@ export default function MusicLoreAndReviews({
                   >
                     <span>{s.name}</span>
                     {s.count > 1 && (
-                      <span className="text-[10px] text-[var(--theme-muted)] font-mono">
+                      <span className="text-[10px] text-[var(--theme-muted)] font-sans font-medium">
                         {s.count}
                       </span>
                     )}
@@ -473,7 +473,7 @@ export default function MusicLoreAndReviews({
           {/* Community Folksonomy (British, UK, Arrangers, Composers, Cultural tags) */}
           {resolvedCategorized.folksonomy.length > 0 && (
             <div className="space-y-3">
-              <h3 className="text-xs font-bold text-[var(--theme-muted)] uppercase tracking-wider font-mono">
+              <h3 className="text-xs font-bold text-[var(--theme-muted)] uppercase tracking-wider">
                 Community Folksonomy & Cultural Context
               </h3>
               <div className="flex flex-wrap gap-2">
@@ -484,7 +484,7 @@ export default function MusicLoreAndReviews({
                   >
                     <span>#{f.name}</span>
                     {f.count > 1 && (
-                      <span className="text-[10px] text-[var(--theme-accent)] font-mono">
+                      <span className="text-[10px] text-[var(--theme-accent)] font-sans font-medium">
                         ({f.count})
                       </span>
                     )}
@@ -497,7 +497,7 @@ export default function MusicLoreAndReviews({
           {/* Era & Timeline */}
           {resolvedCategorized.eras.length > 0 && (
             <div className="space-y-3">
-              <h3 className="text-xs font-bold text-[var(--theme-muted)] uppercase tracking-wider font-mono">
+              <h3 className="text-xs font-bold text-[var(--theme-muted)] uppercase tracking-wider">
                 Era & Decade
               </h3>
               <div className="flex flex-wrap gap-2">
@@ -508,7 +508,7 @@ export default function MusicLoreAndReviews({
                   >
                     <span>{er.name}</span>
                     {er.count > 1 && (
-                      <span className="text-[10px] text-sky-300/70 font-mono">
+                      <span className="text-[10px] text-sky-300/70 font-sans font-medium">
                         {er.count}
                       </span>
                     )}
@@ -526,7 +526,7 @@ export default function MusicLoreAndReviews({
           {/* Header & Write Review / Journal Action */}
           <div className="flex items-center justify-between flex-wrap gap-3 border-b border-[var(--theme-border)]/50 pb-3">
             <div>
-              <div className="flex items-center gap-2 text-xs font-bold text-[var(--theme-accent)] uppercase tracking-widest font-mono">
+              <div className="flex items-center gap-2 text-xs font-bold text-[var(--theme-accent)] uppercase tracking-widest">
                 <MessageSquare size={15} />
                 <span>Community Pulse & Personal Journal</span>
               </div>
@@ -555,7 +555,7 @@ export default function MusicLoreAndReviews({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 py-2">
             {/* Column 1: MusicBrainz Verified Community Rating (out of 10) */}
             <div className="space-y-2 border-b sm:border-b-0 sm:border-r border-[var(--theme-border)]/50 pb-5 sm:pb-0 sm:pr-6">
-              <div className="flex items-center gap-2 text-purple-400 text-xs font-bold uppercase tracking-wider font-mono">
+              <div className="flex items-center gap-2 text-purple-400 text-xs font-bold uppercase tracking-wider">
                 <Award size={15} />
                 <span>MusicBrainz Registry Rating</span>
               </div>
@@ -592,7 +592,7 @@ export default function MusicLoreAndReviews({
             {/* Column 2: Personal User Rating (10-Star Interactive Scale) */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-amber-400 text-xs font-bold uppercase tracking-wider font-mono">
+                <div className="flex items-center gap-2 text-amber-400 text-xs font-bold uppercase tracking-wider">
                   <Star size={15} fill="currentColor" />
                   <span>Your Personal Score (10★ Scale)</span>
                 </div>
@@ -689,7 +689,7 @@ export default function MusicLoreAndReviews({
           {/* Real Stored User Reviews List */}
           {reviews.length > 0 && (
             <div className="pt-6 border-t border-[var(--theme-border)]/50 space-y-4">
-              <h3 className="text-xs font-bold text-[var(--theme-muted)] uppercase tracking-wider font-mono">
+              <h3 className="text-xs font-bold text-[var(--theme-muted)] uppercase tracking-wider">
                 Recent Reviews ({reviews.length})
               </h3>
               <div className="space-y-3">
@@ -701,7 +701,7 @@ export default function MusicLoreAndReviews({
                     <div className="flex items-center justify-between flex-wrap gap-2">
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-bold text-[var(--theme-fg)]">{rev.author}</span>
-                        <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-400/15 border border-amber-400/30 text-amber-300 text-[11px] font-bold font-mono">
+                        <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-400/15 border border-amber-400/30 text-amber-300 text-[11px] font-bold font-sans">
                           <Star size={11} fill="currentColor" />
                           <span>{rev.score}/10</span>
                         </div>
@@ -732,7 +732,7 @@ export default function MusicLoreAndReviews({
       {renderLinks && externalLinks.length > 0 && (
         <section className="space-y-6 animate-fade-in">
           <div className="border-b border-[var(--theme-border)]/50 pb-3">
-            <div className="flex items-center gap-2 text-xs font-bold text-[var(--theme-accent)] uppercase tracking-widest font-mono">
+            <div className="flex items-center gap-2 text-xs font-bold text-[var(--theme-accent)] uppercase tracking-widest">
               <Globe size={15} />
               <span>External Catalog References</span>
             </div>
@@ -770,7 +770,7 @@ export default function MusicLoreAndReviews({
                     <span className="text-xs font-bold text-[var(--theme-fg)] group-hover:text-[var(--theme-accent)] transition-colors block truncate">
                       {sourceName}
                     </span>
-                    <span className="text-[10px] text-[var(--theme-muted)] truncate block font-mono">
+                    <span className="text-[10px] text-[var(--theme-muted)] truncate block font-sans">
                       {url.replace(/^https?:\/\/(www\.)?/, "")}
                     </span>
                   </div>

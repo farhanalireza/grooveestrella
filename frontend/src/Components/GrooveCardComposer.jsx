@@ -436,7 +436,7 @@ function ColorPicker({ value, onChange, label }) {
                     type="text"
                     value={hexInput}
                     onChange={handleHexChange}
-                    className="flex-1 px-2.5 py-1.5 rounded-lg bg-white/8 border border-white/15 text-xs font-mono text-white/90 uppercase tracking-wider focus:outline-none focus:border-[#E8A87C]"
+                    className="flex-1 px-2.5 py-1.5 rounded-lg bg-white/8 border border-white/15 text-xs font-sans text-white/90 uppercase tracking-wider focus:outline-none focus:border-[#E8A87C]"
                     placeholder="#000000"
                     maxLength={7}
                 />
@@ -1015,14 +1015,14 @@ export default function GrooveCardComposer({
 
         if (annotationStyle === 'handwritten') {
             return (
-                <div className={`my-2 py-0.5 px-1 font-serif italic text-xs tracking-wide leading-snug break-words ${textAlign === 'center' ? 'text-center' : textAlign === 'right' ? 'text-right' : 'text-left'}`} style={{ color: textColors.primary }}>
+                <div className={`my-2 py-0.5 px-1 font-sans italic text-xs tracking-wide leading-snug break-words ${textAlign === 'center' ? 'text-center' : textAlign === 'right' ? 'text-right' : 'text-left'}`} style={{ color: textColors.primary }}>
                     &ldquo;{annotationText}&rdquo;
                 </div>
             );
         }
         if (annotationStyle === 'typewriter') {
             return (
-                <div className={`my-2 pt-1.5 border-t border-dashed font-mono text-[9px] uppercase tracking-wider break-words ${textAlign === 'center' ? 'text-center' : textAlign === 'right' ? 'text-right' : 'text-left'}`} style={{ color: textColors.secondary, borderColor: textColors.faint }}>
+                <div className={`my-2 pt-1.5 border-t border-dashed font-sans text-[9px] uppercase tracking-wider break-words ${textAlign === 'center' ? 'text-center' : textAlign === 'right' ? 'text-right' : 'text-left'}`} style={{ color: textColors.secondary, borderColor: textColors.faint }}>
                     [NOTE: {annotationText}]
                 </div>
             );
@@ -1757,7 +1757,7 @@ export default function GrooveCardComposer({
                                             <ListMusic size={14} className="text-[var(--theme-accent,#E8A87C)]" />
                                             <span>{fullTracksList.length} Tracks ready</span>
                                         </div>
-                                        <span className="text-[10px] text-white/40 font-mono">
+                                        <span className="text-[10px] text-white/40 font-sans">
                                             {useTwoColumns ? '2-Column Mode' : 'Single Column'}
                                         </span>
                                     </div>
@@ -2011,7 +2011,7 @@ export default function GrooveCardComposer({
                             borderColor: activeTheme.border,
                         }}
                         className={`relative w-full max-w-[320px] xs:max-w-[340px] sm:max-w-[360px] my-auto p-4 sm:p-5 rounded-2xl flex flex-col justify-between shadow-2xl border transition-colors duration-200 select-none overflow-hidden ${
-                            designStyle === 'library' ? 'font-mono' : designStyle === 'museum' ? 'tracking-wide' : 'font-sans'
+                            designStyle === 'museum' ? 'tracking-wide' : 'font-sans'
                         } ${
                             (showTracklist || cardType === 'tracklist') ? 'h-auto min-h-0' : 'h-auto min-h-[480px] sm:min-h-[500px]'
                         }`}
@@ -2065,7 +2065,7 @@ export default function GrooveCardComposer({
 
                         {/* DESIGN STYLE 4: CASSETTE J-CARD HEADER */}
                         {designStyle === 'cassette' && (
-                            <div className="relative z-10 w-full mb-3 pb-1.5 border-b border-dashed flex justify-between items-center text-[8px] font-mono uppercase tracking-wider" style={{ borderColor: textColors.faint, color: textColors.muted }}>
+                            <div className="relative z-10 w-full mb-3 pb-1.5 border-b border-dashed flex justify-between items-center text-[8px] font-sans uppercase tracking-wider" style={{ borderColor: textColors.faint, color: textColors.muted }}>
                                 <span>SIDE A • TYPE II [CrO2] • 120μs</span>
                                 <span className="px-1.5 py-0.2 bg-white/10 rounded font-bold">DOLBY B-NR</span>
                             </div>
@@ -2186,10 +2186,10 @@ export default function GrooveCardComposer({
                                             {fullTracksList.slice(0, Math.ceil(fullTracksList.length / 2)).map(tr => (
                                                 <div key={tr.num} className="flex items-center justify-between text-[8px] sm:text-[9px] font-medium leading-none py-0.5">
                                                     <div className="flex items-center gap-1.5 truncate pr-1">
-                                                        {showTrackNumbers && <span className="font-mono text-[8px]" style={{ color: textColors.muted }}>{tr.num}</span>}
+                                                        {showTrackNumbers && <span className="font-sans text-[8px]" style={{ color: textColors.muted }}>{tr.num}</span>}
                                                         <span className="truncate" style={{ color: textColors.primary }}>{tr.title}</span>
                                                     </div>
-                                                    {showTrackDurations && <span className="font-mono text-[7.5px] shrink-0" style={{ color: textColors.secondary }}>{tr.duration}</span>}
+                                                    {showTrackDurations && <span className="font-sans text-[7.5px] shrink-0" style={{ color: textColors.secondary }}>{tr.duration}</span>}
                                                 </div>
                                             ))}
                                         </div>
@@ -2198,10 +2198,10 @@ export default function GrooveCardComposer({
                                             {fullTracksList.slice(Math.ceil(fullTracksList.length / 2)).map(tr => (
                                                 <div key={tr.num} className="flex items-center justify-between text-[8px] sm:text-[9px] font-medium leading-none py-0.5">
                                                     <div className="flex items-center gap-1.5 truncate pr-1">
-                                                        {showTrackNumbers && <span className="font-mono text-[8px]" style={{ color: textColors.muted }}>{tr.num}</span>}
+                                                        {showTrackNumbers && <span className="font-sans text-[8px]" style={{ color: textColors.muted }}>{tr.num}</span>}
                                                         <span className="truncate" style={{ color: textColors.primary }}>{tr.title}</span>
                                                     </div>
-                                                    {showTrackDurations && <span className="font-mono text-[7.5px] shrink-0" style={{ color: textColors.secondary }}>{tr.duration}</span>}
+                                                    {showTrackDurations && <span className="font-sans text-[7.5px] shrink-0" style={{ color: textColors.secondary }}>{tr.duration}</span>}
                                                 </div>
                                             ))}
                                         </div>
@@ -2212,10 +2212,10 @@ export default function GrooveCardComposer({
                                         {fullTracksList.map(tr => (
                                             <div key={tr.num} className="flex items-center justify-between text-[9px] font-medium leading-none py-0.5">
                                                 <div className="flex items-center gap-2 truncate pr-2">
-                                                    {showTrackNumbers && <span className="font-mono text-[8.5px]" style={{ color: textColors.muted }}>{tr.num}</span>}
+                                                    {showTrackNumbers && <span className="font-sans text-[8.5px]" style={{ color: textColors.muted }}>{tr.num}</span>}
                                                     <span className="truncate" style={{ color: textColors.primary }}>{tr.title}</span>
                                                 </div>
-                                                {showTrackDurations && <span className="font-mono text-[8px] shrink-0" style={{ color: textColors.secondary }}>{tr.duration}</span>}
+                                                {showTrackDurations && <span className="font-sans text-[8px] shrink-0" style={{ color: textColors.secondary }}>{tr.duration}</span>}
                                             </div>
                                         ))}
                                     </div>
@@ -2693,7 +2693,7 @@ export default function GrooveCardComposer({
                                             <ListMusic size={13} className="text-[var(--theme-accent,#E8A87C)]" />
                                             <span>{fullTracksList.length} Tracks ready</span>
                                         </div>
-                                        <span className="text-[10px] text-white/40 font-mono">
+                                        <span className="text-[10px] text-white/40 font-sans">
                                             {useTwoColumns ? '2-Cols' : '1-Col'}
                                         </span>
                                     </div>

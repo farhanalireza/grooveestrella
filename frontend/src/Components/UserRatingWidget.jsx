@@ -134,7 +134,7 @@ export default function UserRatingWidget({
           />
           {userRating > 0 ? (
             <div className="flex items-center gap-1">
-              <span className="font-black font-mono tracking-tight">
+              <span className="font-black font-sans tracking-tight">
                 {userRating}
                 {ratingSystem === "score" ? "/100" : "/10"}
               </span>

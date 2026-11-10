@@ -557,7 +557,7 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
                     {/* Primary Musical Lore */}
                     {(releaseYear || displayGenre) && (
                         <div className="flex items-center justify-center gap-2 text-xs font-semibold text-[var(--theme-muted)] flex-wrap">
-                            {releaseYear && <span className="font-mono">{releaseYear}</span>}
+                            {releaseYear && <span>{releaseYear}</span>}
                             {releaseYear && displayGenre && <span className="opacity-40">·</span>}
                             {displayGenre && <span className="text-[var(--theme-fg)]/90 font-medium">{displayGenre}</span>}
                         </div>
@@ -673,34 +673,38 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
 
             </div>
 
-            {/* Segmented Navigation Tabs */}
-            <div className="sticky top-0 sm:top-2 z-30 py-2.5 -mx-4 px-4 sm:mx-0 sm:px-0 bg-[var(--theme-bg)]/85 backdrop-blur-2xl border-y border-[var(--theme-border)]/50 mb-8 mt-2 transition-colors">
-                <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden scrollb-none no-scrollbar max-w-xl mx-auto justify-start sm:justify-center">
-                    {ALBUM_TABS.map((tab) => {
-                        const isActive = activeTab === tab.id;
-                        const TabIcon = tab.icon;
-                        return (
-                            <button
-                                key={tab.id}
-                                onClick={() => setActiveTab(tab.id)}
-                                className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all duration-200 cursor-pointer whitespace-nowrap flex items-center gap-1.5 select-none ${
-                                    isActive
-                                        ? 'bg-[var(--theme-accent)] text-[var(--theme-accent-fg)] shadow-md shadow-[var(--theme-accent)]/20'
-                                        : 'text-[var(--theme-muted)] hover:text-[var(--theme-fg)] hover:bg-[var(--theme-surface)]'
-                                }`}
-                            >
-                                <TabIcon size={14} />
-                                <span>{tab.label}</span>
-                                {tab.count !== undefined && (
-                                    <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold ${
-                                        isActive ? 'bg-black/20 text-current' : 'bg-[var(--theme-surface)] text-[var(--theme-muted)]'
-                                    }`}>
-                                        {tab.count}
-                                    </span>
-                                )}
-                            </button>
-                        );
-                    })}
+            {/* Segmented Navigation Tabs (Fluid, Responsive & Never Clipped) */}
+            <div className="sticky top-0 sm:top-2 z-30 py-3 bg-[var(--theme-bg)]/90 backdrop-blur-2xl border-y border-[var(--theme-border)]/50 mb-8 mt-2 transition-colors w-full">
+                <div className="w-full max-w-5xl mx-auto px-4 sm:px-6">
+                    <div className="overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden scrollb-none no-scrollbar py-0.5">
+                        <div className="flex items-center gap-2 sm:gap-2.5 min-w-max mx-auto px-1">
+                            {ALBUM_TABS.map((tab) => {
+                                const isActive = activeTab === tab.id;
+                                const TabIcon = tab.icon;
+                                return (
+                                    <button
+                                        key={tab.id}
+                                        onClick={() => setActiveTab(tab.id)}
+                                        className={`shrink-0 whitespace-nowrap px-4 py-2 rounded-full text-xs font-bold transition-all duration-200 cursor-pointer flex items-center gap-2 select-none active:scale-95 ${
+                                            isActive
+                                                ? 'bg-[var(--theme-accent)] text-[var(--theme-accent-fg)] shadow-md shadow-[var(--theme-accent)]/20'
+                                                : 'text-[var(--theme-muted)] hover:text-[var(--theme-fg)] hover:bg-[var(--theme-surface)]'
+                                        }`}
+                                    >
+                                        <TabIcon size={14} className="shrink-0" />
+                                        <span>{tab.label}</span>
+                                        {tab.count !== undefined && (
+                                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold leading-none shrink-0 ${
+                                                isActive ? 'bg-black/20 text-current' : 'bg-[var(--theme-surface)] text-[var(--theme-muted)]'
+                                            }`}>
+                                                {tab.count}
+                                            </span>
+                                        )}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -809,7 +813,7 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
                                                                 }}
                                                             >
                                                                 <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
-                                                                    <span className="w-7 text-center text-xs sm:text-sm font-semibold text-[var(--theme-muted)] group-hover:text-[var(--theme-fg)] shrink-0 font-mono flex items-center justify-center">
+                                                                    <span className="w-7 text-center text-xs sm:text-sm font-semibold text-[var(--theme-muted)] group-hover:text-[var(--theme-fg)] shrink-0 flex items-center justify-center">
                                                                         {isPending && navigatingTrackId === (track.id || track.trackID) ? (
                                                                             <span className="w-3.5 h-3.5 rounded-full border-2 border-[var(--theme-accent)] border-t-transparent animate-spin inline-block" />
                                                                         ) : (
@@ -882,7 +886,7 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
                                                                     </div>
 
                                                                     {formattedDuration && (
-                                                                        <span className="text-xs text-[var(--theme-muted)] font-mono font-medium">
+                                                                        <span className="text-xs text-[var(--theme-muted)] font-medium">
                                                                             {formattedDuration}
                                                                         </span>
                                                                     )}

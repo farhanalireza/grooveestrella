@@ -520,7 +520,7 @@ export default function PlaylistDetailClient({ id, initialPlaylist }) {
 
                                     <div className="flex items-center gap-3 shrink-0 ml-3" onClick={(e) => e.stopPropagation()}>
                                         {formattedDuration && (
-                                            <span className="text-xs text-white/50 font-mono font-medium">
+                                            <span className="text-xs text-white/50 font-sans font-medium">
                                                 {formattedDuration}
                                             </span>
                                         )}

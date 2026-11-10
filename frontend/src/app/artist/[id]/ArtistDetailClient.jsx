@@ -23,6 +23,8 @@ import RatingPieChart from "@/Components/RatingPieChart";
 import UserRatingWidget from "@/Components/UserRatingWidget";
 import ArtistLinksDrawer from "@/Components/ArtistLinksDrawer";
 import ArtistDetailsDrawer from "@/Components/ArtistDetailsDrawer";
+import ArtistBioAndLineupTab from "@/Components/ArtistBioAndLineupTab";
+import ArtistLinksTab from "@/Components/ArtistLinksTab";
 import GrooveLoader from "@/Components/GrooveLoader";
 import { toast } from "@/lib/toast";
 import { shareLink } from "@/lib/shareHelper";
@@ -70,14 +72,18 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
     const [activeTab, setActiveTab] = useState("songs");
     const { theme, setAdaptivePalette, clearAdaptivePalette, colors } = useTheme();
 
-    const ARTIST_TABS = useMemo(() => [
-        { id: 'songs', label: 'Top Songs', count: topTracks.length, icon: ListMusic },
-        { id: 'discography', label: 'Albums', count: studioAlbums.length, icon: Disc },
-        { id: 'about', label: 'Bio & Lineup', icon: BookOpen },
-        { id: 'lore', label: 'Genres & Roots', icon: Tag },
-        { id: 'reviews', label: 'Ratings & Reviews', icon: Star },
-        { id: 'links', label: 'External Links', icon: Globe },
-    ], [topTracks.length, studioAlbums.length]);
+    const ARTIST_TABS = useMemo(() => {
+        const isGrp = artist?.isGroup ?? /group|band|orchestra|choir/i.test(artist?.type || "");
+        const extCount = Array.isArray(artist?.externalLinks) ? artist.externalLinks.length : 0;
+        return [
+            { id: 'songs', label: 'Top Songs', count: topTracks.length, icon: ListMusic },
+            { id: 'discography', label: 'Albums', count: studioAlbums.length, icon: Disc },
+            { id: 'about', label: isGrp ? 'Bio & Lineup' : 'Bio & Details', icon: BookOpen },
+            { id: 'lore', label: 'Genres & Roots', icon: Tag },
+            { id: 'reviews', label: 'Ratings & Reviews', icon: Star },
+            { id: 'links', label: 'External Links', count: extCount, icon: Globe },
+        ];
+    }, [topTracks.length, studioAlbums.length, artist?.type, artist?.isGroup, artist?.externalLinks]);
 
     useEffect(() => {
         if (typeof window !== "undefined") {
@@ -216,16 +222,36 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
     // Distinguish Group vs Solo Artist and parse metadata
     const isGroup = artist.isGroup ?? /group|band|orchestra|choir/i.test(artist.type || "");
     const entityTypeLabel = isGroup ? (artist.type || "Band / Group") : "Solo Artist";
-    const members = artist.members || { og: [], current: [], past: [], supporting: [] };
-    const currentMembersCount = members.current?.length || 0;
-    const ogCount = members.og?.length || 0;
-    const totalLineupCount = currentMembersCount + (members.past?.length || 0);
-    const bands = artist.bands || [];
-    const collaborations = artist.collaborations || [];
-    const externalLinks = artist.externalLinks || [];
+
+    // Safe, robust members normalization to guarantee arrays and prevent runtime crashes
+    const safeMembers = useMemo(() => {
+        const raw = artist?.members;
+        if (!raw) return { og: [], current: [], past: [], supporting: [] };
+        if (Array.isArray(raw)) {
+            return {
+                og: raw.filter((m) => Array.isArray(m?.roles) && m.roles.some((r) => typeof r === "string" && /original|founder/i.test(r))),
+                current: raw.filter((m) => !m?.ended && !m?.end),
+                past: raw.filter((m) => m?.ended || !!m?.end),
+                supporting: [],
+            };
+        }
+        return {
+            og: Array.isArray(raw.og) ? raw.og : [],
+            current: Array.isArray(raw.current) ? raw.current : [],
+            past: Array.isArray(raw.past) ? raw.past : [],
+            supporting: Array.isArray(raw.supporting) ? raw.supporting : [],
+        };
+    }, [artist?.members]);
+
+    const currentMembersCount = safeMembers.current.length;
+    const ogCount = safeMembers.og.length;
+    const totalLineupCount = currentMembersCount + safeMembers.past.length;
+    const bands = Array.isArray(artist.bands) ? artist.bands : [];
+    const collaborations = Array.isArray(artist.collaborations) ? artist.collaborations : [];
+    const externalLinks = Array.isArray(artist.externalLinks) ? artist.externalLinks : [];
     const lifeSpan = artist.lifeSpan || {};
-    const beginYear = lifeSpan.begin ? lifeSpan.begin.split("-")[0] : null;
-    const endYear = lifeSpan.end ? lifeSpan.end.split("-")[0] : null;
+    const beginYear = lifeSpan.begin ? String(lifeSpan.begin).split("-")[0] : null;
+    const endYear = lifeSpan.end ? String(lifeSpan.end).split("-")[0] : null;
 
     const handleBack = () => {
         if (typeof window !== "undefined" && window.history.length > 1) {
@@ -353,7 +379,7 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
                             {beginYear && (
                                 <>
                                     <span className="text-[var(--theme-border)]">•</span>
-                                    <span className="flex items-center gap-1 font-mono">
+                                    <span className="flex items-center gap-1">
                                         <Calendar size={13} className="text-[var(--theme-accent)]" />
                                         <span>
                                             {isGroup
@@ -405,7 +431,7 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
                                     </button>
                                 )}
                                 <button
-                                    onClick={() => setIsDetailsDrawerOpen(true)}
+                                    onClick={() => setActiveTab("about")}
                                     className="text-[11px] font-bold text-[var(--theme-muted)] hover:text-[var(--theme-fg)] transition inline-flex items-center gap-1 cursor-pointer"
                                 >
                                     <Info size={11} />
@@ -437,33 +463,6 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
                             <ChevronRight size={15} className="shrink-0" />
                         </button>
 
-                        {/* Links Drawer Button */}
-                        <button
-                            type="button"
-                            onClick={() => setIsLinksDrawerOpen(true)}
-                            className="h-11 sm:h-12 px-4 sm:px-5 rounded-full bg-[var(--theme-card)]/80 hover:bg-[var(--theme-surface)] active:scale-95 text-[var(--theme-fg)] font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition backdrop-blur-md cursor-pointer border border-[var(--theme-border)] shadow-lg"
-                            title="All External Links & Streaming Services"
-                        >
-                            <Link2 size={16} className="text-[var(--theme-accent)]" />
-                            <span>Links</span>
-                            {externalLinks.length > 0 && (
-                                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-full bg-[var(--theme-accent)]/20 text-[var(--theme-accent)] font-bold">
-                                    {externalLinks.length}
-                                </span>
-                            )}
-                        </button>
-
-                        {/* Details Drawer Button */}
-                        <button
-                            type="button"
-                            onClick={() => setIsDetailsDrawerOpen(true)}
-                            className="h-11 sm:h-12 px-4 sm:px-5 rounded-full bg-[var(--theme-card)]/80 hover:bg-[var(--theme-surface)] active:scale-95 text-[var(--theme-fg)] font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition backdrop-blur-md cursor-pointer border border-[var(--theme-border)] shadow-lg"
-                            title={isGroup ? "Band Lineup & Lore" : "Artist Details & Bio"}
-                        >
-                            <Info size={16} className="text-[var(--theme-accent)]" />
-                            <span>{isGroup ? "Lineup & Bio" : "Details & Bio"}</span>
-                        </button>
-
                         {/* Bookmark Button */}
                         <button
                             onClick={toggleSave}
@@ -476,34 +475,38 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
                 </div>
             </div>
 
-            {/* Segmented Navigation Tabs */}
-            <div className="sticky top-0 sm:top-2 z-30 py-2.5 -mx-4 px-4 sm:mx-0 sm:px-0 bg-[var(--theme-bg)]/85 backdrop-blur-2xl border-y border-[var(--theme-border)]/50 mb-8 mt-4 transition-colors">
-                <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden scrollb-none no-scrollbar max-w-xl mx-auto justify-start sm:justify-center">
-                    {ARTIST_TABS.map((tab) => {
-                        const isActive = activeTab === tab.id;
-                        const TabIcon = tab.icon;
-                        return (
-                            <button
-                                key={tab.id}
-                                onClick={() => setActiveTab(tab.id)}
-                                className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all duration-200 cursor-pointer whitespace-nowrap flex items-center gap-1.5 select-none ${
-                                    isActive
-                                        ? 'bg-[var(--theme-accent)] text-[var(--theme-accent-fg)] shadow-md shadow-[var(--theme-accent)]/20'
-                                        : 'text-[var(--theme-muted)] hover:text-[var(--theme-fg)] hover:bg-[var(--theme-surface)]'
-                                }`}
-                            >
-                                <TabIcon size={14} />
-                                <span>{tab.label}</span>
-                                {tab.count !== undefined && (
-                                    <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold ${
-                                        isActive ? 'bg-black/20 text-current' : 'bg-[var(--theme-surface)] text-[var(--theme-muted)]'
-                                    }`}>
-                                        {tab.count}
-                                    </span>
-                                )}
-                            </button>
-                        );
-                    })}
+            {/* Segmented Navigation Tabs (Fluid, Responsive & Never Clipped) */}
+            <div className="sticky top-0 sm:top-2 z-30 py-3 bg-[var(--theme-bg)]/90 backdrop-blur-2xl border-y border-[var(--theme-border)]/50 mb-8 mt-4 transition-colors w-full">
+                <div className="w-full max-w-5xl mx-auto px-4 sm:px-6">
+                    <div className="overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden scrollb-none no-scrollbar py-0.5">
+                        <div className="flex items-center gap-2 sm:gap-2.5 min-w-max mx-auto px-1">
+                            {ARTIST_TABS.map((tab) => {
+                                const isActive = activeTab === tab.id;
+                                const TabIcon = tab.icon;
+                                return (
+                                    <button
+                                        key={tab.id}
+                                        onClick={() => setActiveTab(tab.id)}
+                                        className={`shrink-0 whitespace-nowrap px-4 py-2 rounded-full text-xs font-bold transition-all duration-200 cursor-pointer flex items-center gap-2 select-none active:scale-95 ${
+                                            isActive
+                                                ? 'bg-[var(--theme-accent)] text-[var(--theme-accent-fg)] shadow-md shadow-[var(--theme-accent)]/20'
+                                                : 'text-[var(--theme-muted)] hover:text-[var(--theme-fg)] hover:bg-[var(--theme-surface)]'
+                                        }`}
+                                    >
+                                        <TabIcon size={14} className="shrink-0" />
+                                        <span>{tab.label}</span>
+                                        {tab.count !== undefined && (
+                                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold leading-none shrink-0 ${
+                                                isActive ? 'bg-black/20 text-current' : 'bg-[var(--theme-surface)] text-[var(--theme-muted)]'
+                                            }`}>
+                                                {tab.count}
+                                            </span>
+                                        )}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -740,7 +743,7 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
                                         {isAlbumNavigating && (
                                             <div className="absolute inset-0 bg-black/60 backdrop-blur-[1px] flex flex-col items-center justify-center gap-1.5 animate-fade-in z-20">
                                                 <div className="w-8 h-8 rounded-full border-2 border-[var(--theme-accent)] border-t-transparent animate-spin" />
-                                                <span className="text-[10px] font-bold text-white tracking-widest uppercase font-mono">Routing...</span>
+                                                <span className="text-[10px] font-bold text-white tracking-widest uppercase">Routing...</span>
                                             </div>
                                         )}
                                     </div>
@@ -775,183 +778,29 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
                 </div>
             )}
 
-            {/* TAB 3: BIO & LINEUP (Directly Embedded Full Lineup & Biography) */}
+            {/* TAB 3: BIO & LINEUP (Dedicated, Fluid & Crash-Proof Component) */}
             {activeTab === "about" && (
-                <div className="relative z-10 mb-12 animate-fade-in max-w-4xl mx-auto space-y-10">
-                    {/* Band Lineup Section */}
-                    {(isGroup || members.current?.length > 0 || members.og?.length > 0 || members.past?.length > 0 || bands?.length > 0) && (
-                        <div className="space-y-6">
-                            <div className="border-b border-[var(--theme-border)]/50 pb-3">
-                                <div className="flex items-center gap-2 text-xs font-bold text-[var(--theme-accent)] uppercase tracking-widest font-mono">
-                                    <Users size={15} />
-                                    <span>{isGroup ? "Band Personnel & Lineup History" : "Musical Projects & Bands"}</span>
-                                </div>
-                                <h2 className="text-2xl font-black text-[var(--theme-fg)] tracking-tight font-display mt-0.5">
-                                    {isGroup ? `${artist.name} Lineup` : `Groups & Projects with ${artist.name}`}
-                                </h2>
-                            </div>
-
-                            {/* Active / Current Lineup */}
-                            {members.current && members.current.length > 0 && (
-                                <div className="space-y-3">
-                                    <h3 className="text-xs font-bold text-emerald-400 uppercase tracking-wider font-mono flex items-center gap-1.5">
-                                        <CheckCircle2 size={14} />
-                                        <span>Current Active Lineup ({members.current.length})</span>
-                                    </h3>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                                        {members.current.map((m, idx) => (
-                                            <Link
-                                                key={`${m.id || idx}-current`}
-                                                href={m.id ? `/artist/${m.id}` : '#'}
-                                                className="p-3.5 rounded-2xl bg-[var(--theme-surface)]/70 hover:bg-[var(--theme-card)] border border-[var(--theme-border)] hover:border-[var(--theme-accent)] transition-all flex items-center justify-between group cursor-pointer shadow-xs"
-                                            >
-                                                <div className="min-w-0 pr-2">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="text-sm font-bold text-[var(--theme-fg)] group-hover:text-[var(--theme-accent)] transition-colors truncate">
-                                                            {m.name}
-                                                        </span>
-                                                        {m.roles?.some(r => /original|founder/i.test(r)) && (
-                                                            <span className="text-[9px] font-bold uppercase px-2 py-0.5 rounded-full bg-amber-400/15 text-amber-300 border border-amber-400/30 shrink-0">
-                                                                Founder
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    {m.roles && m.roles.length > 0 && (
-                                                        <p className="text-[11px] text-[var(--theme-muted)] truncate mt-0.5">
-                                                            {m.roles.filter(r => !/original|founder/i.test(r)).join(", ") || "Member"}
-                                                        </p>
-                                                    )}
-                                                </div>
-                                                <ChevronRight size={14} className="text-[var(--theme-muted)] group-hover:text-[var(--theme-accent)] transition-transform group-hover:translate-x-0.5 shrink-0" />
-                                            </Link>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Founding Members */}
-                            {members.og && members.og.length > 0 && (
-                                <div className="space-y-3">
-                                    <h3 className="text-xs font-bold text-amber-300 uppercase tracking-wider font-mono flex items-center gap-1.5">
-                                        <Sparkles size={14} />
-                                        <span>Founding Members ({members.og.length})</span>
-                                    </h3>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                                        {members.og.map((m, idx) => (
-                                            <Link
-                                                key={`${m.id || idx}-founder`}
-                                                href={m.id ? `/artist/${m.id}` : '#'}
-                                                className="p-3.5 rounded-2xl bg-[var(--theme-surface)]/70 hover:bg-[var(--theme-card)] border border-amber-400/25 hover:border-amber-400 transition-all flex items-center justify-between group cursor-pointer shadow-xs"
-                                            >
-                                                <div className="min-w-0 pr-2">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="text-sm font-bold text-[var(--theme-fg)] group-hover:text-amber-300 transition-colors truncate">
-                                                            {m.name}
-                                                        </span>
-                                                        <span className="text-[9px] font-bold uppercase px-2 py-0.5 rounded-full bg-amber-400/15 text-amber-300 border border-amber-400/30 shrink-0">
-                                                            Founder
-                                                        </span>
-                                                    </div>
-                                                    <p className="text-[11px] text-[var(--theme-muted)] truncate mt-0.5">
-                                                        {m.roles?.filter(r => !/original|founder/i.test(r)).join(", ") || (m.ended ? "Former Member" : "Current Member")}
-                                                        {m.begin || m.end ? ` (${m.begin?.split("-")[0] || ""} – ${m.end?.split("-")[0] || (m.ended ? "" : "Present")})` : ""}
-                                                    </p>
-                                                </div>
-                                                <ChevronRight size={14} className="text-[var(--theme-muted)] group-hover:text-amber-300 transition-transform group-hover:translate-x-0.5 shrink-0" />
-                                            </Link>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Past Members */}
-                            {members.past && members.past.length > 0 && (
-                                <div className="space-y-3">
-                                    <h3 className="text-xs font-bold text-[var(--theme-muted)] uppercase tracking-wider font-mono">
-                                        Past Members & Lineup History ({members.past.length})
-                                    </h3>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                                        {members.past.map((m, idx) => (
-                                            <Link
-                                                key={`${m.id || idx}-past`}
-                                                href={m.id ? `/artist/${m.id}` : '#'}
-                                                className="p-3 rounded-2xl bg-[var(--theme-surface)]/50 hover:bg-[var(--theme-card)] border border-[var(--theme-border)]/70 hover:border-[var(--theme-border)] transition-all flex items-center justify-between group cursor-pointer"
-                                            >
-                                                <div className="min-w-0 pr-2">
-                                                    <span className="text-xs sm:text-sm font-semibold text-[var(--theme-fg)]/90 group-hover:text-[var(--theme-fg)] truncate block">
-                                                        {m.name}
-                                                    </span>
-                                                    <p className="text-[11px] text-[var(--theme-muted)] truncate mt-0.5">
-                                                        {m.roles?.join(", ") || "Former Member"}
-                                                        {m.begin || m.end ? ` (${m.begin?.split("-")[0] || ""} – ${m.end?.split("-")[0] || "Past"})` : ""}
-                                                    </p>
-                                                </div>
-                                                <ChevronRight size={13} className="text-[var(--theme-muted)] group-hover:text-[var(--theme-fg)] shrink-0" />
-                                            </Link>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Solo Artist Bands */}
-                            {!isGroup && bands && bands.length > 0 && (
-                                <div className="space-y-3">
-                                    <h3 className="text-xs font-bold text-[var(--theme-muted)] uppercase tracking-wider font-mono">
-                                        Member of Bands ({bands.length})
-                                    </h3>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                                        {bands.map((b, idx) => (
-                                            <Link
-                                                key={`${b.id || idx}-band`}
-                                                href={b.id ? `/artist/${b.id}` : '#'}
-                                                className="p-3.5 rounded-2xl bg-[var(--theme-surface)]/70 hover:bg-[var(--theme-card)] border border-[var(--theme-border)] hover:border-[var(--theme-accent)] transition-all flex items-center justify-between group cursor-pointer"
-                                            >
-                                                <div className="min-w-0 pr-2">
-                                                    <span className="text-sm font-bold text-[var(--theme-fg)] group-hover:text-[var(--theme-accent)] transition-colors truncate block">
-                                                        {b.name}
-                                                    </span>
-                                                    {b.roles && b.roles.length > 0 && (
-                                                        <p className="text-[11px] text-[var(--theme-muted)] truncate mt-0.5">
-                                                            {b.roles.join(", ")}
-                                                        </p>
-                                                    )}
-                                                </div>
-                                                <ChevronRight size={14} className="text-[var(--theme-muted)] group-hover:text-[var(--theme-accent)] shrink-0" />
-                                            </Link>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    )}
-
-                    {/* Biography & Lore */}
-                    <MusicLoreAndReviews
-                        id={artist.id || id}
-                        type="artist"
-                        title={artist.name}
-                        artist={artist.name}
-                        description={artist.description}
-                        releaseDetails={{
-                            releaseDate: artist.beginDate ? `Active since ${artist.beginDate}` : null,
-                            country: artist.country || artist.area,
-                            format: isGroup ? 'Musical Band / Group' : 'Solo Artist',
-                            label: artist.type
-                        }}
-                        primaryGenre={genres[0] || null}
-                        genres={artist.genres || genres || []}
-                        categorizedTags={artist.categorizedTags || null}
-                        tags={artist.tags || artist.genres || []}
-                        allTags={artist.allTags || []}
-                        rating={artist.rating}
-                        externalLinks={artist.externalLinks || []}
-                        activeTab="about"
-                    />
-                </div>
+                <ArtistBioAndLineupTab
+                    artist={artist}
+                    isGroup={isGroup}
+                    members={safeMembers}
+                    bands={bands}
+                    collaborations={collaborations}
+                    description={artist.description}
+                />
             )}
 
-            {/* OTHER TABS: Genres & Roots, Ratings & Reviews, External Sources */}
-            {activeTab !== "songs" && activeTab !== "discography" && activeTab !== "about" && (
+            {/* TAB 6: EXTERNAL LINKS (Rich Platform Categorization & Direct Links) */}
+            {activeTab === "links" && (
+                <ArtistLinksTab
+                    artistName={artist.name || "Artist"}
+                    externalLinks={externalLinks}
+                    id={artist.id || id}
+                />
+            )}
+
+            {/* OTHER TABS: Genres & Roots, Ratings & Reviews */}
+            {(activeTab === "lore" || activeTab === "reviews") && (
                 <div className="relative z-10 mb-12 animate-fade-in max-w-4xl mx-auto">
                     <MusicLoreAndReviews
                         id={artist.id || id}

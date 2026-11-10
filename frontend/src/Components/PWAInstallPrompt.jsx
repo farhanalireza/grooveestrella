@@ -142,7 +142,7 @@ export default function PWAInstallPrompt() {
               <div className="min-w-0 flex-1">
                 <h4 className="text-xs sm:text-sm font-extrabold tracking-tight truncate text-[var(--theme-fg)] flex items-center gap-1.5">
                   <span>Install GrooveEstrella</span>
-                  <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-[var(--theme-accent)]/20 text-[var(--theme-accent)] font-mono font-bold">
+                  <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-[var(--theme-accent)]/20 text-[var(--theme-accent)] font-sans font-bold">
                     PWA
                   </span>
                 </h4>

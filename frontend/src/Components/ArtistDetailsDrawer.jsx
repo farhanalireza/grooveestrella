@@ -189,7 +189,7 @@ export default function ArtistDetailsDrawer({
                 >
                   <Users size={14} />
                   <span>Band Lineup</span>
-                  <span className="text-[10px] opacity-80 font-mono">
+                  <span className="text-[10px] opacity-80 font-sans font-semibold">
                     ({currentMembersList.length + pastMembersList.length})
                   </span>
                 </button>
@@ -206,7 +206,7 @@ export default function ArtistDetailsDrawer({
                 >
                   <Layers size={14} />
                   <span>Bands & Groups</span>
-                  <span className="text-[10px] opacity-80 font-mono">({bands.length})</span>
+                  <span className="text-[10px] opacity-80 font-sans font-semibold">({bands.length})</span>
                 </button>
               )}
 
@@ -221,7 +221,7 @@ export default function ArtistDetailsDrawer({
                 >
                   <HeartHandshake size={14} />
                   <span>Collaborations</span>
-                  <span className="text-[10px] opacity-80 font-mono">({collaborations.length})</span>
+                  <span className="text-[10px] opacity-80 font-sans font-semibold">({collaborations.length})</span>
                 </button>
               )}
 
@@ -440,8 +440,8 @@ export default function ArtistDetailsDrawer({
                             </p>
                           )}
                           {(b.begin || b.end) && (
-                            <p className="text-[11px] font-mono text-[var(--theme-muted)] mt-0.5">
-                              {b.begin?.split("-")[0] || ""} – {b.end?.split("-")[0] || (b.ended ? "" : "Present")}
+                            <p className="text-[11px] font-sans font-medium text-[var(--theme-muted)] mt-0.5">
+                              {b.begin ? String(b.begin).split("-")[0] : ""} – {b.end ? String(b.end).split("-")[0] : (b.ended ? "" : "Present")}
                             </p>
                           )}
                         </div>
@@ -549,7 +549,7 @@ export default function ArtistDetailsDrawer({
                         <span className="text-[10px] uppercase font-bold text-[var(--theme-muted)] block">
                           {isGroup ? "Formation Year" : "Birth Date"}
                         </span>
-                        <p className="text-sm font-extrabold text-[var(--theme-fg)] mt-0.5 font-mono">
+                        <p className="text-sm font-extrabold text-[var(--theme-fg)] mt-0.5">
                           {lifeSpan.begin || beginYear}
                         </p>
                       </div>
@@ -560,7 +560,7 @@ export default function ArtistDetailsDrawer({
                         <span className="text-[10px] uppercase font-bold text-[var(--theme-muted)] block">
                           {isGroup ? "Disbanded / Hiatus" : "Death Date"}
                         </span>
-                        <p className="text-sm font-extrabold text-[var(--theme-fg)] mt-0.5 font-mono">
+                        <p className="text-sm font-extrabold text-[var(--theme-fg)] mt-0.5">
                           {lifeSpan.end || endYear}
                         </p>
                       </div>

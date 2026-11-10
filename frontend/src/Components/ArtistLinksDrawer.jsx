@@ -176,7 +176,7 @@ function PlatformIcon({ platform, label }) {
 
   if (p === "wikidata" || p === "wikipedia" || l.includes("wikipedia")) {
     return (
-      <div className="w-8 h-8 rounded-xl bg-white text-black font-serif font-black flex items-center justify-center text-sm shrink-0 shadow-sm">
+      <div className="w-8 h-8 rounded-xl bg-white text-black font-display font-black flex items-center justify-center text-sm shrink-0 shadow-sm">
         W
       </div>
     );
@@ -369,7 +369,7 @@ export default function ArtistLinksDrawer({
                 <div className="min-w-0">
                   <h2 className="text-base sm:text-lg font-bold text-[var(--theme-fg)] truncate flex items-center gap-2">
                     <span>{artistName} Links</span>
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--theme-accent)]/20 text-[var(--theme-accent)] font-mono font-bold shrink-0">
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--theme-accent)]/20 text-[var(--theme-accent)] font-sans font-bold shrink-0">
                       {links.length}
                     </span>
                   </h2>
@@ -434,7 +434,7 @@ export default function ArtistLinksDrawer({
                       }`}
                     >
                       <span>{cat.label}</span>
-                      <span className="text-[10px] opacity-75 font-mono">({cat.count})</span>
+                      <span className="text-[10px] opacity-75 font-sans font-semibold">({cat.count})</span>
                     </button>
                   ))}
               </div>
@@ -470,7 +470,7 @@ export default function ArtistLinksDrawer({
                               {link.label}
                             </h3>
                             {link.handle && (
-                              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-md bg-[var(--theme-card)] text-[var(--theme-muted)] border border-[var(--theme-border)] truncate">
+                              <span className="text-[10px] font-sans font-medium px-1.5 py-0.5 rounded-md bg-[var(--theme-card)] text-[var(--theme-muted)] border border-[var(--theme-border)] truncate">
                                 {link.handle}
                               </span>
                             )}
@@ -503,7 +503,7 @@ export default function ArtistLinksDrawer({
             {/* Bottom Footer */}
             <div className="p-3 border-t border-[var(--theme-border)] bg-[var(--theme-surface)]/80 flex items-center justify-between text-[11px] text-[var(--theme-muted)] shrink-0 px-4">
               <span>Verified MusicBrainz & Open Web Links</span>
-              <span className="font-mono">{filteredLinks.length} showing</span>
+              <span className="font-sans font-medium">{filteredLinks.length} showing</span>
             </div>
           </motion.div>
         </div>

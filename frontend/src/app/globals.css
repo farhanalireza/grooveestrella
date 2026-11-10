@@ -36,7 +36,9 @@
 /* Apply Global Font Mappings & Unified Palette: Wine, Cream, Peach & Terracotta Copper */
 :root, [data-theme="dark"], .dark {
   --font-sans: var(--font-inter), sans-serif;
+  --font-body: var(--font-inter), sans-serif;
   --font-display: var(--font-space-grotesk), sans-serif;
+  --font-mono: var(--font-inter), sans-serif;
   --radius: 0.625rem;
 
   /* Unified Palette: Dark — Deep Obsidian Wine BG, Warm Cream FG, Peach-Copper Accent */
@@ -110,6 +112,10 @@
   --ring: #E8A87C;
 }
 
+body, button, input, select, textarea, p, span, div, a, label {
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
 body {
   font-family: var(--font-sans), system-ui, sans-serif;
   background-color: var(--theme-bg);
@@ -120,6 +126,11 @@ body {
 
 h1, h2, h3, h4, h5, h6, .font-display {
   font-family: var(--font-display) !important;
+}
+
+/* Strictly enforce Space-Grotesk + Inter only; redirect any monospace usage to clean Inter */
+.font-mono, code, kbd, samp, pre {
+  font-family: var(--font-sans), system-ui, sans-serif !important;
 }
 
 @layer components {
@@ -193,18 +204,16 @@ h1, h2, h3, h4, h5, h6, .font-display {
     font-weight: 400;
   }
   .boldonse {
-    font-family: "Boldonse", system-ui, -apple-system, BlinkMacSystemFont,
-      "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans",
-      "Helvetica Neue", sans-serif;
+    font-family: var(--font-display) !important;
     letter-spacing: 1px;
   }
 
-  .space-grotesk{
-    font-family: 'Space Grotesk', sans-serif;
+  .space-grotesk {
+    font-family: var(--font-display) !important;
   }
 
-  .host-grotesk{
-    font-family: 'Host Grotesk', sans-serif;
+  .host-grotesk {
+    font-family: var(--font-sans) !important;
   }
 
   .line-h {

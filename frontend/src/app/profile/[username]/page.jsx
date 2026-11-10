@@ -235,7 +235,7 @@ export default function UserProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen py-24 text-center text-sm font-mono text-[var(--theme-muted)] animate-pulse">
+      <div className="min-h-screen py-24 text-center text-sm font-medium text-[var(--theme-muted)] animate-pulse">
         Loading music critic profile...
       </div>
     );
@@ -283,14 +283,14 @@ export default function UserProfilePage() {
           <div className="flex-1 text-center sm:text-left space-y-3 min-w-0">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="min-w-0">
-                <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-amber-400/10 border border-amber-400/20 text-amber-300 text-[10px] font-bold uppercase tracking-widest font-mono mb-1.5">
+                <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-amber-400/10 border border-amber-400/20 text-amber-300 text-[10px] font-bold uppercase tracking-widest mb-1.5">
                   <Sparkles size={11} />
                   <span>Music Critic & Explorer</span>
                 </div>
                 <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight font-display text-[var(--theme-fg)] truncate">
                   {profile.display_name || profile.username}
                 </h1>
-                <p className="text-sm font-mono text-amber-300 font-bold mt-0.5">
+                <p className="text-sm text-amber-300 font-bold mt-0.5">
                   @{profile.username}
                 </p>
               </div>
@@ -341,7 +341,7 @@ export default function UserProfilePage() {
                   <Headphones size={13} className="text-amber-300" />
                   <span>Listens</span>
                 </div>
-                <div className="text-xl sm:text-2xl font-black font-mono text-[var(--theme-fg)] mt-0.5">
+                <div className="text-xl sm:text-2xl font-black text-[var(--theme-fg)] mt-0.5">
                   {journalLogs.length}
                 </div>
               </div>
@@ -351,7 +351,7 @@ export default function UserProfilePage() {
                   <PenTool size={13} className="text-amber-300" />
                   <span>Reviews</span>
                 </div>
-                <div className="text-xl sm:text-2xl font-black font-mono text-amber-300 mt-0.5">
+                <div className="text-xl sm:text-2xl font-black text-amber-300 mt-0.5">
                   {reviewsCount}
                 </div>
               </div>
@@ -361,7 +361,7 @@ export default function UserProfilePage() {
                   <Star size={13} className="text-amber-300" />
                   <span>Avg Rating</span>
                 </div>
-                <div className="text-xl sm:text-2xl font-black font-mono text-amber-300 mt-0.5">
+                <div className="text-xl sm:text-2xl font-black text-amber-300 mt-0.5">
                   {avgRating ? `${avgRating}★` : "—"}
                 </div>
               </div>
@@ -371,7 +371,7 @@ export default function UserProfilePage() {
                   <Users size={13} className="text-amber-300" />
                   <span>Followers</span>
                 </div>
-                <div className="text-xl sm:text-2xl font-black font-mono text-[var(--theme-fg)] mt-0.5">
+                <div className="text-xl sm:text-2xl font-black text-[var(--theme-fg)] mt-0.5">
                   {followersCount}
                 </div>
               </div>
@@ -403,7 +403,7 @@ export default function UserProfilePage() {
                     alt={item.title}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />
-                  <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-black/70 backdrop-blur-md border border-amber-400/40 text-amber-300 text-[10px] font-bold font-mono">
+                  <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-black/70 backdrop-blur-md border border-amber-400/40 text-amber-300 text-[10px] font-bold">
                     ★ {item.rating}
                   </div>
                 </div>
@@ -525,7 +525,7 @@ export default function UserProfilePage() {
 
             <form onSubmit={handleSaveProfile} className="space-y-4">
               <div>
-                <label className="block text-xs font-mono font-bold text-[var(--theme-muted)] uppercase tracking-wider mb-1.5">
+                <label className="block text-xs font-bold text-[var(--theme-muted)] uppercase tracking-wider mb-1.5">
                   Display Name
                 </label>
                 <input
@@ -539,7 +539,7 @@ export default function UserProfilePage() {
               </div>
 
               <div>
-                <label className="block text-xs font-mono font-bold text-[var(--theme-muted)] uppercase tracking-wider mb-1.5">
+                <label className="block text-xs font-bold text-[var(--theme-muted)] uppercase tracking-wider mb-1.5">
                   Bio / Critical Philosophy
                 </label>
                 <textarea

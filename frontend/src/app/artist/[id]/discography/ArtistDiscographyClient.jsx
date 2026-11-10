@@ -176,7 +176,7 @@ export default function ArtistDiscographyClient({ id, artist: initialArtist, all
                                     }`}
                                 >
                                     <span>{tab.label}</span>
-                                    <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+                                    <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-sans font-semibold ${
                                         isActive ? "bg-black/20 text-white" : "bg-[var(--theme-surface)] text-[var(--theme-muted)]"
                                     }`}>
                                         {tab.count}

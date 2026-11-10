@@ -28,10 +28,16 @@ import {
   Heart,
   ListMusic,
   CheckCircle2,
+  Dice5,
+  RefreshCw,
 } from "lucide-react";
 import { toast } from "@/lib/toast";
 import { generateRandomName, getOrSetUserName } from "@/lib/nameGenerator";
-import UserAvatarIcon, { AVAILABLE_AVATARS } from "@/Components/UserAvatarIcon";
+import UserAvatarIcon, {
+  AVAILABLE_AVATARS,
+  DICEBEAR_STYLES,
+  getDiceBearAvatarUrl,
+} from "@/Components/UserAvatarIcon";
 import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import JournalCard from "@/Components/JournalCard";
@@ -68,6 +74,11 @@ function AccountDashboardContent() {
   const [editBio, setEditBio] = useState("");
   const [isEditingAvatar, setIsEditingAvatar] = useState(false);
 
+  // DiceBear Avatar Customization Studio State
+  const [avatarTab, setAvatarTab] = useState("dicebear"); // 'dicebear' | 'icons'
+  const [dicebearStyle, setDicebearStyle] = useState("identicon");
+  const [dicebearSeed, setDicebearSeed] = useState("");
+
   // User critic preferences
   const [favoriteGenres, setFavoriteGenres] = useState([]);
   const [preferredRatingSystem, setPreferredRatingSystem] = useState("stars"); // 'stars' | 'score'
@@ -92,7 +103,15 @@ function AccountDashboardContent() {
     setEditName(currentName);
     setBio(currentBio);
     setEditBio(currentBio);
-    setUserAvatar(authProfile?.avatar_url || localStorage.getItem("userAvatar") || "");
+
+    const initialAvatar =
+      authProfile?.avatar_url ||
+      localStorage.getItem("userAvatar") ||
+      getDiceBearAvatarUrl("identicon", currentName);
+    setUserAvatar(initialAvatar);
+    if (!dicebearSeed) {
+      setDicebearSeed(currentName);
+    }
 
     // 2. Preferences
     try {
@@ -162,7 +181,18 @@ function AccountDashboardContent() {
               is_public: j.is_public,
               createdAt: new Date(j.created_at).getTime(),
             }));
-            setJournalLogs(formatted);
+
+            // Deduplicate by entity targetId to prevent duplicates in UI
+            const seen = new Set();
+            const deduplicated = [];
+            for (const item of formatted) {
+              const k = `${item.targetType}_${item.targetId}`;
+              if (!seen.has(k)) {
+                seen.add(k);
+                deduplicated.push(item);
+              }
+            }
+            setJournalLogs(deduplicated);
           } else {
             setJournalLogs(logs);
           }
@@ -211,6 +241,23 @@ function AccountDashboardContent() {
       updateProfile({ avatar_url: avId });
     }
     toast.success("Avatar updated! ✨");
+  };
+
+  const handleSelectDiceBear = (style, seed) => {
+    const url = getDiceBearAvatarUrl(style, seed || userName || "groove");
+    setUserAvatar(url);
+    localStorage.setItem("userAvatar", url);
+    setIsEditingAvatar(false);
+    if (user && isSupabaseConfigured()) {
+      updateProfile({ avatar_url: url });
+    }
+    toast.success("DiceBear avatar updated! 🎲✨");
+  };
+
+  const handleRandomizeSeed = () => {
+    const randomSeed = Math.random().toString(36).substring(2, 9);
+    setDicebearSeed(randomSeed);
+    toast.info("Seed randomized! 🎲 Tap any avatar to save.");
   };
 
   // Toggle Genre
@@ -329,12 +376,12 @@ function AccountDashboardContent() {
                 {/* Cloud Auth Status Pill */}
                 <div className="flex items-center justify-center sm:justify-start gap-2 mb-1.5 flex-wrap">
                   {user ? (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-[10px] font-bold uppercase tracking-widest font-mono">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-[10px] font-bold uppercase tracking-widest">
                       <CheckCircle2 size={11} />
                       <span>Cloud Connected · {user.email}</span>
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-amber-400/10 border border-amber-400/25 text-amber-300 text-[10px] font-bold uppercase tracking-widest font-mono">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-amber-400/10 border border-amber-400/25 text-amber-300 text-[10px] font-bold uppercase tracking-widest">
                       <Sparkles size={11} />
                       <span>Local Profile · Citizen</span>
                     </span>
@@ -345,7 +392,7 @@ function AccountDashboardContent() {
                   {userName}
                 </h1>
 
-                <p className="text-sm font-mono text-amber-300 font-bold mt-0.5">
+                <p className="text-sm text-amber-300 font-bold mt-0.5">
                   Profile:{" "}
                   <Link href={`/profile/${profileSlug}`} className="hover:underline">
                     @{profileSlug}
@@ -405,41 +452,140 @@ function AccountDashboardContent() {
               {bio || "Active music explorer and journal keeper on GrooveEstrella."}
             </p>
 
-            {/* Inline Avatar Icon Selector Drawer */}
+            {/* Inline Avatar Icon Selector Drawer (Full DiceBear Studio + Vector Icons) */}
             {isEditingAvatar && (
-              <div className="mt-4 p-4 rounded-2xl bg-[var(--theme-surface)] border border-[var(--theme-border)] text-left space-y-3 animate-fade-in">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--theme-muted)]">
-                    Select Avatar Icon
-                  </span>
+              <div className="mt-4 p-5 rounded-3xl bg-[var(--theme-surface)] border border-[var(--theme-border)] text-left space-y-4 animate-fade-in shadow-xl">
+                <div className="flex items-center justify-between border-b border-[var(--theme-border)]/50 pb-3">
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setAvatarTab("dicebear")}
+                      className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                        avatarTab === "dicebear"
+                          ? "bg-amber-400 text-zinc-950 shadow-xs"
+                          : "text-[var(--theme-muted)] hover:text-[var(--theme-fg)]"
+                      }`}
+                    >
+                      <Sparkles size={13} />
+                      <span>DiceBear Studio</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAvatarTab("icons")}
+                      className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                        avatarTab === "icons"
+                          ? "bg-amber-400 text-zinc-950 shadow-xs"
+                          : "text-[var(--theme-muted)] hover:text-[var(--theme-fg)]"
+                      }`}
+                    >
+                      <Headphones size={13} />
+                      <span>Vector Icons</span>
+                    </button>
+                  </div>
+
                   <button
                     onClick={() => setIsEditingAvatar(false)}
-                    className="text-xs text-[var(--theme-muted)] hover:text-[var(--theme-fg)]"
+                    className="p-1 rounded-lg text-xs text-[var(--theme-muted)] hover:text-[var(--theme-fg)] hover:bg-[var(--theme-card)]"
                   >
                     ✕
                   </button>
                 </div>
-                <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
-                  {AVAILABLE_AVATARS.map((av) => {
-                    const IconComp = av.icon;
-                    const isSelected = userAvatar === av.id;
-                    return (
+
+                {avatarTab === "dicebear" ? (
+                  <div className="space-y-4">
+                    {/* Seed input bar with Randomize button */}
+                    <div className="flex items-center gap-2">
+                      <div className="relative flex-1">
+                        <input
+                          type="text"
+                          value={dicebearSeed}
+                          onChange={(e) => setDicebearSeed(e.target.value)}
+                          placeholder="Type avatar seed or username..."
+                          className="w-full px-3.5 py-2 rounded-xl bg-[var(--theme-card)] border border-[var(--theme-border)] text-xs font-semibold text-[var(--theme-fg)] focus:outline-none focus:border-amber-400"
+                        />
+                      </div>
                       <button
-                        key={av.id}
                         type="button"
-                        onClick={() => handleSelectAvatar(av.id)}
-                        className={`p-2.5 rounded-xl border text-center flex flex-col items-center gap-1 transition cursor-pointer active:scale-95 ${
-                          isSelected
-                            ? "bg-amber-400/20 border-amber-400 text-amber-300"
-                            : "bg-[var(--theme-card)] border-[var(--theme-border)] text-[var(--theme-muted)] hover:text-[var(--theme-fg)]"
-                        }`}
+                        onClick={handleRandomizeSeed}
+                        className="px-3.5 py-2 rounded-xl bg-[var(--theme-card)] hover:bg-[var(--theme-surface)] border border-[var(--theme-border)] text-xs font-bold text-amber-300 transition flex items-center gap-1.5 cursor-pointer shrink-0 shadow-xs"
+                        title="Randomize avatar seed"
                       >
-                        <IconComp className="w-5 h-5" />
-                        <span className="text-[10px] font-semibold truncate">{av.label.split(" ")[0]}</span>
+                        <Dice5 size={15} />
+                        <span>Roll Dice</span>
                       </button>
-                    );
-                  })}
-                </div>
+                    </div>
+
+                    {/* Style selector pills */}
+                    <div className="flex gap-1.5 overflow-x-auto scrollb-none no-scrollbar py-1">
+                      {DICEBEAR_STYLES.map((st) => (
+                        <button
+                          key={st.id}
+                          type="button"
+                          onClick={() => setDicebearStyle(st.id)}
+                          className={`shrink-0 px-3 py-1 rounded-full text-xs font-bold transition cursor-pointer ${
+                            dicebearStyle === st.id
+                              ? "bg-amber-400 text-zinc-950"
+                              : "bg-[var(--theme-card)] text-[var(--theme-muted)] hover:text-[var(--theme-fg)] border border-[var(--theme-border)]"
+                          }`}
+                        >
+                          {st.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Live Gallery of DiceBear Avatars for chosen seed */}
+                    <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-2.5">
+                      {DICEBEAR_STYLES.map((st) => {
+                        const avatarUrl = getDiceBearAvatarUrl(st.id, dicebearSeed || userName || "groove");
+                        const isSelected = userAvatar === avatarUrl;
+                        return (
+                          <button
+                            key={st.id}
+                            type="button"
+                            onClick={() => handleSelectDiceBear(st.id, dicebearSeed || userName || "groove")}
+                            className={`p-2 rounded-2xl border text-center flex flex-col items-center gap-1.5 transition cursor-pointer active:scale-95 group ${
+                              isSelected || dicebearStyle === st.id
+                                ? "bg-amber-400/20 border-amber-400 ring-2 ring-amber-400/30"
+                                : "bg-[var(--theme-card)] border-[var(--theme-border)] hover:border-amber-400/50"
+                            }`}
+                            title={`${st.label}: ${st.desc}`}
+                          >
+                            <img
+                              src={avatarUrl}
+                              alt={st.label}
+                              className="w-12 h-12 rounded-xl object-cover bg-black/30 group-hover:scale-105 transition-transform"
+                            />
+                            <span className="text-[10px] font-bold text-[var(--theme-fg)] truncate w-full">
+                              {st.label}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                    {AVAILABLE_AVATARS.map((av) => {
+                      const IconComp = av.icon;
+                      const isSelected = userAvatar === av.id;
+                      return (
+                        <button
+                          key={av.id}
+                          type="button"
+                          onClick={() => handleSelectAvatar(av.id)}
+                          className={`p-3 rounded-2xl border text-center flex flex-col items-center gap-1.5 transition cursor-pointer active:scale-95 ${
+                            isSelected
+                              ? "bg-amber-400/20 border-amber-400 text-amber-300"
+                              : "bg-[var(--theme-card)] border-[var(--theme-border)] text-[var(--theme-muted)] hover:text-[var(--theme-fg)]"
+                          }`}
+                        >
+                          <IconComp className="w-6 h-6" />
+                          <span className="text-[10px] font-bold truncate">{av.label.split(" ")[0]}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -459,10 +605,10 @@ function AccountDashboardContent() {
             </span>
             <ArrowRight size={13} className="opacity-0 group-hover:opacity-100 transition-opacity text-amber-300" />
           </div>
-          <div className="text-2xl sm:text-3xl font-black font-mono text-[var(--theme-fg)]">
+          <div className="text-2xl sm:text-3xl font-black text-[var(--theme-fg)]">
             {stats.totalListens}
           </div>
-          <span className="text-[11px] text-[var(--theme-muted)] font-mono">Listens recorded</span>
+          <span className="text-[11px] text-[var(--theme-muted)] font-medium">Listens recorded</span>
         </Link>
 
         <Link
@@ -476,10 +622,10 @@ function AccountDashboardContent() {
             </span>
             <ArrowRight size={13} className="opacity-0 group-hover:opacity-100 transition-opacity text-amber-300" />
           </div>
-          <div className="text-2xl sm:text-3xl font-black font-mono text-amber-300">
+          <div className="text-2xl sm:text-3xl font-black text-amber-300">
             {stats.reviews}
           </div>
-          <span className="text-[11px] text-[var(--theme-muted)] font-mono">Reviews published</span>
+          <span className="text-[11px] text-[var(--theme-muted)] font-medium">Reviews published</span>
         </Link>
 
         <div className="p-5 rounded-3xl bg-[var(--theme-card)]/80 border border-[var(--theme-border)] shadow-lg">
@@ -489,10 +635,10 @@ function AccountDashboardContent() {
               <span>Average Rating</span>
             </span>
           </div>
-          <div className="text-2xl sm:text-3xl font-black font-mono text-amber-300">
+          <div className="text-2xl sm:text-3xl font-black text-amber-300">
             {stats.avgScore ? `${stats.avgScore}★` : "—"}
           </div>
-          <span className="text-[11px] text-[var(--theme-muted)] font-mono">Critical score</span>
+          <span className="text-[11px] text-[var(--theme-muted)] font-medium">Critical score</span>
         </div>
 
         <Link
@@ -506,10 +652,10 @@ function AccountDashboardContent() {
             </span>
             <ArrowRight size={13} className="opacity-0 group-hover:opacity-100 transition-opacity text-amber-300" />
           </div>
-          <div className="text-2xl sm:text-3xl font-black font-mono text-[var(--theme-fg)]">
+          <div className="text-2xl sm:text-3xl font-black text-[var(--theme-fg)]">
             {stats.totalLibrary}
           </div>
-          <span className="text-[11px] text-[var(--theme-muted)] font-mono">Albums, tracks, artists</span>
+          <span className="text-[11px] text-[var(--theme-muted)] font-medium">Albums, tracks, artists</span>
         </Link>
       </div>
 
@@ -527,7 +673,7 @@ function AccountDashboardContent() {
         {/* Favorite Genres Pill Selector */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <label className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--theme-muted)]">
+            <label className="text-xs font-bold uppercase tracking-wider text-[var(--theme-muted)]">
               Music Taste & Favorite Genres ({favoriteGenres.length} selected)
             </label>
           </div>
@@ -556,7 +702,7 @@ function AccountDashboardContent() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-[var(--theme-border)]/70">
           {/* Scoring System Choice */}
           <div className="p-4 rounded-2xl bg-[var(--theme-surface)]/80 border border-[var(--theme-border)] space-y-2">
-            <span className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--theme-muted)]">
+            <span className="text-xs font-bold uppercase tracking-wider text-[var(--theme-muted)]">
               Default Rating Scale
             </span>
             <div className="flex items-center gap-2 pt-1">
@@ -587,7 +733,7 @@ function AccountDashboardContent() {
 
           {/* Default Privacy Choice */}
           <div className="p-4 rounded-2xl bg-[var(--theme-surface)]/80 border border-[var(--theme-border)] space-y-2">
-            <span className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--theme-muted)]">
+            <span className="text-xs font-bold uppercase tracking-wider text-[var(--theme-muted)]">
               Default Journal Visibility
             </span>
             <div className="flex items-center gap-2 pt-1">
@@ -670,7 +816,7 @@ function AccountDashboardContent() {
       {/* 5. DIRECT SHORTCUT TO LIBRARY (Clean separation from Account) */}
       <div className="p-6 sm:p-7 rounded-3xl bg-gradient-to-r from-amber-400/10 via-[var(--theme-card)] to-[var(--theme-card)] border border-amber-400/25 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-lg">
         <div className="space-y-1">
-          <div className="inline-flex items-center gap-1 text-[10px] font-mono font-bold uppercase tracking-widest text-amber-300">
+          <div className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-amber-300">
             <ListMusic size={12} />
             <span>Saved Music Collection</span>
           </div>
@@ -702,7 +848,7 @@ function AccountDashboardContent() {
           <span>Export Critic Data (JSON)</span>
         </button>
 
-        <p className="text-[11px] font-mono text-[var(--theme-muted)]">
+        <p className="text-[11px] font-medium text-[var(--theme-muted)]">
           GrooveEstrella Music Journal · Phase 1 Foundation
         </p>
       </div>
@@ -726,7 +872,7 @@ function AccountDashboardContent() {
 
             <form onSubmit={handleSaveProfile} className="space-y-4">
               <div>
-                <label className="block text-xs font-mono font-bold text-[var(--theme-muted)] uppercase tracking-wider mb-1.5">
+                <label className="block text-xs font-bold text-[var(--theme-muted)] uppercase tracking-wider mb-1.5">
                   Display Name
                 </label>
                 <input
@@ -740,7 +886,7 @@ function AccountDashboardContent() {
               </div>
 
               <div>
-                <label className="block text-xs font-mono font-bold text-[var(--theme-muted)] uppercase tracking-wider mb-1.5">
+                <label className="block text-xs font-bold text-[var(--theme-muted)] uppercase tracking-wider mb-1.5">
                   Bio / Critical Philosophy
                 </label>
                 <textarea
@@ -802,7 +948,7 @@ export default function AccountPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen py-24 text-center text-sm font-mono text-[var(--theme-muted)]">
+        <div className="min-h-screen py-24 text-center text-sm font-medium text-[var(--theme-muted)]">
           Loading critic account...
         </div>
       }

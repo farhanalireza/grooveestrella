@@ -159,7 +159,7 @@ export default function LibraryTouchSlider({
           <span>{activeTab.slice(0, -1)} Deck</span>
         </span>
 
-        <span className="text-xs font-mono font-bold text-[var(--theme-muted)] bg-[var(--theme-surface)] px-2.5 py-0.5 rounded-full border border-[var(--theme-border)] shadow-inner">
+        <span className="text-xs font-sans font-bold text-[var(--theme-muted)] bg-[var(--theme-surface)] px-2.5 py-0.5 rounded-full border border-[var(--theme-border)] shadow-inner">
           {currentIndex + 1} / {items.length}
         </span>
       </div>
@@ -234,7 +234,7 @@ export default function LibraryTouchSlider({
               {isNavigating && navigatingId === (currentItem.id || currentItem.trackId || currentItem.trackURI) && (
                 <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px] flex flex-col items-center justify-center gap-2 animate-fade-in z-30">
                   <div className="w-10 h-10 rounded-full border-3 border-[var(--theme-accent)] border-t-transparent animate-spin" />
-                  <span className="text-[11px] font-bold text-white tracking-widest uppercase font-mono">Opening...</span>
+                  <span className="text-[11px] font-bold text-white tracking-widest uppercase">Opening...</span>
                 </div>
               )}
             </div>

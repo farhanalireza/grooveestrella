@@ -124,7 +124,7 @@ export const AlbumTrackCard = ({
                     >
                         <span>{title}</span>
                         {isPending && navigatingTarget === 'track' && (
-                            <span className="text-[10px] text-[var(--theme-accent)] font-mono font-medium animate-pulse">Loading...</span>
+                            <span className="text-[10px] text-[var(--theme-accent)] font-sans font-medium animate-pulse">Loading...</span>
                         )}
                     </h3>
                     <div className="text-xs text-[var(--theme-muted)] truncate">
@@ -145,7 +145,7 @@ export const AlbumTrackCard = ({
             </div>
 
             <div className="flex items-center gap-3 flex-shrink-0 ml-4">
-                {formattedDuration && <span className="text-xs text-[var(--theme-muted)] font-mono font-medium">{formattedDuration}</span>}
+                {formattedDuration && <span className="text-xs text-[var(--theme-muted)] font-sans font-medium">{formattedDuration}</span>}
                 
                 {/* Save button */}
                 <button 
@@ -324,7 +324,7 @@ export const ArtistTrackCard = ({
             </div>
 
             <div className="flex items-center gap-3 flex-shrink-0 ml-4">
-                {duration && <span className="text-xs text-[var(--theme-muted)] font-mono font-medium">{duration}</span>}
+                {duration && <span className="text-xs text-[var(--theme-muted)] font-sans font-medium">{duration}</span>}
                 
                 {/* Save button */}
                 <button 
@@ -515,7 +515,7 @@ export const PlaylistTrackCard = ({
             </div>
 
             <div className="flex items-center gap-3 flex-shrink-0 ml-4">
-                {duration && <span className="text-xs text-[var(--theme-muted)] font-mono font-medium">{duration}</span>}
+                {duration && <span className="text-xs text-[var(--theme-muted)] font-sans font-medium">{duration}</span>}
                 
                 {/* Save button */}
                 <button 
@@ -719,7 +719,7 @@ export const SmallTrackCardWithCover = ({
                     >
                         <span>{title}</span>
                         {isPending && navigatingTarget === 'track' && (
-                            <span className="text-[10px] text-[var(--theme-accent)] font-mono font-medium animate-pulse">Loading...</span>
+                            <span className="text-[10px] text-[var(--theme-accent)] font-sans font-medium animate-pulse">Loading...</span>
                         )}
                     </h3>
                     <div className="text-xs text-[var(--theme-muted)] truncate">

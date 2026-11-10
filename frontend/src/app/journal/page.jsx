@@ -103,10 +103,21 @@ export default function MusicJournalPage() {
             createdAt: new Date(j.created_at).getTime(),
           }));
 
+          // Deduplicate cloud entries by entity targetId (pruning any legacy duplicates from view)
+          const seenTargets = new Set();
+          const deduplicatedCloud = [];
+          for (const item of formatted) {
+            const key = `${item.targetType}_${item.targetId}`;
+            if (!seenTargets.has(key)) {
+              seenTargets.add(key);
+              deduplicatedCloud.push(item);
+            }
+          }
+
           // Merge local and cloud without duplicates
-          const cloudIds = new Set(formatted.map((c) => c.targetId));
+          const cloudIds = new Set(deduplicatedCloud.map((c) => c.targetId));
           const uncommittedLocal = localLogs.filter((l) => !cloudIds.has(l.targetId));
-          setEntries([...formatted, ...uncommittedLocal]);
+          setEntries([...deduplicatedCloud, ...uncommittedLocal]);
           setLoading(false);
           return;
         }
@@ -218,7 +229,7 @@ export default function MusicJournalPage() {
       <div className="relative rounded-3xl bg-[var(--theme-card)]/90 backdrop-blur-2xl border border-[var(--theme-border)] p-8 sm:p-10 shadow-2xl overflow-hidden">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
           <div className="space-y-2 max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-400/10 border border-amber-400/20 text-amber-300 text-xs font-bold uppercase tracking-widest font-mono">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-400/10 border border-amber-400/20 text-amber-300 text-xs font-bold uppercase tracking-widest">
               <BookOpen size={13} />
               <span>Music Journal & Reviews</span>
             </div>
@@ -253,28 +264,28 @@ export default function MusicJournalPage() {
         {/* Live Metric Ribbon */}
         <div className="grid grid-cols-3 gap-3 sm:gap-6 mt-8 pt-6 border-t border-[var(--theme-border)]/70">
           <div>
-            <div className="text-xs font-mono font-bold text-[var(--theme-muted)] uppercase tracking-wider">
+            <div className="text-xs font-bold text-[var(--theme-muted)] uppercase tracking-wider">
               Total Listens
             </div>
-            <div className="text-2xl sm:text-3xl font-black font-mono text-[var(--theme-fg)] mt-1">
+            <div className="text-2xl sm:text-3xl font-black text-[var(--theme-fg)] mt-1">
               {stats.total}
             </div>
           </div>
 
           <div>
-            <div className="text-xs font-mono font-bold text-[var(--theme-muted)] uppercase tracking-wider">
+            <div className="text-xs font-bold text-[var(--theme-muted)] uppercase tracking-wider">
               Written Reviews
             </div>
-            <div className="text-2xl sm:text-3xl font-black font-mono text-amber-300 mt-1">
+            <div className="text-2xl sm:text-3xl font-black text-amber-300 mt-1">
               {stats.reviewed}
             </div>
           </div>
 
           <div>
-            <div className="text-xs font-mono font-bold text-[var(--theme-muted)] uppercase tracking-wider">
+            <div className="text-xs font-bold text-[var(--theme-muted)] uppercase tracking-wider">
               Average Rating
             </div>
-            <div className="text-2xl sm:text-3xl font-black font-mono text-amber-300 mt-1">
+            <div className="text-2xl sm:text-3xl font-black text-amber-300 mt-1">
               {stats.avgScore ? `${stats.avgScore}★` : "—"}
             </div>
           </div>
@@ -353,7 +364,7 @@ export default function MusicJournalPage() {
 
           {/* Sort dropdown */}
           <div className="flex items-center gap-2 shrink-0">
-            <span className="text-xs font-mono text-[var(--theme-muted)]">Sort:</span>
+            <span className="text-xs font-medium text-[var(--theme-muted)]">Sort:</span>
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
@@ -369,7 +380,7 @@ export default function MusicJournalPage() {
 
       {/* Journal Entries List */}
       {loading ? (
-        <div className="py-24 text-center text-sm font-mono text-[var(--theme-muted)] animate-pulse">
+        <div className="py-24 text-center text-sm font-medium text-[var(--theme-muted)] animate-pulse">
           Loading your journal archive...
         </div>
       ) : filteredEntries.length === 0 ? (

@@ -315,7 +315,7 @@ export default function Home() {
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <span className="w-2 h-2 rounded-full bg-[var(--theme-accent)] animate-pulse" />
-                <span className="text-[11px] font-bold text-[var(--theme-accent)] tracking-widest uppercase font-mono">
+                <span className="text-[11px] font-bold text-[var(--theme-accent)] tracking-widest uppercase">
                   Curated Catalog
                 </span>
               </div>
@@ -367,7 +367,7 @@ export default function Home() {
                     {isCurrentNavigating && (
                       <div className="absolute inset-0 bg-black/65 backdrop-blur-[1px] flex flex-col items-center justify-center gap-1.5 animate-fade-in z-20">
                         <div className="w-8 h-8 rounded-full border-2 border-[var(--theme-accent)] border-t-transparent animate-spin" />
-                        <span className="text-[10px] font-bold text-white tracking-widest uppercase font-mono">Routing...</span>
+                        <span className="text-[10px] font-bold text-white tracking-widest uppercase">Routing...</span>
                       </div>
                     )}
                   </div>
@@ -381,7 +381,7 @@ export default function Home() {
                       {alb.artist}
                     </p>
                     <div className="flex items-center gap-2 mt-2 text-[10px] text-[var(--theme-muted)]">
-                      <span className="font-mono">{alb.year}</span>
+                      <span>{alb.year}</span>
                       <span>•</span>
                       <span className="truncate">{alb.genre}</span>
                     </div>
@@ -398,7 +398,7 @@ export default function Home() {
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <span className="w-2 h-2 rounded-full bg-[var(--theme-accent)] animate-pulse" />
-                <span className="text-[11px] font-bold text-[var(--theme-accent)] tracking-widest uppercase font-mono">
+                <span className="text-[11px] font-bold text-[var(--theme-accent)] tracking-widest uppercase">
                   Hall of Fame
                 </span>
               </div>
@@ -460,7 +460,7 @@ export default function Home() {
         {/* SECTION 3: Explore by Musical Style (Clean Lucide Icons - No Emojis) */}
         <div className="p-6 rounded-3xl bg-[var(--theme-card)]/50 border border-[var(--theme-border)] text-center">
           <div className="max-w-md mx-auto mb-4">
-            <span className="text-[10px] font-extrabold text-[var(--theme-accent)] tracking-widest uppercase font-mono">
+            <span className="text-[10px] font-extrabold text-[var(--theme-accent)] tracking-widest uppercase">
               Genre Exploration
             </span>
             <h3 className="text-lg sm:text-xl font-bold text-[var(--theme-fg)] mt-1">

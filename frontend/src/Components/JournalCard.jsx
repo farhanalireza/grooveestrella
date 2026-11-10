@@ -113,7 +113,7 @@ export default function JournalCard({
           <div className="min-w-0 flex-1 space-y-1 pt-0.5">
             {/* Format & Activity Type Badges */}
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[10px] sm:text-[11px] uppercase font-mono font-black tracking-widest text-amber-300">
+              <span className="text-[10px] sm:text-[11px] uppercase font-bold tracking-widest text-amber-300">
                 {entry.targetType || "Album"}
               </span>
 
@@ -192,7 +192,7 @@ export default function JournalCard({
             </p>
           </div>
         ) : (
-          <div className="py-1 text-xs text-[var(--theme-muted)]/60 italic font-mono">
+          <div className="py-1 text-xs text-[var(--theme-muted)]/60 italic font-medium">
             No written review attached to this listen log.
           </div>
         )}
@@ -215,14 +215,14 @@ export default function JournalCard({
         <div className="pt-3.5 border-t border-[var(--theme-border)]/70 flex items-center justify-between flex-wrap gap-3">
           {/* Left Meta: Date + Mood Pill */}
           <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap">
-            <div className="flex items-center gap-1.5 text-xs font-mono font-bold text-[var(--theme-muted)]">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-[var(--theme-muted)]">
               <Calendar size={13} className="text-amber-300" />
               <span>{formattedDate}</span>
             </div>
 
             {moodBadge && (
               <>
-                <span className="text-[var(--theme-muted)]/40 font-mono text-xs">·</span>
+                <span className="text-[var(--theme-muted)]/40 text-xs">·</span>
                 <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-amber-400/10 border border-amber-400/25 text-amber-300 shadow-2xs">
                   <span>{moodBadge.icon}</span>
                   <span>{moodBadge.label}</span>
@@ -236,7 +236,7 @@ export default function JournalCard({
             {/* Rating Badge (Always prominent on the right) */}
             {entry.rating > 0 && (
               <div
-                className={`inline-flex items-center gap-1 px-3 py-1 rounded-full border font-black font-mono text-xs sm:text-sm shadow-xs ${
+                className={`inline-flex items-center gap-1 px-3 py-1 rounded-full border font-black text-xs sm:text-sm shadow-xs ${
                   isMasterpiece
                     ? "bg-gradient-to-r from-amber-400/25 via-amber-400/15 to-amber-400/5 border-amber-400/50 text-amber-300 shadow-[0_0_12px_rgba(251,191,36,0.3)]"
                     : "bg-amber-400/15 border-amber-400/30 text-amber-300"

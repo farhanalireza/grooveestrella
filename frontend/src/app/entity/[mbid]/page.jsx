@@ -76,7 +76,7 @@ export default async function EntityPage({ params, searchParams }) {
           {/* Metadata & Actions */}
           <div className="flex-1 text-center sm:text-left space-y-4">
             <div className="space-y-1.5">
-              <span className="text-xs uppercase font-extrabold tracking-widest text-amber-300 font-mono">
+              <span className="text-xs uppercase font-extrabold tracking-widest text-amber-300">
                 {entity.type} · MusicBrainz ID: {entity.mbid.slice(0, 8)}...
               </span>
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight font-display text-[var(--theme-fg)]">
@@ -90,7 +90,7 @@ export default async function EntityPage({ params, searchParams }) {
             </div>
 
             {/* Quick Meta Ribbon */}
-            <div className="flex items-center justify-center sm:justify-start gap-4 flex-wrap text-xs text-[var(--theme-muted)] font-mono">
+            <div className="flex items-center justify-center sm:justify-start gap-4 flex-wrap text-xs text-[var(--theme-muted)]">
               {entity.year && (
                 <div className="flex items-center gap-1.5">
                   <Calendar size={14} className="text-amber-300" />
@@ -135,7 +135,7 @@ export default async function EntityPage({ params, searchParams }) {
             Community Rating
           </span>
           <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-black text-amber-300 font-mono">
+            <span className="text-3xl font-black text-amber-300">
               {ratingsSummary.avg_stars ? `${ratingsSummary.avg_stars}/10` : "—"}
             </span>
             <span className="text-xs text-[var(--theme-muted)]">
@@ -149,7 +149,7 @@ export default async function EntityPage({ params, searchParams }) {
             100-Point Normalized
           </span>
           <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-black text-amber-300 font-mono">
+            <span className="text-3xl font-black text-amber-300">
               {ratingsSummary.normalized_score_100 || ratingsSummary.avg_score || "—"}
             </span>
             <span className="text-xs text-[var(--theme-muted)]">/ 100</span>

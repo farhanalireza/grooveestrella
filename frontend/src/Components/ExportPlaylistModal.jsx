@@ -197,7 +197,7 @@ export default function ExportPlaylistModal({
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5">
                         <span className="text-xs sm:text-sm font-bold text-white">{fmt.name}</span>
-                        <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-white/10 text-white/70">
+                        <span className="text-[10px] font-sans font-bold px-1.5 py-0.2 rounded bg-white/10 text-white/70">
                           {fmt.ext}
                         </span>
                       </div>

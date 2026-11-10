@@ -343,7 +343,7 @@ export default function LibraryPage() {
             <span className="text-xs font-bold uppercase tracking-wider">Journal Logs</span>
             <BookOpen size={15} />
           </div>
-          <span className="text-xl sm:text-2xl font-extrabold text-amber-300 font-mono">{journalEntries.length}</span>
+          <span className="text-xl sm:text-2xl font-extrabold text-amber-300">{journalEntries.length}</span>
         </div>
       </div>
 
@@ -355,7 +355,7 @@ export default function LibraryPage() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 rounded-full font-semibold text-xs sm:text-sm whitespace-nowrap transition-all duration-300 cursor-pointer ${
+              className={`flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 rounded-full font-semibold text-xs sm:text-sm whitespace-nowrap shrink-0 transition-all duration-300 cursor-pointer ${
                 activeTab === tab.id
                   ? 'bg-[var(--theme-accent)] text-[var(--theme-accent-fg)] shadow-md font-bold'
                   : 'bg-[var(--theme-surface)] text-[var(--theme-muted)] hover:bg-[var(--theme-card)] hover:text-[var(--theme-fg)]'
@@ -600,7 +600,7 @@ export default function LibraryPage() {
                           {isItemNavigating && (
                             <div className="absolute inset-0 bg-black/60 backdrop-blur-[1px] flex flex-col items-center justify-center gap-1.5 animate-fade-in z-20">
                               <div className="w-6 h-6 rounded-full border-2 border-[var(--theme-accent)] border-t-transparent animate-spin" />
-                              <span className="text-[9px] font-bold text-white tracking-widest uppercase font-mono">Routing...</span>
+                              <span className="text-[9px] font-bold text-white tracking-widest uppercase">Routing...</span>
                             </div>
                           )}
 

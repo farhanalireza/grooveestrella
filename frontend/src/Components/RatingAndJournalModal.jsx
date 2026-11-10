@@ -154,8 +154,67 @@ export default function RatingAndJournalModal({
           setIsPublic(true);
         }
       }
+
+      // 3. Check Supabase Cloud if user is authenticated to accurately load cloud journal
+      if (user && isSupabaseConfigured()) {
+        const supabase = createClient();
+        (async () => {
+          try {
+            const { data: entityData } = await supabase
+              .from("music_entities")
+              .select("id")
+              .eq("mbid", id)
+              .maybeSingle();
+
+            if (entityData?.id) {
+              const { data: cloudEntry } = await supabase
+                .from("journals")
+                .select(`
+                  id,
+                  entry_text,
+                  mood,
+                  listened_date,
+                  is_public,
+                  user_ratings ( score, rating_type )
+                `)
+                .eq("user_id", user.id)
+                .eq("entity_id", entityData.id)
+                .order("created_at", { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
+              if (cloudEntry) {
+                setExistingJournalEntry((prev) => ({
+                  ...(prev || {}),
+                  id: cloudEntry.id,
+                  entry_text: cloudEntry.entry_text,
+                  mood: cloudEntry.mood,
+                  listened_date: cloudEntry.listened_date,
+                  is_public: cloudEntry.is_public,
+                }));
+                if (cloudEntry.entry_text) setReflection(cloudEntry.entry_text);
+                if (cloudEntry.mood) setSelectedMood(cloudEntry.mood);
+                if (cloudEntry.listened_date) setEntryDate(cloudEntry.listened_date.split("T")[0]);
+                if (cloudEntry.is_public !== undefined) setIsPublic(cloudEntry.is_public);
+                if (cloudEntry.user_ratings) {
+                  const ur = cloudEntry.user_ratings;
+                  if (ur.rating_type === "stars") {
+                    setStarRating(ur.score);
+                    setScoreRating(ur.score * 10);
+                    setRatingSystem("stars");
+                  } else {
+                    setScoreRating(ur.score);
+                    setStarRating(Math.round(ur.score / 10));
+                    setRatingSystem("score");
+                  }
+                }
+              }
+            }
+          } catch (_) {}
+        })();
+      }
     } catch (_) {}
-  }, [isOpen, id, type, journalEntryId, ratingStorageKey, initialRating, initialReview]);
+  }, [isOpen, id, type, journalEntryId, ratingStorageKey, initialRating, initialReview, user]);
 
   // Handle escape key
   useEffect(() => {
@@ -346,9 +405,54 @@ export default function RatingAndJournalModal({
               if (ratingData) ratingRecordId = ratingData.id;
             }
 
-            // Step C: Save journal entry
-            await supabase.from("journals").upsert(
-              {
+            // Step C: Save or update journal entry (NEVER create duplicates!)
+            const isUuid = (val) =>
+              typeof val === "string" &&
+              /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
+
+            // Check if user already has an existing journal entry for this entity
+            const { data: existingJournals } = await supabase
+              .from("journals")
+              .select("id")
+              .eq("user_id", user.id)
+              .eq("entity_id", entityRecordId)
+              .order("created_at", { ascending: false });
+
+            let targetJournalId = null;
+            if (journalEntryId && isUuid(journalEntryId)) {
+              targetJournalId = journalEntryId;
+            } else if (existingJournalEntry?.id && isUuid(existingJournalEntry.id)) {
+              targetJournalId = existingJournalEntry.id;
+            } else if (existingJournals && existingJournals.length > 0) {
+              targetJournalId = existingJournals[0].id;
+            }
+
+            if (targetJournalId) {
+              // UPDATE the existing journal row
+              await supabase
+                .from("journals")
+                .update({
+                  entry_text: reflection.trim() || null,
+                  mood: selectedMood || null,
+                  listened_date: entryDate,
+                  rating_id: ratingRecordId,
+                  is_public: isPublic,
+                  updated_at: new Date().toISOString(),
+                })
+                .eq("id", targetJournalId);
+
+              // Auto-heal: If duplicate entries existed from previous attempts, delete the extras!
+              if (existingJournals && existingJournals.length > 1) {
+                const staleIds = existingJournals
+                  .filter((j) => j.id !== targetJournalId)
+                  .map((j) => j.id);
+                if (staleIds.length > 0) {
+                  await supabase.from("journals").delete().in("id", staleIds);
+                }
+              }
+            } else {
+              // INSERT a single new journal entry
+              await supabase.from("journals").insert({
                 user_id: user.id,
                 entity_id: entityRecordId,
                 entry_text: reflection.trim() || null,
@@ -356,9 +460,8 @@ export default function RatingAndJournalModal({
                 listened_date: entryDate,
                 rating_id: ratingRecordId,
                 is_public: isPublic,
-              },
-              { onConflict: "id" }
-            );
+              });
+            }
           }
         } catch (cloudErr) {
           console.warn("Could not sync journal to Supabase cloud:", cloudErr?.message);
@@ -554,7 +657,7 @@ export default function RatingAndJournalModal({
                           }`}
                         />
                         <span
-                          className={`text-[10px] font-mono mt-0.5 font-bold transition-colors ${
+                          className={`text-[10px] font-sans mt-0.5 font-bold transition-colors ${
                             isHoveredExact || isSelectedExact
                               ? "text-amber-300 font-extrabold"
                               : "text-[var(--theme-muted)]/60"
@@ -571,7 +674,7 @@ export default function RatingAndJournalModal({
                 <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-[var(--theme-card)]/90 border border-[var(--theme-border)] text-xs min-h-[38px]">
                   {activeDescriptor ? (
                     <div className="flex items-center gap-2">
-                      <span className="font-extrabold font-mono text-amber-300 text-sm">
+                      <span className="font-extrabold font-sans text-amber-300 text-sm">
                         {hoverRating || starRating}/10
                       </span>
                       <span className="text-[var(--theme-fg)] font-bold">
@@ -595,7 +698,7 @@ export default function RatingAndJournalModal({
                   <span className="text-xs text-[var(--theme-muted)] font-medium">
                     Critic Score (0-100)
                   </span>
-                  <div className="flex items-center gap-1.5 font-mono">
+                  <div className="flex items-center gap-1.5 font-sans">
                     <span className="text-2xl font-black text-amber-300">
                       {scoreRating}
                     </span>
@@ -617,7 +720,7 @@ export default function RatingAndJournalModal({
                   className="w-full h-2 rounded-lg bg-[var(--theme-surface)] appearance-none cursor-pointer accent-amber-400"
                 />
 
-                <div className="flex justify-between text-[10px] text-[var(--theme-muted)] font-mono">
+                <div className="flex justify-between text-[10px] text-[var(--theme-muted)] font-sans">
                   <span>0 (Unlistenable)</span>
                   <span>50 (Average)</span>
                   <span>75 (Solid)</span>
@@ -636,7 +739,7 @@ export default function RatingAndJournalModal({
               </span>
 
               {/* Date Stamp */}
-              <div className="flex items-center gap-1.5 text-xs text-[var(--theme-muted)] font-mono">
+              <div className="flex items-center gap-1.5 text-xs text-[var(--theme-muted)] font-sans">
                 <Calendar size={13} className="text-[var(--theme-accent)]" />
                 <input
                   type="date"

@@ -45,9 +45,49 @@ export const AVAILABLE_AVATARS = [
   { id: "music", label: "Soul Groover", icon: Music, bg: "from-pink-500/20 to-yellow-500/20" },
 ];
 
-export default function UserAvatarIcon({ avatarId, className = "w-6 h-6", fallbackLetter = "G" }) {
+export const DICEBEAR_STYLES = [
+  { id: "identicon", label: "Identicon", desc: "Geometric abstract badges" },
+  { id: "bottts", label: "Bottts", desc: "Retro cyber robots" },
+  { id: "lorelei", label: "Lorelei", desc: "Illustrated expressive portraits" },
+  { id: "adventurer", label: "Adventurer", desc: "Whimsical music adventurers" },
+  { id: "thumbs", label: "Thumbs", desc: "Playful character thumbs" },
+  { id: "pixel-art", label: "Pixel Art", desc: "Nostalgic 8-bit avatars" },
+  { id: "notionists", label: "Notionists", desc: "Clean minimalist sketches" },
+  { id: "micah", label: "Micah", desc: "Modern vector portraits" },
+  { id: "shapes", label: "Shapes", desc: "Bauhaus geometric shapes" },
+  { id: "fun-emoji", label: "Fun Emoji", desc: "Vibrant smiling faces" },
+];
+
+export function getDiceBearAvatarUrl(style = "identicon", seed = "groove") {
+  const safeSeed = encodeURIComponent(String(seed || "groove").trim());
+  return `https://api.dicebear.com/7.x/${style}/svg?seed=${safeSeed}`;
+}
+
+export default function UserAvatarIcon({ avatarId, className = "w-6 h-6", fallbackLetter = "G", userName = "" }) {
   if (!avatarId) {
     return <span className="font-black select-none">{fallbackLetter}</span>;
+  }
+
+  // If it's a URL (DiceBear avatar or direct image link)
+  if (
+    typeof avatarId === "string" &&
+    (avatarId.startsWith("http://") ||
+      avatarId.startsWith("https://") ||
+      avatarId.startsWith("data:") ||
+      avatarId.startsWith("/") ||
+      avatarId.includes("dicebear"))
+  ) {
+    return (
+      <img
+        src={avatarId}
+        alt={userName || "User Avatar"}
+        className={`${className} object-cover`}
+        onError={(e) => {
+          // Fallback to identicon using userName or default
+          e.currentTarget.src = getDiceBearAvatarUrl("identicon", userName || "groove");
+        }}
+      />
+    );
   }
 
   const IconComp = AVATAR_ICON_MAP[avatarId];

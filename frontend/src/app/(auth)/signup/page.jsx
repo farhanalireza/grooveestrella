@@ -116,7 +116,7 @@ export default function SignUpPage() {
                   value={username}
                   onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""))}
                   placeholder="soundcritic"
-                  className="w-full px-4 py-3 rounded-2xl bg-[var(--theme-surface)]/80 border border-[var(--theme-border)] text-sm text-[var(--theme-fg)] placeholder:text-[var(--theme-muted)]/50 focus:outline-none focus:border-amber-400 font-mono text-xs"
+                  className="w-full px-4 py-3 rounded-2xl bg-[var(--theme-surface)]/80 border border-[var(--theme-border)] text-sm text-[var(--theme-fg)] placeholder:text-[var(--theme-muted)]/50 focus:outline-none focus:border-amber-400 font-sans text-xs"
                 />
               </div>
             </div>

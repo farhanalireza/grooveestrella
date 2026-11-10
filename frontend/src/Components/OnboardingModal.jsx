@@ -405,7 +405,7 @@ export default function OnboardingModal() {
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-[var(--theme-accent)] animate-pulse" />
-              <span className="text-xs font-bold text-[var(--theme-fg)] tracking-wider uppercase font-mono">
+              <span className="text-xs font-bold text-[var(--theme-fg)] tracking-wider uppercase font-sans">
                 Setup • Step {step} of 5
               </span>
             </div>

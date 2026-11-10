@@ -84,6 +84,7 @@ create index if not exists journals_user_idx on public.journals (user_id);
 create index if not exists journals_entity_idx on public.journals (entity_id);
 create index if not exists journals_listened_date_idx on public.journals (listened_date desc);
 create index if not exists journals_public_idx on public.journals (is_public);
+create unique index if not exists journals_user_entity_unique_idx on public.journals (user_id, entity_id);
 
 -- ==============================================================================
 -- 5. Basic Follows (Social Graph)

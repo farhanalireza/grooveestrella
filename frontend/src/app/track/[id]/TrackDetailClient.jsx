@@ -468,27 +468,31 @@ export default function TrackDetailClient({ id, initialData }) {
 
             </div>
 
-            {/* Segmented Navigation Tabs */}
-            <div className="sticky top-0 sm:top-2 z-30 py-2.5 -mx-4 px-4 sm:mx-0 sm:px-0 bg-[var(--theme-bg)]/85 backdrop-blur-2xl border-y border-[var(--theme-border)]/50 mb-8 mt-4 transition-colors">
-                <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden scrollb-none no-scrollbar max-w-xl mx-auto justify-start sm:justify-center">
-                    {TRACK_TABS.map((tab) => {
-                        const isActive = activeTab === tab.id;
-                        const TabIcon = tab.icon;
-                        return (
-                            <button
-                                key={tab.id}
-                                onClick={() => setActiveTab(tab.id)}
-                                className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all duration-200 cursor-pointer whitespace-nowrap flex items-center gap-1.5 select-none ${
-                                    isActive
-                                        ? 'bg-[var(--theme-accent)] text-[var(--theme-accent-fg)] shadow-md shadow-[var(--theme-accent)]/20'
-                                        : 'text-[var(--theme-muted)] hover:text-[var(--theme-fg)] hover:bg-[var(--theme-surface)]'
-                                }`}
-                            >
-                                <TabIcon size={14} />
-                                <span>{tab.label}</span>
-                            </button>
-                        );
-                    })}
+            {/* Segmented Navigation Tabs (Fluid, Responsive & Never Clipped) */}
+            <div className="sticky top-0 sm:top-2 z-30 py-3 bg-[var(--theme-bg)]/90 backdrop-blur-2xl border-y border-[var(--theme-border)]/50 mb-8 mt-4 transition-colors w-full">
+                <div className="w-full max-w-5xl mx-auto px-4 sm:px-6">
+                    <div className="overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden scrollb-none no-scrollbar py-0.5">
+                        <div className="flex items-center gap-2 sm:gap-2.5 min-w-max mx-auto px-1">
+                            {TRACK_TABS.map((tab) => {
+                                const isActive = activeTab === tab.id;
+                                const TabIcon = tab.icon;
+                                return (
+                                    <button
+                                        key={tab.id}
+                                        onClick={() => setActiveTab(tab.id)}
+                                        className={`shrink-0 whitespace-nowrap px-4 py-2 rounded-full text-xs font-bold transition-all duration-200 cursor-pointer flex items-center gap-2 select-none active:scale-95 ${
+                                            isActive
+                                                ? 'bg-[var(--theme-accent)] text-[var(--theme-accent-fg)] shadow-md shadow-[var(--theme-accent)]/20'
+                                                : 'text-[var(--theme-muted)] hover:text-[var(--theme-fg)] hover:bg-[var(--theme-surface)]'
+                                        }`}
+                                    >
+                                        <TabIcon size={14} className="shrink-0" />
+                                        <span>{tab.label}</span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
                 </div>
             </div>
 
