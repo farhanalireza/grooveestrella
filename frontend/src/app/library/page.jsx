@@ -14,6 +14,7 @@ import PlaylistCover from '@/Components/PlaylistCover';
 import LibraryTouchSlider from '@/Components/LibraryTouchSlider';
 import LibraryCoverImage, { FALLBACK_COVER_SVG } from '@/Components/LibraryCoverImage';
 import RatingAndJournalModal from '@/Components/RatingAndJournalModal';
+import JournalCard from '@/Components/JournalCard';
 
 export default function LibraryPage() {
   const router = useRouter();
@@ -447,133 +448,27 @@ export default function LibraryPage() {
             </div>
           ) : (
             <div className="space-y-6">
-              {journalEntries.map((entry) => {
-                const targetHref = entry.targetId 
-                  ? `/${entry.targetType || 'album'}/${entry.targetId}` 
-                  : '#';
-
-                return (
-                  <article
-                    key={entry.id}
-                    className="rounded-3xl bg-[var(--theme-card)]/80 backdrop-blur-xl border border-[var(--theme-border)]/80 hover:border-amber-400/40 p-6 sm:p-7 shadow-xl transition-all duration-200 space-y-5 group"
-                  >
-                    {/* Top Row: Date Stamp & Score Badge & Mood & Actions */}
-                    <div className="flex items-center justify-between flex-wrap gap-2.5">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        {/* Date Stamp */}
-                        <div className="flex items-center gap-1.5 text-xs text-[var(--theme-muted)] font-mono font-semibold">
-                          <Calendar size={13} className="text-amber-300" />
-                          <span>
-                            {entry.date ? new Date(entry.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) : 'LOGGED'}
-                          </span>
-                        </div>
-
-                        {/* Mood badge */}
-                        {entry.mood && (
-                          <span className="text-xs px-2.5 py-0.5 rounded-full bg-amber-400/10 border border-amber-400/25 text-amber-300 font-semibold">
-                            {entry.mood}
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Score & Controls */}
-                      <div className="flex items-center gap-3">
-                        {/* Rating Badge */}
-                        {entry.rating > 0 && (
-                          <div className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-amber-400/15 border border-amber-400/30 text-amber-300 font-bold font-mono text-xs shadow-xs">
-                            <Star size={13} fill="currentColor" className="text-amber-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.8)]" />
-                            <span>{entry.rating}/10</span>
-                          </div>
-                        )}
-
-                        {/* Controls: Edit & Delete */}
-                        <div className="flex items-center gap-1">
-                          <button
-                            onClick={() => {
-                              setJournalModalItem({
-                                id: entry.targetId,
-                                type: entry.targetType || 'album',
-                                title: entry.title,
-                                subtitle: entry.subtitle,
-                                image: entry.image,
-                                initialRating: entry.rating,
-                                initialReview: entry.review,
-                                journalEntryId: entry.id,
-                              });
-                              setIsJournalModalOpen(true);
-                            }}
-                            className="p-1.5 rounded-lg text-[var(--theme-muted)] hover:text-amber-300 hover:bg-amber-400/10 transition cursor-pointer"
-                            title="Edit this journal entry"
-                          >
-                            <Edit3 size={15} />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteJournalEntry(entry.id)}
-                            className="p-1.5 rounded-lg text-[var(--theme-muted)] hover:text-rose-400 hover:bg-rose-500/10 transition cursor-pointer"
-                            title="Delete this journal entry"
-                          >
-                            <Trash2 size={15} />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Music Item Reference Card (Clickable to visit) */}
-                    <Link
-                      href={targetHref}
-                      className="flex items-center gap-3.5 p-3 rounded-2xl bg-[var(--theme-surface)]/80 hover:bg-[var(--theme-surface)] border border-[var(--theme-border)]/60 transition group/link max-w-xl"
-                    >
-                      {entry.image ? (
-                        <img 
-                          src={entry.image} 
-                          alt={entry.title}
-                          className="w-13 h-13 rounded-xl object-cover shrink-0 shadow-sm ring-1 ring-[var(--theme-border)]"
-                          onError={(e) => { e.currentTarget.src = FALLBACK_COVER_SVG; }}
-                        />
-                      ) : (
-                        <div className="w-13 h-13 rounded-xl bg-[var(--theme-card)] flex items-center justify-center text-[var(--theme-muted)] shrink-0 border border-[var(--theme-border)]">
-                          <Disc size={20} />
-                        </div>
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <span className="text-[10px] uppercase font-bold tracking-wider text-[var(--theme-accent)]">
-                          {entry.targetType || 'Release'}
-                        </span>
-                        <h4 className="text-sm font-extrabold text-[var(--theme-fg)] group-hover/link:text-amber-300 transition-colors truncate">
-                          {entry.title}
-                        </h4>
-                        {entry.subtitle && (
-                          <p className="text-xs text-[var(--theme-muted)] truncate mt-0.5">
-                            {entry.subtitle}
-                          </p>
-                        )}
-                      </div>
-                      <ArrowRight size={14} className="text-[var(--theme-muted)] group-hover/link:text-amber-300 transition-transform group-hover/link:translate-x-1 shrink-0 mr-1" />
-                    </Link>
-
-                    {/* Personal Reflection Text with Generous Line Height & Breathing Space */}
-                    {entry.review && (
-                      <div className="text-sm sm:text-base leading-relaxed text-[var(--theme-fg)] font-body whitespace-pre-line pt-1">
-                        {entry.review}
-                      </div>
-                    )}
-
-                    {/* Context / Vibe Tags */}
-                    {entry.tags && entry.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 pt-1">
-                        {entry.tags.map((tag, idx) => (
-                          <span
-                            key={idx}
-                            className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-[var(--theme-surface)] border border-[var(--theme-border)] text-[var(--theme-muted)]"
-                          >
-                            #{tag}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </article>
-                );
-              })}
+              {journalEntries.map((entry) => (
+                <JournalCard
+                  key={entry.id}
+                  entry={entry}
+                  isOwner={true}
+                  onEdit={(e) => {
+                    setJournalModalItem({
+                      id: e.targetId,
+                      type: e.targetType || 'album',
+                      title: e.title,
+                      subtitle: e.subtitle,
+                      image: e.image,
+                      initialRating: e.rating,
+                      initialReview: e.review,
+                      journalEntryId: e.id,
+                    });
+                    setIsJournalModalOpen(true);
+                  }}
+                  onDelete={handleDeleteJournalEntry}
+                />
+              ))}
             </div>
           )}
         </div>

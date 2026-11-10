@@ -1,925 +1,813 @@
 // src/app/account/page.jsx
 "use client";
 
-import React, { useEffect, useState, Suspense } from 'react';
-import { useRouter } from 'next/navigation';
-import { 
-  Music, Heart, Disc, Users, User, Share2, 
-  Sparkles, Settings, ArrowRight, Dice5, Edit3, Check, 
-  X, Trash2, Download, MessageSquare, Plus, ExternalLink,
-  ChevronRight, Bookmark, LogIn, LogOut, BookOpen, Globe
-} from 'lucide-react';
-import GrooveLoader from '@/Components/GrooveLoader';
-import Link from 'next/link';
-import { toast } from '@/lib/toast';
-import { generateRandomName, getOrSetUserName } from '@/lib/nameGenerator';
-import UserAvatarIcon, { AVAILABLE_AVATARS } from '@/Components/UserAvatarIcon';
-import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext';
+import React, { useEffect, useState, useMemo, Suspense } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import {
+  User,
+  Star,
+  BookOpen,
+  Calendar,
+  Disc,
+  ArrowRight,
+  Sparkles,
+  Edit3,
+  Check,
+  X,
+  Share2,
+  Globe,
+  Sliders,
+  SlidersHorizontal,
+  Download,
+  LogOut,
+  LogIn,
+  PenTool,
+  Headphones,
+  Music,
+  Heart,
+  ListMusic,
+  CheckCircle2,
+} from "lucide-react";
+import { toast } from "@/lib/toast";
+import { generateRandomName, getOrSetUserName } from "@/lib/nameGenerator";
+import UserAvatarIcon, { AVAILABLE_AVATARS } from "@/Components/UserAvatarIcon";
+import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
+import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
+import JournalCard from "@/Components/JournalCard";
+import RatingAndJournalModal from "@/Components/RatingAndJournalModal";
 
-const AVAILABLE_GENRES = [
-  "Rock", "Pop", "Indie", "Electronic", "Hip Hop", 
-  "Jazz", "Classical", "Alternative", "Metal", "R&B", 
-  "Blues", "Folk", "Punk", "Ambient", "Soul", "Disco"
+const ALL_GENRES = [
+  "Rock",
+  "Pop",
+  "Indie",
+  "Electronic",
+  "Hip Hop",
+  "Jazz",
+  "Classical",
+  "Alternative",
+  "Metal",
+  "R&B",
+  "Ambient",
+  "Soul",
+  "Psychedelic",
+  "Post-Punk",
+  "Shoegaze",
+  "Folk",
 ];
 
-function UserDashboardContent() {
+function AccountDashboardContent() {
   const router = useRouter();
-  const { user, profile: authProfile, signOut, isConfigured } = useSupabaseAuth();
-  const [userName, setUserName] = useState('');
-  const [userAvatar, setUserAvatar] = useState('');
-  const [isEditingName, setIsEditingName] = useState(false);
+  const { user, profile: authProfile, signOut, updateProfile, isConfigured } = useSupabaseAuth();
+
+  const [userName, setUserName] = useState("");
+  const [userAvatar, setUserAvatar] = useState("");
+  const [bio, setBio] = useState("");
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editBio, setEditBio] = useState("");
   const [isEditingAvatar, setIsEditingAvatar] = useState(false);
-  const [tempName, setTempName] = useState('');
-  const [activeTab, setActiveTab] = useState('tracks'); // tracks | albums | artists | playlists | reviews | genres
 
+  // User critic preferences
   const [favoriteGenres, setFavoriteGenres] = useState([]);
-  const [savedSongs, setSavedSongs] = useState([]);
-  const [savedAlbums, setSavedAlbums] = useState([]);
-  const [savedArtists, setSavedArtists] = useState([]);
-  const [savedPlaylists, setSavedPlaylists] = useState([]);
-  const [userReviews, setUserReviews] = useState([]);
+  const [preferredRatingSystem, setPreferredRatingSystem] = useState("stars"); // 'stars' | 'score'
+  const [defaultIsPublic, setDefaultIsPublic] = useState(true);
 
-  // Load all user data from localStorage & Supabase profile
+  // Journal logs & library stats
+  const [journalLogs, setJournalLogs] = useState([]);
+  const [savedCounts, setSavedCounts] = useState({ songs: 0, albums: 0, artists: 0, playlists: 0 });
+  const [copiedLink, setCopiedLink] = useState(false);
+
+  // Modal for editing journal entry
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalItem, setModalItem] = useState(null);
+
   const loadData = () => {
-    if (typeof window === 'undefined') return;
-    const currentName = authProfile?.display_name || authProfile?.username || getOrSetUserName();
-    setUserName(currentName);
-    setTempName(currentName);
-    setUserAvatar(authProfile?.avatar_url || localStorage.getItem('userAvatar') || '');
+    if (typeof window === "undefined") return;
 
+    // 1. Profile identity
+    const currentName = authProfile?.display_name || authProfile?.username || getOrSetUserName();
+    const currentBio = authProfile?.bio || localStorage.getItem("groove_user_bio") || "";
+    setUserName(currentName);
+    setEditName(currentName);
+    setBio(currentBio);
+    setEditBio(currentBio);
+    setUserAvatar(authProfile?.avatar_url || localStorage.getItem("userAvatar") || "");
+
+    // 2. Preferences
     try {
-      setFavoriteGenres(JSON.parse(localStorage.getItem('favoriteGenres') || '[]'));
+      setFavoriteGenres(JSON.parse(localStorage.getItem("favoriteGenres") || "[]"));
     } catch (_) {
       setFavoriteGenres([]);
     }
 
+    const prefSystem = localStorage.getItem("preferred_rating_system") || "stars";
+    setPreferredRatingSystem(prefSystem);
+
+    const prefPublic = localStorage.getItem("default_journal_public");
+    setDefaultIsPublic(prefPublic !== null ? prefPublic === "true" : true);
+
+    // 3. Saved media counts from library
     try {
-      setSavedSongs(JSON.parse(localStorage.getItem('savedSongs') || '[]'));
+      const s = JSON.parse(localStorage.getItem("savedSongs") || "[]").length;
+      const al = JSON.parse(localStorage.getItem("savedAlbums") || "[]").length;
+      const ar = JSON.parse(localStorage.getItem("savedArtists") || "[]").length;
+      const p = JSON.parse(localStorage.getItem("savedPlaylists") || "[]").length;
+      setSavedCounts({ songs: s, albums: al, artists: ar, playlists: p });
+    } catch (_) {}
+
+    // 4. Journal logs
+    let logs = [];
+    try {
+      const raw = localStorage.getItem("groove_journal_logs");
+      if (raw) logs = JSON.parse(raw);
     } catch (_) {
-      setSavedSongs([]);
+      logs = [];
     }
 
-    try {
-      setSavedAlbums(JSON.parse(localStorage.getItem('savedAlbums') || '[]'));
-    } catch (_) {
-      setSavedAlbums([]);
-    }
-
-    try {
-      setSavedArtists(JSON.parse(localStorage.getItem('savedArtists') || '[]'));
-    } catch (_) {
-      setSavedArtists([]);
-    }
-
-    try {
-      setSavedPlaylists(JSON.parse(localStorage.getItem('savedPlaylists') || '[]'));
-    } catch (_) {
-      setSavedPlaylists([]);
-    }
-
-    // Collect all user reviews from localStorage
-    try {
-      const reviewsList = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && key.startsWith('groove_reviews_')) {
-          const raw = localStorage.getItem(key);
-          if (raw) {
-            const parsed = JSON.parse(raw);
-            if (Array.isArray(parsed)) {
-              parsed.forEach(rev => {
-                // Include user-created reviews
-                if (rev.id && rev.id.startsWith('usr-')) {
-                  reviewsList.push({
-                    ...rev,
-                    itemId: key.replace('groove_reviews_', ''),
-                  });
-                }
-              });
-            }
+    if (user && isSupabaseConfigured()) {
+      const supabase = createClient();
+      supabase
+        .from("journals")
+        .select(`
+          id,
+          entry_text,
+          mood,
+          listened_date,
+          is_public,
+          created_at,
+          user_ratings ( score, rating_type ),
+          music_entities ( id, mbid, type, title, artist_credit, cover_art_url )
+        `)
+        .eq("user_id", user.id)
+        .order("listened_date", { ascending: false })
+        .then(({ data, error }) => {
+          if (!error && Array.isArray(data) && data.length > 0) {
+            const formatted = data.map((j) => ({
+              id: j.id,
+              targetId: j.music_entities?.mbid,
+              targetType: j.music_entities?.type || "album",
+              title: j.music_entities?.title || "Untitled",
+              subtitle: j.music_entities?.artist_credit || "",
+              image: j.music_entities?.cover_art_url || "",
+              rating:
+                j.user_ratings?.rating_type === "stars"
+                  ? j.user_ratings.score
+                  : Math.round((j.user_ratings?.score || 0) / 10),
+              numericalScore: j.user_ratings?.score || 0,
+              ratingSystem: j.user_ratings?.rating_type || "stars",
+              date: j.listened_date,
+              review: j.entry_text || "",
+              mood: j.mood || "",
+              is_public: j.is_public,
+              createdAt: new Date(j.created_at).getTime(),
+            }));
+            setJournalLogs(formatted);
+          } else {
+            setJournalLogs(logs);
           }
-        }
-      }
-      setUserReviews(reviewsList);
-    } catch (_) {
-      setUserReviews([]);
+        })
+        .catch(() => setJournalLogs(logs));
+    } else {
+      setJournalLogs(logs);
     }
   };
 
   useEffect(() => {
     loadData();
-    window.addEventListener('groove-profile-updated', loadData);
-    return () => window.removeEventListener('groove-profile-updated', loadData);
-  }, []);
+    window.addEventListener("groove-profile-updated", loadData);
+    window.addEventListener("groove-journal-updated", loadData);
+    return () => {
+      window.removeEventListener("groove-profile-updated", loadData);
+      window.removeEventListener("groove-journal-updated", loadData);
+    };
+  }, [user, authProfile]);
 
-  // Roll a new random Adj + Noun combo
-  const handleRollRandomName = () => {
-    const newName = generateRandomName();
-    setUserName(newName);
-    setTempName(newName);
-    localStorage.setItem('userName', newName);
-    toast.success(`Generated aesthetic name: ${newName}! 🎲`);
-  };
-
-  // Save edited name
-  const handleSaveName = () => {
-    const finalName = tempName.trim() || generateRandomName();
+  // Handle Profile Save
+  const handleSaveProfile = async (e) => {
+    e.preventDefault();
+    const finalName = editName.trim() || userName;
     setUserName(finalName);
-    localStorage.setItem('userName', finalName);
-    setIsEditingName(false);
-    toast.success(`Profile name updated to: ${finalName}! ✨`);
-  };
+    setBio(editBio.trim());
+    localStorage.setItem("userName", finalName);
+    localStorage.setItem("groove_user_bio", editBio.trim());
 
-  // Cancel edit name
-  const handleCancelEdit = () => {
-    setTempName(userName);
-    setIsEditingName(false);
+    if (user && isSupabaseConfigured()) {
+      await updateProfile({
+        display_name: finalName,
+        bio: editBio.trim(),
+      });
+    }
+
+    setIsEditingProfile(false);
+    toast.success("Profile updated! ✨");
   };
 
   const handleSelectAvatar = (avId) => {
     setUserAvatar(avId);
-    localStorage.setItem('userAvatar', avId);
+    localStorage.setItem("userAvatar", avId);
     setIsEditingAvatar(false);
-    window.dispatchEvent(new CustomEvent('groove-profile-updated'));
-    toast.success('Avatar updated! ✨');
+    if (user && isSupabaseConfigured()) {
+      updateProfile({ avatar_url: avId });
+    }
+    toast.success("Avatar updated! ✨");
   };
 
-  // Toggle favorite genre
-  const handleToggleGenre = (genre) => {
+  // Toggle Genre
+  const handleToggleGenre = (g) => {
     let updated;
-    if (favoriteGenres.includes(genre)) {
-      updated = favoriteGenres.filter(g => g !== genre);
+    if (favoriteGenres.includes(g)) {
+      updated = favoriteGenres.filter((item) => item !== g);
     } else {
-      updated = [...favoriteGenres, genre];
+      updated = [...favoriteGenres, g];
     }
     setFavoriteGenres(updated);
-    localStorage.setItem('favoriteGenres', JSON.stringify(updated));
-    toast.info(`Updated favorite genres.`);
+    localStorage.setItem("favoriteGenres", JSON.stringify(updated));
   };
 
-  // Remove saved song
-  const handleRemoveSong = (trackUri, trackId, title) => {
-    const updated = savedSongs.filter(s => s.trackURI !== trackUri && s.trackId !== trackId);
-    setSavedSongs(updated);
-    localStorage.setItem('savedSongs', JSON.stringify(updated));
-    toast.info(`Removed "${title}" from saved tracks.`);
+  // Toggle Rating System
+  const handleSelectRatingSystem = (sys) => {
+    setPreferredRatingSystem(sys);
+    localStorage.setItem("preferred_rating_system", sys);
+    toast.info(`Preferred rating system set to ${sys === "stars" ? "10-Star System" : "0–100 Score"}`);
   };
 
-  // Remove saved album
-  const handleRemoveAlbum = (albumId, title) => {
-    const updated = savedAlbums.filter(a => a.id !== albumId);
-    setSavedAlbums(updated);
-    localStorage.setItem('savedAlbums', JSON.stringify(updated));
-    toast.info(`Removed "${title}" from saved albums.`);
+  // Toggle Default Visibility
+  const handleToggleDefaultPublic = () => {
+    const nextVal = !defaultIsPublic;
+    setDefaultIsPublic(nextVal);
+    localStorage.setItem("default_journal_public", String(nextVal));
+    toast.info(`Default entry privacy: ${nextVal ? "Public" : "Private"}`);
   };
 
-  // Remove saved artist
-  const handleRemoveArtist = (artistId, name) => {
-    const updated = savedArtists.filter(a => a.id !== artistId);
-    setSavedArtists(updated);
-    localStorage.setItem('savedArtists', JSON.stringify(updated));
-    toast.info(`Removed "${name}" from saved artists.`);
-  };
-
-  // Delete custom playlist
-  const handleDeletePlaylist = (playlistId, name) => {
-    const updated = savedPlaylists.filter(p => p.id !== playlistId);
-    setSavedPlaylists(updated);
-    localStorage.setItem('savedPlaylists', JSON.stringify(updated));
-    toast.info(`Deleted playlist "${name}".`);
-  };
-
-  // Export full user data as JSON
+  // Export Data JSON
   const handleExportData = () => {
-    const dataBackup = {
-      user: {
-        name: userName,
-        favoriteGenres: favoriteGenres,
-        exportedAt: new Date().toISOString()
-      },
-      library: {
-        savedSongs,
-        savedAlbums,
-        savedArtists,
-        savedPlaylists,
-        userReviews
-      }
-    };
-
-    const blob = new Blob([JSON.stringify(dataBackup, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `groove_data_${userName.toLowerCase().replace(/\s+/g, '_')}.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    toast.success('Your library data was exported successfully! 📁');
+    try {
+      const backup = {
+        profile: { userName, bio, userAvatar },
+        favoriteGenres,
+        preferredRatingSystem,
+        journal: journalLogs,
+        savedSongs: JSON.parse(localStorage.getItem("savedSongs") || "[]"),
+        savedAlbums: JSON.parse(localStorage.getItem("savedAlbums") || "[]"),
+        savedArtists: JSON.parse(localStorage.getItem("savedArtists") || "[]"),
+        savedPlaylists: JSON.parse(localStorage.getItem("savedPlaylists") || "[]"),
+        exportedAt: new Date().toISOString(),
+      };
+      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `grooveestrella-critic-backup-${Date.now()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success("Data export downloaded! 📦");
+    } catch (_) {
+      toast.error("Failed to export backup.");
+    }
   };
 
-  const firstLetter = (userName || 'G').charAt(0).toUpperCase();
-  const totalItems = savedSongs.length + savedAlbums.length + savedArtists.length + savedPlaylists.length;
+  const handleShareProfile = () => {
+    const profileUrl = `${window.location.origin}/profile/${authProfile?.username || userName}`;
+    if (navigator.share) {
+      navigator.share({
+        title: `${userName} on GrooveEstrella`,
+        url: profileUrl,
+      });
+    } else {
+      navigator.clipboard.writeText(profileUrl);
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2000);
+      toast.success("Profile URL copied to clipboard!");
+    }
+  };
+
+  // Computed Critic Stats
+  const stats = useMemo(() => {
+    const totalListens = journalLogs.length;
+    const reviews = journalLogs.filter((l) => l.review && l.review.trim().length > 0).length;
+    const rated = journalLogs.filter((l) => l.rating > 0);
+    const avgScore =
+      rated.length > 0
+        ? (rated.reduce((acc, curr) => acc + curr.rating, 0) / rated.length).toFixed(1)
+        : null;
+    const totalLibrary =
+      savedCounts.songs + savedCounts.albums + savedCounts.artists + savedCounts.playlists;
+    return { totalListens, reviews, avgScore, totalLibrary };
+  }, [journalLogs, savedCounts]);
+
+  const profileSlug = authProfile?.username || userName;
 
   return (
-    <div className='min-h-screen bg-[var(--theme-bg)] text-[var(--theme-fg)] relative overflow-hidden px-4 sm:px-6 md:px-12 lg:px-24 pt-10 pb-32'>
-      {/* Blurry Backdrop Glow */}
-      <div className="absolute top-0 left-0 right-0 h-[45vh] bg-[var(--theme-plum)]/20 rounded-full filter blur-[140px] pointer-events-none z-0" />
-      
-      <div className='relative z-10 w-full max-w-5xl mx-auto space-y-8'>
-        
-        {/* Supabase Account & Music Journal Bar */}
-        <div className="p-4 sm:p-5 rounded-3xl bg-[var(--theme-card)]/80 border border-[var(--theme-border)] backdrop-blur-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-amber-400/15 border border-amber-400/30 flex items-center justify-center text-amber-300 shrink-0">
-              <Sparkles size={20} />
+    <div className="min-h-screen text-[var(--theme-fg)] py-10 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto space-y-10">
+      {/* 1. CRITIC PROFILE HERO CARD */}
+      <div className="relative rounded-3xl bg-[var(--theme-card)]/90 backdrop-blur-2xl border border-[var(--theme-border)] p-7 sm:p-10 shadow-2xl overflow-hidden">
+        <div className="flex flex-col sm:flex-row items-center sm:items-start gap-7 sm:gap-8 relative z-10">
+          {/* Avatar with selector trigger */}
+          <div className="relative group shrink-0">
+            <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-3xl overflow-hidden bg-gradient-to-tr from-amber-400 via-amber-300 to-amber-200 border-2 border-white/20 shadow-2xl flex items-center justify-center ring-4 ring-amber-400/20">
+              <UserAvatarIcon
+                avatarId={userAvatar}
+                userName={userName}
+                className="w-full h-full object-cover"
+                iconClassName="w-14 h-14 text-zinc-950"
+              />
             </div>
-            <div>
-              {user ? (
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-[var(--theme-fg)]">
-                      {user.email}
-                    </span>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 font-bold border border-emerald-500/30">
-                      Cloud Connected
-                    </span>
-                  </div>
-                  <p className="text-xs text-[var(--theme-muted)]">
-                    Profile: <Link href={`/profile/${authProfile?.username || userName}`} className="text-amber-300 font-mono font-bold hover:underline">@{authProfile?.username || userName}</Link>
-                  </p>
-                </div>
-              ) : (
-                <div>
-                  <h3 className="text-xs sm:text-sm font-bold text-[var(--theme-fg)]">
-                    Music Journal & Critic Accounts
-                  </h3>
-                  <p className="text-xs text-[var(--theme-muted)]">
-                    Sign in to backup ratings, sync journal entries, and share your profile.
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
-            <Link
-              href="/journal"
-              className="px-4 py-2 rounded-2xl bg-gradient-to-r from-amber-400 to-amber-300 text-zinc-950 text-xs font-extrabold hover:scale-105 active:scale-95 transition-all shadow-sm flex items-center gap-1.5"
+            <button
+              onClick={() => setIsEditingAvatar(!isEditingAvatar)}
+              className="absolute -bottom-2 -right-2 p-2 rounded-xl bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] border border-[var(--theme-border)] text-[var(--theme-muted)] hover:text-amber-300 transition shadow-lg cursor-pointer"
+              title="Change Avatar Icon"
             >
-              <BookOpen size={14} />
-              <span>Music Journal</span>
-            </Link>
-
-            {user ? (
-              <div className="flex items-center gap-2">
-                <Link
-                  href={`/profile/${authProfile?.username || userName}`}
-                  className="px-3.5 py-2 rounded-2xl bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] border border-[var(--theme-border)] text-xs font-bold text-[var(--theme-fg)] transition flex items-center gap-1.5"
-                >
-                  <Globe size={13} />
-                  <span>Public View</span>
-                </Link>
-                <button
-                  onClick={signOut}
-                  className="px-3 py-2 rounded-2xl text-xs font-bold text-rose-400 hover:bg-rose-500/10 border border-transparent transition cursor-pointer flex items-center gap-1.5"
-                  title="Sign out"
-                >
-                  <LogOut size={13} />
-                  <span>Sign Out</span>
-                </button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2">
-                <Link
-                  href="/login"
-                  className="px-3.5 py-2 rounded-2xl bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] border border-[var(--theme-border)] text-xs font-bold text-[var(--theme-fg)] transition flex items-center gap-1.5"
-                >
-                  <LogIn size={13} />
-                  <span>Sign In</span>
-                </Link>
-                <Link
-                  href="/signup"
-                  className="px-3.5 py-2 rounded-2xl bg-amber-400/20 text-amber-300 border border-amber-400/40 text-xs font-extrabold hover:bg-amber-400/30 transition"
-                >
-                  Sign Up
-                </Link>
-              </div>
-            )}
+              <Edit3 size={14} />
+            </button>
           </div>
-        </div>
 
-        {/* Profile Card with Adj+Noun Generator and Live Edit */}
-        <div className='bg-[var(--theme-card)]/80 border border-[var(--theme-border)] backdrop-blur-xl rounded-3xl p-6 sm:p-8 shadow-md'>
-          <div className='flex flex-col sm:flex-row items-center sm:items-start gap-6'>
-            {/* User Avatar with Clean Vector Icon & Change Picker */}
-            <div className='relative flex-shrink-0'>
-              <div 
-                onClick={() => setIsEditingAvatar(!isEditingAvatar)}
-                className='w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-gradient-to-tr from-[var(--theme-plum)] to-[var(--theme-accent)] flex items-center justify-center text-3xl sm:text-4xl font-black text-[var(--theme-fg)] shadow-md border-2 border-[var(--theme-border)] cursor-pointer hover:scale-105 active:scale-95 transition-transform'
-                title="Click to change avatar icon"
-              >
-                <UserAvatarIcon avatarId={userAvatar} className="w-12 h-12 text-[var(--theme-fg)]" fallbackLetter={firstLetter} />
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsEditingAvatar(!isEditingAvatar)}
-                className='absolute -bottom-1 -right-1 bg-[var(--theme-accent-bg)] p-2 rounded-full shadow-md text-[var(--theme-accent-fg)] hover:opacity-90 transition active:scale-95 cursor-pointer'
-                title="Change Avatar Icon"
-              >
-                <User className='w-4 h-4' />
-              </button>
-            </div>
-
-            {/* Profile Info & Edit Controls */}
-            <div className='flex-1 min-w-0 text-center sm:text-left flex flex-col justify-between'>
-              <div>
-                <div className="flex items-center justify-center sm:justify-start gap-2 mb-2">
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-[var(--theme-border)] bg-[var(--theme-surface)] text-[var(--theme-accent)] text-[10px] font-bold tracking-widest uppercase">
-                    <Sparkles className="w-3 h-3 text-[var(--theme-accent)]" />
-                    <span>Music Layer • Citizen</span>
-                  </span>
-                </div>
-
-                {/* Inline Avatar Icon Selector */}
-                {isEditingAvatar && (
-                  <div className="mb-4 p-3 bg-[var(--theme-surface)]/90 border border-[var(--theme-border)] rounded-2xl animate-fade-in text-left">
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="text-[11px] font-bold text-[var(--theme-muted)] uppercase tracking-wider">
-                        Choose Your Icon Avatar
-                      </p>
-                      <button
-                        onClick={() => setIsEditingAvatar(false)}
-                        className="text-xs text-[var(--theme-muted)] hover:text-[var(--theme-fg)]"
-                      >
-                        <X size={14} />
-                      </button>
-                    </div>
-                    <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-                      {AVAILABLE_AVATARS.map((av) => {
-                        const IconComp = av.icon;
-                        const isSelected = userAvatar === av.id;
-                        return (
-                          <button
-                            key={av.id}
-                            type="button"
-                            onClick={() => handleSelectAvatar(av.id)}
-                            className={`p-2.5 rounded-xl border text-center flex flex-col items-center gap-1 transition cursor-pointer active:scale-95 ${
-                              isSelected
-                                ? "bg-[var(--theme-accent)]/15 border-[var(--theme-accent)] text-[var(--theme-accent)] ring-1 ring-[var(--theme-accent)]/40"
-                                : "bg-[var(--theme-card)] border-[var(--theme-border)] text-[var(--theme-muted)] hover:text-[var(--theme-fg)] hover:border-[var(--theme-accent)]/40"
-                            }`}
-                          >
-                            <IconComp className="w-5 h-5" />
-                            <span className="text-[10px] font-semibold truncate">{av.label.split(" ")[0]}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {/* Name Row: Editable or Display with Shuffle Button */}
-                {isEditingName ? (
-                  <div className="flex items-center justify-center sm:justify-start gap-2 mb-2">
-                    <input
-                      type="text"
-                      value={tempName}
-                      onChange={(e) => setTempName(e.target.value)}
-                      placeholder="Enter username"
-                      className="px-4 py-2 bg-[var(--theme-surface)] border border-[var(--theme-border)] rounded-xl text-lg sm:text-xl font-bold text-[var(--theme-fg)] outline-none focus:ring-1 focus:ring-[var(--theme-accent)]"
-                      autoFocus
-                    />
-                    <button
-                      onClick={handleSaveName}
-                      className="p-2.5 rounded-xl bg-[var(--theme-accent-bg)] hover:opacity-90 text-[var(--theme-accent-fg)] font-bold transition cursor-pointer"
-                      title="Save Name"
-                    >
-                      <Check size={18} />
-                    </button>
-                    <button
-                      onClick={handleCancelEdit}
-                      className="p-2.5 rounded-xl bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] text-[var(--theme-muted)] transition cursor-pointer"
-                      title="Cancel"
-                    >
-                      <X size={18} />
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-center sm:justify-start gap-3 mb-2 flex-wrap">
-                    <h1 className='text-2xl sm:text-4xl font-extrabold text-[var(--theme-fg)] tracking-tight'>
-                      {userName}
-                    </h1>
-                    <div className="flex items-center gap-1.5 flex-wrap justify-center sm:justify-start">
-                      <button
-                        onClick={() => setIsEditingName(true)}
-                        className="p-2 rounded-xl bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] text-[var(--theme-muted)] hover:text-[var(--theme-fg)] border border-[var(--theme-border)] transition cursor-pointer"
-                        title="Edit Username"
-                      >
-                        <Edit3 size={15} />
-                      </button>
-                      <button
-                        onClick={handleRollRandomName}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] text-[var(--theme-accent)] border border-[var(--theme-border)] text-xs font-semibold transition cursor-pointer"
-                        title="Generate a random Adjective + Noun name"
-                      >
-                        <Dice5 size={14} />
-                        <span className="hidden sm:inline">Roll Name</span>
-                      </button>
-                      <button
-                        onClick={() => window.dispatchEvent(new CustomEvent('open-onboarding'))}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[var(--theme-accent)]/15 hover:bg-[var(--theme-accent)]/25 text-[var(--theme-accent)] border border-[var(--theme-accent)]/30 text-xs font-bold transition active:scale-95 cursor-pointer shadow-sm"
-                        title="Tune music taste & preferences"
-                      >
-                        <Sparkles size={14} />
-                        <span>Tune Taste</span>
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                <p className='text-xs sm:text-sm text-[var(--theme-muted)] mb-4'>
-                  Custom Adjective + Noun identity. All your bookmarks, saved tracks, albums, artists, and reviews are stored securely on your device.
-                </p>
-
-                {/* Favorite Genres Pills */}
-                <div className="flex flex-wrap justify-center sm:justify-start gap-1.5">
-                  {favoriteGenres.length > 0 ? (
-                    favoriteGenres.map((g, idx) => (
-                      <span key={idx} className="px-2.5 py-0.5 rounded-full bg-[var(--theme-surface)] border border-[var(--theme-border)] text-[var(--theme-accent)] text-[11px] font-semibold">
-                        #{g}
-                      </span>
-                    ))
+          {/* Profile Details */}
+          <div className="flex-1 text-center sm:text-left space-y-3 min-w-0">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="min-w-0">
+                {/* Cloud Auth Status Pill */}
+                <div className="flex items-center justify-center sm:justify-start gap-2 mb-1.5 flex-wrap">
+                  {user ? (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-[10px] font-bold uppercase tracking-widest font-mono">
+                      <CheckCircle2 size={11} />
+                      <span>Cloud Connected · {user.email}</span>
+                    </span>
                   ) : (
-                    <span className="text-xs text-[var(--theme-muted)]/60 italic">No favorite genres selected yet.</span>
+                    <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-amber-400/10 border border-amber-400/25 text-amber-300 text-[10px] font-bold uppercase tracking-widest font-mono">
+                      <Sparkles size={11} />
+                      <span>Local Profile · Citizen</span>
+                    </span>
                   )}
                 </div>
+
+                <h1 className="text-3xl sm:text-4xl font-black tracking-tight font-display text-[var(--theme-fg)] truncate">
+                  {userName}
+                </h1>
+
+                <p className="text-sm font-mono text-amber-300 font-bold mt-0.5">
+                  Profile:{" "}
+                  <Link href={`/profile/${profileSlug}`} className="hover:underline">
+                    @{profileSlug}
+                  </Link>
+                </p>
+              </div>
+
+              {/* Action Buttons: Public View + Share + Edit */}
+              <div className="flex items-center justify-center sm:justify-end gap-2.5 pt-1 sm:pt-0 shrink-0 flex-wrap">
+                <Link
+                  href={`/profile/${profileSlug}`}
+                  className="px-4 py-2 rounded-2xl bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] border border-[var(--theme-border)] hover:border-amber-400/40 text-xs font-bold text-[var(--theme-fg)] transition flex items-center gap-1.5 shadow-sm"
+                  title="Open your public profile page"
+                >
+                  <Globe size={13} className="text-amber-300" />
+                  <span>Public View</span>
+                </Link>
+
+                <button
+                  onClick={handleShareProfile}
+                  className="p-2.5 rounded-2xl bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] border border-[var(--theme-border)] text-[var(--theme-muted)] hover:text-[var(--theme-fg)] transition cursor-pointer"
+                  title="Share Profile Link"
+                >
+                  {copiedLink ? <Check size={15} className="text-emerald-400" /> : <Share2 size={15} />}
+                </button>
+
+                <button
+                  onClick={() => setIsEditingProfile(true)}
+                  className="p-2.5 rounded-2xl bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] border border-[var(--theme-border)] text-[var(--theme-muted)] hover:text-amber-300 transition cursor-pointer"
+                  title="Edit Profile"
+                >
+                  <Edit3 size={15} />
+                </button>
+
+                {user ? (
+                  <button
+                    onClick={signOut}
+                    className="p-2.5 rounded-2xl bg-[var(--theme-surface)] hover:bg-rose-500/15 border border-[var(--theme-border)] text-[var(--theme-muted)] hover:text-rose-400 transition cursor-pointer"
+                    title="Sign Out"
+                  >
+                    <LogOut size={15} />
+                  </button>
+                ) : (
+                  <Link
+                    href="/login"
+                    className="px-3.5 py-2 rounded-2xl bg-amber-400 text-zinc-950 font-black text-xs hover:scale-105 active:scale-95 transition flex items-center gap-1 shadow-md"
+                  >
+                    <LogIn size={13} />
+                    <span>Sign In</span>
+                  </Link>
+                )}
               </div>
             </div>
 
-            {/* Quick Data Export button */}
-            <div className="flex sm:flex-col items-center gap-2 flex-shrink-0">
+            {/* Bio */}
+            <p className="text-sm sm:text-base text-[var(--theme-muted)] max-w-2xl leading-relaxed pt-1 font-body">
+              {bio || "Active music explorer and journal keeper on GrooveEstrella."}
+            </p>
+
+            {/* Inline Avatar Icon Selector Drawer */}
+            {isEditingAvatar && (
+              <div className="mt-4 p-4 rounded-2xl bg-[var(--theme-surface)] border border-[var(--theme-border)] text-left space-y-3 animate-fade-in">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--theme-muted)]">
+                    Select Avatar Icon
+                  </span>
+                  <button
+                    onClick={() => setIsEditingAvatar(false)}
+                    className="text-xs text-[var(--theme-muted)] hover:text-[var(--theme-fg)]"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                  {AVAILABLE_AVATARS.map((av) => {
+                    const IconComp = av.icon;
+                    const isSelected = userAvatar === av.id;
+                    return (
+                      <button
+                        key={av.id}
+                        type="button"
+                        onClick={() => handleSelectAvatar(av.id)}
+                        className={`p-2.5 rounded-xl border text-center flex flex-col items-center gap-1 transition cursor-pointer active:scale-95 ${
+                          isSelected
+                            ? "bg-amber-400/20 border-amber-400 text-amber-300"
+                            : "bg-[var(--theme-card)] border-[var(--theme-border)] text-[var(--theme-muted)] hover:text-[var(--theme-fg)]"
+                        }`}
+                      >
+                        <IconComp className="w-5 h-5" />
+                        <span className="text-[10px] font-semibold truncate">{av.label.split(" ")[0]}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* 2. CRITIC METRIC DASHBOARD (4 Sleek Status Cards) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <Link
+          href="/journal"
+          className="p-5 rounded-3xl bg-[var(--theme-card)]/80 border border-[var(--theme-border)] hover:border-amber-400/40 transition-all shadow-lg hover:-translate-y-0.5 group block"
+        >
+          <div className="flex items-center justify-between text-xs font-semibold text-[var(--theme-muted)] mb-2">
+            <span className="inline-flex items-center gap-1.5">
+              <BookOpen size={14} className="text-amber-300" />
+              <span>Journal Entries</span>
+            </span>
+            <ArrowRight size={13} className="opacity-0 group-hover:opacity-100 transition-opacity text-amber-300" />
+          </div>
+          <div className="text-2xl sm:text-3xl font-black font-mono text-[var(--theme-fg)]">
+            {stats.totalListens}
+          </div>
+          <span className="text-[11px] text-[var(--theme-muted)] font-mono">Listens recorded</span>
+        </Link>
+
+        <Link
+          href="/journal"
+          className="p-5 rounded-3xl bg-[var(--theme-card)]/80 border border-[var(--theme-border)] hover:border-amber-400/40 transition-all shadow-lg hover:-translate-y-0.5 group block"
+        >
+          <div className="flex items-center justify-between text-xs font-semibold text-[var(--theme-muted)] mb-2">
+            <span className="inline-flex items-center gap-1.5">
+              <PenTool size={14} className="text-amber-300" />
+              <span>Written Reviews</span>
+            </span>
+            <ArrowRight size={13} className="opacity-0 group-hover:opacity-100 transition-opacity text-amber-300" />
+          </div>
+          <div className="text-2xl sm:text-3xl font-black font-mono text-amber-300">
+            {stats.reviews}
+          </div>
+          <span className="text-[11px] text-[var(--theme-muted)] font-mono">Reviews published</span>
+        </Link>
+
+        <div className="p-5 rounded-3xl bg-[var(--theme-card)]/80 border border-[var(--theme-border)] shadow-lg">
+          <div className="flex items-center justify-between text-xs font-semibold text-[var(--theme-muted)] mb-2">
+            <span className="inline-flex items-center gap-1.5">
+              <Star size={14} className="text-amber-300" />
+              <span>Average Rating</span>
+            </span>
+          </div>
+          <div className="text-2xl sm:text-3xl font-black font-mono text-amber-300">
+            {stats.avgScore ? `${stats.avgScore}★` : "—"}
+          </div>
+          <span className="text-[11px] text-[var(--theme-muted)] font-mono">Critical score</span>
+        </div>
+
+        <Link
+          href="/library"
+          className="p-5 rounded-3xl bg-[var(--theme-card)]/80 border border-[var(--theme-border)] hover:border-amber-400/40 transition-all shadow-lg hover:-translate-y-0.5 group block"
+        >
+          <div className="flex items-center justify-between text-xs font-semibold text-[var(--theme-muted)] mb-2">
+            <span className="inline-flex items-center gap-1.5">
+              <ListMusic size={14} className="text-amber-300" />
+              <span>Saved in Library</span>
+            </span>
+            <ArrowRight size={13} className="opacity-0 group-hover:opacity-100 transition-opacity text-amber-300" />
+          </div>
+          <div className="text-2xl sm:text-3xl font-black font-mono text-[var(--theme-fg)]">
+            {stats.totalLibrary}
+          </div>
+          <span className="text-[11px] text-[var(--theme-muted)] font-mono">Albums, tracks, artists</span>
+        </Link>
+      </div>
+
+      {/* 3. CRITIC PREFERENCES & AESTHETIC GENRES */}
+      <div className="p-7 sm:p-8 rounded-3xl bg-[var(--theme-card)]/80 backdrop-blur-xl border border-[var(--theme-border)] shadow-xl space-y-6">
+        <div>
+          <h2 className="text-xl sm:text-2xl font-black tracking-tight font-display text-[var(--theme-fg)]">
+            Critic Identity & Preferences
+          </h2>
+          <p className="text-xs sm:text-sm text-[var(--theme-muted)] mt-1">
+            Customize your scoring philosophy, listening visibility, and aesthetic music taste tags.
+          </p>
+        </div>
+
+        {/* Favorite Genres Pill Selector */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--theme-muted)]">
+              Music Taste & Favorite Genres ({favoriteGenres.length} selected)
+            </label>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {ALL_GENRES.map((g) => {
+              const isSelected = favoriteGenres.includes(g);
+              return (
+                <button
+                  key={g}
+                  type="button"
+                  onClick={() => handleToggleGenre(g)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-bold transition cursor-pointer active:scale-95 ${
+                    isSelected
+                      ? "bg-amber-400 text-zinc-950 shadow-sm"
+                      : "bg-[var(--theme-surface)] text-[var(--theme-muted)] hover:text-[var(--theme-fg)] border border-[var(--theme-border)]"
+                  }`}
+                >
+                  #{g}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Rating System & Privacy Preferences Row */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-[var(--theme-border)]/70">
+          {/* Scoring System Choice */}
+          <div className="p-4 rounded-2xl bg-[var(--theme-surface)]/80 border border-[var(--theme-border)] space-y-2">
+            <span className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--theme-muted)]">
+              Default Rating Scale
+            </span>
+            <div className="flex items-center gap-2 pt-1">
               <button
-                onClick={handleExportData}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] border border-[var(--theme-border)] text-xs font-bold uppercase tracking-wider text-[var(--theme-fg)] transition cursor-pointer shadow-sm"
-                title="Download complete library backup as JSON"
+                type="button"
+                onClick={() => handleSelectRatingSystem("stars")}
+                className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition cursor-pointer ${
+                  preferredRatingSystem === "stars"
+                    ? "bg-amber-400 text-zinc-950 shadow-xs"
+                    : "bg-[var(--theme-card)] text-[var(--theme-muted)] hover:text-[var(--theme-fg)] border border-[var(--theme-border)]"
+                }`}
               >
-                <Download size={14} className="text-[var(--theme-accent)]" />
-                <span>Export Data</span>
+                ★ 10-Star System
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSelectRatingSystem("score")}
+                className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition cursor-pointer ${
+                  preferredRatingSystem === "score"
+                    ? "bg-amber-400 text-zinc-950 shadow-xs"
+                    : "bg-[var(--theme-card)] text-[var(--theme-muted)] hover:text-[var(--theme-fg)] border border-[var(--theme-border)]"
+                }`}
+              >
+                0–100 Score
+              </button>
+            </div>
+          </div>
+
+          {/* Default Privacy Choice */}
+          <div className="p-4 rounded-2xl bg-[var(--theme-surface)]/80 border border-[var(--theme-border)] space-y-2">
+            <span className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--theme-muted)]">
+              Default Journal Visibility
+            </span>
+            <div className="flex items-center gap-2 pt-1">
+              <button
+                type="button"
+                onClick={handleToggleDefaultPublic}
+                className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                  defaultIsPublic
+                    ? "bg-emerald-500/15 border border-emerald-500/30 text-emerald-400"
+                    : "bg-zinc-800 text-zinc-400 border border-zinc-700"
+                }`}
+              >
+                <Globe size={13} />
+                <span>{defaultIsPublic ? "Public Logs (Default)" : "Private Only"}</span>
               </button>
             </div>
           </div>
         </div>
-
-        {/* Stats Row */}
-        <div className='grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4'>
-          <div 
-            onClick={() => setActiveTab('tracks')}
-            className={`p-4 rounded-2xl border transition-all cursor-pointer ${
-              activeTab === 'tracks'
-                ? 'bg-[var(--theme-surface)] border-[var(--theme-accent)]/50 shadow-md' 
-                : 'bg-[var(--theme-card)]/80 border-[var(--theme-border)] hover:border-[var(--theme-accent)]/30'
-            }`}
-          >
-            <div className="flex items-center gap-2 text-xs font-semibold text-[var(--theme-muted)] mb-1">
-              <Music size={14} className="text-[var(--theme-accent)]" />
-              <span>Saved Tracks</span>
-            </div>
-            <div className="text-2xl font-black text-[var(--theme-fg)]">{savedSongs.length}</div>
-          </div>
-
-          <div 
-            onClick={() => setActiveTab('albums')}
-            className={`p-4 rounded-2xl border transition-all cursor-pointer ${
-              activeTab === 'albums' 
-                ? 'bg-[var(--theme-surface)] border-[var(--theme-accent)]/50 shadow-md' 
-                : 'bg-[var(--theme-card)]/80 border-[var(--theme-border)] hover:border-[var(--theme-accent)]/30'
-            }`}
-          >
-            <div className="flex items-center gap-2 text-xs font-semibold text-[var(--theme-muted)] mb-1">
-              <Disc size={14} className="text-[var(--theme-accent)]" />
-              <span>Saved Albums</span>
-            </div>
-            <div className="text-2xl font-black text-[var(--theme-fg)]">{savedAlbums.length}</div>
-          </div>
-
-          <div 
-            onClick={() => setActiveTab('artists')}
-            className={`p-4 rounded-2xl border transition-all cursor-pointer ${
-              activeTab === 'artists' 
-                ? 'bg-[var(--theme-surface)] border-[var(--theme-accent)]/50 shadow-md' 
-                : 'bg-[var(--theme-card)]/80 border-[var(--theme-border)] hover:border-[var(--theme-accent)]/30'
-            }`}
-          >
-            <div className="flex items-center gap-2 text-xs font-semibold text-[var(--theme-muted)] mb-1">
-              <Users size={14} className="text-[var(--theme-accent)]" />
-              <span>Saved Artists</span>
-            </div>
-            <div className="text-2xl font-black text-[var(--theme-fg)]">{savedArtists.length}</div>
-          </div>
-
-          <div 
-            onClick={() => setActiveTab('reviews')}
-            className={`p-4 rounded-2xl border transition-all cursor-pointer ${
-              activeTab === 'reviews' 
-                ? 'bg-[var(--theme-surface)] border-[var(--theme-accent)]/50 shadow-md' 
-                : 'bg-[var(--theme-card)]/80 border-[var(--theme-border)] hover:border-[var(--theme-accent)]/30'
-            }`}
-          >
-            <div className="flex items-center gap-2 text-xs font-semibold text-[var(--theme-muted)] mb-1">
-              <MessageSquare size={14} className="text-[var(--theme-accent)]" />
-              <span>My Reviews</span>
-            </div>
-            <div className="text-2xl font-black text-[var(--theme-fg)]">{userReviews.length}</div>
-          </div>
-        </div>
-
-        {/* Tab Selector Navigation */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-[var(--theme-border)] scrollbar-none">
-          {[
-            { id: 'tracks', label: `Saved Tracks (${savedSongs.length})` },
-            { id: 'albums', label: `Saved Albums (${savedAlbums.length})` },
-            { id: 'artists', label: `Saved Artists (${savedArtists.length})` },
-            { id: 'playlists', label: `Playlists (${savedPlaylists.length})` },
-            { id: 'reviews', label: `My Reviews (${userReviews.length})` },
-            { id: 'genres', label: `Music Taste` },
-          ].map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap ${
-                activeTab === tab.id
-                  ? 'bg-[var(--theme-accent-bg)] text-[var(--theme-accent-fg)] shadow-md font-bold'
-                  : 'bg-[var(--theme-surface)] text-[var(--theme-muted)] hover:text-[var(--theme-fg)] border border-[var(--theme-border)]'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Tab 1: Saved Tracks */}
-        {activeTab === 'tracks' && (
-          <div className="space-y-3">
-            {savedSongs.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {savedSongs.map((song, idx) => {
-                  const songId = song.trackId || (song.trackURI ? song.trackURI.split(':').pop() : null);
-                  const artists = Array.isArray(song.artist) 
-                    ? song.artist.map(a => a.name).join(', ') 
-                    : song.artist || 'Unknown';
-                  return (
-                    <div 
-                      key={song.trackURI || idx}
-                      className="p-3.5 rounded-2xl bg-[var(--theme-card)]/80 border border-[var(--theme-border)] flex items-center justify-between gap-3 hover:border-[var(--theme-accent)]/30 transition group shadow-sm"
-                    >
-                      <div className="flex items-center gap-3 min-w-0 flex-1">
-                        <img 
-                          src={song.image || 'https://placehold.co/100x100/10141F/60A5FA?text=Track'} 
-                          alt={song.title}
-                          className="w-12 h-12 rounded-xl object-cover flex-shrink-0 bg-[var(--theme-surface)]"
-                          onError={(e) => { e.currentTarget.src = 'https://placehold.co/100x100/10141F/60A5FA?text=Track'; }}
-                        />
-                        <div className="min-w-0 flex-1">
-                          {songId ? (
-                            <Link 
-                              href={`/track/${songId}`}
-                              className="text-sm font-bold text-[var(--theme-fg)] hover:text-[var(--theme-accent)] truncate block transition"
-                            >
-                              {song.title}
-                            </Link>
-                          ) : (
-                            <span className="text-sm font-bold text-[var(--theme-fg)] truncate block">{song.title}</span>
-                          )}
-                          <p className="text-xs text-[var(--theme-muted)] truncate">{artists}</p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-1.5 flex-shrink-0">
-                        {songId && (
-                          <Link 
-                            href={`/track/${songId}`}
-                            className="p-2 rounded-xl bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] text-[var(--theme-muted)] hover:text-[var(--theme-fg)] transition"
-                            title="View Track"
-                          >
-                            <ExternalLink size={14} />
-                          </Link>
-                        )}
-                        <button
-                          onClick={() => handleRemoveSong(song.trackURI, song.trackId, song.title)}
-                          className="p-2 rounded-xl bg-[var(--theme-surface)] hover:bg-red-500/20 text-[var(--theme-muted)] hover:text-red-400 transition cursor-pointer"
-                          title="Remove from Saved"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="text-center p-12 rounded-3xl bg-[var(--theme-card)]/50 border border-[var(--theme-border)]">
-                <Music size={32} className="mx-auto text-[var(--theme-muted)]/50 mb-3" />
-                <h3 className="text-base font-bold text-[var(--theme-fg)] mb-1">No Saved Tracks</h3>
-                <p className="text-xs text-[var(--theme-muted)] mb-4">You haven't bookmarked any tracks yet.</p>
-                <Link 
-                  href="/search"
-                  className="px-4 py-2 rounded-xl bg-[var(--theme-accent-bg)] hover:opacity-90 text-[var(--theme-accent-fg)] text-xs font-bold uppercase tracking-wider inline-flex items-center gap-2 transition"
-                >
-                  Explore Catalog
-                </Link>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Tab 2: Saved Albums */}
-        {activeTab === 'albums' && (
-          <div className="space-y-3">
-            {savedAlbums.length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                {savedAlbums.map((album, idx) => {
-                  const albumId = album.id;
-                  const artists = Array.isArray(album.artist) 
-                    ? album.artist.map(a => a.name).join(', ') 
-                    : Array.isArray(album.artists) 
-                    ? album.artists.map(a => a.name).join(', ')
-                    : album.artist || 'Various Artists';
-                  return (
-                    <div 
-                      key={album.id || idx}
-                      className="p-3 rounded-2xl bg-[var(--theme-card)]/80 border border-[var(--theme-border)] flex flex-col justify-between hover:border-[var(--theme-accent)]/30 transition group shadow-sm"
-                    >
-                      <div className="relative aspect-square w-full rounded-xl overflow-hidden mb-3 bg-[var(--theme-surface)]">
-                        <img 
-                          src={album.image || 'https://placehold.co/300x300/10141F/60A5FA?text=Album'} 
-                          alt={album.title || album.name}
-                          className="w-full h-full object-cover transition duration-300 group-hover:scale-105"
-                          onError={(e) => { e.currentTarget.src = 'https://placehold.co/300x300/10141F/60A5FA?text=Album'; }}
-                        />
-                      </div>
-                      <div className="mb-2">
-                        {albumId ? (
-                          <Link 
-                            href={`/album/${albumId}`}
-                            className="text-xs sm:text-sm font-bold text-[var(--theme-fg)] hover:text-[var(--theme-accent)] truncate block transition"
-                          >
-                            {album.title || album.name}
-                          </Link>
-                        ) : (
-                          <span className="text-xs sm:text-sm font-bold text-[var(--theme-fg)] truncate block">{album.title || album.name}</span>
-                        )}
-                        <p className="text-[11px] text-[var(--theme-muted)] truncate">{artists}</p>
-                      </div>
-                      <div className="flex items-center justify-between pt-2 border-t border-[var(--theme-border)]">
-                        {albumId && (
-                          <Link 
-                            href={`/album/${albumId}`}
-                            className="text-[10px] text-[var(--theme-accent)] font-bold uppercase tracking-wider hover:underline"
-                          >
-                            Open Album
-                          </Link>
-                        )}
-                        <button
-                          onClick={() => handleRemoveAlbum(album.id, album.title || album.name)}
-                          className="p-1 text-[var(--theme-muted)] hover:text-red-400 transition cursor-pointer"
-                          title="Remove Album"
-                        >
-                          <Trash2 size={13} />
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="text-center p-12 rounded-3xl bg-[var(--theme-card)]/50 border border-[var(--theme-border)]">
-                <Disc size={32} className="mx-auto text-[var(--theme-muted)]/50 mb-3" />
-                <h3 className="text-base font-bold text-[var(--theme-fg)] mb-1">No Saved Albums</h3>
-                <p className="text-xs text-[var(--theme-muted)] mb-4">You haven't bookmarked any albums yet.</p>
-                <Link 
-                  href="/search"
-                  className="px-4 py-2 rounded-xl bg-[var(--theme-accent-bg)] hover:opacity-90 text-[var(--theme-accent-fg)] text-xs font-bold uppercase tracking-wider inline-flex items-center gap-2 transition"
-                >
-                  Find Albums
-                </Link>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Tab 3: Saved Artists */}
-        {activeTab === 'artists' && (
-          <div className="space-y-3">
-            {savedArtists.length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                {savedArtists.map((art, idx) => {
-                  const artistId = art.id;
-                  const name = art.name || art.title;
-                  return (
-                    <div 
-                      key={art.id || idx}
-                      className="p-4 rounded-2xl bg-[var(--theme-card)]/80 border border-[var(--theme-border)] flex flex-col items-center text-center hover:border-[var(--theme-accent)]/30 transition group shadow-sm"
-                    >
-                      <div className="w-24 h-24 rounded-full overflow-hidden mb-3 border-2 border-[var(--theme-border)] bg-[var(--theme-surface)]">
-                        <img 
-                          src={art.image || 'https://placehold.co/200x200/10141F/60A5FA?text=Artist'} 
-                          alt={name}
-                          className="w-full h-full object-cover transition duration-300 group-hover:scale-105"
-                          onError={(e) => { e.currentTarget.src = 'https://placehold.co/200x200/10141F/60A5FA?text=Artist'; }}
-                        />
-                      </div>
-                      {artistId ? (
-                        <Link 
-                          href={`/artist/${artistId}`}
-                          className="text-xs sm:text-sm font-bold text-[var(--theme-fg)] hover:text-[var(--theme-accent)] truncate w-full block transition mb-1"
-                        >
-                          {name}
-                        </Link>
-                      ) : (
-                        <span className="text-xs sm:text-sm font-bold text-[var(--theme-fg)] truncate w-full block mb-1">{name}</span>
-                      )}
-                      <p className="text-[10px] text-[var(--theme-muted)] mb-3">Artist Profile</p>
-                      
-                      <button
-                        onClick={() => handleRemoveArtist(art.id, name)}
-                        className="px-3 py-1 rounded-full bg-[var(--theme-surface)] hover:bg-red-500/20 text-[var(--theme-muted)] hover:text-red-400 text-[10px] font-semibold transition cursor-pointer"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="text-center p-12 rounded-3xl bg-[var(--theme-card)]/50 border border-[var(--theme-border)]">
-                <Users size={32} className="mx-auto text-[var(--theme-muted)]/50 mb-3" />
-                <h3 className="text-base font-bold text-[var(--theme-fg)] mb-1">No Saved Artists</h3>
-                <p className="text-xs text-[var(--theme-muted)] mb-4">Follow artists to stay updated on their discography.</p>
-                <Link 
-                  href="/search"
-                  className="px-4 py-2 rounded-xl bg-[var(--theme-accent-bg)] hover:opacity-90 text-[var(--theme-accent-fg)] text-xs font-bold uppercase tracking-wider inline-flex items-center gap-2 transition"
-                >
-                  Discover Artists
-                </Link>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Tab 4: Custom Playlists */}
-        {activeTab === 'playlists' && (
-          <div className="space-y-3">
-            {savedPlaylists.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                {savedPlaylists.map((pl, idx) => (
-                  <div 
-                    key={pl.id || idx}
-                    className="p-4 rounded-2xl bg-[var(--theme-card)]/80 border border-[var(--theme-border)] flex flex-col justify-between hover:border-[var(--theme-accent)]/30 transition group shadow-sm"
-                  >
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-[10px] uppercase tracking-wider font-bold text-[var(--theme-accent)]">Custom Playlist</span>
-                        <span className="text-xs text-[var(--theme-muted)]">{pl.tracks?.items?.length || 0} tracks</span>
-                      </div>
-                      <Link 
-                        href={`/playlist/${pl.id}`}
-                        className="text-base font-bold text-[var(--theme-fg)] hover:text-[var(--theme-accent)] block transition mb-1"
-                      >
-                        {pl.name || 'My Playlist'}
-                      </Link>
-                      {pl.description && (
-                        <p className="text-xs text-[var(--theme-muted)] line-clamp-2 mb-3">{pl.description}</p>
-                      )}
-                    </div>
-
-                    <div className="flex items-center justify-between pt-3 border-t border-[var(--theme-border)]">
-                      <Link 
-                        href={`/playlist/${pl.id}`}
-                        className="text-xs text-[var(--theme-accent)] font-bold uppercase tracking-wider hover:underline"
-                      >
-                        Open Playlist
-                      </Link>
-                      <button
-                        onClick={() => handleDeletePlaylist(pl.id, pl.name)}
-                        className="p-1.5 text-[var(--theme-muted)] hover:text-red-400 transition cursor-pointer"
-                        title="Delete Playlist"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center p-12 rounded-3xl bg-[var(--theme-card)]/50 border border-[var(--theme-border)]">
-                <Heart size={32} className="mx-auto text-[var(--theme-muted)]/50 mb-3" />
-                <h3 className="text-base font-bold text-[var(--theme-fg)] mb-1">No Custom Playlists</h3>
-                <p className="text-xs text-[var(--theme-muted)] mb-4">Create your first custom playlist from any track's options menu.</p>
-                <Link 
-                  href="/library"
-                  className="px-4 py-2 rounded-xl bg-[var(--theme-accent-bg)] hover:opacity-90 text-[var(--theme-accent-fg)] text-xs font-bold uppercase tracking-wider inline-flex items-center gap-2 transition"
-                >
-                  Go to Library
-                </Link>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Tab 5: My Reviews */}
-        {activeTab === 'reviews' && (
-          <div className="space-y-3">
-            {userReviews.length > 0 ? (
-              <div className="space-y-3">
-                {userReviews.map((rev) => (
-                  <div 
-                    key={rev.id}
-                    className="p-4 rounded-2xl bg-[var(--theme-card)]/80 border border-[var(--theme-border)] flex flex-col gap-2 shadow-sm"
-                  >
-                    <div className="flex items-center justify-between flex-wrap gap-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-[var(--theme-accent)] uppercase tracking-wider">
-                          Review for Catalog ID: {rev.itemId.slice(0, 16)}...
-                        </span>
-                        <span className="text-amber-400 text-xs font-bold">{rev.score} / 5 ★</span>
-                      </div>
-                      <span className="text-[11px] text-[var(--theme-muted)]">{rev.date}</span>
-                    </div>
-                    <p className="text-sm text-[var(--theme-fg)]/90 italic">"{rev.text}"</p>
-                    {rev.itemId && (
-                      <div className="pt-2 flex justify-end">
-                        <Link 
-                          href={`/track/${rev.itemId}`}
-                          className="inline-flex items-center gap-1.5 text-xs text-[var(--theme-accent)] hover:underline font-semibold"
-                        >
-                          <span>View Music Item</span>
-                          <ChevronRight size={13} />
-                        </Link>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center p-12 rounded-3xl bg-[var(--theme-card)]/50 border border-[var(--theme-border)]">
-                <MessageSquare size={32} className="mx-auto text-[var(--theme-muted)]/50 mb-3" />
-                <h3 className="text-base font-bold text-[var(--theme-fg)] mb-1">No Reviews Written Yet</h3>
-                <p className="text-xs text-[var(--theme-muted)] mb-4">Share your ratings and comments on any track, album, or artist page.</p>
-                <Link 
-                  href="/"
-                  className="px-4 py-2 rounded-xl bg-[var(--theme-accent-bg)] hover:opacity-90 text-[var(--theme-accent-fg)] text-xs font-bold uppercase tracking-wider inline-flex items-center gap-2 transition"
-                >
-                  Explore Trending Music
-                </Link>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Tab 6: Music Taste & Genres */}
-        {activeTab === 'genres' && (
-          <div className="bg-[var(--theme-card)]/80 border border-[var(--theme-border)] rounded-3xl p-6 sm:p-8 space-y-6 shadow-sm">
-            <div>
-              <h3 className="text-lg font-bold text-[var(--theme-fg)] mb-1">Customize Your Music Taste</h3>
-              <p className="text-xs text-[var(--theme-muted)]">
-                Select the genres that define your sound. We use these tags to tailor recommendations on your home dashboard.
-              </p>
-            </div>
-
-            <div className="flex flex-wrap gap-2.5">
-              {AVAILABLE_GENRES.map((genre) => {
-                const isSelected = favoriteGenres.includes(genre);
-                return (
-                  <button
-                    key={genre}
-                    onClick={() => handleToggleGenre(genre)}
-                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
-                      isSelected
-                        ? 'bg-[var(--theme-accent-bg)] text-[var(--theme-accent-fg)] shadow-md border border-[var(--theme-border-active)] font-bold'
-                        : 'bg-[var(--theme-surface)] text-[var(--theme-muted)] hover:text-[var(--theme-fg)] hover:bg-[var(--theme-card)] border border-[var(--theme-border)]'
-                    }`}
-                  >
-                    <span>#{genre}</span>
-                    {isSelected ? <Check size={13} /> : <Plus size={13} />}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
       </div>
+
+      {/* 4. RECENT CRITIC ACTIVITY (Last 3 Journal Entries using New Card Hierarchy) */}
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <BookOpen size={20} className="text-amber-300" />
+            <h2 className="text-2xl font-black tracking-tight font-display text-[var(--theme-fg)]">
+              Recent Journal Activity
+            </h2>
+          </div>
+          <Link
+            href="/journal"
+            className="text-xs font-bold text-amber-300 hover:underline flex items-center gap-1"
+          >
+            <span>View Complete Archive</span>
+            <ArrowRight size={13} />
+          </Link>
+        </div>
+
+        {journalLogs.length === 0 ? (
+          <div className="p-8 rounded-3xl bg-[var(--theme-card)]/60 border border-[var(--theme-border)] text-center space-y-3">
+            <BookOpen size={28} className="mx-auto text-[var(--theme-muted)]" />
+            <h3 className="text-base font-bold text-[var(--theme-fg)]">No Journal Entries Yet</h3>
+            <p className="text-xs text-[var(--theme-muted)] max-w-sm mx-auto">
+              Whenever you listen to music, tap Rate on any album or track to log reflections and scores.
+            </p>
+            <Link
+              href="/search"
+              className="inline-flex items-center gap-1.5 px-5 py-2 rounded-full bg-amber-400 text-zinc-950 font-black text-xs hover:scale-105 active:scale-95 transition shadow-sm mt-2"
+            >
+              <Sparkles size={13} />
+              <span>Explore & Log Music</span>
+            </Link>
+          </div>
+        ) : (
+          <div className="space-y-5">
+            {journalLogs.slice(0, 3).map((entry) => (
+              <JournalCard
+                key={entry.id}
+                entry={entry}
+                isOwner={true}
+                onEdit={(e) => {
+                  setModalItem({
+                    id: e.targetId,
+                    type: e.targetType || "album",
+                    title: e.title,
+                    subtitle: e.subtitle,
+                    image: e.image,
+                    initialRating: e.rating,
+                    initialReview: e.review,
+                    journalEntryId: e.id,
+                  });
+                  setIsModalOpen(true);
+                }}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* 5. DIRECT SHORTCUT TO LIBRARY (Clean separation from Account) */}
+      <div className="p-6 sm:p-7 rounded-3xl bg-gradient-to-r from-amber-400/10 via-[var(--theme-card)] to-[var(--theme-card)] border border-amber-400/25 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-lg">
+        <div className="space-y-1">
+          <div className="inline-flex items-center gap-1 text-[10px] font-mono font-bold uppercase tracking-widest text-amber-300">
+            <ListMusic size={12} />
+            <span>Saved Music Collection</span>
+          </div>
+          <h3 className="text-lg sm:text-xl font-black text-[var(--theme-fg)]">
+            Explore Your Library
+          </h3>
+          <p className="text-xs sm:text-sm text-[var(--theme-muted)]">
+            Your {savedCounts.songs} saved tracks, {savedCounts.albums} albums, {savedCounts.artists} artists, and custom playlists are organized in your Library.
+          </p>
+        </div>
+
+        <Link
+          href="/library"
+          className="px-5 py-2.5 rounded-full bg-amber-400 text-zinc-950 font-black text-xs hover:scale-105 active:scale-95 transition-all shadow-md flex items-center justify-center gap-1.5 shrink-0"
+        >
+          <span>Open Library</span>
+          <ArrowRight size={13} />
+        </Link>
+      </div>
+
+      {/* 6. DATA BACKUP & SESSION MANAGEMENT */}
+      <div className="pt-4 border-t border-[var(--theme-border)]/70 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <button
+          onClick={handleExportData}
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] border border-[var(--theme-border)] text-xs font-bold text-[var(--theme-fg)] transition shadow-sm cursor-pointer"
+          title="Download complete JSON backup"
+        >
+          <Download size={14} className="text-amber-300" />
+          <span>Export Critic Data (JSON)</span>
+        </button>
+
+        <p className="text-[11px] font-mono text-[var(--theme-muted)]">
+          GrooveEstrella Music Journal · Phase 1 Foundation
+        </p>
+      </div>
+
+      {/* Edit Profile Modal */}
+      {isEditingProfile && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-md px-4">
+          <div className="absolute inset-0" onClick={() => setIsEditingProfile(false)} />
+          <div className="relative max-w-md w-full bg-[var(--theme-card)] border border-[var(--theme-border)] rounded-3xl p-6 sm:p-8 shadow-2xl z-10 text-[var(--theme-fg)] space-y-5">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xl font-black font-display text-[var(--theme-fg)]">
+                Edit Critic Profile
+              </h3>
+              <button
+                onClick={() => setIsEditingProfile(false)}
+                className="p-1.5 rounded-xl hover:bg-white/10 text-[var(--theme-muted)] cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveProfile} className="space-y-4">
+              <div>
+                <label className="block text-xs font-mono font-bold text-[var(--theme-muted)] uppercase tracking-wider mb-1.5">
+                  Display Name
+                </label>
+                <input
+                  type="text"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  placeholder="e.g. Sonic Voyager"
+                  className="w-full px-4 py-2.5 rounded-2xl bg-[var(--theme-surface)] border border-[var(--theme-border)] text-sm font-bold text-[var(--theme-fg)] focus:outline-none focus:border-amber-400/60"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-mono font-bold text-[var(--theme-muted)] uppercase tracking-wider mb-1.5">
+                  Bio / Critical Philosophy
+                </label>
+                <textarea
+                  value={editBio}
+                  onChange={(e) => setEditBio(e.target.value)}
+                  rows={4}
+                  placeholder="Share your music taste, favorite decades, or critical perspective..."
+                  className="w-full px-4 py-2.5 rounded-2xl bg-[var(--theme-surface)] border border-[var(--theme-border)] text-sm text-[var(--theme-fg)] focus:outline-none focus:border-amber-400/60 resize-none leading-relaxed"
+                />
+              </div>
+
+              <div className="flex items-center gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsEditingProfile(false)}
+                  className="flex-1 py-2.5 rounded-full border border-[var(--theme-border)] text-xs font-bold text-[var(--theme-muted)] hover:bg-[var(--theme-surface)] transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2.5 rounded-full bg-gradient-to-r from-amber-400 to-amber-300 text-zinc-950 text-xs font-black hover:opacity-90 transition cursor-pointer shadow-md"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Journal Entry Modal */}
+      {isModalOpen && modalItem && (
+        <RatingAndJournalModal
+          isOpen={isModalOpen}
+          onClose={() => {
+            setIsModalOpen(false);
+            setModalItem(null);
+            loadData();
+          }}
+          id={modalItem.id}
+          type={modalItem.type || "album"}
+          title={modalItem.title}
+          subtitle={modalItem.subtitle}
+          image={modalItem.image}
+          initialRating={modalItem.initialRating || 0}
+          initialReview={modalItem.initialReview || ""}
+          journalEntryId={modalItem.journalEntryId || null}
+          onSaved={() => {
+            loadData();
+          }}
+        />
+      )}
     </div>
   );
 }
 
-export default function UserDashboard() {
+export default function AccountPage() {
   return (
-    <Suspense fallback={
-      <GrooveLoader fullScreen={true} text="Loading Dashboard..." />
-    }>
-      <UserDashboardContent />
+    <Suspense
+      fallback={
+        <div className="min-h-screen py-24 text-center text-sm font-mono text-[var(--theme-muted)]">
+          Loading critic account...
+        </div>
+      }
+    >
+      <AccountDashboardContent />
     </Suspense>
   );
 }
