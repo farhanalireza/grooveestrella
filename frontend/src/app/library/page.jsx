@@ -285,7 +285,7 @@ export default function LibraryPage() {
       <div className="flex items-center justify-between gap-3 mb-6 sm:mb-8 flex-wrap">
         <div className="flex items-center gap-3">
           <FolderHeart className="w-8 h-8 text-[var(--theme-accent)]" />
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Your Library Collection</h1>
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight font-display">Your Library Collection</h1>
         </div>
 
         {activeTab === 'journal' && (

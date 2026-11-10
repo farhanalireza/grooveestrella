@@ -243,6 +243,7 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
         };
     }, [artist?.members]);
 
+    const members = safeMembers;
     const currentMembersCount = safeMembers.current.length;
     const ogCount = safeMembers.og.length;
     const totalLineupCount = currentMembersCount + safeMembers.past.length;
@@ -360,7 +361,7 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
                         </div>
 
                         {/* Artist Title */}
-                        <h1 className="text-3xl sm:text-5xl font-extrabold mb-2 leading-tight tracking-tight text-[var(--theme-fg)]">{artist.name}</h1>
+                        <h1 className="text-3xl sm:text-5xl font-extrabold mb-2 leading-tight tracking-tight text-[var(--theme-fg)] font-display">{artist.name}</h1>
                         
                         {/* Minimalist Single-Line Metadata Row */}
                         <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 text-xs font-semibold text-[var(--theme-muted)] mb-3">
@@ -911,7 +912,7 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
                 isOpen={isDetailsDrawerOpen}
                 onClose={() => setIsDetailsDrawerOpen(false)}
                 artist={artist}
-                members={members}
+                members={safeMembers}
                 bands={bands}
                 collaborations={collaborations}
                 description={artist.description}

@@ -335,7 +335,7 @@ export default function PlaylistDetailClient({ id, initialPlaylist }) {
 
                 {/* Playlist Title */}
                 <div className="mt-5 sm:mt-6 flex items-center justify-center gap-2 flex-wrap">
-                    <h1 className="text-2xl sm:text-3xl md:text-4xl font-black leading-tight text-white tracking-tight">
+                    <h1 className="text-2xl sm:text-3xl md:text-4xl font-black leading-tight text-white tracking-tight font-display">
                         {playlist.name}
                     </h1>
                 </div>

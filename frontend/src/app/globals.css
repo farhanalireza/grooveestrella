@@ -38,6 +38,7 @@
   --font-sans: var(--font-inter), sans-serif;
   --font-body: var(--font-inter), sans-serif;
   --font-display: var(--font-space-grotesk), sans-serif;
+  --font-title: var(--font-space-grotesk), sans-serif;
   --font-mono: var(--font-inter), sans-serif;
   --radius: 0.625rem;
 
@@ -112,7 +113,8 @@
   --ring: #E8A87C;
 }
 
-body, button, input, select, textarea, p, span, div, a, label {
+/* Base body and interactive controls default to Inter */
+body, button, input, select, textarea {
   font-family: var(--font-sans), system-ui, sans-serif;
 }
 
@@ -124,8 +126,13 @@ body {
   transition: background-color 0.25s ease, color 0.25s ease;
 }
 
-h1, h2, h3, h4, h5, h6, .font-display {
-  font-family: var(--font-display) !important;
+/* Enforce Space Grotesk as the display and title font across all pages */
+h1, h2, h3, h4, h5, h6,
+h1 *, h2 *, h3 *, h4 *, h5 *, h6 *,
+.font-display, .font-display *,
+.font-title, .font-title *,
+.title-font, .title-font * {
+  font-family: var(--font-space-grotesk), var(--font-display), sans-serif !important;
 }
 
 /* Strictly enforce Space-Grotesk + Inter only; redirect any monospace usage to clean Inter */
@@ -261,6 +268,7 @@ h1, h2, h3, h4, h5, h6, .font-display {
 @theme inline {
   --font-sans: var(--font-inter), sans-serif;
   --font-display: var(--font-space-grotesk), sans-serif;
+  --font-title: var(--font-space-grotesk), sans-serif;
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);

@@ -333,7 +333,7 @@ export default function TrackDetailClient({ id, initialData }) {
 
                 {/* Track Title with Explicit [E] badge */}
                 <div className="mt-5 sm:mt-6 flex items-center justify-center gap-2 flex-wrap">
-                    <h1 className="text-2xl sm:text-3xl md:text-4xl font-black leading-tight text-[var(--theme-fg)] tracking-tight">
+                    <h1 className="text-2xl sm:text-3xl md:text-4xl font-black leading-tight text-[var(--theme-fg)] tracking-tight font-display">
                         {track.name || track.title}
                     </h1>
                     {track.explicit && (

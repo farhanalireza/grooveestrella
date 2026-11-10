@@ -81,9 +81,9 @@ function rateLimitedGet(url, params = {}) {
       });
     } catch (err) {
       const status = err.response?.status;
-      if ((status === 503 || status === 429 || !err.response) && attempt < 3) {
-        const backoff = attempt * 1200;
-        console.warn(`MusicBrainz ${status || err.code || 'error'} on ${url}, retrying in ${backoff}ms (attempt ${attempt}/3)...`);
+      if ((status === 503 || status === 429 || !err.response) && attempt < 4) {
+        const backoff = attempt * 1500;
+        console.warn(`MusicBrainz ${status || err.code || 'error'} on ${url}, retrying in ${backoff}ms (attempt ${attempt}/4)...`);
         await new Promise((resolve) => setTimeout(resolve, backoff));
         return executeWithRetry(attempt + 1);
       }
@@ -1212,6 +1212,9 @@ export async function fetchMusicBrainzArtistServer(id) {
           artist: id,
           type: 'album|ep|single',
           limit: 100,
+        }).catch((err) => {
+          console.warn(`MusicBrainz release-group fetch warning for artist ${id}:`, err?.message);
+          return { data: { 'release-groups': [] } };
         }),
         resolveOpenArtistPhoto(artistData.name, artistData.id),
         resolveDescription(artistData.name, artistData.name, artistData.name, wikidataId, artistData.annotation, tags),

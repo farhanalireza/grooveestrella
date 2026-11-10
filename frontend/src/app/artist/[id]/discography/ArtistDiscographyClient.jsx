@@ -150,7 +150,7 @@ export default function ArtistDiscographyClient({ id, artist: initialArtist, all
                             <Disc size={13} />
                             <span>Complete Discography</span>
                         </div>
-                        <h1 className="text-3xl sm:text-5xl font-black text-[var(--theme-fg)] tracking-tight">
+                        <h1 className="text-3xl sm:text-5xl font-black text-[var(--theme-fg)] tracking-tight font-display">
                             {artist?.name || 'Artist'}
                         </h1>
                         <p className="text-xs sm:text-sm text-[var(--theme-muted)] font-medium mt-1">
