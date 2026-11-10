@@ -468,11 +468,11 @@ export default function TrackDetailClient({ id, initialData }) {
 
             </div>
 
-            {/* Segmented Navigation Tabs (Fluid, Responsive & Never Clipped) */}
-            <div className="sticky top-0 sm:top-2 z-30 py-3 bg-[var(--theme-bg)]/90 backdrop-blur-2xl border-y border-[var(--theme-border)]/50 mb-8 mt-4 transition-colors w-full">
-                <div className="w-full max-w-5xl mx-auto px-4 sm:px-6">
-                    <div className="overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden scrollb-none no-scrollbar py-0.5">
-                        <div className="flex items-center gap-2 sm:gap-2.5 min-w-max mx-auto px-1">
+            {/* Integrated Sticky Navigation Tabs (Part of the Page, Not an Isolated Component) */}
+            <div className="sticky top-0 z-30 bg-[var(--theme-bg)]/90 backdrop-blur-xl border-b border-[var(--theme-border)]/30 mt-6 mb-8 transition-colors w-full">
+                <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 md:px-12">
+                    <div className="overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden scrollb-none no-scrollbar">
+                        <div className="flex items-center gap-1 sm:gap-2 min-w-max">
                             {TRACK_TABS.map((tab) => {
                                 const isActive = activeTab === tab.id;
                                 const TabIcon = tab.icon;
@@ -480,13 +480,13 @@ export default function TrackDetailClient({ id, initialData }) {
                                     <button
                                         key={tab.id}
                                         onClick={() => setActiveTab(tab.id)}
-                                        className={`shrink-0 whitespace-nowrap px-4 py-2 rounded-full text-xs font-bold transition-all duration-200 cursor-pointer flex items-center gap-2 select-none active:scale-95 ${
+                                        className={`shrink-0 whitespace-nowrap py-3 px-3.5 sm:px-4 text-xs sm:text-sm font-bold transition-all duration-200 cursor-pointer flex items-center gap-2 select-none border-b-2 ${
                                             isActive
-                                                ? 'bg-[var(--theme-accent)] text-[var(--theme-accent-fg)] shadow-md shadow-[var(--theme-accent)]/20'
-                                                : 'text-[var(--theme-muted)] hover:text-[var(--theme-fg)] hover:bg-[var(--theme-surface)]'
+                                                ? 'border-[var(--theme-accent)] text-[var(--theme-fg)]'
+                                                : 'border-transparent text-[var(--theme-muted)] hover:text-[var(--theme-fg)]'
                                         }`}
                                     >
-                                        <TabIcon size={14} className="shrink-0" />
+                                        <TabIcon size={15} className={isActive ? "text-[var(--theme-accent)]" : "text-[var(--theme-muted)]"} />
                                         <span>{tab.label}</span>
                                     </button>
                                 );
