@@ -1,9 +1,8 @@
 // src/Components/CardComponents/UserCard.jsx
 "use client";
 
-import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Users, User, ArrowRight, Sparkles } from "lucide-react";
+import { Users, ArrowRight, Sparkles } from "lucide-react";
 
 export function UserCard({
   id,
@@ -14,20 +13,15 @@ export function UserCard({
   bio,
   followers = 0,
 }) {
-  const router = useRouter();
   const displayName = name || title || username || "Critic";
   const userHandle = username || "";
   const avatarSrc = url || `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(userHandle || id || "groove")}`;
-
-  const handleCardClick = () => {
-    if (userHandle) {
-      router.push(`/profile/${encodeURIComponent(userHandle)}`);
-    }
-  };
+  const profileHref = userHandle ? `/profile/${encodeURIComponent(userHandle)}` : "#";
 
   return (
-    <div
-      onClick={handleCardClick}
+    <Link
+      href={profileHref}
+      prefetch={true}
       className="group relative flex items-center justify-between p-3.5 sm:p-4 rounded-3xl bg-[var(--theme-card)]/80 hover:bg-[var(--theme-card)] border border-[var(--theme-border)] hover:border-[var(--theme-accent)] transition-all duration-300 shadow-md hover:shadow-xl cursor-pointer w-full text-left"
     >
       <div className="flex items-center gap-3.5 min-w-0 flex-1">
@@ -80,7 +74,7 @@ export function UserCard({
           <ArrowRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
         </div>
       </div>
-    </div>
+    </Link>
   );
 }
 

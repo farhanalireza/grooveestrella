@@ -145,7 +145,7 @@ export async function extractAdaptivePalette(imageUrl, fallbackTitle = "groove")
       const fallback = getHarmoniousFallback(fallbackTitle);
       paletteCache.set(imageUrl, fallback);
       resolve(fallback);
-    }, 2200);
+    }, 6500);
 
     img.onload = () => {
       clearTimeout(timeout);
@@ -232,11 +232,12 @@ export async function extractAdaptivePalette(imageUrl, fallbackTitle = "groove")
         // Check if artwork is predominantly achromatic (B&W or monochrome)
         const isMonochrome = validColoredPixels < totalPixels * 0.06;
 
-        let dominantHue = 210; // Default cool slate
-        let dominantSat = 35;
-        let accentHue = 40;   // Warm gold accent
+        let dominantHue = 210;
+        let dominantSat = 40;
+        let dominantLight = 22;
+        let accentHue = 40;
         let accentSat = 85;
-        let accentLight = 66;
+        let accentLight = 72;
 
         if (!isMonochrome) {
           // Score each bin: pixelCount * (avgSat^1.2) * lightness balance
@@ -247,7 +248,6 @@ export async function extractAdaptivePalette(imageUrl, fallbackTitle = "groove")
             if (bin.count === 0) return;
             const avgS = bin.totalS / bin.count;
             const avgL = bin.totalL / bin.count;
-            // Prefer saturated, lively hues over washed out colors
             const lightnessFactor = 1 - Math.abs(avgL - 50) / 75;
             const score = bin.count * Math.pow(avgS, 1.25) * Math.max(0.2, lightnessFactor);
 
@@ -259,64 +259,99 @@ export async function extractAdaptivePalette(imageUrl, fallbackTitle = "groove")
 
           if (bestBinIndex >= 0) {
             const bestBin = bins[bestBinIndex];
-            const avgS = Math.round(bestBin.totalS / bestBin.count);
-            dominantHue = Math.round((bestBinIndex + 0.5) * (360 / BIN_COUNT));
-            dominantSat = Math.max(28, Math.min(65, avgS));
+            const avgR = Math.round(bestBin.totalR / bestBin.count);
+            const avgG = Math.round(bestBin.totalG / bestBin.count);
+            const avgB = Math.round(bestBin.totalB / bestBin.count);
+            const [binH, binS, binL] = rgbToHsl(avgR, avgG, avgB);
 
-            // Select accent: use the most vibrant pixel from the art, or complementary/analogous
+            dominantHue = binH;
+
+            // Focus FIRST on preserving the authentic primary cover color for the background:
+            // Preserve genuine light-pastel covers (e.g. bright cream/pastel covers) vs vibrant saturated covers (e.g. MBDTF crimson)
+            if (binL >= 76 && whitePixelsCount > totalPixels * 0.45) {
+              dominantSat = Math.min(binS, 42);
+              dominantLight = Math.min(88, Math.max(76, binL));
+            } else {
+              dominantSat = binS >= 42 ? Math.min(86, Math.max(58, binS)) : Math.max(24, binS);
+              dominantLight = Math.max(20, Math.min(31, Math.round(binL * 0.56)));
+            }
+
+            // Select vibrant contrasting accent
             if (mostVibrantPixel && mostVibrantPixel.s >= 40) {
               accentHue = mostVibrantPixel.h;
-              accentSat = Math.max(mostVibrantPixel.s, 75);
-              accentLight = Math.max(58, Math.min(72, mostVibrantPixel.l));
+              accentSat = Math.max(mostVibrantPixel.s, 78);
+              accentLight = Math.max(66, Math.min(78, mostVibrantPixel.l));
             } else {
               accentHue = (dominantHue + 35) % 360;
               accentSat = 85;
-              accentLight = 66;
+              accentLight = 72;
             }
           }
         } else {
-          // Monochrome / Black & White cover:
-          // Give it a sleek, luxurious deep obsidian slate with warm gold/champagne accent
-          dominantHue = 220;
-          dominantSat = 16;
-          accentHue = 42;
-          accentSat = 88;
-          accentLight = 68;
+          // Monochrome / Black & White / White Album cover:
+          if (whitePixelsCount > totalPixels * 0.62) {
+            dominantHue = 40;
+            dominantSat = 12;
+            dominantLight = 88;
+            accentHue = 220;
+            accentSat = 65;
+            accentLight = 38;
+          } else {
+            dominantHue = 220;
+            dominantSat = 16;
+            dominantLight = 13;
+            accentHue = 42;
+            accentSat = 88;
+            accentLight = 70;
+          }
         }
 
-        // Synthesize rich, distinct background colors directly from the extracted hue!
-        // Never hardcoded purple:
-        // - Blue covers -> Deep midnight navy
-        // - Green covers -> Deep emerald pine
-        // - Orange/Red covers -> Rich dark terracotta / mahogany
-        // - Yellow/Amber covers -> Rich dark bronze / espresso gold
-        // - Cyan covers -> Deep ocean teal
-        const bgHex = hslToHex(dominantHue, Math.min(dominantSat, 42), 11);
-        const ambientTop = hslToHex(dominantHue, Math.min(dominantSat + 18, 58), 22);
-        const deepBase = hslToHex(dominantHue, Math.min(dominantSat, 32), 7);
-        const accentColor = hslToHex(accentHue, accentSat, accentLight);
-        const accentBg = hslToHex(accentHue, Math.max(45, accentSat - 15), 48);
-
+        // 1. Primary Background Color FIRST (authentic Apple Music style rich cover hue, never washed-out 11% mud)
+        const bgHex = hslToHex(dominantHue, dominantSat, dominantLight);
         const rNum = parseInt(bgHex.slice(1, 3), 16);
         const gNum = parseInt(bgHex.slice(3, 5), 16);
         const bNum = parseInt(bgHex.slice(5, 7), 16);
+        const bgLum = getLuminance(rNum, gNum, bNum);
+        const isLightBg = bgLum > 0.34;
+
+        const ambientTop = isLightBg
+          ? hslToHex(dominantHue, Math.min(dominantSat + 10, 50), Math.min(94, dominantLight + 5))
+          : hslToHex(dominantHue, Math.min(dominantSat + 8, 90), Math.min(38, dominantLight + 9));
+        const deepBase = bgHex;
+
+        // 2. Foreground & Surfaces SECOND — derived purely for optimal contrast against bgHex
+        const fg = isLightBg ? "#110D14" : "#FFFFFF";
+        const muted = isLightBg ? "rgba(17, 13, 20, 0.72)" : "rgba(255, 255, 255, 0.74)";
+        const surface = isLightBg ? "rgba(17, 13, 20, 0.08)" : "rgba(255, 255, 255, 0.11)";
+        const card = isLightBg ? "rgba(17, 13, 20, 0.06)" : "rgba(255, 255, 255, 0.09)";
+        const border = isLightBg ? "rgba(17, 13, 20, 0.14)" : "rgba(255, 255, 255, 0.15)";
+        const surfaceElevated = isLightBg
+          ? "rgba(255, 255, 255, 0.88)"
+          : `rgba(${Math.max(0, rNum - 14)}, ${Math.max(0, gNum - 14)}, ${Math.max(0, bNum - 14)}, 0.90)`;
+
+        const accentColor = isLightBg
+          ? hslToHex(accentHue, Math.max(accentSat, 72), 34)
+          : hslToHex(accentHue, Math.max(accentSat, 75), Math.max(70, accentLight));
+        const accentBg = accentColor;
+        const accentFg = isLightBg ? "#FFFFFF" : "#110D14";
 
         const resultPalette = {
           bg: bgHex,
           ambientTop,
           deepBase,
-          fg: "#FFFDF9",
+          isLightBg,
+          fg,
           accent: accentColor,
           accentBg,
-          accentFg: "#0D0F14",
-          surface: `rgba(${rNum + 24}, ${gNum + 24}, ${bNum + 24}, 0.60)`,
-          surfaceElevated: `rgba(${rNum + 38}, ${gNum + 38}, ${bNum + 38}, 0.88)`,
-          card: `rgba(${rNum + 28}, ${gNum + 28}, ${bNum + 28}, 0.68)`,
-          border: "rgba(255, 253, 249, 0.15)",
+          accentFg,
+          surface,
+          surfaceElevated,
+          card,
+          border,
           borderActive: accentColor,
-          muted: "rgba(255, 253, 249, 0.72)",
+          muted,
           plum: ambientTop,
-          gradient: `radial-gradient(ellipse at 50% -10%, ${ambientTop} 0%, ${bgHex} 62%, ${deepBase} 100%)`,
+          gradient: `linear-gradient(180deg, ${ambientTop} 0%, ${bgHex} 38%, ${bgHex} 100%)`,
         };
 
         paletteCache.set(imageUrl, resultPalette);

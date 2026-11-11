@@ -1,7 +1,7 @@
 // src/contexts/SupabaseAuthContext.jsx
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import { toast } from "@/lib/toast";
 
@@ -24,24 +24,36 @@ export function SupabaseAuthProvider({ children }) {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
   const [configured, setConfigured] = useState(false);
+  const fetchedUserIdRef = useRef(null);
+  const inFlightProfileRef = useRef(null);
 
-  const fetchProfile = useCallback(async (userId, client) => {
+  const fetchProfile = useCallback(async (userId, client, { force = false } = {}) => {
     if (!userId || !client) return null;
-    try {
-      const { data, error } = await client
-        .from("profiles")
-        .select("*")
-        .eq("id", userId)
-        .maybeSingle();
-
-      if (!error && data) {
-        setProfile(data);
-        return data;
-      }
-    } catch (err) {
-      console.warn("Failed to fetch user profile:", err?.message);
+    if (!force && fetchedUserIdRef.current === userId && inFlightProfileRef.current) {
+      return inFlightProfileRef.current;
     }
-    return null;
+    const req = (async () => {
+      try {
+        const { data, error } = await client
+          .from("profiles")
+          .select("*")
+          .eq("id", userId)
+          .maybeSingle();
+
+        if (!error && data) {
+          fetchedUserIdRef.current = userId;
+          setProfile(data);
+          return data;
+        }
+      } catch (err) {
+        console.warn("Failed to fetch user profile:", err?.message);
+      }
+      return null;
+    })();
+    inFlightProfileRef.current = req;
+    const res = await req;
+    inFlightProfileRef.current = null;
+    return res;
   }, []);
 
   useEffect(() => {
@@ -67,25 +79,18 @@ export function SupabaseAuthProvider({ children }) {
 
     const supabase = createClient();
 
-    // 1. Check initial active session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchProfile(session.user.id, supabase);
-      }
-      setLoading(false);
-    });
-
-    // 2. Listen for auth state changes (sign in, sign out, token refresh)
+    // Listen for initial session + auth state changes (avoids double query vs getSession)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
 
         if (currentSession?.user) {
-          await fetchProfile(currentSession.user.id, supabase);
+          if (fetchedUserIdRef.current !== currentSession.user.id || event === "USER_UPDATED") {
+            await fetchProfile(currentSession.user.id, supabase);
+          }
         } else {
+          fetchedUserIdRef.current = null;
           setProfile(null);
         }
         setLoading(false);
@@ -155,6 +160,7 @@ export function SupabaseAuthProvider({ children }) {
       const supabase = createClient();
       await supabase.auth.signOut();
     }
+    fetchedUserIdRef.current = null;
     setUser(null);
     setProfile(null);
     setSession(null);
@@ -191,7 +197,7 @@ export function SupabaseAuthProvider({ children }) {
   const refreshProfile = async () => {
     if (user) {
       const supabase = createClient();
-      await fetchProfile(user.id, supabase);
+      await fetchProfile(user.id, supabase, { force: true });
     }
   };
 

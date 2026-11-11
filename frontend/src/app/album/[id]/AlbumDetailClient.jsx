@@ -239,23 +239,37 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
 
     const artistsList = Array.isArray(album.artists) ? album.artists : [{ name: album.artist || 'Various Artists' }];
     const coverUrl = album.images?.[0]?.url || album.coverArt || album.url || 'https://placehold.co/600x600/17020B/E8A87C?text=No+Cover';
+    const displayCoverUrl = (coverUrl.startsWith('http://') || coverUrl.startsWith('https://'))
+        ? `/api/cover-proxy?url=${encodeURIComponent(coverUrl)}`
+        : coverUrl;
 
-    // Dynamic Album-Adaptive Theme Effect & High-Contrast Palette Extraction
+    // 1. Extract Album Primary Palette cleanly once per cover artwork (Background FIRST, Contrast Foreground SECOND)
     useEffect(() => {
-        if (coverUrl) {
-            extractAdaptivePalette(coverUrl, album.name || album.title || "album").then((palette) => {
-                setAlbumPalette(palette);
-                if (theme === "adaptive") {
-                    setAdaptivePalette(palette);
-                }
-            });
+        if (!coverUrl) return;
+        let active = true;
+        extractAdaptivePalette(coverUrl, album.name || album.title || "album").then((palette) => {
+            if (active) setAlbumPalette(palette);
+        });
+        return () => { active = false; };
+    }, [coverUrl, album.name, album.title]);
+
+    // 2. Sync extracted palette to global ThemeContext when Auto-Adaptive theme is active
+    useEffect(() => {
+        if (theme === "adaptive" && albumPalette) {
+            setAdaptivePalette(albumPalette);
         }
         return () => {
             clearAdaptivePalette();
         };
-    }, [theme, coverUrl, album.name, album.title, setAdaptivePalette, clearAdaptivePalette]);
+    }, [theme, albumPalette, setAdaptivePalette, clearAdaptivePalette]);
 
-    const mainBgColor = albumPalette?.bg || colors?.bg || "#0a0a0c";
+    const mainBgColor = albumPalette?.bg || colors?.bg || "#17020B";
+    const mainFgColor = albumPalette?.fg || "#FFFFFF";
+    const mainMutedColor = albumPalette?.muted || "rgba(255, 255, 255, 0.74)";
+    const mainBorderColor = albumPalette?.border || "rgba(255, 255, 255, 0.15)";
+    const mainSurfaceColor = albumPalette?.surface || "rgba(255, 255, 255, 0.10)";
+    const mainAccentColor = albumPalette?.accent || colors?.accent || "#E8A87C";
+    const mainAccentFg = albumPalette?.accentFg || colors?.accentFg || "#110D14";
 
     const totalDurationMs = album.totalDurationMs || tracks.reduce((acc, t) => acc + (t.duration || t.duration_ms || 0), 0);
     function formatTotalDuration(ms) {
@@ -425,23 +439,38 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
 
     return (
         <div 
-            className="relative min-h-screen text-white pb-32 transition-colors duration-300 overflow-x-hidden"
+            className="relative min-h-screen pb-32 transition-colors duration-300 w-full max-w-full overflow-x-hidden"
             style={{ 
                 backgroundColor: mainBgColor,
-                '--album-main-bg': mainBgColor
+                color: mainFgColor,
+                '--album-main-bg': mainBgColor,
+                '--album-fg': mainFgColor,
+                '--album-muted': mainMutedColor,
+                '--album-border': mainBorderColor,
+                '--album-surface': mainSurfaceColor,
+                '--album-accent': mainAccentColor,
+                '--album-accent-fg': mainAccentFg,
+                '--theme-bg': mainBgColor,
+                '--theme-fg': mainFgColor,
+                '--theme-muted': mainMutedColor,
+                '--theme-border': mainBorderColor,
+                '--theme-surface': mainSurfaceColor,
+                '--theme-accent': mainAccentColor,
+                '--theme-accent-fg': mainAccentFg,
             }}
         >
-            {/* 1. Top Album Artwork Backdrop (Reduced blur so artwork is crisp and clearly visible; fades into solid mainBgColor where tracklist starts) */}
-            <div className="absolute top-0 inset-x-0 h-[660px] sm:h-[720px] overflow-hidden pointer-events-none z-0">
+            {/* 1. Top Album Artwork Backdrop: Vivid blurred cover behind hero, dissolving completely into solid primary color BEFORE tabs/tracklist start */}
+            <div className="absolute top-0 inset-x-0 h-[560px] sm:h-[620px] overflow-hidden pointer-events-none z-0">
                 <div 
-                    className="absolute inset-0 bg-cover bg-center scale-105 blur-[9px] opacity-80 saturate-110 transition-all duration-700"
-                    style={{ backgroundImage: `url(${coverUrl})` }}
+                    className="absolute inset-0 bg-cover bg-center scale-105 blur-[10px] opacity-90 saturate-125 transition-all duration-700"
+                    style={{ backgroundImage: `url(${displayCoverUrl})` }}
                 />
-                {/* Dark Scrim overlay for crisp, high-contrast readability */}
-                <div className="absolute inset-0 bg-black/40 backdrop-blur-[0.5px]" />
-                {/* Smooth Fade Transition into the Album Main Palette Background right where the tracklist starts */}
+                {/* Subtle Top Header Scrim + Rich Fade straight into Solid Album Primary Background Color */}
                 <div 
-                    className="absolute inset-x-0 bottom-0 h-44 bg-gradient-to-b from-transparent to-[var(--album-main-bg)]"
+                    className="absolute inset-0"
+                    style={{
+                        background: `linear-gradient(to bottom, rgba(0,0,0,0.38) 0%, rgba(0,0,0,0.12) 28%, var(--album-main-bg) 96%, var(--album-main-bg) 100%)`
+                    }}
                 />
             </div>
 
@@ -490,7 +519,7 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
                     >
                         {/* Center Vinyl Label with miniature album artwork */}
                         <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden border-2 border-white/20 shadow-inner flex items-center justify-center relative bg-black">
-                            <img src={coverUrl} alt="Label" className="w-full h-full object-cover" />
+                            <img src={displayCoverUrl} alt="Label" className="w-full h-full object-cover" />
                             <div className="absolute w-3.5 h-3.5 rounded-full bg-[#0a0a0d] border border-white/40 shadow-inner" />
                         </div>
                     </div>
@@ -498,11 +527,14 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
                     {/* Front Album Jacket Cover */}
                     <div className="relative z-10 w-52 h-52 sm:w-60 sm:h-60 md:w-68 md:h-68 aspect-square rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl bg-black/40 ring-1 ring-white/20 backdrop-blur-sm group-hover:shadow-[0_25px_50px_-12px_rgba(0,0,0,0.8)] transition-all duration-500">
                         <img 
-                            src={coverUrl} 
+                            src={displayCoverUrl} 
                             alt={album.name || album.title} 
                             className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" 
                             onError={(e) => { 
-                                if (album?.mainCoverArt && e.currentTarget.src !== album.mainCoverArt) {
+                                if (e.currentTarget.dataset.retriedDirect !== '1' && coverUrl.startsWith('http')) {
+                                    e.currentTarget.dataset.retriedDirect = '1';
+                                    e.currentTarget.src = coverUrl;
+                                } else if (album?.mainCoverArt && e.currentTarget.src !== album.mainCoverArt) {
                                     e.currentTarget.src = album.mainCoverArt;
                                 } else {
                                     e.currentTarget.src = 'https://placehold.co/500x500/17020B/E8A87C?text=Album'; 
@@ -516,9 +548,9 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
 
                 {/* Album Title with Inline Explicit [E] badge */}
                 <div className="mt-4 sm:mt-5 flex items-center justify-center gap-2 flex-wrap max-w-lg">
-                    <h1 className="text-2xl sm:text-3xl md:text-4xl font-black leading-tight text-white tracking-tight font-display text-center inline-flex items-center gap-2 flex-wrap justify-center drop-shadow-[0_2px_12px_rgba(0,0,0,0.9)]">
+                    <h1 className="text-2xl sm:text-3xl md:text-4xl font-black leading-tight text-[var(--album-fg)] tracking-tight font-display text-center inline-flex items-center gap-2 flex-wrap justify-center">
                         <span>{album.name || album.title}</span>
-                        <span className="inline-flex items-center justify-center w-4 h-4 rounded-[3px] text-[10px] font-bold bg-white/15 text-white/90 shrink-0 select-none align-middle" title="Explicit Content">
+                        <span className="inline-flex items-center justify-center w-4 h-4 rounded-[3px] text-[10px] font-bold bg-[var(--album-surface)] text-[var(--album-fg)] shrink-0 select-none align-middle" title="Explicit Content">
                             E
                         </span>
                     </h1>
@@ -529,7 +561,7 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
                     {artistsList.map((a, i) => (
                         <span
                             key={`${a.id || 'artist'}-${i}`}
-                            className="text-base sm:text-lg font-semibold text-zinc-100 hover:text-[var(--theme-accent)] transition cursor-pointer inline-flex items-center gap-1 drop-shadow-[0_1px_6px_rgba(0,0,0,0.8)]"
+                            className="text-base sm:text-lg font-semibold text-[var(--album-fg)]/90 [@media(hover:hover)]:hover:text-[var(--album-accent)] transition cursor-pointer inline-flex items-center gap-1"
                             onClick={() => {
                                 if (a.id && !isPending) {
                                     setNavigatingArtistId(a.id);
@@ -541,7 +573,7 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
                         >
                             <span>{a.name}{i < artistsList.length - 1 && ', '}</span>
                             {isPending && navigatingArtistId === a.id && (
-                                <span className="w-3 h-3 rounded-full border-2 border-[var(--theme-accent)] border-t-transparent animate-spin inline-block" />
+                                <span className="w-3 h-3 rounded-full border-2 border-[var(--album-accent)] border-t-transparent animate-spin inline-block" />
                             )}
                         </span>
                     ))}
@@ -551,25 +583,25 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
                 <div className="mt-2.5 flex flex-col items-center justify-center gap-2 select-none max-w-md mx-auto">
                     {/* Primary Musical Lore */}
                     {(releaseYear || displayGenre) && (
-                        <div className="flex items-center justify-center gap-2 text-xs font-semibold text-zinc-300 flex-wrap">
+                        <div className="flex items-center justify-center gap-2 text-xs font-semibold text-[var(--album-muted)] flex-wrap">
                             {releaseYear && <span>{releaseYear}</span>}
                             {releaseYear && displayGenre && <span className="opacity-40">·</span>}
-                            {displayGenre && <span className="text-white font-medium">{displayGenre}</span>}
+                            {displayGenre && <span className="text-[var(--album-fg)] font-medium">{displayGenre}</span>}
                         </div>
                     )}
 
                     {/* Secondary Metrics & Badges Row (Clean dot separator, high contrast pills) */}
                     <div className="flex items-center justify-center gap-2 flex-wrap text-xs">
                         {tracks.length > 0 && (
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-zinc-200 text-[11px] font-medium shadow-sm">
-                                <Clock size={11} className="text-[var(--theme-accent)] shrink-0" />
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--album-surface)] backdrop-blur-md border border-[var(--album-border)] text-[var(--album-fg)] text-[11px] font-medium shadow-sm">
+                                <Clock size={11} className="text-[var(--album-accent)] shrink-0" />
                                 <span>{tracks.length} songs{formattedTotalTime ? ` · ${formattedTotalTime}` : ''}</span>
                             </span>
                         )}
 
                         {discCount > 1 && (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-white text-[11px] font-semibold shadow-sm">
-                                <Disc size={11} className="text-[var(--theme-accent)] shrink-0" />
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[var(--album-surface)] backdrop-blur-md border border-[var(--album-border)] text-[var(--album-fg)] text-[11px] font-semibold shadow-sm">
+                                <Disc size={11} className="text-[var(--album-accent)] shrink-0" />
                                 <span>{discCount} Discs</span>
                             </span>
                         )}
@@ -577,7 +609,7 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
                         {album.editions && album.editions.length > 1 && (
                             <button
                                 onClick={() => setIsEditionsDrawerOpen(true)}
-                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[var(--theme-accent)]/20 hover:bg-[var(--theme-accent)]/30 text-[var(--theme-accent)] border border-[var(--theme-accent)]/40 text-[11px] font-bold transition-all shadow-sm cursor-pointer active:scale-95"
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[var(--album-accent)]/20 [@media(hover:hover)]:hover:bg-[var(--album-accent)]/30 text-[var(--album-accent)] border border-[var(--album-accent)]/40 text-[11px] font-bold transition-all shadow-sm cursor-pointer active:scale-95"
                                 title="Explore pressings & editions"
                             >
                                 <Layers size={11} className="shrink-0" />
@@ -605,16 +637,16 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
                     {/* Create GrooveCard Button */}
                     <button
                         onClick={() => setIsGrooveCardOpen(true)}
-                        className="w-12 h-12 rounded-full aspect-square shrink-0 bg-white/10 hover:bg-white/20 active:scale-95 text-white flex items-center justify-center transition-all duration-200 backdrop-blur-md cursor-pointer shadow-lg border border-white/20 group"
+                        className="w-12 h-12 rounded-full aspect-square shrink-0 bg-[var(--album-surface)] [@media(hover:hover)]:hover:opacity-90 active:scale-95 text-[var(--album-fg)] flex items-center justify-center transition-all duration-200 backdrop-blur-md cursor-pointer shadow-lg border border-[var(--album-border)] group"
                         title="Create GrooveCard"
                     >
-                        <Sparkles size={20} className="text-white group-hover:text-[var(--theme-accent)] transition-colors" />
+                        <Sparkles size={20} className="text-[var(--album-fg)] [@media(hover:hover)]:group-hover:text-[var(--album-accent)] transition-colors" />
                     </button>
 
                     {/* Prominent Open GrooveLink Pill Button */}
                     <button
                         onClick={() => setIsGrooveLinkOpen(true)}
-                        className="h-12 px-6 sm:px-8 rounded-full bg-[var(--theme-accent)] hover:opacity-95 active:scale-95 text-[var(--theme-accent-fg)] font-black text-xs sm:text-sm tracking-wide flex items-center justify-center gap-2 transition-all duration-200 shadow-xl cursor-pointer shrink-0 whitespace-nowrap"
+                        className="h-12 px-6 sm:px-8 rounded-full bg-[var(--album-accent)] hover:opacity-95 active:scale-95 text-[var(--album-accent-fg)] font-black text-xs sm:text-sm tracking-wide flex items-center justify-center gap-2 transition-all duration-200 shadow-xl cursor-pointer shrink-0 whitespace-nowrap"
                         title="Open GrooveLink & Universal Streaming"
                     >
                         <img src="/in.svg" alt="GrooveLink" className="w-5 h-5 object-contain shrink-0" />
@@ -625,10 +657,10 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
                     {/* Bookmark / Save to Library Button */}
                     <button
                         onClick={toggleSave}
-                        className="w-12 h-12 rounded-full aspect-square shrink-0 bg-white/10 hover:bg-white/20 active:scale-95 text-white flex items-center justify-center transition-all duration-200 backdrop-blur-md cursor-pointer shadow-lg border border-white/20"
+                        className="w-12 h-12 rounded-full aspect-square shrink-0 bg-[var(--album-surface)] [@media(hover:hover)]:hover:opacity-90 active:scale-95 text-[var(--album-fg)] flex items-center justify-center transition-all duration-200 backdrop-blur-md cursor-pointer shadow-lg border border-[var(--album-border)]"
                         title={saved ? "Remove from Library" : "Save Album to Library"}
                     >
-                        {saved ? <Check size={20} className="text-[var(--theme-accent)]" /> : <Plus size={20} />}
+                        {saved ? <Check size={20} className="text-[var(--album-accent)]" /> : <Plus size={20} />}
                     </button>
 
                     {/* Add All Tracks to Playlist Button */}
@@ -659,16 +691,16 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
                                 }
                             }));
                         }}
-                        className="w-12 h-12 rounded-full aspect-square shrink-0 bg-white/10 hover:bg-white/20 active:scale-95 text-white flex items-center justify-center transition-all duration-200 backdrop-blur-md cursor-pointer shadow-lg border border-white/20 group"
+                        className="w-12 h-12 rounded-full aspect-square shrink-0 bg-[var(--album-surface)] [@media(hover:hover)]:hover:opacity-90 active:scale-95 text-[var(--album-fg)] flex items-center justify-center transition-all duration-200 backdrop-blur-md cursor-pointer shadow-lg border border-[var(--album-border)] group"
                         title="Add Album to Playlist"
                     >
-                        <ListPlus size={20} className="group-hover:text-[var(--theme-accent)] transition-colors" />
+                        <ListPlus size={20} className="[@media(hover:hover)]:group-hover:text-[var(--album-accent)] transition-colors" />
                     </button>
                 </div>
             </div>
 
             {/* 3. Integrated Sticky Navigation Tabs (Part of the Page, Not an Isolated Component) */}
-            <div className="sticky top-0 z-30 bg-[var(--album-main-bg)]/90 backdrop-blur-xl border-b border-white/10 mt-6 mb-8 transition-colors w-full">
+            <div className="sticky top-0 z-30 bg-[var(--album-main-bg)]/95 backdrop-blur-xl border-b border-[var(--album-border)] mt-6 mb-8 transition-colors w-full">
                 <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 md:px-12">
                     <div className="overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden scrollb-none no-scrollbar">
                         <div className="flex items-center gap-1 sm:gap-2 min-w-max">
@@ -681,15 +713,15 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
                                         onClick={() => setActiveTab(tab.id)}
                                         className={`shrink-0 whitespace-nowrap py-3 px-3.5 sm:px-4 text-xs sm:text-sm font-bold transition-all duration-200 cursor-pointer flex items-center gap-2 select-none border-b-2 ${
                                             isActive
-                                                ? 'border-[var(--theme-accent)] text-white'
-                                                : 'border-transparent text-zinc-400 hover:text-white'
+                                                ? 'border-[var(--album-accent)] text-[var(--album-fg)]'
+                                                : 'border-transparent text-[var(--album-muted)] [@media(hover:hover)]:hover:text-[var(--album-fg)]'
                                         }`}
                                     >
-                                        <TabIcon size={15} className={isActive ? "text-[var(--theme-accent)]" : "text-zinc-400"} />
+                                        <TabIcon size={15} className={isActive ? "text-[var(--album-accent)]" : "text-[var(--album-muted)]"} />
                                         <span>{tab.label}</span>
                                         {tab.count !== undefined && (
                                             <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold leading-none shrink-0 ${
-                                                isActive ? 'bg-[var(--theme-accent)]/20 text-[var(--theme-accent)]' : 'bg-white/10 text-zinc-300'
+                                                isActive ? 'bg-[var(--album-accent)]/20 text-[var(--album-accent)]' : 'bg-[var(--album-surface)] text-[var(--album-fg)]'
                                             }`}>
                                                 {tab.count}
                                             </span>
@@ -702,7 +734,7 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
                 </div>
             </div>
 
-            {/* TAB CONTENT (Flows Naturally on Album Palette Background - NO CARDS!) */}
+            {/* TAB CONTENT (Flows Naturally on Solid Album Primary Color - NO CARDS!) */}
             <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 md:px-12">
 
             {/* TAB 1: TRACKS */}
@@ -710,17 +742,17 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
                 <div className="relative z-10 mb-12 animate-fade-in">
                     {/* Header row with Tracklist title */}
                     <div className="flex items-center justify-between mb-5 px-1">
-                        <h2 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight">
+                        <h2 className="text-xl sm:text-2xl font-extrabold text-[var(--album-fg)] tracking-tight font-display">
                             Tracklist
                         </h2>
 
                         {album.editions && album.editions.length > 1 && (
                             <button
                                 onClick={() => setIsEditionsDrawerOpen(true)}
-                                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 hover:bg-white/10 border border-white/10 text-xs font-semibold text-white transition cursor-pointer shadow-xs"
+                                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--album-surface)] border border-[var(--album-border)] text-xs font-semibold text-[var(--album-fg)] transition cursor-pointer shadow-xs"
                                 title="Explore pressings & alternate editions"
                             >
-                                <Layers size={13} className="text-[var(--theme-accent)]" />
+                                <Layers size={13} className="text-[var(--album-accent)]" />
                                 <span>{album.editions.length} Editions</span>
                             </button>
                         )}
@@ -728,14 +760,14 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
 
                 {/* Switching edition banner */}
                 {loadingTracks && (
-                    <div className="mb-6 p-3.5 rounded-2xl bg-zinc-900/90/80 border border-white/10 backdrop-blur-xl flex items-center justify-center gap-2.5 text-xs font-semibold text-[var(--theme-accent)] animate-pulse">
-                        <span className="w-3 h-3 rounded-full border-2 border-[var(--theme-accent)] border-t-transparent animate-spin" />
+                    <div className="mb-6 p-3.5 rounded-2xl bg-[var(--album-surface)] border border-[var(--album-border)] backdrop-blur-xl flex items-center justify-center gap-2.5 text-xs font-semibold text-[var(--album-accent)] animate-pulse">
+                        <span className="w-3 h-3 rounded-full border-2 border-[var(--album-accent)] border-t-transparent animate-spin" />
                         <span>Switching edition and loading tracklist...</span>
                     </div>
                 )}
 
                 {tracks.length === 0 || loadingTracks ? (
-                    <div className="flex flex-col items-center justify-center p-12 rounded-2xl bg-white/5 border border-white/10 text-center">
+                    <div className="flex flex-col items-center justify-center p-12 rounded-2xl bg-[var(--album-surface)] border border-[var(--album-border)] text-center">
                         <GrooveLoader size={56} />
                     </div>
                 ) : (
@@ -747,17 +779,17 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
                                 <div key={`disc-group-${discSection.discNumber}`} className="space-y-2">
                                     {/* Disc Header (Disc 1, Disc 2, Disc 3, etc.) - ONLY if > 1 disc */}
                                     {discSection.showDiscHeader && (
-                                        <div className="flex items-center justify-between px-1 border-b border-white/10 pb-2 mb-2">
-                                            <h3 className="text-sm sm:text-base font-bold text-white tracking-tight flex items-center gap-2">
-                                                <Disc size={16} className="text-[var(--theme-accent)]" />
+                                        <div className="flex items-center justify-between px-1 border-b border-[var(--album-border)] pb-2.5 mb-1">
+                                            <h3 className="text-sm sm:text-base font-bold text-[var(--album-fg)] tracking-tight flex items-center gap-2 font-display">
+                                                <Disc size={16} className="text-[var(--album-accent)]" />
                                                 <span>{discSection.discTitle}</span>
-                                                <span className="text-[10px] font-semibold text-[var(--theme-accent)] px-2 py-0.5 rounded-full bg-zinc-900/90 border border-white/10">
+                                                <span className="text-[10px] font-semibold text-[var(--album-accent)] px-2 py-0.5 rounded-full bg-[var(--album-surface)] border border-[var(--album-border)]">
                                                     {discSection.tracksCount} songs
                                                 </span>
                                             </h3>
                                             {discFormattedTime && (
-                                                <span className="text-xs text-zinc-400 font-medium flex items-center gap-1.5">
-                                                    <Clock size={12} className="text-[var(--theme-accent)]" />
+                                                <span className="text-xs text-[var(--album-muted)] font-medium flex items-center gap-1.5">
+                                                    <Clock size={12} className="text-[var(--album-accent)]" />
                                                     <span>{discFormattedTime}</span>
                                                 </span>
                                             )}
@@ -773,130 +805,132 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
                                                 {/* Side Header: ONLY if disc has multiple sides AND user has sides enabled */}
                                                 {sideSection.showSideHeader && (
                                                     <div className="flex items-center gap-3 py-2 my-1.5">
-                                                        <div className="h-px bg-[var(--theme-border)] flex-1" />
-                                                        <span className="text-[11px] font-extrabold uppercase tracking-wider text-zinc-400 px-3 py-0.5 rounded-full bg-white/10 border border-white/10 shrink-0 flex items-center gap-1.5 shadow-sm">
+                                                        <div className="h-px bg-[var(--album-border)] flex-1" />
+                                                        <span className="text-[11px] font-extrabold uppercase tracking-wider text-[var(--album-muted)] px-3 py-0.5 rounded-full bg-[var(--album-surface)] border border-[var(--album-border)] shrink-0 flex items-center gap-1.5 shadow-sm">
                                                             <span>{sideSection.sideLabel || `Side ${sideIdx + 1}`}</span>
                                                             {sideFormattedTime && <span>· {sideFormattedTime}</span>}
                                                         </span>
-                                                        <div className="h-px bg-[var(--theme-border)] flex-1" />
+                                                        <div className="h-px bg-[var(--album-border)] flex-1" />
                                                     </div>
                                                 )}
 
-                                                {/* Tracklist for this Side */}
+                                                {/* Clean Apple Music-style Tracklist (no mobile tap hover, no border-radius artifacts, crisp inset dividers with breathing space) */}
                                                 <div className="flex flex-col">
                                                     {sideSection.tracks.map((track, index) => {
                                                         const trackArtists = Array.isArray(track.artists) ? track.artists : Array.isArray(track.artist) ? track.artist : artistsList;
                                                         const trackTitle = track.title || track.name;
                                                         const artistsStr = trackArtists.map(a => a.name).join(', ');
                                                         const isExplicit = track.explicit || false;
+                                                        const tId = track.id || track.trackID;
                                                         const formattedDuration = typeof (track.duration || track.duration_ms) === 'number' && (track.duration || track.duration_ms) > 0
                                                             ? `${Math.floor((track.duration || track.duration_ms) / 60000)}:${Math.floor(((track.duration || track.duration_ms) % 60000) / 1000).toString().padStart(2, '0')}`
                                                             : null;
 
                                                         return (
-                                                            <div 
-                                                                key={`${track.id || track.trackID || 'track'}-${discSection.discNumber}-${sideSection.side || 'side'}-${index}`}
-                                                                className={`flex items-center justify-between py-2.5 sm:py-3 px-2 sm:px-3 hover:bg-white/5 rounded-xl transition duration-150 border-b border-white/10/40 last:border-b-0 group ${
-                                                                    isPending && navigatingTrackId === (track.id || track.trackID) ? 'opacity-70 pointer-events-none cursor-wait' : 'cursor-pointer'
-                                                                }`}
-                                                                onClick={() => {
-                                                                    const tId = track.id || track.trackID;
-                                                                    if (tId && !isPending) {
-                                                                        setNavigatingTrackId(tId);
-                                                                        startTransition(() => {
-                                                                            router.push(`/track/${tId}`);
-                                                                        });
-                                                                    }
-                                                                }}
-                                                            >
-                                                                <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
-                                                                    <span className="w-7 text-center text-xs sm:text-sm font-semibold text-zinc-400 group-hover:text-white shrink-0 flex items-center justify-center">
-                                                                        {isPending && navigatingTrackId === (track.id || track.trackID) ? (
-                                                                            <span className="w-3.5 h-3.5 rounded-full border-2 border-[var(--theme-accent)] border-t-transparent animate-spin inline-block" />
-                                                                        ) : (
-                                                                            showVinylSides 
-                                                                                ? (track.trackNumber || track.pos || index + 1) 
-                                                                                : (index + 1)
-                                                                        )}
-                                                                    </span>
+                                                            <div key={`${tId || 'track'}-${discSection.discNumber}-${sideSection.side || 'side'}-${index}`}>
+                                                                <div 
+                                                                    className={`flex items-center justify-between py-3.5 sm:py-4 px-1.5 sm:px-2.5 [@media(hover:hover)]:hover:bg-[var(--album-surface)] [@media(hover:hover)]:hover:rounded-xl transition-colors duration-150 group ${
+                                                                        isPending && navigatingTrackId === tId ? 'opacity-70 pointer-events-none cursor-wait' : 'cursor-pointer'
+                                                                    }`}
+                                                                    onMouseEnter={() => { if (tId) router.prefetch(`/track/${tId}`); }}
+                                                                    onTouchStart={() => { if (tId) router.prefetch(`/track/${tId}`); }}
+                                                                    onClick={() => {
+                                                                        if (tId && !isPending) {
+                                                                            setNavigatingTrackId(tId);
+                                                                            startTransition(() => {
+                                                                                router.push(`/track/${tId}`);
+                                                                            });
+                                                                        }
+                                                                    }}
+                                                                >
+                                                                    <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
+                                                                        <span className="w-7 text-center text-xs sm:text-sm font-semibold text-[var(--album-muted)] [@media(hover:hover)]:group-hover:text-[var(--album-fg)] shrink-0 flex items-center justify-center">
+                                                                            {isPending && navigatingTrackId === tId ? (
+                                                                                <span className="w-3.5 h-3.5 rounded-full border-2 border-[var(--album-accent)] border-t-transparent animate-spin inline-block" />
+                                                                            ) : (
+                                                                                showVinylSides 
+                                                                                    ? (track.trackNumber || track.pos || index + 1) 
+                                                                                    : (index + 1)
+                                                                            )}
+                                                                        </span>
 
-                                                                    <div className="flex flex-col min-w-0 flex-1">
-                                                                        <div className="flex items-center gap-1.5 min-w-0">
-                                                                            <span className="font-semibold text-sm sm:text-base text-white group-hover:text-[var(--theme-accent)] transition-colors truncate">
-                                                                                {trackTitle}
-                                                                            </span>
-                                                                            {isExplicit && (
-                                                                                <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-[3px] text-[9px] font-bold bg-[var(--theme-muted)]/20 text-white/90 shrink-0 select-none">
-                                                                                    E
+                                                                        <div className="flex flex-col min-w-0 flex-1">
+                                                                            <div className="flex items-center gap-1.5 min-w-0">
+                                                                                <span className="font-semibold text-sm sm:text-base text-[var(--album-fg)] [@media(hover:hover)]:group-hover:text-[var(--album-accent)] transition-colors truncate">
+                                                                                    {trackTitle}
+                                                                                </span>
+                                                                                {isExplicit && (
+                                                                                    <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-[3px] text-[9px] font-bold bg-[var(--album-surface)] text-[var(--album-fg)] shrink-0 select-none">
+                                                                                        E
+                                                                                    </span>
+                                                                                )}
+                                                                            </div>
+                                                                            {artistsStr && artistsStr !== (album.name || album.title) && (
+                                                                                <span className="text-xs text-[var(--album-muted)] truncate block mt-0.5">
+                                                                                    {artistsStr}
                                                                                 </span>
                                                                             )}
                                                                         </div>
-                                                                        {artistsStr && artistsStr !== (album.name || album.title) && (
-                                                                            <span className="text-xs text-zinc-400 truncate block mt-0.5">
-                                                                                {artistsStr}
+                                                                    </div>
+
+                                                                    <div className="flex items-center gap-2 sm:gap-3 shrink-0 ml-3" onClick={(e) => e.stopPropagation()}>
+                                                                        {/* Quick Action Pill Buttons on Desktop Hover */}
+                                                                        <div className="opacity-0 [@media(hover:hover)]:group-hover:opacity-100 flex items-center gap-1 transition-opacity mr-1 hidden sm:flex">
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => setSelectedTrackForGrooveLink({
+                                                                                    id: tId,
+                                                                                    type: 'track',
+                                                                                    name: trackTitle,
+                                                                                    title: trackTitle,
+                                                                                    artist: trackArtists,
+                                                                                    album: album.name || album.title,
+                                                                                    imageUrl: coverUrl,
+                                                                                    coverArt: coverUrl,
+                                                                                    popularity: 85,
+                                                                                    explicit: isExplicit,
+                                                                                    genres: album.genres || [],
+                                                                                    spotifyUrl: track.spoURL,
+                                                                                    youtubeUrl: track.YTURL
+                                                                                })}
+                                                                                className="p-1.5 rounded-lg bg-[var(--album-surface)] text-[var(--album-fg)] border border-[var(--album-border)] shadow-sm transition active:scale-95"
+                                                                                title="Open GrooveLink"
+                                                                            >
+                                                                                <img src="/in.svg" alt="GrooveLink" className="w-3.5 h-3.5 object-contain" />
+                                                                            </button>
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => setSelectedTrackForGrooveCard({
+                                                                                    id: tId,
+                                                                                    title: trackTitle,
+                                                                                    artist: trackArtists,
+                                                                                    imageUrl: coverUrl,
+                                                                                    album: album.name || album.title,
+                                                                                    explicit: isExplicit,
+                                                                                    genres: album.genres || []
+                                                                                })}
+                                                                                className="p-1.5 rounded-lg bg-[var(--album-surface)] text-[var(--album-fg)] [@media(hover:hover)]:hover:text-[var(--album-accent)] border border-[var(--album-border)] shadow-sm transition active:scale-95"
+                                                                                title="Create GrooveCard"
+                                                                            >
+                                                                                <Sparkles size={14} />
+                                                                            </button>
+                                                                        </div>
+
+                                                                        {formattedDuration && (
+                                                                            <span className="text-xs text-[var(--album-muted)] font-medium">
+                                                                                {formattedDuration}
                                                                             </span>
                                                                         )}
-                                                                    </div>
-                                                                </div>
 
-                                                                <div className="flex items-center gap-2 sm:gap-3 shrink-0 ml-3" onClick={(e) => e.stopPropagation()}>
-                                                                    {/* Quick Action Pill Buttons on Desktop Hover */}
-                                                                    <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity mr-1 hidden sm:flex">
-                                                                        <button
-                                                                            type="button"
-                                                                            onClick={() => setSelectedTrackForGrooveLink({
-                                                                                id: track.id || track.trackID,
-                                                                                type: 'track',
-                                                                                name: trackTitle,
-                                                                                title: trackTitle,
-                                                                                artist: trackArtists,
-                                                                                album: album.name || album.title,
-                                                                                imageUrl: coverUrl,
-                                                                                coverArt: coverUrl,
-                                                                                popularity: 85,
-                                                                                explicit: isExplicit,
-                                                                                genres: album.genres || [],
-                                                                                spotifyUrl: track.spoURL,
-                                                                                youtubeUrl: track.YTURL
-                                                                            })}
-                                                                            className="p-1.5 rounded-lg bg-white/10 hover:bg-white/10 text-white border border-white/10 shadow-sm transition active:scale-95"
-                                                                            title="Open GrooveLink"
-                                                                        >
-                                                                            <img src="/in.svg" alt="GrooveLink" className="w-3.5 h-3.5 object-contain" />
-                                                                        </button>
-                                                                        <button
-                                                                            type="button"
-                                                                            onClick={() => setSelectedTrackForGrooveCard({
-                                                                                id: track.id || track.trackID,
-                                                                                title: trackTitle,
-                                                                                artist: trackArtists,
-                                                                                imageUrl: coverUrl,
-                                                                                album: album.name || album.title,
-                                                                                explicit: isExplicit,
-                                                                                genres: album.genres || []
-                                                                            })}
-                                                                            className="p-1.5 rounded-lg bg-white/10 hover:bg-white/10 text-white hover:text-[var(--theme-accent)] border border-white/10 shadow-sm transition active:scale-95"
-                                                                            title="Create GrooveCard"
-                                                                        >
-                                                                            <Sparkles size={14} />
-                                                                        </button>
-                                                                    </div>
-
-                                                                    {formattedDuration && (
-                                                                        <span className="text-xs text-zinc-400 font-medium">
-                                                                            {formattedDuration}
-                                                                        </span>
-                                                                    )}
-
-                                                                    <DropdownMenu>
-                                                                        <DropdownMenuTrigger asChild>
-                                                                            <button 
-                                                                                className="p-1.5 rounded-lg hover:bg-white/10 text-zinc-400 hover:text-white transition cursor-pointer"
-                                                                                title="More options"
-                                                                            >
-                                                                                <MoreHorizontal size={18} />
-                                                                            </button>
-                                                                        </DropdownMenuTrigger>
+                                                                        <DropdownMenu>
+                                                                            <DropdownMenuTrigger asChild>
+                                                                                <button 
+                                                                                    className="p-1.5 rounded-full [@media(hover:hover)]:hover:bg-[var(--album-surface)] text-[var(--album-muted)] [@media(hover:hover)]:hover:text-[var(--album-fg)] transition cursor-pointer"
+                                                                                    title="More options"
+                                                                                >
+                                                                                    <MoreHorizontal size={18} />
+                                                                                </button>
+                                                                            </DropdownMenuTrigger>
                                                                         <DropdownMenuContent 
                                                                             className="bg-zinc-900/90 backdrop-blur-2xl text-white min-w-[200px] rounded-2xl p-2 border border-white/10 shadow-2xl z-[9999]"
                                                                             align="end"
@@ -1000,6 +1034,10 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
                                                                         </DropdownMenuContent>
                                                                     </DropdownMenu>
                                                                 </div>
+                                                                </div>
+                                                                {index < sideSection.tracks.length - 1 && (
+                                                                    <div className="ml-[46px] sm:ml-[54px] mr-2 h-px bg-[var(--album-border)]" />
+                                                                )}
                                                             </div>
                                                         );
                                                     })}

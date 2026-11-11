@@ -53,12 +53,28 @@ export function getCachedOrInFlight(key, fetcher) {
   return promise;
 }
 
-// Chained sequential queue for MusicBrainz to strictly adhere to 1 request per second
+// Chained sequential queue for MusicBrainz to adhere strictly to ~1 req/s on cold fetches
 let requestQueue = Promise.resolve();
 let lastRequestTime = 0;
-const MIN_INTERVAL_MS = 1000;
+const MIN_INTERVAL_MS = 1080;
+
+function buildUrlWithParams(url, params = {}) {
+  const sp = new URLSearchParams();
+  for (const [k, v] of Object.entries({ ...params, fmt: 'json' })) {
+    if (v !== undefined && v !== null) sp.set(k, String(v));
+  }
+  const sep = url.includes('?') ? '&' : '?';
+  return `${url}${sep}${sp.toString()}`;
+}
 
 function rateLimitedGet(url, params = {}) {
+  const fullUrl = buildUrlWithParams(url, params);
+  const rawCacheKey = `mb_http_${fullUrl}`;
+  const memHit = getCached(rawCacheKey);
+  if (memHit) {
+    return Promise.resolve({ data: memHit, status: 200 });
+  }
+
   const executeWithRetry = async (attempt = 1) => {
     const now = Date.now();
     const timeSinceLast = now - lastRequestTime;
@@ -68,22 +84,35 @@ function rateLimitedGet(url, params = {}) {
     lastRequestTime = Date.now();
 
     try {
-      return await axios.get(url, {
-        params: {
-          ...params,
-          fmt: 'json',
-        },
+      const res = await fetch(fullUrl, {
         headers: {
           'User-Agent': USER_AGENT,
           Accept: 'application/json',
         },
-        timeout: 4000,
+        next: { revalidate: 86400 },
+        signal: AbortSignal.timeout(4500),
       });
+
+      if (!res.ok) {
+        if ((res.status === 503 || res.status === 429) && attempt < 3) {
+          const backoff = 1100;
+          console.warn(`MusicBrainz ${res.status} on ${url}, retry in ${backoff}ms (attempt ${attempt}/2)...`);
+          await new Promise((resolve) => setTimeout(resolve, backoff));
+          return executeWithRetry(attempt + 1);
+        }
+        const err = new Error(`MusicBrainz HTTP ${res.status}`);
+        err.response = { status: res.status };
+        throw err;
+      }
+
+      const data = await res.json();
+      setCached(rawCacheKey, data);
+      return { data, status: res.status };
     } catch (err) {
       const status = err.response?.status;
-      if ((status === 503 || status === 429 || !err.response) && attempt < 2) {
-        const backoff = 600;
-        console.warn(`MusicBrainz ${status || err.code || 'error'} on ${url}, fast retry in ${backoff}ms (attempt ${attempt}/2)...`);
+      if ((status === 503 || status === 429 || !err.response) && attempt < 3 && err.name !== 'TimeoutError') {
+        const backoff = 1100;
+        console.warn(`MusicBrainz ${status || err.code || 'error'} on ${url}, retry in ${backoff}ms (attempt ${attempt}/2)...`);
         await new Promise((resolve) => setTimeout(resolve, backoff));
         return executeWithRetry(attempt + 1);
       }
@@ -143,17 +172,21 @@ export async function resolveOpenTrackCover(title, artist = '', rgId = null, rel
     return caa;
   }
 
-  // 2. Try Deezer public API
+  // 2. Try Deezer public API (cached 24h)
   try {
-    const deezerRes = await axios.get('https://api.deezer.com/search', {
-      params: { q: query || cleanTitle, limit: 1 },
-      timeout: 3000,
+    const deezerUrl = `https://api.deezer.com/search?q=${encodeURIComponent(query || cleanTitle)}&limit=1`;
+    const deezerRes = await fetch(deezerUrl, {
+      next: { revalidate: 86400 },
+      signal: AbortSignal.timeout(1400),
     });
-    const item = deezerRes.data?.data?.[0];
-    if (item?.album?.cover_xl || item?.album?.cover_big || item?.album?.cover_medium) {
-      const deezerCover = item.album.cover_xl || item.album.cover_big || item.album.cover_medium;
-      setCached(cacheKey, deezerCover);
-      return deezerCover;
+    if (deezerRes.ok) {
+      const deezerData = await deezerRes.json();
+      const item = deezerData?.data?.[0];
+      if (item?.album?.cover_xl || item?.album?.cover_big || item?.album?.cover_medium) {
+        const deezerCover = item.album.cover_xl || item.album.cover_big || item.album.cover_medium;
+        setCached(cacheKey, deezerCover);
+        return deezerCover;
+      }
     }
   } catch (_) {
     // continue
@@ -341,17 +374,21 @@ export async function resolveOpenArtistPhoto(artistName, mbid = null) {
   const cached = getCached(cacheKey);
   if (cached) return cached;
 
-  // 1. Try Deezer artist search (authentic artist photography)
+  // 1. Try Deezer artist search (authentic artist photography, cached 24h)
   try {
-    const deezerRes = await axios.get('https://api.deezer.com/search/artist', {
-      params: { q: name, limit: 1 },
-      timeout: 2000,
+    const deezerUrl = `https://api.deezer.com/search/artist?q=${encodeURIComponent(name)}&limit=1`;
+    const deezerRes = await fetch(deezerUrl, {
+      next: { revalidate: 86400 },
+      signal: AbortSignal.timeout(1400),
     });
-    const item = deezerRes.data?.data?.[0];
-    if (item && (item.picture_xl || item.picture_big || item.picture_medium)) {
-      const photo = item.picture_xl || item.picture_big || item.picture_medium;
-      setCached(cacheKey, photo);
-      return photo;
+    if (deezerRes.ok) {
+      const deezerData = await deezerRes.json();
+      const item = deezerData?.data?.[0];
+      if (item && (item.picture_xl || item.picture_big || item.picture_medium)) {
+        const photo = item.picture_xl || item.picture_big || item.picture_medium;
+        setCached(cacheKey, photo);
+        return photo;
+      }
     }
   } catch (_) {
     // continue
@@ -1158,17 +1195,22 @@ export async function fetchMusicBrainzArtistServer(id) {
       // 2. Concurrently fetch release-groups, photo, description, and Deezer top tracks!
       const fetchDeezerTracks = async () => {
         try {
-          const deezerArtistRes = await axios.get('https://api.deezer.com/search/artist', {
-            params: { q: artistData.name, limit: 1 },
-            timeout: 2500,
+          const searchUrl = `https://api.deezer.com/search/artist?q=${encodeURIComponent(artistData.name.trim())}&limit=1`;
+          const deezerArtistRes = await fetch(searchUrl, {
+            next: { revalidate: 86400 },
+            signal: AbortSignal.timeout(2000),
           });
-          const deezerArtist = deezerArtistRes.data?.data?.[0];
+          if (!deezerArtistRes.ok) return [];
+          const deezerArtistData = await deezerArtistRes.json();
+          const deezerArtist = deezerArtistData?.data?.[0];
           if (deezerArtist?.id) {
-            const deezerTopRes = await axios.get(`https://api.deezer.com/artist/${deezerArtist.id}/top`, {
-              params: { limit: 10 },
-              timeout: 2500,
+            const deezerTopRes = await fetch(`https://api.deezer.com/artist/${deezerArtist.id}/top?limit=10`, {
+              next: { revalidate: 86400 },
+              signal: AbortSignal.timeout(2000),
             });
-            const deezerSongs = deezerTopRes.data?.data || [];
+            if (!deezerTopRes.ok) return [];
+            const deezerTopData = await deezerTopRes.json();
+            const deezerSongs = deezerTopData?.data || [];
             if (deezerSongs.length > 0) {
               return deezerSongs.map((s) => {
                 const songCover = s.album?.cover_xl || s.album?.cover_big || s.album?.cover_medium;
@@ -1652,6 +1694,16 @@ export async function fetchMusicBrainzAlbumServer(id, targetReleaseId = null) {
         id: a.artist?.id || '',
       })) || [{ name: artistCredit, id: '' }];
 
+      // Extract initial Wikidata ID and tags from release-group so description + cover fetch can start IN PARALLEL with tracklist
+      const initialRelations = rgData?.relations || [];
+      const initialWikidataRel = initialRelations.find((r) => r.type === 'wikidata' || r.url?.resource?.includes('wikidata.org'));
+      const initialWikidataId = initialWikidataRel?.url?.resource?.split('/')?.filter(Boolean)?.pop() || null;
+      const initialTagsList = (rgData?.tags || []).map((t) => (typeof t === 'string' ? t : t.name)).filter(Boolean);
+
+      const parallelDescriptionPromise = albumTitle
+        ? resolveDescription(albumTitle, albumTitle, artistCredit, initialWikidataId, rgData?.annotation, initialTagsList)
+        : Promise.resolve(null);
+
       // Determine canonical original release
       const firstReleaseDate = rgData?.['first-release-date'] || '';
       const canonicalSorted = [...releases].sort((a, b) => {
@@ -1684,12 +1736,19 @@ export async function fetchMusicBrainzAlbumServer(id, targetReleaseId = null) {
         label: e.editionName,
       }));
 
-      // Determine release candidates: targetReleaseId takes precedence, followed by canonical releases
+      // Prioritize releases that are verified to contain tracks first to hit on attempt #1
+      const trackBearingSorted = [...canonicalSorted].sort((a, b) => {
+        const aHasTracks = (a.media || []).some((m) => (m['track-count'] || 0) > 0) ? 1 : 0;
+        const bHasTracks = (b.media || []).some((m) => (m['track-count'] || 0) > 0) ? 1 : 0;
+        return bHasTracks - aHasTracks;
+      });
+
+      // Determine release candidates: targetReleaseId takes precedence, followed by track-bearing canonical releases
       let releaseCandidates = [];
       if (targetReleaseId) {
-        releaseCandidates = [targetReleaseId, ...canonicalSorted.filter((r) => r.id !== targetReleaseId).map((r) => r.id)];
+        releaseCandidates = [targetReleaseId, ...trackBearingSorted.filter((r) => r.id !== targetReleaseId).map((r) => r.id)];
       } else {
-        releaseCandidates = canonicalSorted.map((r) => r.id);
+        releaseCandidates = trackBearingSorted.map((r) => r.id);
         if (!rgData && !releaseCandidates.includes(id)) {
           releaseCandidates.unshift(id);
         }
@@ -1850,8 +1909,9 @@ export async function fetchMusicBrainzAlbumServer(id, targetReleaseId = null) {
       const wikidataRel = (rgData?.relations || allRelations).find((r) => r.type === 'wikidata' || r.url?.resource?.includes('wikidata.org'));
       const wikidataId = wikidataRel?.url?.resource?.split('/')?.filter(Boolean)?.pop() || null;
 
-      // Resolve rich description / review background (music-aware with fast timeout)
-      const description = await resolveDescription(albumTitle, albumTitle, artistCredit, wikidataId, rgData?.annotation || relData?.annotation, tags);
+      // Resolve rich description / review background (reuse parallel fetch if started, else resolve)
+      const description = (await parallelDescriptionPromise) ||
+        await resolveDescription(albumTitle, albumTitle, artistCredit, wikidataId, rgData?.annotation || relData?.annotation, tags);
 
       // Parse external links
       const externalLinks = parseExternalLinks(allRelations, {

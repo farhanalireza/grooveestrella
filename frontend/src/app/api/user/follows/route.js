@@ -1,6 +1,6 @@
 // src/app/api/user/follows/route.js
 import { NextResponse } from 'next/server';
-import { createClient, isSupabaseServerConfigured } from '@/lib/supabase/server';
+import { getPublicSupabaseClient } from '@/lib/supabase/publicServer';
 
 export async function GET(request) {
   try {
@@ -13,15 +13,13 @@ export async function GET(request) {
       return NextResponse.json({ error: 'Missing userId parameter', users: [], total: 0 }, { status: 400 });
     }
 
-    if (!isSupabaseServerConfigured()) {
+    const supabase = getPublicSupabaseClient();
+    if (!supabase) {
       return NextResponse.json({ users: [], total: 0 });
     }
 
-    const supabase = await createClient();
-
     let targetIds = [];
     if (type === 'following') {
-      // Users that userId is following
       const { data: rows, error } = await supabase
         .from('follows')
         .select('following_id')
@@ -33,7 +31,6 @@ export async function GET(request) {
       }
       targetIds = rows ? rows.map((r) => r.following_id) : [];
     } else {
-      // Users that follow userId
       const { data: rows, error } = await supabase
         .from('follows')
         .select('follower_id')
@@ -47,52 +44,40 @@ export async function GET(request) {
     }
 
     if (targetIds.length === 0) {
-      return NextResponse.json({ users: [], total: 0 });
+      return NextResponse.json({ users: [], total: 0, type });
     }
 
-    // Fetch user profiles
-    const { data: profiles, error: profilesError } = await supabase
-      .from('profiles')
-      .select('id, username, display_name, avatar_url, bio, created_at')
-      .in('id', targetIds);
-
-    if (profilesError) {
-      console.error('Error fetching profiles:', profilesError);
-      return NextResponse.json({ error: profilesError.message, users: [], total: 0 }, { status: 500 });
-    }
-
-    // Check which ones the current viewer is following
-    let followingSet = new Set();
-    if (currentUserId && targetIds.length > 0) {
-      const { data: curFollows } = await supabase
+    // Fetch profiles, viewer follow status, and follower counts IN PARALLEL
+    const [profilesRes, curFollowsRes, fCountsRes] = await Promise.all([
+      supabase
+        .from('profiles')
+        .select('id, username, display_name, avatar_url, bio')
+        .in('id', targetIds),
+      currentUserId
+        ? supabase
+            .from('follows')
+            .select('following_id')
+            .eq('follower_id', currentUserId)
+            .in('following_id', targetIds)
+        : Promise.resolve({ data: [] }),
+      supabase
         .from('follows')
         .select('following_id')
-        .eq('follower_id', currentUserId)
-        .in('following_id', targetIds);
+        .in('following_id', targetIds),
+    ]);
 
-      if (curFollows) {
-        for (const row of curFollows) {
-          followingSet.add(row.following_id);
-        }
-      }
+    if (profilesRes.error) {
+      console.error('Error fetching profiles:', profilesRes.error);
+      return NextResponse.json({ error: profilesRes.error.message, users: [], total: 0 }, { status: 500 });
     }
 
-    // Also fetch followers counts for these users to display social proof
+    const followingSet = new Set((curFollowsRes?.data || []).map((r) => r.following_id));
     const followerCountMap = {};
-    if (targetIds.length > 0) {
-      const { data: fCounts } = await supabase
-        .from('follows')
-        .select('following_id')
-        .in('following_id', targetIds);
-
-      if (fCounts) {
-        for (const f of fCounts) {
-          followerCountMap[f.following_id] = (followerCountMap[f.following_id] || 0) + 1;
-        }
-      }
+    for (const f of fCountsRes?.data || []) {
+      followerCountMap[f.following_id] = (followerCountMap[f.following_id] || 0) + 1;
     }
 
-    const formattedUsers = (profiles || []).map((p) => ({
+    const formattedUsers = (profilesRes.data || []).map((p) => ({
       id: p.id,
       username: p.username || '',
       displayName: p.display_name || p.username || 'Critic',

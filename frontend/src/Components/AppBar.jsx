@@ -91,17 +91,6 @@ const AppBar = ({ selectedSection, setSection }) => {
     }
   }, [activeSection, selectedSection, setSection]);
 
-  // Aggressive route prefetching for all app bar destinations
-  // This completely eliminates navigation delay when switching tabs
-  useEffect(() => {
-    const routesToWarm = ['/', '/search', '/account', '/library', '/settings', '/feedback'];
-    routesToWarm.forEach((route) => {
-      try {
-        router.prefetch(route);
-      } catch (_) {}
-    });
-  }, [router]);
-
   const handlePrefetch = useCallback((route) => {
     try {
       router.prefetch(route);
@@ -121,7 +110,7 @@ const AppBar = ({ selectedSection, setSection }) => {
           {/* Logo & Brand Name */}
           <Link
             href="/"
-            prefetch={true}
+            prefetch={false}
             onMouseEnter={() => handlePrefetch("/")}
             className="flex items-center gap-2.5 cursor-pointer hover:opacity-90 transition duration-200" 
           >
@@ -138,7 +127,7 @@ const AppBar = ({ selectedSection, setSection }) => {
                   <Link
                     key={idx}
                     href={item.route}
-                    prefetch={true}
+                    prefetch={false}
                     onMouseEnter={() => handlePrefetch(item.route)}
                     onTouchStart={() => handlePrefetch(item.route)}
                     onClick={() => {
@@ -202,7 +191,7 @@ const AppBar = ({ selectedSection, setSection }) => {
               <Link
                 key={idx}
                 href={item.route}
-                prefetch={true}
+                prefetch={false}
                 onMouseEnter={() => handlePrefetch(item.route)}
                 onTouchStart={() => handlePrefetch(item.route)}
                 onPointerDown={() => {

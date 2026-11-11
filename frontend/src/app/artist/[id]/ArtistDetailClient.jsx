@@ -275,31 +275,13 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
             className="relative min-h-screen bg-[var(--theme-bg)] text-[var(--theme-fg)] pb-32 transition-colors duration-300 w-full max-w-full overflow-x-hidden"
             style={{ background: theme === 'adaptive' && colors?.gradient ? colors.gradient : undefined }}
         >
-            {/* 1. Artist Full-Bleed Banner Hero (Full background on Mobile, Height-limited on PC) */}
-            <div className="relative w-full max-w-full overflow-hidden bg-black">
-                {/* Hero Banner Image */}
-                <div className="relative w-full max-w-full h-[62vh] sm:h-[68vh] md:h-[480px] lg:h-[540px] overflow-hidden bg-black">
-                    <img 
-                        src={coverUrl} 
-                        alt={artist.name} 
-                        className="w-full max-w-full h-full object-cover object-top sm:object-center select-none block"
-                        style={{
-                            maskImage: 'linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.5) 12%, rgba(0,0,0,1) 25%, rgba(0,0,0,1) 75%, rgba(0,0,0,0) 100%)',
-                            WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.5) 12%, rgba(0,0,0,1) 25%, rgba(0,0,0,1) 75%, rgba(0,0,0,0) 100%)',
-                        }}
-                        onError={(e) => { e.currentTarget.src = 'https://placehold.co/800x800/17020B/E8A87C?text=Artist'; }}
-                    />
-
-                    {/* Top Black-to-Transparent Fade: Upper buttons rest cleanly in dark space before photo reveals */}
-                    <div className="absolute inset-x-0 top-0 h-32 sm:h-36 bg-gradient-to-b from-black via-black/85 via-35% to-transparent pointer-events-none z-10" />
-
-                    {/* Bottom Smooth Fade into Natural Page Background */}
-                    <div className="absolute inset-x-0 bottom-0 h-72 sm:h-80 bg-gradient-to-t from-[var(--theme-bg)] via-[var(--theme-bg)]/85 via-40% to-transparent pointer-events-none z-10" />
-
-                    {/* Floating Top Navigation: Fused Back + Brand Pill on Left, Share on Right */}
-                    <header className="absolute top-4 sm:top-6 inset-x-0 px-4 sm:px-6 md:px-12 flex items-center justify-between z-20 max-w-7xl mx-auto pointer-events-none">
-                        {/* Fused Back + GrooveEstrella Brand Pill (Left-aligned, leaving center unobstructed for artist photo) */}
-                        <div className="flex items-center bg-black/60 hover:bg-black/80 backdrop-blur-md rounded-full border border-white/20 shadow-xl p-1 pointer-events-auto transition-colors">
+            {/* 1. Artist Hero Header + Unzoomed Full-Width Photo with Top Black Fade & Bottom Page Fade */}
+            <div className="relative w-full max-w-full overflow-hidden">
+                {/* Top Navigation Bar in dedicated Black Header Zone (above the artist photo) */}
+                <div className="relative z-20 w-full max-w-full bg-black">
+                    <header className="w-full max-w-7xl mx-auto px-4 sm:px-6 md:px-12 pt-4 pb-3 sm:pt-5 sm:pb-4 flex items-center justify-between">
+                        {/* Fused Back + GrooveEstrella Brand Pill */}
+                        <div className="flex items-center bg-white/10 hover:bg-white/15 backdrop-blur-md rounded-full border border-white/15 shadow-lg p-1 transition-colors">
                             <button 
                                 onClick={handleBack}
                                 className="w-8 h-8 sm:w-9 sm:h-9 rounded-full aspect-square shrink-0 hover:bg-white/15 active:scale-95 text-white flex items-center justify-center transition cursor-pointer"
@@ -320,38 +302,54 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
 
                         <button 
                             onClick={handleNativeShare}
-                            className="w-10 h-10 rounded-full aspect-square shrink-0 bg-black/60 hover:bg-black/80 active:scale-95 text-white flex items-center justify-center transition backdrop-blur-md cursor-pointer border border-white/20 shadow-xl pointer-events-auto"
+                            className="w-10 h-10 rounded-full aspect-square shrink-0 bg-white/10 hover:bg-white/15 active:scale-95 text-white flex items-center justify-center transition backdrop-blur-md cursor-pointer border border-white/15 shadow-lg"
                             title="Share Artist"
                         >
                             <Share2 size={18} />
                         </button>
                     </header>
+                </div>
 
-                    {/* Artist Title and Primary Category Badges (Tidal/Apple Music Layout) */}
-                    <div className="absolute bottom-4 sm:bottom-6 md:bottom-8 inset-x-0 px-4 sm:px-6 md:px-12 z-20">
-                        <div className="max-w-5xl mx-auto">
-                            {/* Entity Type Badge & Primary Genre */}
-                            <div className="flex flex-wrap items-center gap-2 mb-2">
-                                <span className={`inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-[11px] font-black uppercase tracking-wider backdrop-blur-md border shadow-md ${
-                                    isGroup 
-                                        ? 'bg-purple-950/70 text-purple-200 border-purple-400/40' 
-                                        : 'bg-emerald-950/70 text-emerald-200 border-emerald-400/40'
-                                }`}>
-                                    {isGroup ? <Users size={12} /> : <User size={12} />}
-                                    <span>{entityTypeLabel}</span>
+                {/* Artist Photo Container: Immediately follows black header bar, seamless top black-to-transparent blend directly into full unzoomed image height, smooth bottom fade into theme background */}
+                <div className="relative w-full max-w-full overflow-hidden bg-black">
+                    <img 
+                        src={coverUrl} 
+                        alt={artist.name} 
+                        className="w-full max-w-full h-auto max-h-[125vw] md:h-[460px] lg:h-[520px] md:max-h-[520px] object-cover object-top md:object-center select-none block"
+                        onError={(e) => { e.currentTarget.src = 'https://placehold.co/800x800/17020B/E8A87C?text=Artist'; }}
+                    />
+
+                    {/* Seamless Top Black-to-Transparent Fade directly onto image top edge (zero hard line or color gap) */}
+                    <div className="absolute inset-x-0 top-0 h-12 sm:h-16 bg-gradient-to-b from-black via-black/55 to-transparent pointer-events-none z-10" />
+
+                    {/* Gentle Bottom Fade into Natural Page Background so full image height shines while ending softly */}
+                    <div className="absolute inset-x-0 bottom-0 h-28 sm:h-36 bg-gradient-to-t from-[var(--theme-bg)] via-[var(--theme-bg)]/75 via-30% to-transparent pointer-events-none z-10" />
+                </div>
+
+                {/* Artist Title & Primary Category Badges cleanly resting in the bottom fade */}
+                <div className="relative z-20 -mt-12 sm:-mt-16 px-4 sm:px-6 md:px-12 pb-1">
+                    <div className="max-w-5xl mx-auto">
+                        {/* Entity Type Badge & Primary Genre */}
+                        <div className="flex flex-wrap items-center gap-2 mb-2">
+                            <span className={`inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-[11px] font-black uppercase tracking-wider backdrop-blur-md border shadow-md ${
+                                isGroup 
+                                    ? 'bg-purple-950/70 text-purple-200 border-purple-400/40' 
+                                    : 'bg-emerald-950/70 text-emerald-200 border-emerald-400/40'
+                            }`}>
+                                {isGroup ? <Users size={12} /> : <User size={12} />}
+                                <span>{entityTypeLabel}</span>
+                            </span>
+                            {genres.length > 0 && (
+                                <span className="px-3 py-0.5 rounded-full bg-black/60 backdrop-blur-md text-[var(--theme-accent)] text-[11px] font-bold uppercase tracking-wider border border-[var(--theme-accent)]/30">
+                                    {genres[0]}
                                 </span>
-                                {genres.length > 0 && (
-                                    <span className="px-3 py-0.5 rounded-full bg-black/60 backdrop-blur-md text-[var(--theme-accent)] text-[11px] font-bold uppercase tracking-wider border border-[var(--theme-accent)]/30">
-                                        {genres[0]}
-                                    </span>
-                                )}
-                            </div>
-
-                            {/* Prominent Artist Name */}
-                            <h1 className="text-3xl sm:text-5xl md:text-6xl font-black leading-tight tracking-tight text-white font-display drop-shadow-[0_4px_16px_rgba(0,0,0,0.9)]">
-                                {artist.name}
-                            </h1>
+                            )}
                         </div>
+
+                        {/* Prominent Artist Name */}
+                        <h1 className="text-3xl sm:text-5xl md:text-6xl font-black leading-tight tracking-tight text-[var(--theme-fg)] font-display drop-shadow-[0_2px_12px_rgba(0,0,0,0.45)]">
+                            {artist.name}
+                        </h1>
                     </div>
                 </div>
 

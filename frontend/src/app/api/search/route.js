@@ -5,7 +5,7 @@ import {
   searchMusicBrainzArtistsServer, 
   searchMusicBrainzAlbumsServer 
 } from '@/lib/musicbrainzServer';
-import { createClient, isSupabaseServerConfigured } from '@/lib/supabase/server';
+import { getPublicSupabaseClient } from '@/lib/supabase/publicServer';
 
 export async function GET(request) {
   try {
@@ -26,28 +26,26 @@ export async function GET(request) {
     } else if (type === 'album') {
       results = await searchMusicBrainzAlbumsServer(cleanQuery, limit);
     } else if (type === 'user') {
-      if (isSupabaseServerConfigured()) {
-        const supabase = await createClient();
+      const supabase = getPublicSupabaseClient();
+      if (supabase) {
         const { data: profiles, error } = await supabase
           .from('profiles')
-          .select('id, username, display_name, avatar_url, bio, created_at')
+          .select('id, username, display_name, avatar_url, bio')
           .or(`username.ilike.%${cleanQuery}%,display_name.ilike.%${cleanQuery}%`)
           .limit(limit);
 
-        if (!error && Array.isArray(profiles)) {
+        if (!error && Array.isArray(profiles) && profiles.length > 0) {
           const profileIds = profiles.map((p) => p.id);
           const followerCountMap = {};
 
-          if (profileIds.length > 0) {
-            const { data: followsData } = await supabase
-              .from('follows')
-              .select('following_id')
-              .in('following_id', profileIds);
+          const { data: followsData } = await supabase
+            .from('follows')
+            .select('following_id')
+            .in('following_id', profileIds);
 
-            if (followsData) {
-              for (const f of followsData) {
-                followerCountMap[f.following_id] = (followerCountMap[f.following_id] || 0) + 1;
-              }
+          if (followsData) {
+            for (const f of followsData) {
+              followerCountMap[f.following_id] = (followerCountMap[f.following_id] || 0) + 1;
             }
           }
 
@@ -68,7 +66,16 @@ export async function GET(request) {
       results = await searchMusicBrainzTracksServer(cleanQuery, limit);
     }
 
-    return NextResponse.json({ results, type, query: cleanQuery });
+    return NextResponse.json(
+      { results, type, query: cleanQuery },
+      {
+        headers: {
+          'Cache-Control': type === 'user'
+            ? 'public, s-maxage=30, stale-while-revalidate=120'
+            : 'public, s-maxage=3600, stale-while-revalidate=86400',
+        },
+      }
+    );
   } catch (error) {
     console.error('Search API Route Error:', error);
     return NextResponse.json({ error: 'Server error searching music catalog', results: [] }, { status: 500 });
