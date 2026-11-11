@@ -431,71 +431,45 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
                 '--album-main-bg': mainBgColor
             }}
         >
-            {/* 1. Top Blurred Album Artwork Backdrop (Visible, not barely seen; fades into solid mainBgColor where tracklist starts) */}
+            {/* 1. Top Album Artwork Backdrop (Reduced blur so artwork is crisp and clearly visible; fades into solid mainBgColor where tracklist starts) */}
             <div className="absolute top-0 inset-x-0 h-[660px] sm:h-[720px] overflow-hidden pointer-events-none z-0">
                 <div 
-                    className="absolute inset-0 bg-cover bg-center scale-110 blur-xl opacity-75 saturate-125 transition-all duration-700"
+                    className="absolute inset-0 bg-cover bg-center scale-105 blur-[9px] opacity-80 saturate-110 transition-all duration-700"
                     style={{ backgroundImage: `url(${coverUrl})` }}
                 />
                 {/* Dark Scrim overlay for crisp, high-contrast readability */}
-                <div className="absolute inset-0 bg-black/45 backdrop-blur-[1px]" />
+                <div className="absolute inset-0 bg-black/40 backdrop-blur-[0.5px]" />
                 {/* Smooth Fade Transition into the Album Main Palette Background right where the tracklist starts */}
                 <div 
                     className="absolute inset-x-0 bottom-0 h-44 bg-gradient-to-b from-transparent to-[var(--album-main-bg)]"
                 />
             </div>
 
-            {/* Top Bar for Mobile */}
-            <header className="sm:hidden relative z-20 w-full max-w-xs mx-auto flex items-center justify-between px-2.5 py-1.5 rounded-full bg-black/50 backdrop-blur-xl border border-white/15 shadow-2xl mb-6 mt-4">
-                <button 
-                    onClick={handleBack}
-                    className="w-9 h-9 rounded-full aspect-square shrink-0 bg-white/10 hover:bg-white/20 active:scale-95 text-white flex items-center justify-center transition border border-white/15 cursor-pointer"
-                    title="Go Back"
-                >
-                    <ArrowLeft size={16} />
-                </button>
-
-                {/* App Logo & Word Mark */}
-                <div 
-                    onClick={() => router.push("/")}
-                    className="flex items-center gap-1.5 px-2 py-1 rounded-full hover:bg-white/10 active:scale-95 transition cursor-pointer select-none"
-                    title="GrooveEstrella Home"
-                >
-                    <img src="/in.svg" alt="GrooveEstrella" className="w-5 h-5 object-contain shrink-0" />
-                    <span className="text-xs font-bold text-white tracking-tight font-display">GrooveEstrella</span>
+            {/* Top Navigation: Fused Back + Brand Pill on Left, Share on Right */}
+            <header className="relative z-20 w-full flex items-center justify-between mb-8 px-4 sm:px-6 md:px-12 pt-4 sm:pt-6 max-w-7xl mx-auto">
+                {/* Fused Back + GrooveEstrella Brand Pill */}
+                <div className="flex items-center bg-black/50 hover:bg-black/70 backdrop-blur-md rounded-full border border-white/20 shadow-lg p-1 transition-colors">
+                    <button 
+                        onClick={handleBack}
+                        className="w-8 h-8 sm:w-9 sm:h-9 rounded-full aspect-square shrink-0 hover:bg-white/15 active:scale-95 text-white flex items-center justify-center transition cursor-pointer"
+                        title="Go Back"
+                    >
+                        <ArrowLeft size={17} />
+                    </button>
+                    <div className="h-4 w-px bg-white/20 mx-1" />
+                    <button
+                        onClick={() => router.push("/")}
+                        className="flex items-center gap-1.5 pl-1 pr-3 py-1 hover:bg-white/15 rounded-full active:scale-95 transition cursor-pointer select-none"
+                        title="GrooveEstrella Home"
+                    >
+                        <img src="/in.svg" alt="GrooveEstrella" className="w-4 h-4 sm:w-5 sm:h-5 object-contain shrink-0" />
+                        <span className="text-xs font-bold text-white tracking-tight font-display">GrooveEstrella</span>
+                    </button>
                 </div>
 
                 <button 
                     onClick={handleNativeShare}
-                    className="w-9 h-9 rounded-full aspect-square shrink-0 bg-white/10 hover:bg-white/20 active:scale-95 text-white flex items-center justify-center transition border border-white/15 cursor-pointer"
-                    title="Share Album"
-                >
-                    <Share2 size={16} />
-                </button>
-            </header>
-
-            {/* Top Navigation for Desktop / PC */}
-            <header className="hidden sm:flex relative z-20 w-full items-center justify-between mb-8 px-4 sm:px-6 md:px-12 pt-6 max-w-7xl mx-auto">
-                <button 
-                    onClick={handleBack}
-                    className="w-11 h-11 rounded-full aspect-square shrink-0 bg-black/45 hover:bg-black/65 active:scale-95 text-white flex items-center justify-center transition backdrop-blur-md cursor-pointer border border-white/20 shadow-lg"
-                    title="Go Back"
-                >
-                    <ArrowLeft size={18} />
-                </button>
-
-                <div 
-                    onClick={() => router.push("/")}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/45 hover:bg-black/65 backdrop-blur-md border border-white/20 active:scale-95 transition cursor-pointer select-none"
-                    title="GrooveEstrella Home"
-                >
-                    <img src="/in.svg" alt="GrooveEstrella" className="w-5 h-5 object-contain shrink-0" />
-                    <span className="text-xs font-bold text-white tracking-tight font-display">GrooveEstrella</span>
-                </div>
-
-                <button 
-                    onClick={handleNativeShare}
-                    className="w-11 h-11 rounded-full aspect-square shrink-0 bg-black/45 hover:bg-black/65 active:scale-95 text-white flex items-center justify-center transition backdrop-blur-md cursor-pointer border border-white/20 shadow-lg"
+                    className="w-10 h-10 rounded-full aspect-square shrink-0 bg-black/50 hover:bg-black/70 active:scale-95 text-white flex items-center justify-center transition backdrop-blur-md cursor-pointer border border-white/20 shadow-lg"
                     title="Share Album"
                 >
                     <Share2 size={18} />

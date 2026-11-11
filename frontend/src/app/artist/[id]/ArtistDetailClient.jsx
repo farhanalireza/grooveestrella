@@ -292,28 +292,31 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
                     {/* Bottom Smooth Fade into Natural Page Background */}
                     <div className="absolute inset-x-0 bottom-0 h-72 sm:h-80 bg-gradient-to-t from-[var(--theme-bg)] via-[var(--theme-bg)]/85 via-40% to-transparent pointer-events-none z-10" />
 
-                    {/* Floating Top Navigation: Back, Brand Wordmark, Native Share */}
-                    <header className="absolute top-4 sm:top-6 inset-x-0 px-4 sm:px-6 md:px-12 flex items-center justify-between z-20 max-w-7xl mx-auto">
-                        <button 
-                            onClick={handleBack}
-                            className="w-10 h-10 rounded-full aspect-square shrink-0 bg-black/45 hover:bg-black/65 active:scale-95 text-white flex items-center justify-center transition backdrop-blur-md cursor-pointer border border-white/20 shadow-lg"
-                            title="Go Back"
-                        >
-                            <ArrowLeft size={18} />
-                        </button>
-
-                        <div 
-                            onClick={() => router.push("/")}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/45 hover:bg-black/65 backdrop-blur-md border border-white/20 active:scale-95 transition cursor-pointer select-none"
-                            title="GrooveEstrella Home"
-                        >
-                            <img src="/in.svg" alt="GrooveEstrella" className="w-5 h-5 object-contain shrink-0" />
-                            <span className="text-xs font-bold text-white tracking-tight font-display">GrooveEstrella</span>
+                    {/* Floating Top Navigation: Fused Back + Brand Pill on Left, Share on Right */}
+                    <header className="absolute top-4 sm:top-6 inset-x-0 px-4 sm:px-6 md:px-12 flex items-center justify-between z-20 max-w-7xl mx-auto pointer-events-none">
+                        {/* Fused Back + GrooveEstrella Brand Pill (Left-aligned, leaving center unobstructed for artist photo) */}
+                        <div className="flex items-center bg-black/50 hover:bg-black/70 backdrop-blur-md rounded-full border border-white/20 shadow-lg p-1 pointer-events-auto transition-colors">
+                            <button 
+                                onClick={handleBack}
+                                className="w-8 h-8 sm:w-9 sm:h-9 rounded-full aspect-square shrink-0 hover:bg-white/15 active:scale-95 text-white flex items-center justify-center transition cursor-pointer"
+                                title="Go Back"
+                            >
+                                <ArrowLeft size={17} />
+                            </button>
+                            <div className="h-4 w-px bg-white/20 mx-1" />
+                            <button
+                                onClick={() => router.push("/")}
+                                className="flex items-center gap-1.5 pl-1 pr-3 py-1 hover:bg-white/15 rounded-full active:scale-95 transition cursor-pointer select-none"
+                                title="GrooveEstrella Home"
+                            >
+                                <img src="/in.svg" alt="GrooveEstrella" className="w-4 h-4 sm:w-5 sm:h-5 object-contain shrink-0" />
+                                <span className="text-xs font-bold text-white tracking-tight font-display">GrooveEstrella</span>
+                            </button>
                         </div>
 
                         <button 
                             onClick={handleNativeShare}
-                            className="w-10 h-10 rounded-full aspect-square shrink-0 bg-black/45 hover:bg-black/65 active:scale-95 text-white flex items-center justify-center transition backdrop-blur-md cursor-pointer border border-white/20 shadow-lg"
+                            className="w-10 h-10 rounded-full aspect-square shrink-0 bg-black/50 hover:bg-black/70 active:scale-95 text-white flex items-center justify-center transition backdrop-blur-md cursor-pointer border border-white/20 shadow-lg pointer-events-auto"
                             title="Share Artist"
                         >
                             <Share2 size={18} />
@@ -456,7 +459,7 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
             <div className="sticky top-0 z-30 bg-[var(--theme-bg)]/90 backdrop-blur-xl border-b border-[var(--theme-border)]/30 mt-6 mb-8 transition-colors w-full">
                 <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 md:px-12">
                     <div className="overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden scrollb-none no-scrollbar">
-                        <div className="flex items-center gap-1 sm:gap-2 min-w-max">
+                        <div className="flex items-center gap-1 sm:gap-2 min-w-max px-1 sm:px-2">
                             {ARTIST_TABS.map((tab) => {
                                 const isActive = activeTab === tab.id;
                                 const TabIcon = tab.icon;
@@ -739,55 +742,55 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
                         )}
                     </div>
                 )}
-            </div>
 
-            {/* TAB 3: BIO & LINEUP (Dedicated, Fluid & Crash-Proof Component) */}
-            {activeTab === "about" && (
-                <ArtistBioAndLineupTab
-                    artist={artist}
-                    isGroup={isGroup}
-                    members={safeMembers}
-                    bands={bands}
-                    collaborations={collaborations}
-                    description={artist.description}
-                />
-            )}
-
-            {/* TAB 6: EXTERNAL LINKS (Rich Platform Categorization & Direct Links) */}
-            {activeTab === "links" && (
-                <ArtistLinksTab
-                    artistName={artist.name || "Artist"}
-                    externalLinks={externalLinks}
-                    id={artist.id || id}
-                />
-            )}
-
-            {/* OTHER TABS: Genres & Roots, Ratings & Reviews */}
-            {(activeTab === "lore" || activeTab === "reviews") && (
-                <div className="relative z-10 mb-12 animate-fade-in max-w-4xl mx-auto">
-                    <MusicLoreAndReviews
-                        id={artist.id || id}
-                        type="artist"
-                        title={artist.name}
-                        artist={artist.name}
+                {/* TAB 3: BIO & LINEUP (Dedicated, Fluid & Crash-Proof Component) */}
+                {activeTab === "about" && (
+                    <ArtistBioAndLineupTab
+                        artist={artist}
+                        isGroup={isGroup}
+                        members={safeMembers}
+                        bands={bands}
+                        collaborations={collaborations}
                         description={artist.description}
-                        releaseDetails={{
-                            releaseDate: artist.beginDate ? `Active since ${artist.beginDate}` : null,
-                            country: artist.country || artist.area,
-                            format: isGroup ? 'Musical Band / Group' : 'Solo Artist',
-                            label: artist.type
-                        }}
-                        primaryGenre={genres[0] || null}
-                        genres={artist.genres || genres || []}
-                        categorizedTags={artist.categorizedTags || null}
-                        tags={artist.tags || artist.genres || []}
-                        allTags={artist.allTags || []}
-                        rating={artist.rating}
-                        externalLinks={artist.externalLinks || []}
-                        activeTab={activeTab}
                     />
-                </div>
-            )}
+                )}
+
+                {/* TAB 6: EXTERNAL LINKS (Rich Platform Categorization & Direct Links) */}
+                {activeTab === "links" && (
+                    <ArtistLinksTab
+                        artistName={artist.name || "Artist"}
+                        externalLinks={externalLinks}
+                        id={artist.id || id}
+                    />
+                )}
+
+                {/* OTHER TABS: Genres & Roots, Ratings & Reviews */}
+                {(activeTab === "lore" || activeTab === "reviews") && (
+                    <div className="relative z-10 mb-12 animate-fade-in max-w-4xl mx-auto">
+                        <MusicLoreAndReviews
+                            id={artist.id || id}
+                            type="artist"
+                            title={artist.name}
+                            artist={artist.name}
+                            description={artist.description}
+                            releaseDetails={{
+                                releaseDate: artist.beginDate ? `Active since ${artist.beginDate}` : null,
+                                country: artist.country || artist.area,
+                                format: isGroup ? 'Musical Band / Group' : 'Solo Artist',
+                                label: artist.type
+                            }}
+                            primaryGenre={genres[0] || null}
+                            genres={artist.genres || genres || []}
+                            categorizedTags={artist.categorizedTags || null}
+                            tags={artist.tags || artist.genres || []}
+                            allTags={artist.allTags || []}
+                            rating={artist.rating}
+                            externalLinks={artist.externalLinks || []}
+                            activeTab={activeTab}
+                        />
+                    </div>
+                )}
+            </div>
 
             {/* GrooveLink Modal */}
             <GrooveLinkModal

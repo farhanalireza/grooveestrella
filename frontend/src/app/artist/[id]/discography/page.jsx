@@ -1,14 +1,32 @@
 // src/app/artist/[id]/discography/page.jsx
+import { cache } from 'react';
 import { fetchMusicBrainzArtistServer, searchMusicBrainzArtistsServer } from '@/lib/musicbrainzServer';
 import ArtistDiscographyClient from './ArtistDiscographyClient';
+
+// Enable Incremental Static Regeneration (ISR) at Vercel Edge for 24 hours
+export const revalidate = 86400;
+
+const getArtistData = cache(async (id) => {
+  if (!id) return null;
+  let artistData = await fetchMusicBrainzArtistServer(id);
+  if (!artistData) {
+    try {
+      const searchRes = await searchMusicBrainzArtistsServer(decodeURIComponent(id), 1);
+      if (searchRes && searchRes.length > 0) {
+        artistData = await fetchMusicBrainzArtistServer(searchRes[0].id);
+      }
+    } catch (_) {}
+  }
+  return artistData;
+});
 
 export async function generateMetadata({ params }) {
   const { id } = await params;
   let artist = null;
   try {
     artist = await Promise.race([
-      fetchMusicBrainzArtistServer(id),
-      new Promise((res) => setTimeout(() => res(null), 1200)),
+      getArtistData(id),
+      new Promise((res) => setTimeout(() => res(null), 3000)),
     ]);
   } catch (_) {}
 
@@ -27,13 +45,7 @@ export async function generateMetadata({ params }) {
 
 export default async function Page({ params }) {
   const { id } = await params;
-  let artistData = await fetchMusicBrainzArtistServer(id);
-  if (!artistData) {
-    const searchRes = await searchMusicBrainzArtistsServer(decodeURIComponent(id), 1);
-    if (searchRes.length > 0) {
-      artistData = await fetchMusicBrainzArtistServer(searchRes[0].id);
-    }
-  }
+  const artistData = await getArtistData(id);
 
   return (
     <ArtistDiscographyClient 

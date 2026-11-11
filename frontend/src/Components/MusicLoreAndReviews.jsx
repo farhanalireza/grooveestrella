@@ -292,7 +292,7 @@ export default function MusicLoreAndReviews({
   const renderLinks = renderAll || activeTab === "links";
 
   return (
-    <div className="relative z-10 w-full space-y-12 pb-16">
+    <div className="relative z-10 w-full space-y-12 px-4 sm:px-6 md:px-8 pb-16">
       
       {/* 1. ABOUT & INFO TAB (Full Lore, Specs & Artist Bio - NO CARD WRAPPER!) */}
       {renderAbout && (description || artistDescription || releaseDetails) && (

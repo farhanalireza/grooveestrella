@@ -56,7 +56,7 @@ export function getCachedOrInFlight(key, fetcher) {
 // Chained sequential queue for MusicBrainz to strictly adhere to 1 request per second
 let requestQueue = Promise.resolve();
 let lastRequestTime = 0;
-const MIN_INTERVAL_MS = 1020;
+const MIN_INTERVAL_MS = 1000;
 
 function rateLimitedGet(url, params = {}) {
   const executeWithRetry = async (attempt = 1) => {
@@ -77,13 +77,13 @@ function rateLimitedGet(url, params = {}) {
           'User-Agent': USER_AGENT,
           Accept: 'application/json',
         },
-        timeout: 7000,
+        timeout: 4000,
       });
     } catch (err) {
       const status = err.response?.status;
-      if ((status === 503 || status === 429 || !err.response) && attempt < 4) {
-        const backoff = attempt * 1500;
-        console.warn(`MusicBrainz ${status || err.code || 'error'} on ${url}, retrying in ${backoff}ms (attempt ${attempt}/4)...`);
+      if ((status === 503 || status === 429 || !err.response) && attempt < 2) {
+        const backoff = 600;
+        console.warn(`MusicBrainz ${status || err.code || 'error'} on ${url}, fast retry in ${backoff}ms (attempt ${attempt}/2)...`);
         await new Promise((resolve) => setTimeout(resolve, backoff));
         return executeWithRetry(attempt + 1);
       }

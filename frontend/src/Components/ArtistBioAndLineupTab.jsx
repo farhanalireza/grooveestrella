@@ -83,18 +83,104 @@ export default function ArtistBioAndLineupTab({
   }, [description]);
 
   return (
-    <div className="relative z-10 space-y-12 animate-fade-in max-w-4xl mx-auto pb-16">
+    <div className="relative z-10 space-y-10 animate-fade-in max-w-4xl mx-auto px-4 sm:px-6 md:px-8 pb-16">
       
-      {/* 1. BAND LINEUP & PERSONNEL SECTION */}
+      {/* 1. FULL EDITORIAL BIOGRAPHY (Description & History) */}
+      <section className="space-y-4">
+        <div className="border-b border-[var(--theme-border)]/50 pb-3.5">
+          <div className="flex items-center gap-2 text-xs font-bold text-[var(--theme-accent)] uppercase tracking-widest">
+            <BookOpen size={15} />
+            <span>Biography & Overview</span>
+          </div>
+          <h2 className="text-2xl sm:text-3xl font-black text-[var(--theme-fg)] tracking-tight font-display mt-0.5">
+            About {artist.name || "Artist"}
+          </h2>
+        </div>
+
+        {paragraphs.length > 0 ? (
+          <div className="space-y-4 text-sm sm:text-base text-[var(--theme-fg)]/90 leading-relaxed font-body">
+            {paragraphs.map((p, idx) => (
+              <p key={`bio-para-${idx}`} className="leading-relaxed">
+                {p}
+              </p>
+            ))}
+          </div>
+        ) : description ? (
+          <p className="text-sm sm:text-base text-[var(--theme-fg)]/90 leading-relaxed font-body">
+            {description}
+          </p>
+        ) : (
+          <div className="p-6 rounded-2xl bg-[var(--theme-surface)]/50 border border-[var(--theme-border)] text-center text-xs text-[var(--theme-muted)]">
+            No long-form biography currently cataloged for this artist.
+          </div>
+        )}
+      </section>
+
+      {/* 2. ARCHIVAL SPECS & METADATA GRID (Years active, born/formed, origin, format) */}
+      <section className="space-y-4 pt-2">
+        <h3 className="text-xs font-bold text-[var(--theme-muted)] uppercase tracking-wider">
+          Archival Timeline & Geographic Roots
+        </h3>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+          <div className="p-3.5 rounded-2xl bg-[var(--theme-surface)]/70 border border-[var(--theme-border)]/60 space-y-1">
+            <span className="text-[11px] font-semibold text-[var(--theme-muted)] flex items-center gap-1.5">
+              <Calendar size={13} className="text-[var(--theme-accent)]" />
+              <span>{isGroup ? "Formed" : "Born / Started"}</span>
+            </span>
+            <p className="text-sm font-bold text-[var(--theme-fg)]">
+              {beginYear ? `${beginYear}` : "Active"}
+            </p>
+          </div>
+
+          <div className="p-3.5 rounded-2xl bg-[var(--theme-surface)]/70 border border-[var(--theme-border)]/60 space-y-1">
+            <span className="text-[11px] font-semibold text-[var(--theme-muted)] flex items-center gap-1.5">
+              <Clock size={13} className="text-[var(--theme-accent)]" />
+              <span>Status</span>
+            </span>
+            <p className="text-sm font-bold text-[var(--theme-fg)]">
+              {isEnded ? `${isGroup ? "Disbanded" : "Died"} (${endYear || ""})` : "Active"}
+            </p>
+          </div>
+
+          <div className="p-3.5 rounded-2xl bg-[var(--theme-surface)]/70 border border-[var(--theme-border)]/60 space-y-1">
+            <span className="text-[11px] font-semibold text-[var(--theme-muted)] flex items-center gap-1.5">
+              <MapPin size={13} className="text-[var(--theme-accent)]" />
+              <span>Origin / Country</span>
+            </span>
+            <p className="text-sm font-bold text-[var(--theme-fg)] truncate">
+              {artist.country || artist.area || "Global"}
+            </p>
+          </div>
+
+          <div className="p-3.5 rounded-2xl bg-[var(--theme-surface)]/70 border border-[var(--theme-border)]/60 space-y-1">
+            <span className="text-[11px] font-semibold text-[var(--theme-muted)] flex items-center gap-1.5">
+              <Disc size={13} className="text-[var(--theme-accent)]" />
+              <span>Entity Format</span>
+            </span>
+            <p className="text-sm font-bold text-[var(--theme-fg)] truncate">
+              {isGroup ? "Musical Band / Group" : "Solo Artist"}
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* CLEAR VISUAL DIVISION */}
+      {hasLineup && (
+        <div className="relative py-2">
+          <div className="h-px bg-gradient-to-r from-transparent via-[var(--theme-border)] to-transparent" />
+        </div>
+      )}
+
+      {/* 3. BAND PERSONNEL & LINEUP HISTORY (Or Groups/Projects for solo artist) */}
       {hasLineup && (
         <section className="space-y-8">
           <div className="border-b border-[var(--theme-border)]/50 pb-3.5">
             <div className="flex items-center gap-2 text-xs font-bold text-[var(--theme-accent)] uppercase tracking-widest">
               <Users size={15} />
-              <span>{isGroup ? "Band Personnel & Lineup History" : "Musical Projects & Bands"}</span>
+              <span>{isGroup ? "Band Personnel & Lineup History" : "Musical Projects & Groups"}</span>
             </div>
             <h2 className="text-2xl sm:text-3xl font-black text-[var(--theme-fg)] tracking-tight font-display mt-0.5">
-              {isGroup ? `${artist.name || "Band"} Lineup` : `Groups & Projects with ${artist.name || "Artist"}`}
+              {isGroup ? `${artist.name || "Band"} Lineup History` : `Groups & Projects with ${artist.name || "Artist"}`}
             </h2>
           </div>
 
@@ -288,79 +374,6 @@ export default function ArtistBioAndLineupTab({
           )}
         </section>
       )}
-
-      {/* 2. ARCHIVAL SPECS & METADATA GRID */}
-      <section className="space-y-4 pt-4 border-t border-[var(--theme-border)]/50">
-        <h3 className="text-xs font-bold text-[var(--theme-fg)] uppercase tracking-wider">
-          Archival Timeline & Geographic Roots
-        </h3>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
-          <div className="p-3.5 rounded-2xl bg-[var(--theme-surface)]/70 border border-[var(--theme-border)]/60 space-y-1">
-            <span className="text-[11px] font-semibold text-[var(--theme-muted)] flex items-center gap-1.5">
-              <Calendar size={13} className="text-[var(--theme-accent)]" />
-              <span>Formed / Started</span>
-            </span>
-            <p className="text-sm font-bold text-[var(--theme-fg)]">
-              {beginYear ? `${beginYear}` : "Archive Active"}
-            </p>
-          </div>
-
-          <div className="p-3.5 rounded-2xl bg-[var(--theme-surface)]/70 border border-[var(--theme-border)]/60 space-y-1">
-            <span className="text-[11px] font-semibold text-[var(--theme-muted)] flex items-center gap-1.5">
-              <Clock size={13} className="text-[var(--theme-accent)]" />
-              <span>Status</span>
-            </span>
-            <p className="text-sm font-bold text-[var(--theme-fg)]">
-              {isEnded ? `Disbanded (${endYear || ""})` : "Active"}
-            </p>
-          </div>
-
-          <div className="p-3.5 rounded-2xl bg-[var(--theme-surface)]/70 border border-[var(--theme-border)]/60 space-y-1">
-            <span className="text-[11px] font-semibold text-[var(--theme-muted)] flex items-center gap-1.5">
-              <MapPin size={13} className="text-[var(--theme-accent)]" />
-              <span>Country / Origin</span>
-            </span>
-            <p className="text-sm font-bold text-[var(--theme-fg)] truncate">
-              {artist.country || artist.area || "Global"}
-            </p>
-          </div>
-
-          <div className="p-3.5 rounded-2xl bg-[var(--theme-surface)]/70 border border-[var(--theme-border)]/60 space-y-1">
-            <span className="text-[11px] font-semibold text-[var(--theme-muted)] flex items-center gap-1.5">
-              <Disc size={13} className="text-[var(--theme-accent)]" />
-              <span>Entity Format</span>
-            </span>
-            <p className="text-sm font-bold text-[var(--theme-fg)] truncate">
-              {isGroup ? "Musical Band / Group" : "Solo Artist"}
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* 3. FULL EDITORIAL BIOGRAPHY */}
-      <section className="space-y-4 pt-4 border-t border-[var(--theme-border)]/50">
-        <div className="flex items-center gap-2 text-xs font-bold text-[var(--theme-accent)] uppercase tracking-widest">
-          <BookOpen size={15} />
-          <span>Biography & History</span>
-        </div>
-        <h2 className="text-2xl sm:text-3xl font-black text-[var(--theme-fg)] tracking-tight font-display">
-          About {artist.name || "Artist"}
-        </h2>
-
-        {paragraphs.length > 0 ? (
-          <div className="space-y-4 text-sm sm:text-base text-[var(--theme-muted)] leading-relaxed font-body">
-            {paragraphs.map((p, idx) => (
-              <p key={`bio-para-${idx}`} className="leading-relaxed">
-                {p}
-              </p>
-            ))}
-          </div>
-        ) : (
-          <div className="p-6 rounded-2xl bg-[var(--theme-surface)]/50 border border-[var(--theme-border)] text-center text-xs text-[var(--theme-muted)]">
-            No long-form biography currently cataloged for this artist in MusicBrainz.
-          </div>
-        )}
-      </section>
     </div>
   );
 }

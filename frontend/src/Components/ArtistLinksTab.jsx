@@ -219,7 +219,7 @@ export default function ArtistLinksTab({
   };
 
   return (
-    <div className="relative z-10 space-y-8 animate-fade-in max-w-4xl mx-auto pb-16">
+    <div className="relative z-10 space-y-8 animate-fade-in max-w-4xl mx-auto px-4 sm:px-6 md:px-8 pb-16">
       <div className="border-b border-[var(--theme-border)]/50 pb-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-2 text-xs font-bold text-[var(--theme-accent)] uppercase tracking-widest">
