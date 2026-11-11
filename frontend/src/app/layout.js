@@ -7,13 +7,13 @@ import LiquidToastContainer from "@/Components/LiquidToastContainer";
 const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
   variable: "--font-space-grotesk",
-  weight: ["300", "400", "500", "600", "700"],
+  display: "swap",
 });
 
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
-  weight: ["300", "400", "500", "600", "700", "800"],
+  display: "swap",
 });
 
 export const viewport = {
