@@ -272,22 +272,26 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
 
     return (
         <div 
-            className="relative min-h-screen bg-[var(--theme-bg)] text-[var(--theme-fg)] pb-32 transition-colors duration-300"
+            className="relative min-h-screen bg-[var(--theme-bg)] text-[var(--theme-fg)] pb-32 transition-colors duration-300 w-full max-w-full overflow-x-hidden"
             style={{ background: theme === 'adaptive' && colors?.gradient ? colors.gradient : undefined }}
         >
             {/* 1. Artist Full-Bleed Banner Hero (Full background on Mobile, Height-limited on PC) */}
-            <div className="relative w-full overflow-hidden">
+            <div className="relative w-full max-w-full overflow-hidden bg-black">
                 {/* Hero Banner Image */}
-                <div className="relative w-full h-[62vh] sm:h-[68vh] md:h-[480px] lg:h-[540px] overflow-hidden bg-[var(--theme-bg)]">
+                <div className="relative w-full max-w-full h-[62vh] sm:h-[68vh] md:h-[480px] lg:h-[540px] overflow-hidden bg-black">
                     <img 
                         src={coverUrl} 
                         alt={artist.name} 
-                        className="w-full h-full object-cover object-top sm:object-center select-none"
+                        className="w-full max-w-full h-full object-cover object-top sm:object-center select-none block"
+                        style={{
+                            maskImage: 'linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.5) 12%, rgba(0,0,0,1) 25%, rgba(0,0,0,1) 75%, rgba(0,0,0,0) 100%)',
+                            WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.5) 12%, rgba(0,0,0,1) 25%, rgba(0,0,0,1) 75%, rgba(0,0,0,0) 100%)',
+                        }}
                         onError={(e) => { e.currentTarget.src = 'https://placehold.co/800x800/17020B/E8A87C?text=Artist'; }}
                     />
 
-                    {/* Top Gradient for Back and Share Navigation Controls */}
-                    <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-black/85 via-black/40 to-transparent pointer-events-none z-10" />
+                    {/* Top Black-to-Transparent Fade: Upper buttons rest cleanly in dark space before photo reveals */}
+                    <div className="absolute inset-x-0 top-0 h-32 sm:h-36 bg-gradient-to-b from-black via-black/85 via-35% to-transparent pointer-events-none z-10" />
 
                     {/* Bottom Smooth Fade into Natural Page Background */}
                     <div className="absolute inset-x-0 bottom-0 h-72 sm:h-80 bg-gradient-to-t from-[var(--theme-bg)] via-[var(--theme-bg)]/85 via-40% to-transparent pointer-events-none z-10" />
@@ -295,7 +299,7 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
                     {/* Floating Top Navigation: Fused Back + Brand Pill on Left, Share on Right */}
                     <header className="absolute top-4 sm:top-6 inset-x-0 px-4 sm:px-6 md:px-12 flex items-center justify-between z-20 max-w-7xl mx-auto pointer-events-none">
                         {/* Fused Back + GrooveEstrella Brand Pill (Left-aligned, leaving center unobstructed for artist photo) */}
-                        <div className="flex items-center bg-black/50 hover:bg-black/70 backdrop-blur-md rounded-full border border-white/20 shadow-lg p-1 pointer-events-auto transition-colors">
+                        <div className="flex items-center bg-black/60 hover:bg-black/80 backdrop-blur-md rounded-full border border-white/20 shadow-xl p-1 pointer-events-auto transition-colors">
                             <button 
                                 onClick={handleBack}
                                 className="w-8 h-8 sm:w-9 sm:h-9 rounded-full aspect-square shrink-0 hover:bg-white/15 active:scale-95 text-white flex items-center justify-center transition cursor-pointer"
@@ -316,7 +320,7 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
 
                         <button 
                             onClick={handleNativeShare}
-                            className="w-10 h-10 rounded-full aspect-square shrink-0 bg-black/50 hover:bg-black/70 active:scale-95 text-white flex items-center justify-center transition backdrop-blur-md cursor-pointer border border-white/20 shadow-lg pointer-events-auto"
+                            className="w-10 h-10 rounded-full aspect-square shrink-0 bg-black/60 hover:bg-black/80 active:scale-95 text-white flex items-center justify-center transition backdrop-blur-md cursor-pointer border border-white/20 shadow-xl pointer-events-auto"
                             title="Share Artist"
                         >
                             <Share2 size={18} />

@@ -30,6 +30,8 @@ import {
   CheckCircle2,
   Dice5,
   RefreshCw,
+  Users,
+  UserCheck,
 } from "lucide-react";
 import { toast } from "@/lib/toast";
 import { generateRandomName, getOrSetUserName } from "@/lib/nameGenerator";
@@ -42,6 +44,7 @@ import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import JournalCard from "@/Components/JournalCard";
 import RatingAndJournalModal from "@/Components/RatingAndJournalModal";
+import FollowersListModal from "@/Components/FollowersListModal";
 
 const ALL_GENRES = [
   "Rock",
@@ -92,6 +95,17 @@ function AccountDashboardContent() {
   // Modal for editing journal entry
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalItem, setModalItem] = useState(null);
+
+  // Social follows modal
+  const [followersCount, setFollowersCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
+  const [isFollowsModalOpen, setIsFollowsModalOpen] = useState(false);
+  const [followsModalTab, setFollowsModalTab] = useState("followers");
+
+  const handleOpenFollows = (tab = "followers") => {
+    setFollowsModalTab(tab);
+    setIsFollowsModalOpen(true);
+  };
 
   const loadData = () => {
     if (typeof window === "undefined") return;
@@ -146,6 +160,22 @@ function AccountDashboardContent() {
 
     if (user && isSupabaseConfigured()) {
       const supabase = createClient();
+
+      // Fetch social counts
+      supabase
+        .from("follows")
+        .select("*", { count: "exact", head: true })
+        .eq("following_id", user.id)
+        .then(({ count }) => setFollowersCount(count || 0))
+        .catch(() => {});
+
+      supabase
+        .from("follows")
+        .select("*", { count: "exact", head: true })
+        .eq("follower_id", user.id)
+        .then(({ count }) => setFollowingCount(count || 0))
+        .catch(() => {});
+
       supabase
         .from("journals")
         .select(`
@@ -451,6 +481,39 @@ function AccountDashboardContent() {
             <p className="text-sm sm:text-base text-[var(--theme-muted)] max-w-2xl leading-relaxed pt-1 font-body">
               {bio || "Active music explorer and journal keeper on GrooveEstrella."}
             </p>
+
+            {/* Social Follower & Following Row */}
+            {user && (
+              <div className="flex items-center justify-center sm:justify-start gap-4 pt-1 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => handleOpenFollows("followers")}
+                  className="inline-flex items-center gap-1.5 text-xs text-[var(--theme-muted)] hover:text-amber-300 transition cursor-pointer font-medium group"
+                  title="View your followers"
+                >
+                  <Users size={13} className="text-amber-300" />
+                  <span className="font-black text-sm text-[var(--theme-fg)] group-hover:text-amber-300 transition-colors">
+                    {followersCount}
+                  </span>
+                  <span>Followers</span>
+                </button>
+
+                <span className="text-[var(--theme-border)]">·</span>
+
+                <button
+                  type="button"
+                  onClick={() => handleOpenFollows("following")}
+                  className="inline-flex items-center gap-1.5 text-xs text-[var(--theme-muted)] hover:text-amber-300 transition cursor-pointer font-medium group"
+                  title="View critics you follow"
+                >
+                  <UserCheck size={13} className="text-amber-300" />
+                  <span className="font-black text-sm text-[var(--theme-fg)] group-hover:text-amber-300 transition-colors">
+                    {followingCount}
+                  </span>
+                  <span>Following</span>
+                </button>
+              </div>
+            )}
 
             {/* Inline Avatar Icon Selector Drawer (Full DiceBear Studio + Vector Icons) */}
             {isEditingAvatar && (
@@ -938,6 +1001,17 @@ function AccountDashboardContent() {
           onSaved={() => {
             loadData();
           }}
+        />
+      )}
+
+      {/* Followers & Following Modal */}
+      {user && (
+        <FollowersListModal
+          isOpen={isFollowsModalOpen}
+          onClose={() => setIsFollowsModalOpen(false)}
+          userId={user.id}
+          username={authProfile?.username || userName}
+          initialTab={followsModalTab}
         />
       )}
     </div>

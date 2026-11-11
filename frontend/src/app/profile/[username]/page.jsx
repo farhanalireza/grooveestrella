@@ -26,6 +26,7 @@ import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import { toast } from "@/lib/toast";
 import JournalCard, { FALLBACK_COVER_SVG } from "@/Components/JournalCard";
+import FollowersListModal from "@/Components/FollowersListModal";
 
 export default function UserProfilePage() {
   const params = useParams();
@@ -38,6 +39,9 @@ export default function UserProfilePage() {
   const [loading, setLoading] = useState(true);
   const [isFollowing, setIsFollowing] = useState(false);
   const [followersCount, setFollowersCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
+  const [isFollowsModalOpen, setIsFollowsModalOpen] = useState(false);
+  const [followsModalTab, setFollowsModalTab] = useState("followers");
 
   // Filter tabs: 'all' | 'reviewed' | 'top_rated'
   const [activeFilter, setActiveFilter] = useState("all");
@@ -128,7 +132,14 @@ export default function UserProfilePage() {
               .eq("following_id", dbProfile.id);
             setFollowersCount(fCount || 0);
 
-            // 4. Check if current user is following this profile
+            // 4. Following count
+            const { count: followingC } = await supabase
+              .from("follows")
+              .select("*", { count: "exact", head: true })
+              .eq("follower_id", dbProfile.id);
+            setFollowingCount(followingC || 0);
+
+            // 5. Check if current user is following this profile
             if (user && user.id !== dbProfile.id) {
               const { data: followRel } = await supabase
                 .from("follows")
@@ -205,6 +216,11 @@ export default function UserProfilePage() {
       setTimeout(() => setCopiedLink(false), 2000);
       toast.success("Profile link copied to clipboard!");
     }
+  };
+
+  const handleOpenFollows = (tab = "followers") => {
+    setFollowsModalTab(tab);
+    setIsFollowsModalOpen(true);
   };
 
   // Metrics
@@ -335,7 +351,7 @@ export default function UserProfilePage() {
             </p>
 
             {/* Critic Stat Cards Row */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 pt-3">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 sm:gap-3 pt-3">
               <div className="p-3 rounded-2xl bg-[var(--theme-surface)]/80 border border-[var(--theme-border)]/60 text-center sm:text-left">
                 <div className="flex items-center justify-center sm:justify-start gap-1.5 text-xs text-[var(--theme-muted)] font-medium">
                   <Headphones size={13} className="text-amber-300" />
@@ -366,15 +382,37 @@ export default function UserProfilePage() {
                 </div>
               </div>
 
-              <div className="p-3 rounded-2xl bg-[var(--theme-surface)]/80 border border-[var(--theme-border)]/60 text-center sm:text-left">
-                <div className="flex items-center justify-center sm:justify-start gap-1.5 text-xs text-[var(--theme-muted)] font-medium">
+              {/* Followers - Clickable */}
+              <button
+                type="button"
+                onClick={() => handleOpenFollows("followers")}
+                className="p-3 rounded-2xl bg-[var(--theme-surface)]/80 hover:bg-[var(--theme-surface)] border border-[var(--theme-border)]/60 hover:border-amber-400/50 text-center sm:text-left transition-all duration-200 cursor-pointer group shadow-xs"
+                title="View followers"
+              >
+                <div className="flex items-center justify-center sm:justify-start gap-1.5 text-xs text-[var(--theme-muted)] font-medium group-hover:text-amber-300 transition-colors">
                   <Users size={13} className="text-amber-300" />
                   <span>Followers</span>
                 </div>
-                <div className="text-xl sm:text-2xl font-black text-[var(--theme-fg)] mt-0.5">
+                <div className="text-xl sm:text-2xl font-black text-[var(--theme-fg)] mt-0.5 group-hover:text-amber-300 transition-colors">
                   {followersCount}
                 </div>
-              </div>
+              </button>
+
+              {/* Following - Clickable */}
+              <button
+                type="button"
+                onClick={() => handleOpenFollows("following")}
+                className="p-3 rounded-2xl bg-[var(--theme-surface)]/80 hover:bg-[var(--theme-surface)] border border-[var(--theme-border)]/60 hover:border-amber-400/50 text-center sm:text-left transition-all duration-200 cursor-pointer group shadow-xs col-span-2 sm:col-span-1"
+                title="View critics this user follows"
+              >
+                <div className="flex items-center justify-center sm:justify-start gap-1.5 text-xs text-[var(--theme-muted)] font-medium group-hover:text-amber-300 transition-colors">
+                  <UserCheck size={13} className="text-amber-300" />
+                  <span>Following</span>
+                </div>
+                <div className="text-xl sm:text-2xl font-black text-[var(--theme-fg)] mt-0.5 group-hover:text-amber-300 transition-colors">
+                  {followingCount}
+                </div>
+              </button>
             </div>
           </div>
         </div>
@@ -569,6 +607,17 @@ export default function UserProfilePage() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Followers & Following Modal */}
+      {profile && (
+        <FollowersListModal
+          isOpen={isFollowsModalOpen}
+          onClose={() => setIsFollowsModalOpen(false)}
+          userId={profile.id}
+          username={profile.username}
+          initialTab={followsModalTab}
+        />
       )}
     </div>
   );

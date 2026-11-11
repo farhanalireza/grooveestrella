@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Search, X, Music, Users, Disc, ListMusic } from "lucide-react";
+import { Search, X, Music, Users, Disc, ListMusic, UserRound } from "lucide-react";
 import { motion } from "framer-motion";
 
 const SearchComp = ({ initialQuery = "", handleChange }) => {
@@ -39,6 +39,7 @@ const SearchComp = ({ initialQuery = "", handleChange }) => {
         { id: "artist", label: "Artists", icon: Users },
         { id: "album", label: "Albums", icon: Disc },
         { id: "playlist", label: "Playlists", icon: ListMusic },
+        { id: "user", label: "Users", icon: UserRound },
     ];
 
     return (
@@ -52,7 +53,7 @@ const SearchComp = ({ initialQuery = "", handleChange }) => {
                 <input
                     className="flex-1 min-w-0 bg-transparent px-3 text-[var(--theme-fg)] text-sm sm:text-base outline-none placeholder-[var(--theme-muted)] font-medium"
                     type="text"
-                    placeholder="Search songs, artists, albums, or playlists..."
+                    placeholder="Search songs, artists, albums, playlists, or users..."
                     value={searchQuery}
                     onChange={(e) => handleSearch(e.target.value, searchType)}
                     id="searchBar"

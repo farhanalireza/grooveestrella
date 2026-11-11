@@ -239,28 +239,6 @@ const AppBar = ({ selectedSection, setSection }) => {
               </Link>
             );
           })}
-
-          {/* Mobile Theme Toggle Button */}
-          <motion.button
-            whileTap={{ scale: 0.92 }}
-            onClick={toggleTheme}
-            className="relative py-1.5 px-2 flex flex-col justify-center items-center gap-1 text-[var(--theme-muted)] hover:text-[var(--theme-fg)] transition-colors duration-200 cursor-pointer"
-            title={`Current theme: ${theme === 'adaptive' ? 'Album-Adaptive' : isDark ? 'Dark' : 'Light'}. Click to cycle.`}
-            aria-label="Toggle Theme"
-          >
-            <div className="relative z-10">
-              {theme === "adaptive" ? (
-                <Sparkles size={17} className="text-[var(--theme-accent)]" />
-              ) : isDark ? (
-                <Sun size={17} className="text-[var(--theme-accent)]" />
-              ) : (
-                <Moon size={17} className="text-[var(--theme-accent)]" />
-              )}
-            </div>
-            <span className="relative z-10 text-[9px] font-bold tracking-wider uppercase leading-none">
-              {theme === "adaptive" ? "Auto" : isDark ? "Light" : "Dark"}
-            </span>
-          </motion.button>
         </nav>
       </div>
     </>

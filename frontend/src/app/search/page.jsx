@@ -10,6 +10,7 @@ import { ArtistCard } from '@/Components/CardComponents/ArtistsCard';
 import { TrackCard } from '@/Components/CardComponents/TracksCard';
 import { AlbumCard } from '@/Components/CardComponents/AlbumsCard';
 import { PlaylistCard } from '@/Components/CardComponents/PlaylistsCard';
+import { UserCard } from '@/Components/CardComponents/UserCard';
 import GrooveLoader from '@/Components/GrooveLoader';
 
 export default function SearchPage() {
@@ -95,7 +96,7 @@ export default function SearchPage() {
             <p className="text-[var(--theme-muted)] text-xs md:text-sm font-semibold text-center mb-6 tracking-wide uppercase">
                 {searchTerm
                     ? `Displaying results for: "${searchTerm}"`
-                    : "Discover tracks, artists, albums, or playlists"}
+                    : "Discover tracks, artists, albums, playlists, or users"}
             </p>
 
             {/* If no search term entered, show engaging popular search chips */}
@@ -195,6 +196,18 @@ export default function SearchPage() {
                                             title={track.title}
                                             trackURI={track.trackURI}
                                             id={track.id}
+                                        />
+                                    )}
+
+                                    {track.type === "user" && (
+                                        <UserCard
+                                            id={track.id}
+                                            username={track.username}
+                                            title={track.title}
+                                            name={track.name}
+                                            url={track.url}
+                                            bio={track.bio}
+                                            followers={track.followers}
                                         />
                                     )}
                                 </React.Fragment>
