@@ -1,9 +1,9 @@
 // src/app/library/page.jsx
 "use client";
 
-import React, { useEffect, useState, useMemo, useCallback, useTransition } from 'react';
+import React, { useEffect, useState, useMemo, useCallback, useTransition, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { 
   Music, Disc, Users, Heart, FolderHeart, Trash2, ArrowRight, 
   Plus, UploadCloud, Layers, LayoutGrid, List, BookOpen, Star, Calendar, Sparkles, Edit3
@@ -13,14 +13,23 @@ import ImportPlaylistModal from '@/Components/ImportPlaylistModal';
 import PlaylistCover from '@/Components/PlaylistCover';
 import LibraryTouchSlider from '@/Components/LibraryTouchSlider';
 import LibraryCoverImage, { FALLBACK_COVER_SVG } from '@/Components/LibraryCoverImage';
-import RatingAndJournalModal from '@/Components/RatingAndJournalModal';
 import JournalCard from '@/Components/JournalCard';
+import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext';
+import { createClient, isSupabaseConfigured } from '@/lib/supabase/client';
+import { buildJournalEditorHref } from '@/lib/journalLinks';
 
-export default function LibraryPage() {
+function LibraryContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const { user } = useSupabaseAuth();
   const [isPending, startTransition] = useTransition();
   const [navigatingId, setNavigatingId] = useState(null);
-  const [activeTab, setActiveTab] = useState('songs');
+  const [activeTab, setActiveTab] = useState(() => {
+    const initialTab = searchParams.get('tab');
+    return ['songs', 'albums', 'artists', 'playlists', 'journal'].includes(initialTab)
+      ? initialTab
+      : 'songs';
+  });
   const [viewMode, setViewMode] = useState('slider'); // 'slider' | 'grid' | 'list'
   const [sliderIndex, setSliderIndex] = useState(0);
 
@@ -36,33 +45,96 @@ export default function LibraryPage() {
   const [newPlName, setNewPlName] = useState('');
   const [newPlDesc, setNewPlDesc] = useState('');
 
-  // Journal modal states for edit / new log
-  const [isJournalModalOpen, setIsJournalModalOpen] = useState(false);
-  const [journalModalItem, setJournalModalItem] = useState(null);
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam && ['songs', 'albums', 'artists', 'playlists', 'journal'].includes(tabParam)) {
+      const id = setTimeout(() => setActiveTab(tabParam), 0);
+      return () => clearTimeout(id);
+    }
+  }, [searchParams]);
 
-  const loadData = useCallback(() => {
+  const loadData = useCallback(async () => {
+    let localJournals = [];
     try {
       setSongs(JSON.parse(localStorage.getItem('savedSongs') || '[]'));
       setAlbums(JSON.parse(localStorage.getItem('savedAlbums') || '[]'));
       setArtists(JSON.parse(localStorage.getItem('savedArtists') || '[]'));
       setPlaylists(JSON.parse(localStorage.getItem('savedPlaylists') || '[]'));
       setCustomPlaylists(JSON.parse(localStorage.getItem('customPlaylists') || '[]'));
-      setJournalEntries(JSON.parse(localStorage.getItem('groove_journal_logs') || '[]'));
+      localJournals = JSON.parse(localStorage.getItem('groove_journal_logs') || '[]');
 
       const savedView = localStorage.getItem('groove_library_view_mode');
       if (savedView === 'slider' || savedView === 'grid' || savedView === 'list') {
         setViewMode(savedView);
       }
     } catch (_) {}
-  }, []);
+
+    if (user && isSupabaseConfigured()) {
+      try {
+        const supabase = createClient();
+        const { data: cloudJournals, error } = await supabase
+          .from('journals')
+          .select(`
+            id,
+            entry_text,
+            mood,
+            listened_date,
+            is_public,
+            created_at,
+            user_ratings (
+              score,
+              rating_type
+            ),
+            music_entities (
+              id,
+              mbid,
+              type,
+              title,
+              artist_credit,
+              cover_art_url
+            )
+          `)
+          .eq('user_id', user.id)
+          .order('listened_date', { ascending: false });
+
+        if (!error && Array.isArray(cloudJournals)) {
+          const formatted = cloudJournals.map((j) => ({
+            id: j.id,
+            targetId: j.music_entities?.mbid || j.music_entities?.id,
+            targetType: j.music_entities?.type || 'album',
+            title: j.music_entities?.title || 'Untitled',
+            subtitle: j.music_entities?.artist_credit || '',
+            image: j.music_entities?.cover_art_url || '',
+            rating: j.user_ratings
+              ? j.user_ratings.rating_type === 'stars'
+                ? Number(j.user_ratings.score)
+                : Math.round(Number(j.user_ratings.score || 0) / 10)
+              : 0,
+            numericalScore: j.user_ratings?.score || 0,
+            ratingSystem: j.user_ratings?.rating_type || 'stars',
+            date: j.listened_date,
+            review: j.entry_text || '',
+            mood: j.mood || '',
+            is_public: j.is_public,
+            createdAt: new Date(j.created_at).getTime(),
+          }));
+
+          const cloudIds = new Set(formatted.map((c) => c.targetId));
+          const uncommittedLocal = localJournals.filter((l) => !cloudIds.has(l.targetId));
+          setJournalEntries([...formatted, ...uncommittedLocal]);
+          return;
+        }
+      } catch (_) {}
+    }
+
+    setJournalEntries(localJournals);
+  }, [user]);
 
   useEffect(() => {
     loadData();
 
     const handleJournalSync = () => {
-      try {
-        setJournalEntries(JSON.parse(localStorage.getItem('groove_journal_logs') || '[]'));
-      } catch (_) {}
+      loadData();
     };
 
     window.addEventListener('groove-journal-updated', handleJournalSync);
@@ -132,11 +204,15 @@ export default function LibraryPage() {
     } catch (_) {}
   };
 
-  const handleDeleteJournalEntry = (entryId) => {
+  const handleDeleteJournalEntry = async (entryId) => {
     try {
       const updated = journalEntries.filter(e => e.id !== entryId);
       localStorage.setItem('groove_journal_logs', JSON.stringify(updated));
       setJournalEntries(updated);
+      if (user && isSupabaseConfigured() && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(entryId)) {
+        const supabase = createClient();
+        await supabase.from('journals').delete().eq('id', entryId).eq('user_id', user.id);
+      }
       window.dispatchEvent(new CustomEvent('groove-journal-updated', { detail: { entryId } }));
       toast.info("Journal log removed");
     } catch (_) {}
@@ -289,22 +365,13 @@ export default function LibraryPage() {
         </div>
 
         {activeTab === 'journal' && (
-          <button
-            onClick={() => {
-              setJournalModalItem({
-                id: 'custom_log',
-                type: 'album',
-                title: 'Personal Listen',
-                subtitle: '',
-                image: '',
-              });
-              setIsJournalModalOpen(true);
-            }}
+          <Link
+            href="/journal/new?returnTo=%2Flibrary%3Ftab%3Djournal"
             className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-amber-400 via-amber-300 to-amber-400 text-zinc-950 font-extrabold text-xs sm:text-sm shadow-md active:scale-95 cursor-pointer"
           >
             <Plus size={15} />
             <span>New Journal Log</span>
-          </button>
+          </Link>
         )}
       </div>
 
@@ -338,13 +405,17 @@ export default function LibraryPage() {
           </div>
           <span className="text-xl sm:text-2xl font-extrabold text-[var(--theme-fg)]">{allPlaylists.length}</span>
         </div>
-        <div className="bg-[var(--theme-card)]/80 backdrop-blur-xl border border-amber-400/30 rounded-2xl p-3.5 sm:p-4 flex flex-col justify-between shadow-md">
+        <button
+          type="button"
+          onClick={() => setActiveTab('journal')}
+          className="bg-[var(--theme-card)]/80 backdrop-blur-xl border border-amber-400/30 hover:border-amber-400/60 rounded-2xl p-3.5 sm:p-4 flex flex-col justify-between shadow-md text-left transition cursor-pointer"
+        >
           <div className="flex items-center justify-between text-amber-300 mb-1.5">
             <span className="text-xs font-bold uppercase tracking-wider">Journal Logs</span>
             <BookOpen size={15} />
           </div>
           <span className="text-xl sm:text-2xl font-extrabold text-amber-300">{journalEntries.length}</span>
-        </div>
+        </button>
       </div>
 
       {/* Navigation Tabs (With cross-browser hidden scrollbar) */}
@@ -400,22 +471,13 @@ export default function LibraryPage() {
                 <span>Full Archive</span>
                 <ArrowRight size={13} />
               </Link>
-              <button
-                onClick={() => {
-                  setJournalModalItem({
-                    id: `log_${Date.now()}`,
-                    type: 'album',
-                    title: 'New Album Listen',
-                    subtitle: '',
-                    image: '',
-                  });
-                  setIsJournalModalOpen(true);
-                }}
+              <Link
+                href="/journal/new?returnTo=%2Flibrary%3Ftab%3Djournal"
                 className="px-4 py-2 rounded-2xl bg-gradient-to-r from-amber-400 to-amber-300 text-zinc-950 text-xs font-black hover:scale-105 active:scale-95 transition-all shadow-md flex items-center gap-1.5 cursor-pointer"
               >
                 <Plus size={14} />
                 <span>Log Listen</span>
-              </button>
+              </Link>
             </div>
           </div>
 
@@ -429,22 +491,13 @@ export default function LibraryPage() {
               <p className="text-sm text-[var(--theme-muted)] mb-6 leading-relaxed">
                 Rate albums, score tracks, and jot down your listening reflections to fill your personal music archive!
               </p>
-              <button
-                onClick={() => {
-                  setJournalModalItem({
-                    id: `log_${Date.now()}`,
-                    type: 'album',
-                    title: 'New Album Listen',
-                    subtitle: '',
-                    image: '',
-                  });
-                  setIsJournalModalOpen(true);
-                }}
+              <Link
+                href="/journal/new?returnTo=%2Flibrary%3Ftab%3Djournal"
                 className="inline-flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-amber-400 via-amber-300 to-amber-400 text-zinc-950 font-extrabold text-sm rounded-full hover:scale-105 active:scale-95 transition-all shadow-md cursor-pointer"
               >
                 <Sparkles size={16} />
                 <span>Write First Journal Log</span>
-              </button>
+              </Link>
             </div>
           ) : (
             <div className="space-y-6">
@@ -454,17 +507,17 @@ export default function LibraryPage() {
                   entry={entry}
                   isOwner={true}
                   onEdit={(e) => {
-                    setJournalModalItem({
-                      id: e.targetId,
-                      type: e.targetType || 'album',
-                      title: e.title,
-                      subtitle: e.subtitle,
-                      image: e.image,
-                      initialRating: e.rating,
-                      initialReview: e.review,
-                      journalEntryId: e.id,
-                    });
-                    setIsJournalModalOpen(true);
+                    router.push(
+                      buildJournalEditorHref({
+                        mbid: e.targetId,
+                        type: e.targetType || 'album',
+                        title: e.title,
+                        subtitle: e.subtitle,
+                        image: e.image,
+                        entryId: e.id,
+                        returnTo: '/library?tab=journal',
+                      })
+                    );
                   }}
                   onDelete={handleDeleteJournalEntry}
                 />
@@ -716,26 +769,6 @@ export default function LibraryPage() {
         </>
       )}
 
-      {/* Rating & Journal Modal for Library */}
-      {isJournalModalOpen && journalModalItem && (
-        <RatingAndJournalModal
-          isOpen={isJournalModalOpen}
-          onClose={() => {
-            setIsJournalModalOpen(false);
-            setJournalModalItem(null);
-            loadData();
-          }}
-          id={journalModalItem.id}
-          type={journalModalItem.type || 'album'}
-          title={journalModalItem.title}
-          subtitle={journalModalItem.subtitle}
-          image={journalModalItem.image}
-          initialRating={journalModalItem.initialRating || 0}
-          initialReview={journalModalItem.initialReview || ''}
-          journalEntryId={journalModalItem.journalEntryId || null}
-        />
-      )}
-
       {/* Create Playlist Modal */}
       {isCreateModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
@@ -831,5 +864,19 @@ function EmptyState({ type }) {
         Start Exploring
       </Link>
     </div>
+  );
+}
+
+export default function LibraryPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-[var(--theme-bg)] text-[var(--theme-muted)] flex items-center justify-center text-sm font-medium">
+          Loading your library...
+        </div>
+      }
+    >
+      <LibraryContent />
+    </Suspense>
   );
 }

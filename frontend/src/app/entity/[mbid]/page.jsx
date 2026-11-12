@@ -15,7 +15,9 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { getOrFetchMusicEntity, getEntityRatingsSummary } from "@/lib/supabase/musicEntities";
+import { getEntityPublicReviewsAndRatings } from "@/lib/supabase/journals";
 import UserRatingWidget from "@/Components/UserRatingWidget";
+import EntityReviewsSection from "@/Components/EntityReviewsSection";
 
 export async function generateMetadata({ params }) {
   const { mbid } = await params;
@@ -41,7 +43,10 @@ export default async function EntityPage({ params, searchParams }) {
     notFound();
   }
 
-  const ratingsSummary = await getEntityRatingsSummary(mbid);
+  const [ratingsSummary, publicReviewsData] = await Promise.all([
+    getEntityRatingsSummary(mbid),
+    getEntityPublicReviewsAndRatings(mbid),
+  ]);
 
   const isAlbum = entity.type === "album" || entity.type === "release-group";
   const isArtist = entity.type === "artist";
@@ -136,7 +141,11 @@ export default async function EntityPage({ params, searchParams }) {
           </span>
           <div className="flex items-baseline gap-2">
             <span className="text-3xl font-black text-amber-300">
-              {ratingsSummary.avg_stars ? `${ratingsSummary.avg_stars}/10` : "—"}
+              {publicReviewsData?.summary?.avg_rating_10
+                ? `${publicReviewsData.summary.avg_rating_10}/10`
+                : ratingsSummary.avg_stars
+                ? `${ratingsSummary.avg_stars}/10`
+                : "—"}
             </span>
             <span className="text-xs text-[var(--theme-muted)]">
               ({ratingsSummary.total_ratings} {ratingsSummary.total_ratings === 1 ? "rating" : "ratings"})
@@ -167,6 +176,18 @@ export default async function EntityPage({ params, searchParams }) {
           </div>
         </div>
       </div>
+
+      {/* Public Reviews & Community Ratings */}
+      <EntityReviewsSection
+        mbid={entity.mbid}
+        type={entity.type === "artist" ? "artist" : entity.type === "track" ? "track" : "album"}
+        title={entity.title}
+        subtitle={entity.artist_credit || ""}
+        image={entity.cover_art_url || ""}
+        year={entity.year}
+        initialSummary={publicReviewsData?.summary}
+        initialReviews={publicReviewsData?.reviews}
+      />
     </div>
   );
 }

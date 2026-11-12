@@ -1147,50 +1147,117 @@ export async function fetchMusicBrainzArtistServer(id) {
       const artistType = artistData.type || 'Artist';
       const isGroup = /group|band|orchestra|choir/i.test(artistType);
 
-      const ogMembers = [];
-      const currentMembers = [];
-      const pastMembers = [];
-      const supportingMusicians = [];
-      const memberBands = [];
-      const collaborations = [];
+      const bandMemberMap = new Map();
+      const memberBandsMap = new Map();
+      const supportingMap = new Map();
+      const collabMap = new Map();
 
-      const seenMembers = new Set();
+      const mergeMemberRelation = (targetMap, rel) => {
+        const artistObj = rel.artist;
+        if (!artistObj?.id) return;
+        const attrs = Array.isArray(rel.attributes) ? rel.attributes : [];
+        const isOg = attrs.some((a) => /original|founder/i.test(a));
+        const period = {
+          begin: rel.begin || null,
+          end: rel.end || null,
+          ended: !!rel.ended,
+        };
+
+        if (!targetMap.has(artistObj.id)) {
+          targetMap.set(artistObj.id, {
+            id: artistObj.id,
+            name: artistObj.name,
+            sortName: artistObj['sort-name'],
+            disambiguation: artistObj.disambiguation || null,
+            roles: [...attrs],
+            isFounder: isOg,
+            begin: period.begin,
+            end: period.end,
+            ended: period.ended,
+            periods: period.begin || period.end || period.ended ? [period] : [],
+          });
+          return;
+        }
+
+        const existing = targetMap.get(artistObj.id);
+        for (const a of attrs) {
+          if (!existing.roles.includes(a)) existing.roles.push(a);
+        }
+        if (isOg) existing.isFounder = true;
+
+        if (period.begin || period.end || period.ended) {
+          const pKey = `${period.begin || ''}|${period.end || ''}|${period.ended}`;
+          const hasP = existing.periods.some((p) => `${p.begin || ''}|${p.end || ''}|${p.ended}` === pKey);
+          if (!hasP) existing.periods.push(period);
+        }
+
+        // Earliest begin
+        if (period.begin && (!existing.begin || period.begin < existing.begin)) {
+          existing.begin = period.begin;
+        }
+        // Any open tenure keeps member active/unended unless all tenures ended
+        if (!period.ended && !period.end) {
+          existing.ended = false;
+          existing.end = null;
+        } else if (existing.ended || existing.periods.length === 1) {
+          const allEnded = existing.periods.length > 0 && existing.periods.every((p) => p.ended || !!p.end);
+          if (allEnded) {
+            existing.ended = true;
+            const latestEnd = existing.periods
+              .map((p) => p.end)
+              .filter(Boolean)
+              .sort()
+              .pop();
+            existing.end = latestEnd || existing.end;
+          }
+        }
+      };
+
       for (const rel of artistData.relations || []) {
         if (rel['target-type'] === 'artist' && rel.artist) {
-          const relArtist = {
-            id: rel.artist.id,
-            name: rel.artist.name,
-            sortName: rel.artist['sort-name'],
-            disambiguation: rel.artist.disambiguation || null,
-            roles: rel.attributes || [],
-            begin: rel.begin || null,
-            end: rel.end || null,
-            ended: !!rel.ended,
-          };
-
-          const key = `${rel.type}_${rel.artist.id}`;
-          if (!seenMembers.has(key)) {
-            seenMembers.add(key);
-            if (rel.type === 'member of band') {
-              if (rel.direction === 'forward') {
-                // For a Solo Person: groups they were a member of
-                memberBands.push(relArtist);
-              } else {
-                // For a Group: individual members of the band
-                const isOg = (rel.attributes || []).some((a) => /original|founder/i.test(a));
-                const isPast = rel.ended || !!rel.end;
-                if (isOg) ogMembers.push(relArtist);
-                if (!isPast) currentMembers.push(relArtist);
-                else pastMembers.push(relArtist);
-              }
-            } else if (rel.type?.includes('supporting')) {
-              supportingMusicians.push(relArtist);
-            } else if (rel.type === 'collaboration' || rel.type?.includes('involved') || rel.type?.includes('tribute')) {
-              collaborations.push({ ...relArtist, relationType: rel.type });
+          if (rel.type === 'member of band') {
+            if (rel.direction === 'forward') {
+              mergeMemberRelation(memberBandsMap, rel);
+            } else {
+              mergeMemberRelation(bandMemberMap, rel);
+            }
+          } else if (rel.type?.includes('supporting')) {
+            mergeMemberRelation(supportingMap, rel);
+          } else if (rel.type === 'collaboration' || rel.type?.includes('involved') || rel.type?.includes('tribute')) {
+            if (!collabMap.has(rel.artist.id)) {
+              collabMap.set(rel.artist.id, {
+                id: rel.artist.id,
+                name: rel.artist.name,
+                sortName: rel.artist['sort-name'],
+                disambiguation: rel.artist.disambiguation || null,
+                roles: rel.attributes || [],
+                begin: rel.begin || null,
+                end: rel.end || null,
+                ended: !!rel.ended,
+                relationType: rel.type,
+              });
             }
           }
         }
       }
+
+      const ogMembers = [];
+      const currentMembers = [];
+      const pastMembers = [];
+
+      for (const m of bandMemberMap.values()) {
+        if (m.periods.length > 1) {
+          m.periods.sort((a, b) => (a.begin || '9999').localeCompare(b.begin || '9999'));
+        }
+        const isPast = m.ended || !!m.end;
+        if (m.isFounder) ogMembers.push(m);
+        if (!isPast) currentMembers.push(m);
+        else pastMembers.push(m);
+      }
+
+      const supportingMusicians = Array.from(supportingMap.values());
+      const memberBands = Array.from(memberBandsMap.values());
+      const collaborations = Array.from(collabMap.values());
 
       // 2. Concurrently fetch release-groups, photo, description, and Deezer top tracks!
       const fetchDeezerTracks = async () => {

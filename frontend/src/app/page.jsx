@@ -1,14 +1,15 @@
 // src/app/page.jsx
 "use client";
 
-import React, { useState, useTransition } from "react";
+import React, { useState, useEffect, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { 
   Music, ArrowRight, Info, AlertCircle, Sparkles, Search, X, 
-  Flame, Zap, Headphones, Disc, Disc3, Mic, ChevronRight, Compass
+  Flame, Zap, Headphones, Disc, Disc3, Mic, ChevronRight, Compass, Award
 } from "lucide-react";
 import Link from "next/link";
 import axios from "axios";
+import OfficialListCover from "@/Components/OfficialListCover";
 
 const FEATURED_ALBUMS = [
   {
@@ -155,6 +156,22 @@ export default function Home() {
 
   const [isPending, startTransition] = useTransition();
   const [navigatingId, setNavigatingId] = useState(null);
+  const [officialLists, setOfficialLists] = useState([]);
+
+  useEffect(() => {
+    let active = true;
+    fetch("/api/lists")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (active && Array.isArray(data?.lists)) {
+          setOfficialLists(data.lists);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
 
   // Check if input is a URL
   const isUrl = (string) => {
@@ -308,7 +325,65 @@ export default function Home() {
 
       {/* DISCOVERIES & SUGGESTIONS SECTION */}
       <div className="w-full space-y-12 mt-4">
-        
+        {/* SECTION 0: Official Curated Lists Showcase */}
+        {officialLists.length > 0 && (
+          <div>
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <Award className="w-3.5 h-3.5 text-amber-300" />
+                  <span className="text-[11px] font-bold text-amber-300 tracking-widest uppercase">
+                    Editorial Collections
+                  </span>
+                </div>
+                <h2 className="text-xl sm:text-2xl font-black text-[var(--theme-fg)] tracking-tight">
+                  Official Curated Lists
+                </h2>
+              </div>
+
+              <Link
+                href="/lists"
+                className="inline-flex items-center gap-1 text-xs font-bold text-[var(--theme-muted)] hover:text-[var(--theme-accent)] transition cursor-pointer"
+              >
+                <span>View all lists</span>
+                <ChevronRight size={14} />
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {officialLists.slice(0, 4).map((list) => (
+                <Link
+                  key={list.id}
+                  href={`/lists/${list.slug}`}
+                  className="group flex items-center gap-4 p-4 rounded-3xl bg-[var(--theme-card)]/80 hover:bg-[var(--theme-card)] border border-[var(--theme-border)] hover:border-amber-400/50 transition-all shadow-md hover:shadow-xl"
+                >
+                  <OfficialListCover
+                    coverImageUrl={list.cover_image_url}
+                    previewCovers={list.preview_covers}
+                    title={list.title}
+                    className="w-20 h-20 rounded-2xl shrink-0 shadow-md"
+                  />
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-amber-300">
+                      <span>{list.list_type === "ranked" ? "Ranked" : "Curated"}</span>
+                      <span>·</span>
+                      <span>{list.category || "Official"}</span>
+                    </div>
+                    <h3 className="text-base font-black text-[var(--theme-fg)] group-hover:text-amber-300 transition truncate font-display">
+                      {list.title}
+                    </h3>
+                    <p className="text-xs text-[var(--theme-muted)] truncate">
+                      {list.item_count} {list.item_count === 1 ? "selection" : "selections"}
+                      {list.description ? ` · ${list.description}` : ""}
+                    </p>
+                  </div>
+                  <ChevronRight size={16} className="text-[var(--theme-muted)] group-hover:text-amber-300 shrink-0" />
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* SECTION 1: Masterpiece Albums Showcase */}
         <div>
           <div className="flex items-center justify-between mb-5">

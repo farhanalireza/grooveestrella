@@ -1,5 +1,5 @@
 -- ==============================================================================
--- GrooveEstrella Music App - Phase 1 Database Schema & RLS Policies
+-- GrooveEstrella Music App - Phase 1 & Phase 2 Database Schema & RLS Policies
 -- Target: Supabase (PostgreSQL 15+)
 -- ==============================================================================
 
@@ -16,9 +16,13 @@ create table if not exists public.profiles (
   display_name text,
   avatar_url text,
   bio text,
+  is_admin boolean not null default false,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
+
+-- Ensure Phase 2 columns exist on pre-existing databases
+alter table public.profiles add column if not exists is_admin boolean not null default false;
 
 -- Index for fast username lookups (e.g. /profile/[username])
 create index if not exists profiles_username_idx on public.profiles (lower(username));
@@ -44,7 +48,7 @@ create index if not exists music_entities_type_idx on public.music_entities (typ
 create index if not exists music_entities_title_idx on public.music_entities (lower(title));
 
 -- ==============================================================================
--- 3. User Ratings (Supports 10-star and 100-score scales)
+-- 3. User Ratings (Supports 10-star and 100-score scales; ALWAYS public)
 -- ==============================================================================
 create table if not exists public.user_ratings (
   id uuid default gen_random_uuid() primary key,
@@ -54,11 +58,24 @@ create table if not exists public.user_ratings (
   score numeric not null, -- numeric score (e.g. 8.5, 9, 88)
   review text,
   listened_date date default current_date,
-  is_public boolean default true,
+  is_public boolean not null default true check (is_public = true),
   created_at timestamptz default now(),
   updated_at timestamptz default now(),
   unique(user_id, entity_id, rating_type)
 );
+
+-- Enforce Phase 2 hard rule on existing databases: a rating can NEVER be private
+update public.user_ratings set is_public = true where is_public is distinct from true;
+alter table public.user_ratings alter column is_public set default true;
+alter table public.user_ratings alter column is_public set not null;
+do $$ begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'user_ratings_always_public_check'
+  ) then
+    alter table public.user_ratings
+      add constraint user_ratings_always_public_check check (is_public = true);
+  end if;
+end $$;
 
 create index if not exists user_ratings_user_idx on public.user_ratings (user_id);
 create index if not exists user_ratings_entity_idx on public.user_ratings (entity_id);
@@ -84,6 +101,15 @@ create index if not exists journals_user_idx on public.journals (user_id);
 create index if not exists journals_entity_idx on public.journals (entity_id);
 create index if not exists journals_listened_date_idx on public.journals (listened_date desc);
 create index if not exists journals_public_idx on public.journals (is_public);
+-- Prune any pre-constraint duplicate (user_id, entity_id) entries keeping the newest one
+delete from public.journals a
+using public.journals b
+where a.user_id = b.user_id
+  and a.entity_id = b.entity_id
+  and (
+    a.created_at < b.created_at
+    or (a.created_at = b.created_at and a.id < b.id)
+  );
 create unique index if not exists journals_user_entity_unique_idx on public.journals (user_id, entity_id);
 
 -- ==============================================================================
@@ -100,7 +126,44 @@ create index if not exists follows_follower_idx on public.follows (follower_id);
 create index if not exists follows_following_idx on public.follows (following_id);
 
 -- ==============================================================================
--- 6. Entity Rating Summaries View (Average Score & Total Ratings per Entity)
+-- 6. Official Curated Lists (Phase 2 - Admin Curated Lists & Items)
+-- ==============================================================================
+create table if not exists public.official_lists (
+  id uuid default gen_random_uuid() primary key,
+  slug text unique not null,
+  title text not null,
+  description text,
+  cover_image_url text,
+  list_type text not null default 'ranked' check (list_type in ('ranked', 'unranked')),
+  category text default 'Curated',
+  badge_label text, -- Prepared for future entity badges (e.g. 'GOAT', 'Greatest Albums of All Time')
+  is_public boolean not null default true check (is_public = true),
+  created_by uuid references public.profiles(id) on delete set null,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+create index if not exists official_lists_slug_idx on public.official_lists (slug);
+create index if not exists official_lists_created_at_idx on public.official_lists (created_at desc);
+
+create table if not exists public.official_list_items (
+  id uuid default gen_random_uuid() primary key,
+  list_id uuid references public.official_lists(id) on delete cascade not null,
+  entity_id uuid references public.music_entities(id) on delete cascade not null,
+  position integer not null default 1,
+  note text,
+  badge_text text, -- Prepared for per-item entity badges (e.g. '#3 on Greatest Albums of All Time')
+  created_at timestamptz default now(),
+  updated_at timestamptz default now(),
+  unique(list_id, entity_id)
+);
+
+create index if not exists official_list_items_list_pos_idx on public.official_list_items (list_id, position asc);
+create index if not exists official_list_items_entity_idx on public.official_list_items (entity_id);
+
+-- ==============================================================================
+-- 7. Entity Rating Summaries View (Average Score & Total Ratings per Entity)
+--    Ratings are ALWAYS public regardless of journal entry visibility.
 -- ==============================================================================
 create or replace view public.entity_ratings_summary as
 select 
@@ -118,8 +181,36 @@ select
     else null 
   end)::numeric, 1) as normalized_score_100
 from public.music_entities e
-left join public.user_ratings r on e.id = r.entity_id and r.is_public = true
+left join public.user_ratings r on e.id = r.entity_id
 group by e.id, e.mbid, e.type, e.title, e.artist_credit;
+
+-- ==============================================================================
+-- 8. Official List Entity Badges View (Data Structure Ready for Entity Badges)
+-- ==============================================================================
+create or replace view public.entity_official_badges as
+select
+  i.id as item_id,
+  e.id as entity_id,
+  e.mbid,
+  e.type as entity_type,
+  l.id as list_id,
+  l.slug as list_slug,
+  l.title as list_title,
+  l.list_type,
+  l.category,
+  l.badge_label,
+  i.position,
+  coalesce(
+    nullif(trim(i.badge_text), ''),
+    case
+      when l.list_type = 'ranked' then '#' || i.position::text || ' on ' || l.title
+      else coalesce(nullif(trim(l.badge_label), ''), l.title)
+    end
+  ) as resolved_badge
+from public.official_list_items i
+join public.official_lists l on l.id = i.list_id
+join public.music_entities e on e.id = i.entity_id
+where l.is_public = true;
 
 -- ==============================================================================
 -- 7. Automated Profile Creation Trigger on Supabase Auth Sign Up
@@ -209,9 +300,43 @@ create or replace trigger set_profiles_updated_at
   before update on public.profiles
   for each row execute procedure public.set_current_timestamp_updated_at();
 
+create or replace function public.guard_profile_is_admin()
+returns trigger
+language plpgsql
+as $$
+begin
+  if current_user not in ('postgres', 'supabase_admin')
+     and coalesce(auth.role(), '') <> 'service_role' then
+    new.is_admin := old.is_admin;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists prevent_profile_admin_escalation on public.profiles;
+create trigger prevent_profile_admin_escalation
+  before update on public.profiles
+  for each row execute procedure public.guard_profile_is_admin();
+
 create or replace trigger set_music_entities_updated_at
   before update on public.music_entities
   for each row execute procedure public.set_current_timestamp_updated_at();
+
+create or replace function public.enforce_rating_always_public()
+returns trigger
+language plpgsql
+as $$
+begin
+  -- Hard rule: A rating can NEVER be private.
+  new.is_public := true;
+  return new;
+end;
+$$;
+
+drop trigger if exists ensure_user_ratings_public on public.user_ratings;
+create trigger ensure_user_ratings_public
+  before insert or update on public.user_ratings
+  for each row execute procedure public.enforce_rating_always_public();
 
 create or replace trigger set_user_ratings_updated_at
   before update on public.user_ratings
@@ -219,6 +344,14 @@ create or replace trigger set_user_ratings_updated_at
 
 create or replace trigger set_journals_updated_at
   before update on public.journals
+  for each row execute procedure public.set_current_timestamp_updated_at();
+
+create or replace trigger set_official_lists_updated_at
+  before update on public.official_lists
+  for each row execute procedure public.set_current_timestamp_updated_at();
+
+create or replace trigger set_official_list_items_updated_at
+  before update on public.official_list_items
   for each row execute procedure public.set_current_timestamp_updated_at();
 
 -- ==============================================================================
@@ -231,6 +364,8 @@ alter table public.music_entities enable row level security;
 alter table public.user_ratings enable row level security;
 alter table public.journals enable row level security;
 alter table public.follows enable row level security;
+alter table public.official_lists enable row level security;
+alter table public.official_list_items enable row level security;
 
 -- ------------------------------------------------------------------------------
 -- A. Profiles Policies
@@ -247,7 +382,7 @@ drop policy if exists "Users can insert their own profile" on public.profiles;
 create policy "Users can insert their own profile"
   on public.profiles
   for insert
-  with check (auth.uid() = id);
+  with check (auth.uid() = id and is_admin = false);
 
 -- Users can only update their own profile
 drop policy if exists "Users can update their own profile" on public.profiles;
@@ -282,29 +417,29 @@ create policy "Authenticated users can update music entities"
   using (auth.role() = 'authenticated');
 
 -- ------------------------------------------------------------------------------
--- C. User Ratings Policies
+-- C. User Ratings Policies (Ratings are ALWAYS Public)
 -- ------------------------------------------------------------------------------
--- Public ratings are viewable by everyone; private ratings only by the owner
 drop policy if exists "User ratings are viewable by public or owner" on public.user_ratings;
-create policy "User ratings are viewable by public or owner"
+drop policy if exists "User ratings are always public" on public.user_ratings;
+create policy "User ratings are always public"
   on public.user_ratings
   for select
-  using (is_public = true or auth.uid() = user_id);
+  using (true);
 
--- Users can only insert ratings with their own user_id
+-- Users can only insert ratings with their own user_id (and always public)
 drop policy if exists "Users can insert own ratings" on public.user_ratings;
 create policy "Users can insert own ratings"
   on public.user_ratings
   for insert
-  with check (auth.uid() = user_id);
+  with check (auth.uid() = user_id and is_public = true);
 
--- Users can only update their own ratings
+-- Users can only update their own ratings (and always public)
 drop policy if exists "Users can update own ratings" on public.user_ratings;
 create policy "Users can update own ratings"
   on public.user_ratings
   for update
   using (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
+  with check (auth.uid() = user_id and is_public = true);
 
 -- Users can only delete their own ratings
 drop policy if exists "Users can delete own ratings" on public.user_ratings;
@@ -368,6 +503,100 @@ create policy "Users can unfollow"
   on public.follows
   for delete
   using (auth.uid() = follower_id);
+
+-- ------------------------------------------------------------------------------
+-- F. Official Curated Lists Policies (Admin Managed, Publicly Viewable)
+-- ------------------------------------------------------------------------------
+drop policy if exists "Official lists are viewable by everyone" on public.official_lists;
+create policy "Official lists are viewable by everyone"
+  on public.official_lists
+  for select
+  using (is_public = true);
+
+drop policy if exists "Admins can insert official lists" on public.official_lists;
+create policy "Admins can insert official lists"
+  on public.official_lists
+  for insert
+  with check (
+    exists (
+      select 1 from public.profiles p
+      where p.id = auth.uid() and p.is_admin = true
+    )
+  );
+
+drop policy if exists "Admins can update official lists" on public.official_lists;
+create policy "Admins can update official lists"
+  on public.official_lists
+  for update
+  using (
+    exists (
+      select 1 from public.profiles p
+      where p.id = auth.uid() and p.is_admin = true
+    )
+  )
+  with check (
+    exists (
+      select 1 from public.profiles p
+      where p.id = auth.uid() and p.is_admin = true
+    )
+    and is_public = true
+  );
+
+drop policy if exists "Admins can delete official lists" on public.official_lists;
+create policy "Admins can delete official lists"
+  on public.official_lists
+  for delete
+  using (
+    exists (
+      select 1 from public.profiles p
+      where p.id = auth.uid() and p.is_admin = true
+    )
+  );
+
+drop policy if exists "Official list items are viewable by everyone" on public.official_list_items;
+create policy "Official list items are viewable by everyone"
+  on public.official_list_items
+  for select
+  using (true);
+
+drop policy if exists "Admins can insert official list items" on public.official_list_items;
+create policy "Admins can insert official list items"
+  on public.official_list_items
+  for insert
+  with check (
+    exists (
+      select 1 from public.profiles p
+      where p.id = auth.uid() and p.is_admin = true
+    )
+  );
+
+drop policy if exists "Admins can update official list items" on public.official_list_items;
+create policy "Admins can update official list items"
+  on public.official_list_items
+  for update
+  using (
+    exists (
+      select 1 from public.profiles p
+      where p.id = auth.uid() and p.is_admin = true
+    )
+  )
+  with check (
+    exists (
+      select 1 from public.profiles p
+      where p.id = auth.uid() and p.is_admin = true
+    )
+  );
+
+drop policy if exists "Admins can delete official list items" on public.official_list_items;
+create policy "Admins can delete official list items"
+  on public.official_list_items
+  for delete
+  using (
+    exists (
+      select 1 from public.profiles p
+      where p.id = auth.uid() and p.is_admin = true
+    )
+  );
 
 -- ==============================================================================
 -- 10. Storage Bucket Setup (Avatars & Cover Art)

@@ -19,6 +19,7 @@ import GrooveLinkModal from "@/Components/GrooveLinkModal";
 import GrooveCardComposer from "@/Components/GrooveCardComposer";
 import AlbumEditionsDrawer from "@/Components/AlbumEditionsDrawer";
 import MusicLoreAndReviews from "@/Components/MusicLoreAndReviews";
+import EntityReviewsSection from "@/Components/EntityReviewsSection";
 import RatingPieChart from "@/Components/RatingPieChart";
 import UserRatingWidget from "@/Components/UserRatingWidget";
 import GrooveLoader from "@/Components/GrooveLoader";
@@ -1050,6 +1051,19 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
                         })}
                     </div>
                 )}
+
+                {/* Community Ratings & Public Reviews surfaced directly on the Album page */}
+                <div className="mt-12 pt-10 border-t border-[var(--album-border)]">
+                    <EntityReviewsSection
+                        mbid={album.id || id}
+                        type="album"
+                        title={album.name || album.title}
+                        subtitle={artistsList.map(a => a.name).join(', ')}
+                        image={coverUrl}
+                        year={album.originalReleaseYear || album.releaseYear}
+                        musicbrainzRating={album.rating}
+                    />
+                </div>
                 </div>
             )}
 
@@ -1061,6 +1075,8 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
                         type="album"
                         title={album.name || album.title}
                         artist={artistsList.map(a => a.name).join(', ')}
+                        image={coverUrl}
+                        year={album.originalReleaseYear || album.releaseYear}
                         description={album.description}
                         artistDescription={album.artistDescription || (artistsList?.[0]?.description)}
                         releaseDetails={{

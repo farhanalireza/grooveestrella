@@ -26,6 +26,7 @@ import { extractAdaptivePalette } from "@/lib/colorExtractor";
 import GrooveLinkModal from "@/Components/GrooveLinkModal";
 import GrooveCardComposer from "@/Components/GrooveCardComposer";
 import MusicLoreAndReviews from "@/Components/MusicLoreAndReviews";
+import EntityReviewsSection from "@/Components/EntityReviewsSection";
 import RatingPieChart from "@/Components/RatingPieChart";
 import UserRatingWidget from "@/Components/UserRatingWidget";
 import GrooveLoader from "@/Components/GrooveLoader";
@@ -497,12 +498,14 @@ export default function TrackDetailClient({ id, initialData }) {
             </div>
 
             {/* Tab Content Container */}
-            <div className="relative z-10 mb-12 animate-fade-in max-w-4xl mx-auto">
+            <div className="relative z-10 mb-12 animate-fade-in max-w-4xl mx-auto space-y-12">
                 <MusicLoreAndReviews
                     id={track.id || id}
                     type="track"
                     title={track.name || track.title}
                     artist={artistsList.map(a => a.name).join(', ')}
+                    image={coverUrl}
+                    year={releaseYear}
                     description={track.description}
                     artistDescription={track.artistDescription}
                     releaseDetails={{
@@ -521,6 +524,21 @@ export default function TrackDetailClient({ id, initialData }) {
                     totalDurationMs={durationMs}
                     activeTab={activeTab === 'story' ? 'about' : activeTab}
                 />
+
+                {/* Surface Public Ratings & Reviews directly under Story & Lore on default view */}
+                {activeTab === 'story' && (
+                    <div className="px-4 sm:px-6 md:px-8 pt-6 border-t border-[var(--theme-border)]/40">
+                        <EntityReviewsSection
+                            mbid={track.id || id}
+                            type="track"
+                            title={track.name || track.title}
+                            subtitle={artistsList.map(a => a.name).join(', ')}
+                            image={coverUrl}
+                            year={releaseYear}
+                            musicbrainzRating={track.rating}
+                        />
+                    </div>
+                )}
             </div>
 
             {/* GrooveLink Modal */}

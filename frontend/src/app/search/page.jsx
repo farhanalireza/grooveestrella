@@ -2,8 +2,10 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
+import { Award, ChevronRight } from 'lucide-react';
 import SearchComp from '@/Components/Search';
 import useDebouncedSearch from '@/hooks/useDebouncedSearch';
 import { ArtistCard } from '@/Components/CardComponents/ArtistsCard';
@@ -11,6 +13,7 @@ import { TrackCard } from '@/Components/CardComponents/TracksCard';
 import { AlbumCard } from '@/Components/CardComponents/AlbumsCard';
 import { PlaylistCard } from '@/Components/CardComponents/PlaylistsCard';
 import { UserCard } from '@/Components/CardComponents/UserCard';
+import OfficialListCover from '@/Components/OfficialListCover';
 import GrooveLoader from '@/Components/GrooveLoader';
 
 export default function SearchPage() {
@@ -19,6 +22,20 @@ export default function SearchPage() {
     const [searchTerm, setSearchTerm] = useState("");
     const [loading, setLoading] = useState(false);
     const [searchType, setSearchType] = useState("track");
+    const [officialLists, setOfficialLists] = useState([]);
+
+    useEffect(() => {
+        let active = true;
+        fetch('/api/lists')
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => {
+                if (active && Array.isArray(d?.lists)) {
+                    setOfficialLists(d.lists);
+                }
+            })
+            .catch(() => {});
+        return () => { active = false; };
+    }, []);
 
     const debouncedSearch = useDebouncedSearch(searchTerm, searchType, setLoading, setSearchResults);
     
@@ -131,6 +148,66 @@ export default function SearchPage() {
                             </button>
                         ))}
                     </div>
+
+                    {/* Official Curated Lists Discovery Block */}
+                    <div className="w-full pt-6 text-left space-y-3">
+                        <div className="flex items-center justify-between">
+                            <span className="inline-flex items-center gap-1.5 text-[11px] font-bold tracking-widest uppercase text-amber-300">
+                                <Award size={13} />
+                                <span>Official Curated Lists</span>
+                            </span>
+                            <Link
+                                href="/lists"
+                                className="inline-flex items-center gap-1 text-xs font-bold text-[var(--theme-accent)] hover:underline"
+                            >
+                                <span>Browse all lists</span>
+                                <ChevronRight size={13} />
+                            </Link>
+                        </div>
+
+                        {officialLists.length > 0 ? (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                {officialLists.slice(0, 4).map((list) => (
+                                    <Link
+                                        key={list.id}
+                                        href={`/lists/${list.slug}`}
+                                        className="group flex items-center gap-3.5 p-3 rounded-2xl bg-[var(--theme-card)]/80 hover:bg-[var(--theme-card)] border border-[var(--theme-border)] hover:border-amber-400/50 transition shadow-sm"
+                                    >
+                                        <OfficialListCover
+                                            coverImageUrl={list.cover_image_url}
+                                            previewCovers={list.preview_covers}
+                                            title={list.title}
+                                            className="w-14 h-14 rounded-xl shrink-0"
+                                        />
+                                        <div className="min-w-0 flex-1">
+                                            <div className="text-[10px] font-bold uppercase tracking-wider text-amber-300">
+                                                {list.list_type === 'ranked' ? 'Ranked' : 'Curated'} · {list.item_count} items
+                                            </div>
+                                            <h3 className="text-sm font-black text-[var(--theme-fg)] group-hover:text-amber-300 transition truncate">
+                                                {list.title}
+                                            </h3>
+                                        </div>
+                                        <ChevronRight size={15} className="text-[var(--theme-muted)] group-hover:text-amber-300 shrink-0" />
+                                    </Link>
+                                ))}
+                            </div>
+                        ) : (
+                            <Link
+                                href="/lists"
+                                className="flex items-center justify-between p-4 rounded-2xl bg-[var(--theme-card)]/60 border border-[var(--theme-border)] hover:border-amber-400/40 transition"
+                            >
+                                <div>
+                                    <div className="text-sm font-bold text-[var(--theme-fg)]">
+                                        Explore Official GrooveEstrella Lists
+                                    </div>
+                                    <div className="text-xs text-[var(--theme-muted)]">
+                                        Curated rankings, genre essentials, and artist listening guides.
+                                    </div>
+                                </div>
+                                <ChevronRight size={16} className="text-amber-300 shrink-0" />
+                            </Link>
+                        )}
+                    </div>
                 </div>
             )}
 
@@ -142,7 +219,7 @@ export default function SearchPage() {
                     </div>
                 ) : searchResults.length === 0 && searchTerm ? (
                     <div className="text-center py-20">
-                        <span className="text-[var(--theme-muted)] text-sm font-medium">No results found for "{searchTerm}". Try another search.</span>
+                        <span className="text-[var(--theme-muted)] text-sm font-medium">No results found for &quot;{searchTerm}&quot;. Try another search.</span>
                     </div>
                 ) : (
                     <div className={

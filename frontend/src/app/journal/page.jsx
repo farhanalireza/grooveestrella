@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   BookOpen,
   Star,
@@ -22,13 +23,14 @@ import {
   PenTool,
   Headphones,
 } from "lucide-react";
-import RatingAndJournalModal from "@/Components/RatingAndJournalModal";
 import JournalCard from "@/Components/JournalCard";
 import { toast } from "@/lib/toast";
 import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
+import { buildJournalEditorHref } from "@/lib/journalLinks";
 
 export default function MusicJournalPage() {
+  const router = useRouter();
   const { user } = useSupabaseAuth();
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -39,10 +41,6 @@ export default function MusicJournalPage() {
   const [filterMode, setFilterMode] = useState("all"); // 'all' | 'reviewed' | 'logs'
   const [selectedMood, setSelectedMood] = useState("all");
   const [sortBy, setSortBy] = useState("newest"); // 'newest' | 'highest' | 'oldest'
-
-  // Modal state
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalItem, setModalItem] = useState(null);
 
   const loadJournalEntries = async () => {
     let localLogs = [];
@@ -229,9 +227,18 @@ export default function MusicJournalPage() {
       <div className="relative rounded-3xl bg-[var(--theme-card)]/90 backdrop-blur-2xl border border-[var(--theme-border)] p-8 sm:p-10 shadow-2xl overflow-hidden">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
           <div className="space-y-2 max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-400/10 border border-amber-400/20 text-amber-300 text-xs font-bold uppercase tracking-widest">
-              <BookOpen size={13} />
-              <span>Music Journal & Reviews</span>
+            <div className="flex items-center gap-2 flex-wrap">
+              <Link
+                href="/library"
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--theme-surface)] border border-[var(--theme-border)] text-[var(--theme-muted)] hover:text-[var(--theme-fg)] text-xs font-bold uppercase tracking-widest transition"
+              >
+                <span>Library</span>
+              </Link>
+              <span className="text-[var(--theme-muted)]/50 text-xs">/</span>
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-400/10 border border-amber-400/20 text-amber-300 text-xs font-bold uppercase tracking-widest">
+                <BookOpen size={13} />
+                <span>Music Journal</span>
+              </div>
             </div>
             <h1 className="text-3xl sm:text-5xl font-black tracking-tight font-display text-[var(--theme-fg)]">
               Your Music Journal
@@ -242,22 +249,13 @@ export default function MusicJournalPage() {
           </div>
 
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
-            <button
-              onClick={() => {
-                setModalItem({
-                  id: `log_${Date.now()}`,
-                  type: "album",
-                  title: "New Album Listen",
-                  subtitle: "",
-                  image: "",
-                });
-                setIsModalOpen(true);
-              }}
+            <Link
+              href="/journal/new?returnTo=/journal"
               className="px-6 py-3 rounded-full bg-gradient-to-r from-amber-400 to-amber-300 text-zinc-950 font-black text-sm hover:scale-105 active:scale-95 transition-all shadow-lg flex items-center justify-center gap-2 cursor-pointer"
             >
               <Plus size={16} />
               <span>Log a Listen</span>
-            </button>
+            </Link>
           </div>
         </div>
 
@@ -399,22 +397,13 @@ export default function MusicJournalPage() {
               : "Whenever you listen to an album or track, tap Rate to capture your thoughts, assign a score, and build your musical story."}
           </p>
           {!searchQuery && (
-            <button
-              onClick={() => {
-                setModalItem({
-                  id: `log_${Date.now()}`,
-                  type: "album",
-                  title: "New Album Listen",
-                  subtitle: "",
-                  image: "",
-                });
-                setIsModalOpen(true);
-              }}
+            <Link
+              href="/journal/new?returnTo=/journal"
               className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-amber-400 text-zinc-950 font-extrabold text-sm hover:scale-105 active:scale-95 transition cursor-pointer shadow-md"
             >
               <Sparkles size={16} />
               <span>Write First Journal Entry</span>
-            </button>
+            </Link>
           )}
         </div>
       ) : (
@@ -425,45 +414,22 @@ export default function MusicJournalPage() {
               entry={entry}
               isOwner={true}
               onEdit={(e) => {
-                setModalItem({
-                  id: e.targetId,
-                  type: e.targetType || "album",
-                  title: e.title,
-                  subtitle: e.subtitle,
-                  image: e.image,
-                  initialRating: e.rating,
-                  initialReview: e.review,
-                  journalEntryId: e.id,
-                });
-                setIsModalOpen(true);
+                router.push(
+                  buildJournalEditorHref({
+                    mbid: e.targetId,
+                    type: e.targetType || "album",
+                    title: e.title,
+                    subtitle: e.subtitle,
+                    image: e.image,
+                    entryId: e.id,
+                    returnTo: "/journal",
+                  })
+                );
               }}
               onDelete={handleDeleteEntry}
             />
           ))}
         </div>
-      )}
-
-      {/* Rating & Journal Modal */}
-      {isModalOpen && modalItem && (
-        <RatingAndJournalModal
-          isOpen={isModalOpen}
-          onClose={() => {
-            setIsModalOpen(false);
-            setModalItem(null);
-            loadJournalEntries();
-          }}
-          id={modalItem.id}
-          type={modalItem.type || "album"}
-          title={modalItem.title}
-          subtitle={modalItem.subtitle}
-          image={modalItem.image}
-          initialRating={modalItem.initialRating || 0}
-          initialReview={modalItem.initialReview || ""}
-          journalEntryId={modalItem.journalEntryId || null}
-          onSaved={() => {
-            loadJournalEntries();
-          }}
-        />
       )}
     </div>
   );

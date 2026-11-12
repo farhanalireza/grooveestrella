@@ -43,8 +43,8 @@ import UserAvatarIcon, {
 import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import JournalCard from "@/Components/JournalCard";
-import RatingAndJournalModal from "@/Components/RatingAndJournalModal";
 import FollowersListModal from "@/Components/FollowersListModal";
+import { buildJournalEditorHref } from "@/lib/journalLinks";
 
 const ALL_GENRES = [
   "Rock",
@@ -87,14 +87,10 @@ function AccountDashboardContent() {
   const [preferredRatingSystem, setPreferredRatingSystem] = useState("stars"); // 'stars' | 'score'
   const [defaultIsPublic, setDefaultIsPublic] = useState(true);
 
-  // Journal logs & library stats
+  // Journal & Library stats
   const [journalLogs, setJournalLogs] = useState([]);
   const [savedCounts, setSavedCounts] = useState({ songs: 0, albums: 0, artists: 0, playlists: 0 });
   const [copiedLink, setCopiedLink] = useState(false);
-
-  // Modal for editing journal entry
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalItem, setModalItem] = useState(null);
 
   // Social follows modal
   const [followersCount, setFollowersCount] = useState(0);
@@ -858,17 +854,17 @@ function AccountDashboardContent() {
                 entry={entry}
                 isOwner={true}
                 onEdit={(e) => {
-                  setModalItem({
-                    id: e.targetId,
-                    type: e.targetType || "album",
-                    title: e.title,
-                    subtitle: e.subtitle,
-                    image: e.image,
-                    initialRating: e.rating,
-                    initialReview: e.review,
-                    journalEntryId: e.id,
-                  });
-                  setIsModalOpen(true);
+                  router.push(
+                    buildJournalEditorHref({
+                      mbid: e.targetId,
+                      type: e.targetType || "album",
+                      title: e.title,
+                      subtitle: e.subtitle,
+                      image: e.image,
+                      entryId: e.id,
+                      returnTo: "/account",
+                    })
+                  );
                 }}
               />
             ))}
@@ -876,7 +872,39 @@ function AccountDashboardContent() {
         )}
       </div>
 
-      {/* 5. DIRECT SHORTCUT TO LIBRARY (Clean separation from Account) */}
+      {/* 5. DIRECT SHORTCUT TO LIBRARY & ADMIN OFFICIAL LISTS */}
+      {authProfile?.is_admin && (
+        <div className="p-6 sm:p-7 rounded-3xl bg-gradient-to-r from-amber-500/15 via-[var(--theme-card)] to-[var(--theme-card)] border border-amber-400/40 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-lg">
+          <div className="space-y-1">
+            <div className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-amber-300">
+              <Sparkles size={12} />
+              <span>Admin Curator Access</span>
+            </div>
+            <h3 className="text-lg sm:text-xl font-black text-[var(--theme-fg)]">
+              Manage Official Curated Lists
+            </h3>
+            <p className="text-xs sm:text-sm text-[var(--theme-muted)]">
+              Create, reorder, and annotate official GrooveEstrella rankings and editorial collections.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2.5 shrink-0">
+            <Link
+              href="/lists"
+              className="px-4 py-2.5 rounded-full bg-[var(--theme-surface)] border border-[var(--theme-border)] text-[var(--theme-fg)] font-bold text-xs hover:border-amber-400/50 transition"
+            >
+              All Lists
+            </Link>
+            <Link
+              href="/lists/new"
+              className="px-5 py-2.5 rounded-full bg-amber-400 text-zinc-950 font-black text-xs hover:scale-105 active:scale-95 transition-all shadow-md"
+            >
+              + New Official List
+            </Link>
+          </div>
+        </div>
+      )}
+
       <div className="p-6 sm:p-7 rounded-3xl bg-gradient-to-r from-amber-400/10 via-[var(--theme-card)] to-[var(--theme-card)] border border-amber-400/25 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-lg">
         <div className="space-y-1">
           <div className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-amber-300">
@@ -912,7 +940,7 @@ function AccountDashboardContent() {
         </button>
 
         <p className="text-[11px] font-medium text-[var(--theme-muted)]">
-          GrooveEstrella Music Journal · Phase 1 Foundation
+          GrooveEstrella Music Journal · Phase 2
         </p>
       </div>
 
@@ -979,29 +1007,6 @@ function AccountDashboardContent() {
             </form>
           </div>
         </div>
-      )}
-
-      {/* Edit Journal Entry Modal */}
-      {isModalOpen && modalItem && (
-        <RatingAndJournalModal
-          isOpen={isModalOpen}
-          onClose={() => {
-            setIsModalOpen(false);
-            setModalItem(null);
-            loadData();
-          }}
-          id={modalItem.id}
-          type={modalItem.type || "album"}
-          title={modalItem.title}
-          subtitle={modalItem.subtitle}
-          image={modalItem.image}
-          initialRating={modalItem.initialRating || 0}
-          initialReview={modalItem.initialReview || ""}
-          journalEntryId={modalItem.journalEntryId || null}
-          onSaved={() => {
-            loadData();
-          }}
-        />
       )}
 
       {/* Followers & Following Modal */}

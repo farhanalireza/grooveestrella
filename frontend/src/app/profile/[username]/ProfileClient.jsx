@@ -13,17 +13,15 @@ import {
   Edit3,
   Sparkles,
   Share2,
-  PenTool,
-  Headphones,
-  Award,
   Users,
   Check,
 } from "lucide-react";
 import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import { toast } from "@/lib/toast";
-import JournalCard, { FALLBACK_COVER_SVG } from "@/Components/JournalCard";
+import JournalCard from "@/Components/JournalCard";
 import FollowersListModal from "@/Components/FollowersListModal";
+import { buildJournalEditorHref } from "@/lib/journalLinks";
 
 export default function ProfileClient({
   rawUsername,
@@ -31,20 +29,26 @@ export default function ProfileClient({
   initialJournalLogs = [],
   initialFollowersCount = 0,
   initialFollowingCount = 0,
+  initialAvgRating = null,
 }) {
   const router = useRouter();
   const { user, profile: authProfile, updateProfile } = useSupabaseAuth();
 
-  const [profile, setProfile] = useState(initialProfile);
-  const [journalLogs, setJournalLogs] = useState(initialJournalLogs);
-  const [isFollowing, setIsFollowing] = useState(false);
-  const [followersCount, setFollowersCount] = useState(initialFollowersCount);
-  const [followingCount, setFollowingCount] = useState(initialFollowingCount);
+  const [profileOverride, setProfileOverride] = useState(null);
+  const [followState, setFollowState] = useState({ targetId: null, following: false });
+  const [followerDelta, setFollowerDelta] = useState(0);
   const [isFollowsModalOpen, setIsFollowsModalOpen] = useState(false);
   const [followsModalTab, setFollowsModalTab] = useState("followers");
 
-  // Filter tabs: 'all' | 'reviewed' | 'top_rated'
-  const [activeFilter, setActiveFilter] = useState("all");
+  const profile =
+    profileOverride ||
+    initialProfile ||
+    (authProfile && authProfile.username?.toLowerCase() === rawUsername.toLowerCase()
+      ? authProfile
+      : null);
+  const journalLogs = initialJournalLogs;
+  const followersCount = Math.max(0, initialFollowersCount + followerDelta);
+  const followingCount = initialFollowingCount;
 
   // Edit Profile modal
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -52,29 +56,12 @@ export default function ProfileClient({
   const [editBio, setEditBio] = useState(initialProfile?.bio || "");
   const [copiedLink, setCopiedLink] = useState(false);
 
-  // Sync if props update across client navigations
-  useEffect(() => {
-    setProfile(initialProfile);
-    setJournalLogs(initialJournalLogs);
-    setFollowersCount(initialFollowersCount);
-    setFollowingCount(initialFollowingCount);
-    setEditDisplayName(initialProfile?.display_name || "");
-    setEditBio(initialProfile?.bio || "");
-  }, [initialProfile, initialJournalLogs, initialFollowersCount, initialFollowingCount]);
+  const profileId = profile?.id;
+  const currentUserId = user?.id;
 
-  // Fallback for local/guest own-profile when SSR returned null
+  // Non-blocking check: is current logged-in user following this user?
   useEffect(() => {
-    if (!profile && authProfile && authProfile.username?.toLowerCase() === rawUsername.toLowerCase()) {
-      setProfile(authProfile);
-      setEditDisplayName(authProfile.display_name || "");
-      setEditBio(authProfile.bio || "");
-    }
-  }, [profile, authProfile, rawUsername]);
-
-  // Non-blocking background check: is current logged-in user following this critic?
-  useEffect(() => {
-    if (!user || !profile?.id || user.id === profile.id || !isSupabaseConfigured()) {
-      setIsFollowing(false);
+    if (!currentUserId || !profileId || currentUserId === profileId || !isSupabaseConfigured()) {
       return;
     }
 
@@ -83,18 +70,26 @@ export default function ProfileClient({
     supabase
       .from("follows")
       .select("follower_id")
-      .eq("follower_id", user.id)
-      .eq("following_id", profile.id)
+      .eq("follower_id", currentUserId)
+      .eq("following_id", profileId)
       .maybeSingle()
       .then(({ data }) => {
-        if (active) setIsFollowing(Boolean(data));
+        if (active) setFollowState({ targetId: profileId, following: Boolean(data) });
       })
       .catch(() => {});
 
     return () => {
       active = false;
     };
-  }, [user?.id, profile?.id]);
+  }, [currentUserId, profileId]);
+
+  const isFollowing = Boolean(
+    currentUserId &&
+      profileId &&
+      currentUserId !== profileId &&
+      followState.targetId === profileId &&
+      followState.following
+  );
 
   const isOwner = Boolean(
     user && profile && (user.id === profile.id || user.email?.split("@")[0] === profile.username)
@@ -102,7 +97,7 @@ export default function ProfileClient({
 
   const handleToggleFollow = async () => {
     if (!user || !isSupabaseConfigured()) {
-      toast.info("Sign in to follow other critics!");
+      toast.info("Sign in to follow listeners!");
       return;
     }
     if (!profile) return;
@@ -110,9 +105,8 @@ export default function ProfileClient({
     const supabase = createClient();
     const nextFollowing = !isFollowing;
 
-    // Optimistic UI update
-    setIsFollowing(nextFollowing);
-    setFollowersCount((prev) => (nextFollowing ? prev + 1 : Math.max(0, prev - 1)));
+    setFollowState({ targetId: profile.id, following: nextFollowing });
+    setFollowerDelta((prev) => (nextFollowing ? prev + 1 : prev - 1));
 
     try {
       if (!nextFollowing) {
@@ -127,14 +121,21 @@ export default function ProfileClient({
           follower_id: user.id,
           following_id: profile.id,
         });
-        toast.success(`Following @${profile.username}! 🎵`);
+        toast.success(`Following @${profile.username}!`);
       }
+      setFollowerDelta(0);
       router.refresh();
     } catch (_) {
-      setIsFollowing(!nextFollowing);
-      setFollowersCount((prev) => (nextFollowing ? Math.max(0, prev - 1) : prev + 1));
+      setFollowState({ targetId: profile.id, following: !nextFollowing });
+      setFollowerDelta((prev) => (nextFollowing ? prev - 1 : prev + 1));
       toast.error("Could not update follow status.");
     }
+  };
+
+  const handleOpenEdit = () => {
+    setEditDisplayName(profile?.display_name || "");
+    setEditBio(profile?.bio || "");
+    setIsEditOpen(true);
   };
 
   const handleSaveProfile = async (e) => {
@@ -143,27 +144,27 @@ export default function ProfileClient({
       display_name: editDisplayName,
       bio: editBio,
     });
-    setProfile((prev) => ({
-      ...prev,
+    setProfileOverride({
+      ...profile,
       display_name: editDisplayName,
       bio: editBio,
-    }));
+    });
     setIsEditOpen(false);
-    toast.success("Profile updated successfully!");
+    toast.success("Profile updated!");
     router.refresh();
   };
 
   const handleShareProfile = () => {
     if (navigator.share) {
       navigator.share({
-        title: `${profile?.display_name || "Critic Profile"} on GrooveEstrella`,
+        title: `${profile?.display_name || profile?.username} on GrooveEstrella`,
         url: window.location.href,
       });
     } else {
       navigator.clipboard.writeText(window.location.href);
       setCopiedLink(true);
       setTimeout(() => setCopiedLink(false), 2000);
-      toast.success("Profile link copied to clipboard!");
+      toast.success("Profile link copied!");
     }
   };
 
@@ -172,37 +173,25 @@ export default function ProfileClient({
     setIsFollowsModalOpen(true);
   };
 
-  // Metrics
+  // Strictly enforce public-only display on Public Profile
+  const publicEntries = useMemo(() => {
+    return (journalLogs || []).filter((entry) => entry.is_public !== false);
+  }, [journalLogs]);
+
+  // Average Rating (uses all public ratings from server, or computes from logs)
   const avgRating = useMemo(() => {
-    const rated = journalLogs.filter((l) => l.rating > 0);
+    if (initialAvgRating) return initialAvgRating;
+    const rated = publicEntries.filter((l) => l.rating > 0);
     if (rated.length === 0) return null;
-    return (rated.reduce((acc, curr) => acc + curr.rating, 0) / rated.length).toFixed(1);
-  }, [journalLogs]);
-
-  const reviewsCount = useMemo(() => {
-    return journalLogs.filter((l) => l.review && l.review.trim().length > 0).length;
-  }, [journalLogs]);
-
-  const topRated = useMemo(() => {
-    return journalLogs.filter((l) => l.rating >= 8.5);
-  }, [journalLogs]);
-
-  const displayedEntries = useMemo(() => {
-    if (activeFilter === "reviewed") {
-      return journalLogs.filter((l) => l.review && l.review.trim().length > 0);
-    }
-    if (activeFilter === "top_rated") {
-      return journalLogs.filter((l) => l.rating >= 8.5);
-    }
-    return journalLogs;
-  }, [journalLogs, activeFilter]);
+    return (rated.reduce((acc, curr) => acc + Number(curr.rating), 0) / rated.length).toFixed(1);
+  }, [initialAvgRating, publicEntries]);
 
   if (!profile) {
     return (
       <div className="min-h-[70vh] flex flex-col items-center justify-center p-6 text-center space-y-4">
         <h2 className="text-2xl font-black font-display">Profile Not Found</h2>
         <p className="text-sm text-[var(--theme-muted)]">
-          The music critic @{rawUsername} could not be located.
+          @{rawUsername} could not be located.
         </p>
         <Link
           href="/"
@@ -215,69 +204,68 @@ export default function ProfileClient({
   }
 
   return (
-    <div className="min-h-screen text-[var(--theme-fg)] py-10 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto space-y-12">
-      {/* Profile Header Hero Card */}
-      <div className="relative rounded-3xl bg-[var(--theme-card)]/90 backdrop-blur-2xl border border-[var(--theme-border)] p-7 sm:p-10 shadow-2xl overflow-hidden">
-        <div className="flex flex-col sm:flex-row items-center sm:items-start gap-7 sm:gap-8 relative z-10">
-          {/* Avatar */}
-          <div className="w-28 h-28 sm:w-36 sm:h-36 rounded-3xl overflow-hidden bg-gradient-to-tr from-amber-400 via-amber-300 to-amber-200 border-2 border-white/20 shadow-2xl shrink-0 flex items-center justify-center ring-4 ring-amber-400/20 group">
+    <div className="min-h-screen text-[var(--theme-fg)] py-10 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto space-y-12 pb-32">
+      {/* 3.1 ELEVATED PROFILE HEADER CARD */}
+      <header className="relative rounded-3xl bg-gradient-to-br from-[var(--theme-surface-elevated)] via-[var(--theme-card)] to-[var(--theme-card)] backdrop-blur-2xl border border-[var(--theme-border)]/90 ring-1 ring-white/5 p-6 sm:p-9 shadow-[0_24px_60px_-15px_rgba(0,0,0,0.55)] overflow-hidden">
+        {/* Subtle top highlight line for elevated depth */}
+        <div className="absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-[var(--theme-accent)]/40 to-transparent pointer-events-none" />
+
+        <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 sm:gap-7 relative z-10">
+          {/* Larger Avatar (80–96px: w-20 h-20 on mobile, w-24 h-24 on sm+) */}
+          <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden bg-gradient-to-tr from-amber-400 via-amber-300 to-amber-200 border border-white/25 shadow-xl shrink-0 flex items-center justify-center ring-2 ring-amber-400/20">
             {profile.avatar_url ? (
               <img
                 src={profile.avatar_url}
                 alt={profile.display_name || profile.username}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                className="w-full h-full object-cover"
                 onError={(e) => {
                   e.currentTarget.src = `https://api.dicebear.com/7.x/identicon/svg?seed=${profile.username}`;
                 }}
               />
             ) : (
-              <User size={56} className="text-zinc-950" />
+              <User size={40} className="text-zinc-950" />
             )}
           </div>
 
-          {/* Profile Details & Bio */}
-          <div className="flex-1 text-center sm:text-left space-y-3 min-w-0">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="min-w-0">
-                <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-amber-400/10 border border-amber-400/20 text-amber-300 text-[10px] font-bold uppercase tracking-widest mb-1.5">
-                  <Sparkles size={11} />
-                  <span>Music Critic & Explorer</span>
-                </div>
-                <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight font-display text-[var(--theme-fg)] truncate">
+          {/* Identity, Bio, Stats Row & Actions */}
+          <div className="flex-1 text-center sm:text-left space-y-3 min-w-0 w-full">
+            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+              <div className="min-w-0 space-y-0.5">
+                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight font-display text-[var(--theme-fg)] truncate">
                   {profile.display_name || profile.username}
                 </h1>
-                <p className="text-sm text-amber-300 font-bold mt-0.5">
+                <p className="text-sm text-[var(--theme-accent)] font-semibold">
                   @{profile.username}
                 </p>
               </div>
 
-              {/* Action Buttons: Follow + Share + Edit */}
-              <div className="flex items-center justify-center sm:justify-end gap-2.5 pt-1 sm:pt-0 shrink-0">
+              {/* Prominent Follow + Share (or Edit Profile for owner) */}
+              <div className="flex items-center justify-center sm:justify-end gap-2.5 shrink-0">
                 {isOwner ? (
                   <button
-                    onClick={() => setIsEditOpen(true)}
-                    className="px-4 py-2 rounded-2xl bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] border border-[var(--theme-border)] text-xs font-bold text-[var(--theme-fg)] transition flex items-center gap-1.5 shadow-sm cursor-pointer hover:border-amber-400/40"
+                    onClick={handleOpenEdit}
+                    className="px-4 py-2 rounded-full bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] border border-[var(--theme-border)] hover:border-amber-400/50 text-xs font-bold text-[var(--theme-fg)] transition flex items-center gap-1.5 shadow-sm cursor-pointer"
                   >
-                    <Edit3 size={14} />
+                    <Edit3 size={13} />
                     <span>Edit Profile</span>
                   </button>
                 ) : (
                   <button
                     onClick={handleToggleFollow}
-                    className={`px-5 py-2 rounded-2xl text-xs font-black transition flex items-center gap-1.5 shadow-md cursor-pointer ${
+                    className={`px-6 py-2.5 rounded-full text-xs sm:text-sm font-black transition flex items-center gap-2 shadow-lg cursor-pointer ${
                       isFollowing
-                        ? "bg-zinc-800 text-zinc-200 border border-zinc-700 hover:bg-zinc-700"
-                        : "bg-gradient-to-r from-amber-400 to-amber-300 text-zinc-950 hover:scale-105 active:scale-95"
+                        ? "bg-[var(--theme-surface)] text-[var(--theme-fg)] border border-[var(--theme-border)] hover:border-rose-400/50"
+                        : "bg-gradient-to-r from-amber-400 via-amber-300 to-amber-400 text-zinc-950 hover:scale-105 active:scale-95 shadow-amber-400/20"
                     }`}
                   >
-                    {isFollowing ? <UserCheck size={14} /> : <UserPlus size={14} />}
-                    <span>{isFollowing ? "Following" : "Follow Critic"}</span>
+                    {isFollowing ? <UserCheck size={15} /> : <UserPlus size={15} />}
+                    <span>{isFollowing ? "Following" : "Follow"}</span>
                   </button>
                 )}
 
                 <button
                   onClick={handleShareProfile}
-                  className="p-2.5 rounded-2xl bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] border border-[var(--theme-border)] text-[var(--theme-muted)] hover:text-[var(--theme-fg)] transition cursor-pointer"
+                  className="p-2.5 rounded-full bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] border border-[var(--theme-border)] text-[var(--theme-muted)] hover:text-[var(--theme-fg)] transition cursor-pointer shadow-sm"
                   title="Share Profile Link"
                 >
                   {copiedLink ? <Check size={16} className="text-emerald-400" /> : <Share2 size={16} />}
@@ -285,196 +273,109 @@ export default function ProfileClient({
               </div>
             </div>
 
-            {/* Bio */}
-            <p className="text-sm sm:text-base text-[var(--theme-muted)] max-w-2xl leading-relaxed pt-1 font-body">
-              {profile.bio || "Active music journal keeper on GrooveEstrella."}
-            </p>
+            {/* Short Bio */}
+            {profile.bio && (
+              <p className="text-sm sm:text-[15px] text-[var(--theme-muted)] max-w-2xl leading-relaxed font-body">
+                {profile.bio}
+              </p>
+            )}
 
-            {/* Critic Stat Cards Row */}
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 sm:gap-3 pt-3">
-              <div className="p-3 rounded-2xl bg-[var(--theme-surface)]/80 border border-[var(--theme-border)]/60 text-center sm:text-left">
-                <div className="flex items-center justify-center sm:justify-start gap-1.5 text-xs text-[var(--theme-muted)] font-medium">
-                  <Headphones size={13} className="text-amber-300" />
-                  <span>Listens</span>
-                </div>
-                <div className="text-xl sm:text-2xl font-black text-[var(--theme-fg)] mt-0.5">
-                  {journalLogs.length}
-                </div>
+            {/* Stats Row: X Journal Entries · Y.Y★ Avg Rating · Z Followers */}
+            <div className="pt-2 flex items-center justify-center sm:justify-start gap-2.5 sm:gap-3.5 flex-wrap text-xs sm:text-sm">
+              <div className="inline-flex items-center gap-1.5 font-semibold text-[var(--theme-fg)]">
+                <BookOpen size={14} className="text-[var(--theme-accent)]" />
+                <span className="font-black">{publicEntries.length}</span>
+                <span className="text-[var(--theme-muted)] font-medium">
+                  {publicEntries.length === 1 ? "Journal Entry" : "Journal Entries"}
+                </span>
               </div>
 
-              <div className="p-3 rounded-2xl bg-[var(--theme-surface)]/80 border border-[var(--theme-border)]/60 text-center sm:text-left">
-                <div className="flex items-center justify-center sm:justify-start gap-1.5 text-xs text-[var(--theme-muted)] font-medium">
-                  <PenTool size={13} className="text-amber-300" />
-                  <span>Reviews</span>
-                </div>
-                <div className="text-xl sm:text-2xl font-black text-amber-300 mt-0.5">
-                  {reviewsCount}
-                </div>
-              </div>
+              <span className="text-[var(--theme-muted)]/40">·</span>
 
-              <div className="p-3 rounded-2xl bg-[var(--theme-surface)]/80 border border-[var(--theme-border)]/60 text-center sm:text-left">
-                <div className="flex items-center justify-center sm:justify-start gap-1.5 text-xs text-[var(--theme-muted)] font-medium">
-                  <Star size={13} className="text-amber-300" />
-                  <span>Avg Rating</span>
-                </div>
-                <div className="text-xl sm:text-2xl font-black text-amber-300 mt-0.5">
+              <div className="inline-flex items-center gap-1.5 font-semibold text-[var(--theme-fg)]">
+                <Star size={14} className="text-amber-400" fill={avgRating ? "currentColor" : "none"} />
+                <span className="font-black text-amber-300">
                   {avgRating ? `${avgRating}★` : "—"}
-                </div>
+                </span>
+                <span className="text-[var(--theme-muted)] font-medium">Avg Rating</span>
               </div>
 
-              {/* Followers - Clickable */}
+              <span className="text-[var(--theme-muted)]/40">·</span>
+
               <button
                 type="button"
                 onClick={() => handleOpenFollows("followers")}
-                className="p-3 rounded-2xl bg-[var(--theme-surface)]/80 hover:bg-[var(--theme-surface)] border border-[var(--theme-border)]/60 hover:border-amber-400/50 text-center sm:text-left transition-all duration-200 cursor-pointer group shadow-xs"
-                title="View followers"
+                className="inline-flex items-center gap-1.5 font-semibold text-[var(--theme-fg)] hover:text-amber-300 transition cursor-pointer"
+                title="View followers & following"
               >
-                <div className="flex items-center justify-center sm:justify-start gap-1.5 text-xs text-[var(--theme-muted)] font-medium group-hover:text-amber-300 transition-colors">
-                  <Users size={13} className="text-amber-300" />
-                  <span>Followers</span>
-                </div>
-                <div className="text-xl sm:text-2xl font-black text-[var(--theme-fg)] mt-0.5 group-hover:text-amber-300 transition-colors">
-                  {followersCount}
-                </div>
-              </button>
-
-              {/* Following - Clickable */}
-              <button
-                type="button"
-                onClick={() => handleOpenFollows("following")}
-                className="p-3 rounded-2xl bg-[var(--theme-surface)]/80 hover:bg-[var(--theme-surface)] border border-[var(--theme-border)]/60 hover:border-amber-400/50 text-center sm:text-left transition-all duration-200 cursor-pointer group shadow-xs col-span-2 sm:col-span-1"
-                title="View critics this user follows"
-              >
-                <div className="flex items-center justify-center sm:justify-start gap-1.5 text-xs text-[var(--theme-muted)] font-medium group-hover:text-amber-300 transition-colors">
-                  <UserCheck size={13} className="text-amber-300" />
-                  <span>Following</span>
-                </div>
-                <div className="text-xl sm:text-2xl font-black text-[var(--theme-fg)] mt-0.5 group-hover:text-amber-300 transition-colors">
-                  {followingCount}
-                </div>
+                <Users size={14} className="text-[var(--theme-accent)]" />
+                <span className="font-black">{followersCount}</span>
+                <span className="text-[var(--theme-muted)] font-medium hover:text-amber-300">
+                  {followersCount === 1 ? "Follower" : "Followers"}
+                </span>
               </button>
             </div>
           </div>
         </div>
-      </div>
+      </header>
 
-      {/* Optional Top Rated Favorites Shelf */}
-      {topRated.length > 0 && (
-        <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <Award size={18} className="text-amber-300" />
-            <h2 className="text-lg font-black tracking-tight font-display">
-              Critic's Top Rated Releases
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3.5">
-            {topRated.slice(0, 4).map((item) => (
-              <Link
-                key={item.id}
-                href={`/${item.targetType || "album"}/${item.targetId}`}
-                className="group relative p-3 rounded-2xl bg-[var(--theme-card)]/80 border border-[var(--theme-border)] hover:border-amber-400/50 transition-all shadow-md hover:-translate-y-1 block overflow-hidden"
-              >
-                <div className="aspect-square rounded-xl overflow-hidden mb-2.5 bg-black/40 relative">
-                  <img
-                    src={item.image || FALLBACK_COVER_SVG}
-                    alt={item.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                  <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-black/70 backdrop-blur-md border border-amber-400/40 text-amber-300 text-[10px] font-bold">
-                    ★ {item.rating}
-                  </div>
-                </div>
-                <h4 className="text-xs font-black text-[var(--theme-fg)] truncate group-hover:text-amber-300 transition-colors">
-                  {item.title}
-                </h4>
-                <p className="text-[11px] text-[var(--theme-muted)] truncate">{item.subtitle}</p>
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Public Music Journal Timeline */}
-      <div className="space-y-6">
-        <div className="flex items-center justify-between flex-wrap gap-4">
+      {/* 3.2 PUBLIC MUSIC JOURNAL LIST */}
+      <section className="space-y-6">
+        <div className="flex items-baseline justify-between gap-4 border-b border-[var(--theme-border)]/60 pb-3.5 flex-wrap">
           <div className="flex items-center gap-2.5">
-            <BookOpen size={20} className="text-amber-300" />
-            <h2 className="text-2xl font-black tracking-tight font-display">
-              Public Listening Journal
+            <BookOpen size={20} className="text-[var(--theme-accent)]" />
+            <h2 className="text-xl sm:text-2xl font-black tracking-tight font-display text-[var(--theme-fg)]">
+              Public Music Journal
             </h2>
           </div>
 
-          {/* Filter Toggles */}
-          <div className="flex items-center gap-1.5 bg-[var(--theme-card)]/80 p-1 rounded-2xl border border-[var(--theme-border)]">
-            <button
-              onClick={() => setActiveFilter("all")}
-              className={`px-3 py-1 rounded-xl text-xs font-bold transition cursor-pointer ${
-                activeFilter === "all"
-                  ? "bg-amber-400 text-zinc-950 shadow-xs"
-                  : "text-[var(--theme-muted)] hover:text-[var(--theme-fg)]"
-              }`}
-            >
-              All Listens ({journalLogs.length})
-            </button>
-            <button
-              onClick={() => setActiveFilter("reviewed")}
-              className={`px-3 py-1 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1 ${
-                activeFilter === "reviewed"
-                  ? "bg-amber-400 text-zinc-950 shadow-xs"
-                  : "text-[var(--theme-muted)] hover:text-[var(--theme-fg)]"
-              }`}
-            >
-              <PenTool size={11} />
-              <span>Reviews ({reviewsCount})</span>
-            </button>
-            <button
-              onClick={() => setActiveFilter("top_rated")}
-              className={`px-3 py-1 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1 ${
-                activeFilter === "top_rated"
-                  ? "bg-amber-400 text-zinc-950 shadow-xs"
-                  : "text-[var(--theme-muted)] hover:text-[var(--theme-fg)]"
-              }`}
-            >
-              <Star size={11} />
-              <span>Top Rated ({topRated.length})</span>
-            </button>
-          </div>
+          <span className="text-xs sm:text-sm font-bold text-[var(--theme-muted)]">
+            {publicEntries.length} {publicEntries.length === 1 ? "Listen" : "Listens"} Recorded
+          </span>
         </div>
 
-        {/* Timeline Entries List */}
-        {displayedEntries.length === 0 ? (
-          <div className="text-center py-20 bg-[var(--theme-card)]/60 border border-[var(--theme-border)] rounded-3xl p-8 max-w-md mx-auto space-y-3 shadow-xl">
-            <div className="w-16 h-16 rounded-full bg-amber-400/10 border border-amber-400/20 flex items-center justify-center text-amber-300 mx-auto">
-              <BookOpen size={28} />
+        {publicEntries.length === 0 ? (
+          <div className="text-center py-16 sm:py-20 bg-[var(--theme-card)]/60 border border-[var(--theme-border)] rounded-3xl p-8 max-w-md mx-auto space-y-3 shadow-lg">
+            <div className="w-14 h-14 rounded-full bg-amber-400/10 border border-amber-400/20 flex items-center justify-center text-amber-300 mx-auto">
+              <BookOpen size={24} />
             </div>
-            <h3 className="text-lg font-black text-[var(--theme-fg)]">No Public Journal Entries</h3>
+            <h3 className="text-lg font-black text-[var(--theme-fg)]">No Public Entries Yet</h3>
             <p className="text-xs sm:text-sm text-[var(--theme-muted)] leading-relaxed">
-              {activeFilter === "reviewed"
-                ? "This critic has not written reviews yet."
-                : "This critic has not published any public listening logs yet."}
+              {isOwner
+                ? "Log an album, track, or artist listen as Public to share your reviews here."
+                : `@${profile.username} hasn't published any public journal entries yet.`}
             </p>
             {isOwner && (
               <Link
-                href="/journal"
+                href={`/journal/new?returnTo=${encodeURIComponent(`/profile/${profile.username}`)}`}
                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-amber-400 text-zinc-950 font-black text-xs hover:scale-105 active:scale-95 transition shadow-md mt-2"
               >
                 <Sparkles size={14} />
-                <span>Write a Journal Entry</span>
+                <span>Log a Listen</span>
               </Link>
             )}
           </div>
         ) : (
-          <div className="space-y-6 sm:space-y-7">
-            {displayedEntries.map((entry) => (
+          <div className="space-y-7">
+            {publicEntries.map((entry) => (
               <JournalCard
                 key={entry.id}
                 entry={entry}
                 isOwner={isOwner}
                 onEdit={
                   isOwner
-                    ? () => {
-                        router.push("/journal");
+                    ? (e) => {
+                        router.push(
+                          buildJournalEditorHref({
+                            mbid: e.targetId,
+                            type: e.targetType || "album",
+                            title: e.title,
+                            subtitle: e.subtitle,
+                            image: e.image,
+                            entryId: e.id,
+                            returnTo: `/profile/${profile.username}`,
+                          })
+                        );
                       }
                     : null
                 }
@@ -482,16 +383,16 @@ export default function ProfileClient({
             ))}
           </div>
         )}
-      </div>
+      </section>
 
       {/* Edit Profile Modal */}
       {isEditOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-md px-4">
           <div className="absolute inset-0" onClick={() => setIsEditOpen(false)} />
-          <div className="relative max-w-md w-full bg-[var(--theme-card)] border border-[var(--theme-border)] rounded-3xl p-6 sm:p-8 shadow-2xl z-10 text-[var(--theme-fg)] space-y-5 animate-scale-up">
+          <div className="relative max-w-md w-full bg-[var(--theme-card)] border border-[var(--theme-border)] rounded-3xl p-6 sm:p-8 shadow-2xl z-10 text-[var(--theme-fg)] space-y-5">
             <div className="flex items-center justify-between">
               <h3 className="text-xl font-black font-display text-[var(--theme-fg)]">
-                Edit Critic Profile
+                Edit Profile
               </h3>
               <button
                 onClick={() => setIsEditOpen(false)}
@@ -510,7 +411,7 @@ export default function ProfileClient({
                   type="text"
                   value={editDisplayName}
                   onChange={(e) => setEditDisplayName(e.target.value)}
-                  placeholder="e.g. Sonic Voyager"
+                  placeholder="Your display name"
                   className="w-full px-4 py-2.5 rounded-2xl bg-[var(--theme-surface)] border border-[var(--theme-border)] text-sm font-bold text-[var(--theme-fg)] focus:outline-none focus:border-amber-400/60"
                   required
                 />
@@ -518,13 +419,13 @@ export default function ProfileClient({
 
               <div>
                 <label className="block text-xs font-bold text-[var(--theme-muted)] uppercase tracking-wider mb-1.5">
-                  Bio / Critical Philosophy
+                  Bio
                 </label>
                 <textarea
                   value={editBio}
                   onChange={(e) => setEditBio(e.target.value)}
                   rows={4}
-                  placeholder="Share your music taste, favorite decades, or critical perspective..."
+                  placeholder="Share a short bio about your music taste..."
                   className="w-full px-4 py-2.5 rounded-2xl bg-[var(--theme-surface)] border border-[var(--theme-border)] text-sm text-[var(--theme-fg)] focus:outline-none focus:border-amber-400/60 resize-none leading-relaxed"
                 />
               </div>

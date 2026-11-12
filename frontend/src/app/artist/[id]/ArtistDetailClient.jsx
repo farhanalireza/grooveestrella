@@ -19,6 +19,7 @@ import { AlbumCard } from "@/Components/CardComponents/AlbumsCard";
 import GrooveLinkModal from "@/Components/GrooveLinkModal";
 import GrooveCardComposer from "@/Components/GrooveCardComposer";
 import MusicLoreAndReviews from "@/Components/MusicLoreAndReviews";
+import EntityReviewsSection from "@/Components/EntityReviewsSection";
 import RatingPieChart from "@/Components/RatingPieChart";
 import UserRatingWidget from "@/Components/UserRatingWidget";
 import ArtistLinksDrawer from "@/Components/ArtistLinksDrawer";
@@ -375,8 +376,8 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
                                     <Calendar size={14} className="text-[var(--theme-accent)] shrink-0" />
                                     <span>
                                         {isGroup
-                                            ? `Formed ${beginYear}${endYear ? ` · Disbanded ${endYear}` : " · Active"}`
-                                            : `Born ${beginYear}${endYear ? ` · Died ${endYear}` : " · Active"}`
+                                            ? `Formed ${beginYear}${endYear ? ` · Disbanded ${endYear}` : lifeSpan?.ended ? " · Disbanded" : " · Active"}`
+                                            : `Born ${beginYear}${endYear ? ` · Died ${endYear}` : lifeSpan?.ended ? " · Deceased" : " · Active"}`
                                         }
                                     </span>
                                 </div>
@@ -742,6 +743,19 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
                                 </div>
                             </div>
                         )}
+
+                        {/* Community Ratings & Public Reviews surfaced directly on the Artist page */}
+                        <div className="pt-10 border-t border-[var(--theme-border)]/40 max-w-4xl mx-auto">
+                            <EntityReviewsSection
+                                mbid={artist.id || id}
+                                type="artist"
+                                title={artist.name}
+                                subtitle={artist.country || artist.area || "Artist"}
+                                image={coverUrl}
+                                year={beginYear ? parseInt(beginYear, 10) : null}
+                                musicbrainzRating={artist.rating}
+                            />
+                        </div>
                     </div>
                 )}
 
@@ -774,6 +788,8 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
                             type="artist"
                             title={artist.name}
                             artist={artist.name}
+                            image={coverUrl}
+                            year={beginYear ? parseInt(beginYear, 10) : null}
                             description={artist.description}
                             releaseDetails={{
                                 releaseDate: artist.beginDate ? `Active since ${artist.beginDate}` : null,

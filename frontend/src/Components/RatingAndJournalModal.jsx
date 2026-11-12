@@ -394,9 +394,9 @@ export default function RatingAndJournalModal({
                     entity_id: entityRecordId,
                     rating_type: ratingSystem,
                     score: ratingSystem === "stars" ? starRating : scoreRating,
-                    review: reflection.trim() || null,
+                    review: isPublic ? reflection.trim() || null : null,
                     listened_date: entryDate,
-                    is_public: isPublic,
+                    is_public: true,
                   },
                   { onConflict: "user_id,entity_id,rating_type" }
                 )

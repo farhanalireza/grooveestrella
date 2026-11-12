@@ -18,6 +18,7 @@ export interface Database {
           display_name: string | null;
           avatar_url: string | null;
           bio: string | null;
+          is_admin: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -27,6 +28,7 @@ export interface Database {
           display_name?: string | null;
           avatar_url?: string | null;
           bio?: string | null;
+          is_admin?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -36,6 +38,7 @@ export interface Database {
           display_name?: string | null;
           avatar_url?: string | null;
           bio?: string | null;
+          is_admin?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -171,6 +174,82 @@ export interface Database {
           created_at?: string;
         };
       };
+      official_lists: {
+        Row: {
+          id: string;
+          slug: string;
+          title: string;
+          description: string | null;
+          cover_image_url: string | null;
+          list_type: 'ranked' | 'unranked';
+          category: string | null;
+          badge_label: string | null;
+          is_public: true;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          slug: string;
+          title: string;
+          description?: string | null;
+          cover_image_url?: string | null;
+          list_type?: 'ranked' | 'unranked';
+          category?: string | null;
+          badge_label?: string | null;
+          is_public?: true;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          slug?: string;
+          title?: string;
+          description?: string | null;
+          cover_image_url?: string | null;
+          list_type?: 'ranked' | 'unranked';
+          category?: string | null;
+          badge_label?: string | null;
+          is_public?: true;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      official_list_items: {
+        Row: {
+          id: string;
+          list_id: string;
+          entity_id: string;
+          position: number;
+          note: string | null;
+          badge_text: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          list_id: string;
+          entity_id: string;
+          position?: number;
+          note?: string | null;
+          badge_text?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          list_id?: string;
+          entity_id?: string;
+          position?: number;
+          note?: string | null;
+          badge_text?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
     };
     Views: {
       entity_ratings_summary: {
@@ -184,6 +263,22 @@ export interface Database {
           avg_stars: number | null;
           avg_score: number | null;
           normalized_score_100: number | null;
+        };
+      };
+      entity_official_badges: {
+        Row: {
+          item_id: string;
+          entity_id: string;
+          mbid: string;
+          entity_type: string;
+          list_id: string;
+          list_slug: string;
+          list_title: string;
+          list_type: 'ranked' | 'unranked';
+          category: string | null;
+          badge_label: string | null;
+          position: number;
+          resolved_badge: string;
         };
       };
     };
