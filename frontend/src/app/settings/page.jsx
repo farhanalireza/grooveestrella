@@ -6,15 +6,18 @@ import { useRouter } from 'next/navigation';
 import { 
   Shield, Volume2, Check, Music, Trash2, 
   ListMusic, Disc, Users, AlertTriangle, ArrowLeft,
-  Sun, Moon, Palette, Smartphone, Download, Sparkles, ArrowRight
+  Sun, Moon, Palette, Smartphone, Download, Sparkles, ArrowRight,
+  User, Mail, CheckCircle2
 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from '@/lib/toast';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext';
 
 export default function SettingsPage() {
   const router = useRouter();
   const { theme, isDark, setTheme } = useTheme();
+  const { user, profile, signOut } = useSupabaseAuth();
   const [preferredPlatform, setPreferredPlatform] = useState("none");
   const [showVinylSides, setShowVinylSides] = useState(true);
   const [isStandalone, setIsStandalone] = useState(false);
@@ -156,8 +159,92 @@ export default function SettingsPage() {
           </button>
           <div>
             <h1 className="text-2xl font-extrabold tracking-tight text-[var(--theme-fg)]">Settings</h1>
-            <p className="text-xs text-[var(--theme-muted)]">Configure preferences and manage locally saved data.</p>
+            <p className="text-xs text-[var(--theme-muted)]">Configure preferences, account security, and manage data.</p>
           </div>
+        </div>
+
+        {/* SECTION: CONNECTED ACCOUNT & EMAIL BADGE */}
+        <div className="space-y-4 bg-[var(--theme-card)]/60 border border-[var(--theme-border)] rounded-2xl p-4 sm:p-5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <User className="w-5 h-5 text-[var(--theme-accent)]" />
+              <h2 className="text-base font-bold text-[var(--theme-fg)]">Account & Authentication</h2>
+            </div>
+            {user ? (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[11px] font-bold uppercase tracking-widest shadow-xs">
+                <CheckCircle2 size={12} />
+                <span>Cloud Connected</span>
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400/10 border border-amber-400/30 text-amber-300 text-[11px] font-bold uppercase tracking-widest shadow-xs">
+                <Sparkles size={12} />
+                <span>Local Profile</span>
+              </span>
+            )}
+          </div>
+
+          {user ? (
+            <div className="p-4 rounded-xl bg-[var(--theme-surface)] border border-[var(--theme-border)] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-full bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+                  <Mail size={18} />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-semibold text-[var(--theme-muted)] uppercase tracking-wider">
+                      Account Email
+                    </span>
+                    {/* The Email Badge moved inside Settings */}
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[11px] font-bold tracking-wide">
+                      <CheckCircle2 size={11} />
+                      <span>{user.email}</span>
+                    </span>
+                  </div>
+                  <p className="text-sm font-bold text-[var(--theme-fg)] truncate mt-0.5">
+                    {profile?.display_name || user.email?.split('@')[0]}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <Link
+                  href="/account"
+                  className="px-3.5 py-1.5 rounded-full bg-[var(--theme-card)] hover:bg-[var(--theme-surface-elevated)] border border-[var(--theme-border)] text-xs font-bold text-[var(--theme-fg)] transition shadow-xs flex items-center gap-1.5"
+                >
+                  <span>View Account</span>
+                  <ArrowRight size={13} />
+                </Link>
+                <button
+                  onClick={async () => {
+                    await signOut();
+                    toast.info("Signed out successfully");
+                    router.push("/");
+                  }}
+                  className="px-3 py-1.5 rounded-full bg-red-500/10 hover:bg-red-500/20 border border-red-500/25 text-red-400 text-xs font-bold transition cursor-pointer"
+                >
+                  Sign Out
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="p-4 rounded-xl bg-[var(--theme-surface)] border border-[var(--theme-border)] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-amber-400/10 border border-amber-400/20 flex items-center justify-center text-amber-300 shrink-0">
+                  <Mail size={18} />
+                </div>
+                <div>
+                  <h3 className="text-xs sm:text-sm font-bold text-[var(--theme-fg)]">No Account Connected</h3>
+                  <p className="text-[11px] text-[var(--theme-muted)]">Sign in or create an account to sync journals across devices.</p>
+                </div>
+              </div>
+              <Link
+                href="/login"
+                className="px-4 py-2 rounded-full bg-amber-400 text-zinc-950 text-xs font-black hover:opacity-90 transition shadow-sm text-center"
+              >
+                Sign In / Sign Up
+              </Link>
+            </div>
+          )}
         </div>
 
         {/* SECTION: MUSIC TASTE & ONBOARDING */}

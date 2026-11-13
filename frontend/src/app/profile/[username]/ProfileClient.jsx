@@ -22,6 +22,10 @@ import { toast } from "@/lib/toast";
 import JournalCard from "@/Components/JournalCard";
 import FollowersListModal from "@/Components/FollowersListModal";
 import { buildJournalEditorHref } from "@/lib/journalLinks";
+import UserProfileBadge, {
+  getProfileBadgeTheme,
+  NOISE_GRAIN_BG,
+} from "@/Components/UserProfileBadge";
 
 export default function ProfileClient({
   rawUsername,
@@ -54,6 +58,9 @@ export default function ProfileClient({
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editDisplayName, setEditDisplayName] = useState(initialProfile?.display_name || "");
   const [editBio, setEditBio] = useState(initialProfile?.bio || "");
+  const [editBadge, setEditBadge] = useState(
+    initialProfile?.badge || (initialProfile?.is_admin ? "admin" : "critic")
+  );
   const [copiedLink, setCopiedLink] = useState(false);
 
   const profileId = profile?.id;
@@ -135,6 +142,7 @@ export default function ProfileClient({
   const handleOpenEdit = () => {
     setEditDisplayName(profile?.display_name || "");
     setEditBio(profile?.bio || "");
+    setEditBadge(profile?.badge || (profile?.is_admin ? "admin" : "critic"));
     setIsEditOpen(true);
   };
 
@@ -143,14 +151,22 @@ export default function ProfileClient({
     await updateProfile({
       display_name: editDisplayName,
       bio: editBio,
+      badge: editBadge,
+      is_verified: editBadge === "verified",
+      is_critic: editBadge === "critic",
+      ...(editBadge === "admin" ? { is_admin: true } : {}),
     });
     setProfileOverride({
       ...profile,
       display_name: editDisplayName,
       bio: editBio,
+      badge: editBadge,
+      is_admin: editBadge === "admin",
+      is_verified: editBadge === "verified",
+      is_critic: editBadge === "critic",
     });
     setIsEditOpen(false);
-    toast.success("Profile updated!");
+    toast.success("Profile & Identity Badge updated!");
     router.refresh();
   };
 
@@ -203,16 +219,32 @@ export default function ProfileClient({
     );
   }
 
+  const userBadge = profile?.badge || (profile?.is_admin ? "admin" : "critic");
+  const badgeTheme = getProfileBadgeTheme(userBadge);
+
   return (
     <div className="min-h-screen text-[var(--theme-fg)] py-10 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto space-y-12 pb-32">
-      {/* 3.1 ELEVATED PROFILE HEADER CARD */}
-      <header className="relative rounded-3xl bg-gradient-to-br from-[var(--theme-surface-elevated)] via-[var(--theme-card)] to-[var(--theme-card)] backdrop-blur-2xl border border-[var(--theme-border)]/90 ring-1 ring-white/5 p-6 sm:p-9 shadow-[0_24px_60px_-15px_rgba(0,0,0,0.55)] overflow-hidden">
+      {/* 3.1 ELEVATED PROFILE HEADER CARD (Dynamic Badge Theme & Tell) */}
+      <header
+        style={
+          badgeTheme.grain
+            ? {
+                backgroundImage: `radial-gradient(ellipse at top, rgba(245,158,11,0.18), transparent 70%), ${NOISE_GRAIN_BG}`,
+              }
+            : undefined
+        }
+        className={`relative rounded-3xl ${badgeTheme.heroBg} backdrop-blur-2xl border ${badgeTheme.heroBorder} ${badgeTheme.heroRing} p-6 sm:p-9 ${badgeTheme.heroShadow} overflow-hidden transition-all duration-500`}
+      >
         {/* Subtle top highlight line for elevated depth */}
-        <div className="absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-[var(--theme-accent)]/40 to-transparent pointer-events-none" />
+        <div
+          className={`absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent ${badgeTheme.highlightLine} to-transparent pointer-events-none`}
+        />
 
         <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 sm:gap-7 relative z-10">
-          {/* Larger Avatar (80–96px: w-20 h-20 on mobile, w-24 h-24 on sm+) */}
-          <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden bg-gradient-to-tr from-amber-400 via-amber-300 to-amber-200 border border-white/25 shadow-xl shrink-0 flex items-center justify-center ring-2 ring-amber-400/20">
+          {/* Larger Avatar */}
+          <div
+            className={`w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden ${badgeTheme.avatarBg} border border-white/25 shadow-xl shrink-0 flex items-center justify-center ${badgeTheme.avatarRing} transition-all duration-500`}
+          >
             {profile.avatar_url ? (
               <img
                 src={profile.avatar_url}
@@ -230,11 +262,19 @@ export default function ProfileClient({
           {/* Identity, Bio, Stats Row & Actions */}
           <div className="flex-1 text-center sm:text-left space-y-3 min-w-0 w-full">
             <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-              <div className="min-w-0 space-y-0.5">
+              <div className="min-w-0 space-y-1">
+                {/* Badge & Identity Tell */}
+                <div className="flex items-center justify-center sm:justify-start gap-2 flex-wrap mb-1">
+                  <UserProfileBadge badge={userBadge} size="sm" />
+                  <span className={`text-[11px] font-semibold ${badgeTheme.accentText} tracking-wide`}>
+                    · {badgeTheme.tell}
+                  </span>
+                </div>
+
                 <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight font-display text-[var(--theme-fg)] truncate">
                   {profile.display_name || profile.username}
                 </h1>
-                <p className="text-sm text-[var(--theme-accent)] font-semibold">
+                <p className={`text-sm ${badgeTheme.accentText} font-semibold`}>
                   @{profile.username}
                 </p>
               </div>
@@ -415,6 +455,74 @@ export default function ProfileClient({
                   className="w-full px-4 py-2.5 rounded-2xl bg-[var(--theme-surface)] border border-[var(--theme-border)] text-sm font-bold text-[var(--theme-fg)] focus:outline-none focus:border-amber-400/60"
                   required
                 />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-[var(--theme-muted)] uppercase tracking-wider mb-2">
+                  Profile Badge & Identity Aura
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {[
+                    {
+                      id: "admin",
+                      title: "Admin Badge",
+                      desc: "Glowing Red Badge · System Administrator",
+                      badgeComp: <UserProfileBadge badge="admin" size="sm" />,
+                      borderActive: "border-red-500/80 bg-red-950/40 ring-red-500/50",
+                    },
+                    {
+                      id: "verified",
+                      title: "Verified Badge",
+                      desc: "Logo Disc · Authenticated Listener",
+                      badgeComp: <UserProfileBadge badge="verified" size="sm" />,
+                      borderActive: "border-sky-400/80 bg-sky-950/40 ring-sky-400/50",
+                    },
+                    {
+                      id: "critic",
+                      title: "Critic Badge",
+                      desc: "Golden Disc with Grain · Music Critic",
+                      badgeComp: <UserProfileBadge badge="critic" size="sm" />,
+                      borderActive: "border-amber-400/80 bg-amber-950/40 ring-amber-400/50",
+                    },
+                    {
+                      id: "none",
+                      title: "Citizen",
+                      desc: "Standard Listener · Clean Profile",
+                      badgeComp: (
+                        <span className="px-2.5 py-0.5 rounded-full bg-[var(--theme-card)] text-[10px] font-bold text-[var(--theme-muted)] uppercase tracking-wider border border-[var(--theme-border)]">
+                          Citizen
+                        </span>
+                      ),
+                      borderActive: "border-[var(--theme-accent)] bg-[var(--theme-surface)] ring-[var(--theme-accent)]/50",
+                    },
+                  ].map((option) => {
+                    const isSelected = editBadge === option.id;
+                    return (
+                      <button
+                        key={option.id}
+                        type="button"
+                        onClick={() => setEditBadge(option.id)}
+                        className={`p-3 rounded-2xl border text-left flex flex-col justify-between gap-1.5 transition cursor-pointer ${
+                          isSelected
+                            ? `${option.borderActive} ring-2 shadow-sm`
+                            : "bg-[var(--theme-surface)] border-[var(--theme-border)] hover:border-[var(--theme-border-active)]"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          {option.badgeComp}
+                          {isSelected && (
+                            <span className="w-4 h-4 rounded-full bg-[var(--theme-accent)] text-[var(--theme-accent-fg)] flex items-center justify-center shrink-0">
+                              <Check size={10} strokeWidth={3} />
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-[var(--theme-muted)] leading-tight pt-0.5">
+                          {option.desc}
+                        </p>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               <div>

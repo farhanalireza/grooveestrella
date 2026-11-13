@@ -418,30 +418,64 @@ function LibraryContent() {
         </button>
       </div>
 
-      {/* Navigation Tabs (With cross-browser hidden scrollbar) */}
-      <div className="flex gap-2 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden scrollb-none no-scrollbar pb-3 mb-6 border-b border-[var(--theme-border)]">
-        {tabs.map(tab => {
-          const Icon = tab.icon;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 rounded-full font-semibold text-xs sm:text-sm whitespace-nowrap shrink-0 transition-all duration-300 cursor-pointer ${
-                activeTab === tab.id
-                  ? 'bg-[var(--theme-accent)] text-[var(--theme-accent-fg)] shadow-md font-bold'
-                  : 'bg-[var(--theme-surface)] text-[var(--theme-muted)] hover:bg-[var(--theme-card)] hover:text-[var(--theme-fg)]'
-              }`}
-            >
-              <Icon size={15} />
-              <span>{tab.label}</span>
-              <span className={`text-[11px] px-2 py-0.5 rounded-full font-bold ${
-                activeTab === tab.id ? 'bg-black/15 text-[var(--theme-accent-fg)]' : 'bg-[var(--theme-card)] text-[var(--theme-muted)]'
-              }`}>
-                {tab.count}
-              </span>
-            </button>
-          );
-        })}
+      {/* Coordinated Navigation Bar — Music Library & Music Journal side-by-side */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 mb-6 border-b border-[var(--theme-border)]">
+        {/* Left: Saved Music Library Category Tabs */}
+        <div className="flex items-center gap-2 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden scrollb-none no-scrollbar">
+          {tabs.filter(t => t.id !== 'journal').map(tab => {
+            const Icon = tab.icon;
+            const isCurrent = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-full font-semibold text-xs sm:text-sm whitespace-nowrap shrink-0 transition-all duration-200 cursor-pointer ${
+                  isCurrent
+                    ? 'bg-[var(--theme-accent)] text-[var(--theme-accent-fg)] shadow-md font-bold'
+                    : 'bg-[var(--theme-surface)] text-[var(--theme-muted)] hover:bg-[var(--theme-card)] hover:text-[var(--theme-fg)]'
+                }`}
+              >
+                <Icon size={14} />
+                <span>{tab.label}</span>
+                <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                  isCurrent ? 'bg-black/15 text-[var(--theme-accent-fg)]' : 'bg-[var(--theme-card)] text-[var(--theme-muted)]'
+                }`}>
+                  {tab.count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Right / Dedicated Place: Music Journal Hub — prominently featured in coordination */}
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={() => setActiveTab('journal')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-full font-bold text-xs sm:text-sm transition-all duration-300 cursor-pointer shadow-sm ${
+              activeTab === 'journal'
+                ? 'bg-gradient-to-r from-amber-400 via-amber-300 to-amber-400 text-zinc-950 font-black shadow-[0_0_15px_rgba(245,158,11,0.35)] ring-2 ring-amber-400/60 scale-102'
+                : 'bg-amber-950/30 hover:bg-amber-900/40 text-amber-200 border border-amber-500/40 hover:border-amber-400/70'
+            }`}
+          >
+            <BookOpen size={15} className={activeTab === 'journal' ? 'text-zinc-950' : 'text-amber-300'} />
+            <span>Music Journal</span>
+            <span className={`text-[10px] px-2 py-0.5 rounded-full font-black ${
+              activeTab === 'journal'
+                ? 'bg-black/20 text-zinc-950'
+                : 'bg-amber-400/20 text-amber-300'
+            }`}>
+              {journalEntries.length}
+            </span>
+          </button>
+
+          <Link
+            href="/journal/new?returnTo=%2Flibrary%3Ftab%3Djournal"
+            className="p-2 rounded-full bg-[var(--theme-surface)] hover:bg-amber-400/20 text-amber-300 border border-amber-400/30 hover:border-amber-400/60 transition shadow-xs cursor-pointer shrink-0"
+            title="Write New Journal Log"
+          >
+            <Plus size={15} />
+          </Link>
+        </div>
       </div>
 
       {/* SECTION SPECIFIC CONTENT */}
@@ -528,6 +562,46 @@ function LibraryContent() {
       ) : (
         /* STANDARD BOOKMARKS: SONGS, ALBUMS, ARTISTS, PLAYLISTS */
         <>
+          {/* Coordinated Music Journal Companion Bar (Always gives Journal its place) */}
+          <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-amber-500/10 via-[var(--theme-card)] to-[var(--theme-surface)] border border-amber-500/25 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-amber-400/15 border border-amber-400/30 flex items-center justify-center text-amber-300 shrink-0">
+                <BookOpen size={17} />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-xs sm:text-sm font-black text-[var(--theme-fg)]">
+                    Music Listening Journal
+                  </h3>
+                  <span className="px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 text-[10px] font-black uppercase tracking-wider">
+                    {journalEntries.length} {journalEntries.length === 1 ? 'Log' : 'Logs'}
+                  </span>
+                </div>
+                <p className="text-[11px] text-[var(--theme-muted)] mt-0.5">
+                  Reflect on music, log moods, and rate albums alongside your saved collection.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
+              <button
+                type="button"
+                onClick={() => setActiveTab('journal')}
+                className="px-3.5 py-1.5 rounded-full bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] border border-amber-400/30 hover:border-amber-400/60 text-xs font-bold text-amber-300 transition flex items-center gap-1.5 cursor-pointer shadow-xs"
+              >
+                <span>Open Journal</span>
+                <ArrowRight size={13} />
+              </button>
+              <Link
+                href="/journal/new?returnTo=%2Flibrary%3Ftab%3Djournal"
+                className="px-3.5 py-1.5 rounded-full bg-gradient-to-r from-amber-400 to-amber-300 text-zinc-950 font-black text-xs hover:scale-105 active:scale-95 transition shadow-sm flex items-center gap-1 cursor-pointer"
+              >
+                <Plus size={13} />
+                <span>Log Listen</span>
+              </Link>
+            </div>
+          </div>
+
           {/* View Options Switcher: Slider (Touch Deck of Cards) | Grid Box | List */}
           <div className="flex items-center justify-between gap-3 mb-8 flex-wrap">
             {/* If playlists tab, display Create and Import buttons */}

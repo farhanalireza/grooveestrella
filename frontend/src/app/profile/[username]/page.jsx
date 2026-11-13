@@ -32,7 +32,7 @@ const getPublicProfileData = cache(async (rawUsername) => {
   try {
     const { data: dbProfile, error: profileErr } = await supabase
       .from("profiles")
-      .select("id, username, display_name, avatar_url, bio, created_at")
+      .select("id, username, display_name, avatar_url, bio, badge, is_admin, created_at")
       .ilike("username", normalizedUsername)
       .maybeSingle();
 

@@ -19,6 +19,9 @@ export interface Database {
           avatar_url: string | null;
           bio: string | null;
           is_admin: boolean;
+          badge: 'admin' | 'verified' | 'critic' | 'none' | null;
+          is_verified: boolean;
+          is_critic: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -29,6 +32,9 @@ export interface Database {
           avatar_url?: string | null;
           bio?: string | null;
           is_admin?: boolean;
+          badge?: 'admin' | 'verified' | 'critic' | 'none' | null;
+          is_verified?: boolean;
+          is_critic?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -39,6 +45,9 @@ export interface Database {
           avatar_url?: string | null;
           bio?: string | null;
           is_admin?: boolean;
+          badge?: 'admin' | 'verified' | 'critic' | 'none' | null;
+          is_verified?: boolean;
+          is_critic?: boolean;
           created_at?: string;
           updated_at?: string;
         };

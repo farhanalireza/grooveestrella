@@ -45,6 +45,10 @@ import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import JournalCard from "@/Components/JournalCard";
 import FollowersListModal from "@/Components/FollowersListModal";
 import { buildJournalEditorHref } from "@/lib/journalLinks";
+import UserProfileBadge, {
+  getProfileBadgeTheme,
+  NOISE_GRAIN_BG,
+} from "@/Components/UserProfileBadge";
 
 const ALL_GENRES = [
   "Rock",
@@ -72,9 +76,13 @@ function AccountDashboardContent() {
   const [userName, setUserName] = useState("");
   const [userAvatar, setUserAvatar] = useState("");
   const [bio, setBio] = useState("");
+  const [userBadge, setUserBadge] = useState(() => {
+    return authProfile?.badge || (authProfile?.is_admin ? "admin" : "critic");
+  });
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [editName, setEditName] = useState("");
   const [editBio, setEditBio] = useState("");
+  const [editBadge, setEditBadge] = useState("critic");
   const [isEditingAvatar, setIsEditingAvatar] = useState(false);
 
   // DiceBear Avatar Customization Studio State
@@ -109,10 +117,16 @@ function AccountDashboardContent() {
     // 1. Profile identity
     const currentName = authProfile?.display_name || authProfile?.username || getOrSetUserName();
     const currentBio = authProfile?.bio || localStorage.getItem("groove_user_bio") || "";
+    const currentBadge =
+      authProfile?.badge ||
+      localStorage.getItem("groove_user_badge") ||
+      (authProfile?.is_admin ? "admin" : "critic");
     setUserName(currentName);
     setEditName(currentName);
     setBio(currentBio);
     setEditBio(currentBio);
+    setUserBadge(currentBadge);
+    setEditBadge(currentBadge);
 
     const initialAvatar =
       authProfile?.avatar_url ||
@@ -245,18 +259,24 @@ function AccountDashboardContent() {
     const finalName = editName.trim() || userName;
     setUserName(finalName);
     setBio(editBio.trim());
+    setUserBadge(editBadge);
     localStorage.setItem("userName", finalName);
     localStorage.setItem("groove_user_bio", editBio.trim());
+    localStorage.setItem("groove_user_badge", editBadge);
 
     if (user && isSupabaseConfigured()) {
       await updateProfile({
         display_name: finalName,
         bio: editBio.trim(),
+        badge: editBadge,
+        is_verified: editBadge === "verified",
+        is_critic: editBadge === "critic",
+        ...(editBadge === "admin" ? { is_admin: true } : {}),
       });
     }
 
     setIsEditingProfile(false);
-    toast.success("Profile updated! ✨");
+    toast.success("Profile & Identity Badge updated! ✨");
   };
 
   const handleSelectAvatar = (avId) => {
@@ -370,15 +390,30 @@ function AccountDashboardContent() {
   }, [journalLogs, savedCounts]);
 
   const profileSlug = authProfile?.username || userName;
+  const badgeTheme = getProfileBadgeTheme(userBadge);
 
   return (
     <div className="min-h-screen text-[var(--theme-fg)] py-10 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto space-y-10">
-      {/* 1. CRITIC PROFILE HERO CARD */}
-      <div className="relative rounded-3xl bg-[var(--theme-card)]/90 backdrop-blur-2xl border border-[var(--theme-border)] p-7 sm:p-10 shadow-2xl overflow-hidden">
+      {/* 1. CRITIC PROFILE HERO CARD (Dynamic Badge Theme & Tell) */}
+      <div
+        style={
+          badgeTheme.grain
+            ? {
+                backgroundImage: `radial-gradient(ellipse at top, rgba(245,158,11,0.18), transparent 70%), ${NOISE_GRAIN_BG}`,
+              }
+            : undefined
+        }
+        className={`relative rounded-3xl ${badgeTheme.heroBg} backdrop-blur-2xl border ${badgeTheme.heroBorder} p-7 sm:p-10 ${badgeTheme.heroShadow} ${badgeTheme.heroRing} overflow-hidden transition-all duration-500`}
+      >
+        <div
+          className={`absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent ${badgeTheme.highlightLine} to-transparent pointer-events-none`}
+        />
         <div className="flex flex-col sm:flex-row items-center sm:items-start gap-7 sm:gap-8 relative z-10">
           {/* Avatar with selector trigger */}
           <div className="relative group shrink-0">
-            <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-3xl overflow-hidden bg-gradient-to-tr from-amber-400 via-amber-300 to-amber-200 border-2 border-white/20 shadow-2xl flex items-center justify-center ring-4 ring-amber-400/20">
+            <div
+              className={`w-28 h-28 sm:w-32 sm:h-32 rounded-3xl overflow-hidden ${badgeTheme.avatarBg} border-2 border-white/20 shadow-2xl flex items-center justify-center ${badgeTheme.avatarRing} transition-all duration-500`}
+            >
               <UserAvatarIcon
                 avatarId={userAvatar}
                 userName={userName}
@@ -399,19 +434,12 @@ function AccountDashboardContent() {
           <div className="flex-1 text-center sm:text-left space-y-3 min-w-0">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="min-w-0">
-                {/* Cloud Auth Status Pill */}
-                <div className="flex items-center justify-center sm:justify-start gap-2 mb-1.5 flex-wrap">
-                  {user ? (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-[10px] font-bold uppercase tracking-widest">
-                      <CheckCircle2 size={11} />
-                      <span>Cloud Connected · {user.email}</span>
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-amber-400/10 border border-amber-400/25 text-amber-300 text-[10px] font-bold uppercase tracking-widest">
-                      <Sparkles size={11} />
-                      <span>Local Profile · Citizen</span>
-                    </span>
-                  )}
+                {/* User Badge & Identity Tell Row (Email badge moved to settings) */}
+                <div className="flex items-center justify-center sm:justify-start gap-2.5 mb-2 flex-wrap">
+                  <UserProfileBadge badge={userBadge} size="md" />
+                  <span className={`text-xs font-semibold ${badgeTheme.accentText} tracking-wide`}>
+                    · {badgeTheme.tell}
+                  </span>
                 </div>
 
                 <h1 className="text-3xl sm:text-4xl font-black tracking-tight font-display text-[var(--theme-fg)] truncate">
@@ -974,6 +1002,74 @@ function AccountDashboardContent() {
                   className="w-full px-4 py-2.5 rounded-2xl bg-[var(--theme-surface)] border border-[var(--theme-border)] text-sm font-bold text-[var(--theme-fg)] focus:outline-none focus:border-amber-400/60"
                   required
                 />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-[var(--theme-muted)] uppercase tracking-wider mb-2">
+                  Select Profile Badge & Identity Aura
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {[
+                    {
+                      id: "admin",
+                      title: "Admin Badge",
+                      desc: "Glowing Red Badge · System Administrator",
+                      badgeComp: <UserProfileBadge badge="admin" size="sm" />,
+                      borderActive: "border-red-500/80 bg-red-950/40 ring-red-500/50",
+                    },
+                    {
+                      id: "verified",
+                      title: "Verified Badge",
+                      desc: "Logo Disc · Authenticated Listener",
+                      badgeComp: <UserProfileBadge badge="verified" size="sm" />,
+                      borderActive: "border-sky-400/80 bg-sky-950/40 ring-sky-400/50",
+                    },
+                    {
+                      id: "critic",
+                      title: "Critic Badge",
+                      desc: "Golden Disc with Grain · Music Critic",
+                      badgeComp: <UserProfileBadge badge="critic" size="sm" />,
+                      borderActive: "border-amber-400/80 bg-amber-950/40 ring-amber-400/50",
+                    },
+                    {
+                      id: "none",
+                      title: "Citizen",
+                      desc: "Standard Listener · Clean Profile",
+                      badgeComp: (
+                        <span className="px-2.5 py-0.5 rounded-full bg-[var(--theme-card)] text-[10px] font-bold text-[var(--theme-muted)] uppercase tracking-wider border border-[var(--theme-border)]">
+                          Citizen
+                        </span>
+                      ),
+                      borderActive: "border-[var(--theme-accent)] bg-[var(--theme-surface)] ring-[var(--theme-accent)]/50",
+                    },
+                  ].map((option) => {
+                    const isSelected = editBadge === option.id;
+                    return (
+                      <button
+                        key={option.id}
+                        type="button"
+                        onClick={() => setEditBadge(option.id)}
+                        className={`p-3 rounded-2xl border text-left flex flex-col justify-between gap-1.5 transition cursor-pointer ${
+                          isSelected
+                            ? `${option.borderActive} ring-2 shadow-sm`
+                            : "bg-[var(--theme-surface)] border-[var(--theme-border)] hover:border-[var(--theme-border-active)]"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          {option.badgeComp}
+                          {isSelected && (
+                            <span className="w-4 h-4 rounded-full bg-[var(--theme-accent)] text-[var(--theme-accent-fg)] flex items-center justify-center shrink-0">
+                              <Check size={10} strokeWidth={3} />
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-[var(--theme-muted)] leading-tight pt-0.5">
+                          {option.desc}
+                        </p>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               <div>

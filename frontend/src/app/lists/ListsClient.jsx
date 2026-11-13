@@ -109,65 +109,67 @@ export default function ListsClient({ initialLists = [] }) {
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {filteredLists.map((list) => (
-            <Link
-              key={list.id}
-              href={`/lists/${list.slug}`}
-              className="group rounded-3xl bg-[var(--theme-card)]/85 hover:bg-[var(--theme-card)] border border-[var(--theme-border)] hover:border-amber-400/45 p-5 sm:p-6 shadow-xl hover:shadow-2xl transition-all duration-300 flex gap-5 items-start"
-            >
-              <OfficialListCover
-                coverImageUrl={list.cover_image_url}
-                previewCovers={list.preview_covers}
-                title={list.title}
-                className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl shrink-0 shadow-lg group-hover:scale-[1.02] transition-transform"
-              />
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-10">
+            {filteredLists.map((list) => (
+              <Link
+                key={list.id}
+                href={`/lists/${list.slug}`}
+                className="group relative flex flex-col sm:flex-row gap-6 items-start pb-8 border-b border-[var(--theme-border)]/40 hover:border-amber-400/50 transition-all duration-300"
+              >
+                <OfficialListCover
+                  coverImageUrl={list.cover_image_url}
+                  previewCovers={list.preview_covers}
+                  title={list.title}
+                  className="w-32 h-32 sm:w-36 sm:h-36 rounded-3xl shrink-0 shadow-[0_15px_35px_-10px_rgba(0,0,0,0.7)] group-hover:shadow-[0_20px_45px_-10px_rgba(245,158,11,0.25)] group-hover:scale-[1.02] transition-all duration-300 border border-white/10"
+                />
 
-              <div className="min-w-0 flex-1 space-y-2">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-400/15 border border-amber-400/30 text-amber-300 text-[10px] font-bold uppercase tracking-wider">
-                    <CheckCircle2 size={10} />
-                    <span>Official</span>
-                  </span>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--theme-muted)]">
-                    {list.list_type === "ranked" ? "Ranked" : "Unranked"}
-                  </span>
-                  {list.category && (
-                    <>
-                      <span className="text-[var(--theme-muted)]/40 text-[10px]">·</span>
-                      <span className="text-[10px] font-semibold text-[var(--theme-accent)]">
-                        {list.category}
-                      </span>
-                    </>
-                  )}
-                </div>
-
-                <h2 className="text-lg sm:text-xl font-black text-[var(--theme-fg)] group-hover:text-amber-300 transition-colors font-display line-clamp-2">
-                  {list.title}
-                </h2>
-
-                {list.description && (
-                  <p className="text-xs sm:text-sm text-[var(--theme-muted)] line-clamp-2 leading-relaxed">
-                    {list.description}
-                  </p>
-                )}
-
-                <div className="pt-1 flex items-center justify-between text-xs font-bold text-[var(--theme-muted)]">
-                  <span className="inline-flex items-center gap-1">
-                    <Layers size={12} className="text-[var(--theme-accent)]" />
-                    <span>
-                      {list.item_count} {list.item_count === 1 ? "entry" : "entries"}
+                <div className="min-w-0 flex-1 space-y-2.5">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-400/10 border border-amber-400/30 text-amber-300 text-[10px] font-black uppercase tracking-wider">
+                      <CheckCircle2 size={10} />
+                      <span>Editorial</span>
                     </span>
-                  </span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--theme-muted)]">
+                      {list.list_type === "ranked" ? "Ranked Countdown" : "Curated Guide"}
+                    </span>
+                    {list.category && (
+                      <>
+                        <span className="text-[var(--theme-muted)]/40 text-[10px]">·</span>
+                        <span className="text-[10px] font-bold text-[var(--theme-accent)] uppercase tracking-wider">
+                          {list.category}
+                        </span>
+                      </>
+                    )}
+                  </div>
 
-                  <span className="inline-flex items-center gap-1 text-amber-300 group-hover:translate-x-0.5 transition-transform">
-                    <span>Explore</span>
-                    <ArrowRight size={13} />
-                  </span>
+                  <h2 className="text-xl sm:text-2xl font-black text-[var(--theme-fg)] group-hover:text-amber-300 transition-colors font-display leading-snug">
+                    {list.title}
+                  </h2>
+
+                  {list.description && (
+                    <p className="text-xs sm:text-sm text-[var(--theme-muted)] line-clamp-2 leading-relaxed font-body">
+                      {list.description}
+                    </p>
+                  )}
+
+                  <div className="pt-1 flex items-center justify-between text-xs font-bold text-[var(--theme-muted)]">
+                    <span className="inline-flex items-center gap-1.5">
+                      <Layers size={13} className="text-[var(--theme-accent)]" />
+                      <span>
+                        {list.item_count} {list.item_count === 1 ? "entry" : "entries"}
+                      </span>
+                    </span>
+
+                    <span className="inline-flex items-center gap-1.5 text-xs font-extrabold text-amber-300 group-hover:translate-x-1 transition-transform">
+                      <span>Read Editorial</span>
+                      <ArrowRight size={14} />
+                    </span>
+                  </div>
                 </div>
-              </div>
-            </Link>
-          ))}
+              </Link>
+            ))}
+          </div>
         </div>
       )}
     </div>

@@ -17,12 +17,18 @@ create table if not exists public.profiles (
   avatar_url text,
   bio text,
   is_admin boolean not null default false,
+  badge text check (badge in ('admin', 'verified', 'critic', 'none')) default 'critic',
+  is_verified boolean not null default false,
+  is_critic boolean not null default true,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
 
 -- Ensure Phase 2 columns exist on pre-existing databases
 alter table public.profiles add column if not exists is_admin boolean not null default false;
+alter table public.profiles add column if not exists badge text check (badge in ('admin', 'verified', 'critic', 'none')) default 'critic';
+alter table public.profiles add column if not exists is_verified boolean not null default false;
+alter table public.profiles add column if not exists is_critic boolean not null default true;
 
 -- Index for fast username lookups (e.g. /profile/[username])
 create index if not exists profiles_username_idx on public.profiles (lower(username));
