@@ -77,7 +77,8 @@ function AccountDashboardContent() {
   const [userAvatar, setUserAvatar] = useState("");
   const [bio, setBio] = useState("");
   const [userBadge, setUserBadge] = useState(() => {
-    return authProfile?.badge || (authProfile?.is_admin ? "admin" : "critic");
+    if (authProfile?.is_admin) return "admin";
+    return authProfile?.badge || "critic";
   });
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [editName, setEditName] = useState("");
@@ -117,10 +118,9 @@ function AccountDashboardContent() {
     // 1. Profile identity
     const currentName = authProfile?.display_name || authProfile?.username || getOrSetUserName();
     const currentBio = authProfile?.bio || localStorage.getItem("groove_user_bio") || "";
-    const currentBadge =
-      authProfile?.badge ||
-      localStorage.getItem("groove_user_badge") ||
-      (authProfile?.is_admin ? "admin" : "critic");
+    const currentBadge = authProfile?.is_admin
+      ? "admin"
+      : (authProfile?.badge || localStorage.getItem("groove_user_badge") || "critic");
     setUserName(currentName);
     setEditName(currentName);
     setBio(currentBio);
@@ -259,19 +259,20 @@ function AccountDashboardContent() {
     const finalName = editName.trim() || userName;
     setUserName(finalName);
     setBio(editBio.trim());
-    setUserBadge(editBadge);
+    const finalBadge = authProfile?.is_admin ? "admin" : editBadge;
+    setUserBadge(finalBadge);
     localStorage.setItem("userName", finalName);
     localStorage.setItem("groove_user_bio", editBio.trim());
-    localStorage.setItem("groove_user_badge", editBadge);
+    localStorage.setItem("groove_user_badge", finalBadge);
 
     if (user && isSupabaseConfigured()) {
       await updateProfile({
         display_name: finalName,
         bio: editBio.trim(),
-        badge: editBadge,
-        is_verified: editBadge === "verified",
-        is_critic: editBadge === "critic",
-        ...(editBadge === "admin" ? { is_admin: true } : {}),
+        badge: finalBadge,
+        is_verified: finalBadge === "verified",
+        is_critic: finalBadge === "critic",
+        ...(authProfile?.is_admin || finalBadge === "admin" ? { is_admin: true } : {}),
       });
     }
 

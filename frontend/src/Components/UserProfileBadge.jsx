@@ -62,8 +62,8 @@ export function LogoDiscIcon({ className = "w-4 h-4" }) {
 /**
  * Profile Badge metadata and styling configuration
  */
-export function getProfileBadgeTheme(badgeType = "critic") {
-  const norm = (badgeType || "").toLowerCase().trim();
+export function getProfileBadgeTheme(badgeType = "critic", isAdmin = false) {
+  const norm = isAdmin ? "admin" : (badgeType || "").toLowerCase().trim();
 
   if (norm === "admin") {
     return {
@@ -153,11 +153,12 @@ export function getProfileBadgeTheme(badgeType = "critic") {
  */
 export default function UserProfileBadge({
   badge = "critic",
+  isAdmin = false,
   size = "md", // 'sm' | 'md' | 'lg'
   className = "",
   showTell = false,
 }) {
-  const norm = (badge || "").toLowerCase().trim();
+  const norm = isAdmin ? "admin" : (badge || "").toLowerCase().trim();
 
   // 1. ADMIN (Glowing Red Badge)
   if (norm === "admin") {

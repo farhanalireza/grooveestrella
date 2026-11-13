@@ -44,6 +44,7 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
     const [selectedTrackForGrooveLink, setSelectedTrackForGrooveLink] = useState(null);
     const [selectedTrackForGrooveCard, setSelectedTrackForGrooveCard] = useState(null);
     const [showVinylSides, setShowVinylSides] = useState(true);
+    const [isVinylActive, setIsVinylActive] = useState(false);
     const [activeTab, setActiveTab] = useState("tracks");
     const [albumPalette, setAlbumPalette] = useState(null);
     const { theme, setAdaptivePalette, clearAdaptivePalette, colors } = useTheme();
@@ -508,11 +509,21 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
 
             {/* 2. High-Fidelity Album Hero (Sitting cleanly on the backdrop - NO CARDS!) */}
             <div className="relative z-10 w-full max-w-xl mx-auto flex flex-col items-center text-center px-4 mb-4">
-                {/* Square Album Cover with Interactive Vinyl Disc Peeking */}
-                <div className="relative group mx-auto mb-2 flex items-center justify-center">
+                {/* Square Album Cover with Interactive Vinyl Disc Peeking (Hover on PC, Hold/Tap on Mobile) */}
+                <div 
+                    className="relative group mx-auto mb-2 flex items-center justify-center cursor-pointer select-none touch-manipulation"
+                    onTouchStart={() => setIsVinylActive(true)}
+                    onTouchEnd={() => setIsVinylActive(false)}
+                    onTouchCancel={() => setIsVinylActive(false)}
+                    onClick={() => setIsVinylActive(prev => !prev)}
+                >
                     {/* Concentric Vinyl Disc Peeking from behind the jacket */}
                     <div 
-                        className="absolute w-48 h-48 sm:w-56 sm:h-56 md:w-64 md:h-64 rounded-full bg-[#0c0d12] shadow-2xl border border-white/10 flex items-center justify-center transition-all duration-700 ease-out group-hover:translate-x-12 sm:group-hover:translate-x-16 group-hover:rotate-45 pointer-events-none select-none z-0 translate-x-4 sm:translate-x-6 rotate-12"
+                        className={`absolute w-52 h-52 sm:w-56 sm:h-56 md:w-64 md:h-64 rounded-full bg-[#0c0d12] shadow-2xl border border-white/10 flex items-center justify-center transition-all duration-700 ease-out pointer-events-none select-none z-0 ${
+                            isVinylActive
+                                ? 'translate-x-12 sm:translate-x-16 rotate-45 scale-105'
+                                : 'translate-x-4 sm:translate-x-6 rotate-12 group-hover:translate-x-12 sm:group-hover:translate-x-16 group-hover:rotate-45'
+                        }`}
                         style={{
                             backgroundImage: 'repeating-radial-gradient(circle, #16181f, #16181f 2px, #0c0d12 3px, #0c0d12 4px)',
                             boxShadow: '0 20px 40px -10px rgba(0,0,0,0.8), inset 0 0 0 2px rgba(255,255,255,0.06)'
@@ -525,12 +536,18 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
                         </div>
                     </div>
 
-                    {/* Front Album Jacket Cover */}
-                    <div className="relative z-10 w-52 h-52 sm:w-60 sm:h-60 md:w-68 md:h-68 aspect-square rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl bg-black/40 ring-1 ring-white/20 backdrop-blur-sm group-hover:shadow-[0_25px_50px_-12px_rgba(0,0,0,0.8)] transition-all duration-500">
+                    {/* Front Album Jacket Cover - slightly increased size on mobile (w-56 h-56 instead of w-52 h-52) */}
+                    <div className={`relative z-10 w-56 h-56 sm:w-60 sm:h-60 md:w-68 md:h-68 aspect-square rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl bg-black/40 ring-1 ring-white/20 backdrop-blur-sm transition-all duration-500 ${
+                        isVinylActive
+                            ? 'shadow-[0_25px_50px_-12px_rgba(0,0,0,0.8)] scale-[1.02]'
+                            : 'group-hover:shadow-[0_25px_50px_-12px_rgba(0,0,0,0.8)]'
+                    }`}>
                         <img 
                             src={displayCoverUrl} 
                             alt={album.name || album.title} 
-                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" 
+                            className={`w-full h-full object-cover transition-transform duration-700 ${
+                                isVinylActive ? 'scale-105' : 'group-hover:scale-105'
+                            }`} 
                             onError={(e) => { 
                                 if (e.currentTarget.dataset.retriedDirect !== '1' && coverUrl.startsWith('http')) {
                                     e.currentTarget.dataset.retriedDirect = '1';

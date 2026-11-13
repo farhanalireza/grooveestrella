@@ -59,7 +59,7 @@ export default function ProfileClient({
   const [editDisplayName, setEditDisplayName] = useState(initialProfile?.display_name || "");
   const [editBio, setEditBio] = useState(initialProfile?.bio || "");
   const [editBadge, setEditBadge] = useState(
-    initialProfile?.badge || (initialProfile?.is_admin ? "admin" : "critic")
+    initialProfile?.is_admin ? "admin" : (initialProfile?.badge || "critic")
   );
   const [copiedLink, setCopiedLink] = useState(false);
 
@@ -142,28 +142,29 @@ export default function ProfileClient({
   const handleOpenEdit = () => {
     setEditDisplayName(profile?.display_name || "");
     setEditBio(profile?.bio || "");
-    setEditBadge(profile?.badge || (profile?.is_admin ? "admin" : "critic"));
+    setEditBadge(profile?.is_admin ? "admin" : (profile?.badge || "critic"));
     setIsEditOpen(true);
   };
 
   const handleSaveProfile = async (e) => {
     e.preventDefault();
+    const finalBadge = profile?.is_admin ? "admin" : editBadge;
     await updateProfile({
       display_name: editDisplayName,
       bio: editBio,
-      badge: editBadge,
-      is_verified: editBadge === "verified",
-      is_critic: editBadge === "critic",
-      ...(editBadge === "admin" ? { is_admin: true } : {}),
+      badge: finalBadge,
+      is_verified: finalBadge === "verified",
+      is_critic: finalBadge === "critic",
+      ...(profile?.is_admin || finalBadge === "admin" ? { is_admin: true } : {}),
     });
     setProfileOverride({
       ...profile,
       display_name: editDisplayName,
       bio: editBio,
-      badge: editBadge,
-      is_admin: editBadge === "admin",
-      is_verified: editBadge === "verified",
-      is_critic: editBadge === "critic",
+      badge: finalBadge,
+      is_admin: profile?.is_admin || finalBadge === "admin",
+      is_verified: finalBadge === "verified",
+      is_critic: finalBadge === "critic",
     });
     setIsEditOpen(false);
     toast.success("Profile & Identity Badge updated!");
@@ -219,7 +220,7 @@ export default function ProfileClient({
     );
   }
 
-  const userBadge = profile?.badge || (profile?.is_admin ? "admin" : "critic");
+  const userBadge = profile?.is_admin ? "admin" : (profile?.badge || "critic");
   const badgeTheme = getProfileBadgeTheme(userBadge);
 
   return (

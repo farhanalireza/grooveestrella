@@ -117,13 +117,98 @@ export function getHarmoniousFallback(seedString = "groove") {
     muted: "rgba(255, 253, 249, 0.72)",
     plum: ambientTop,
     gradient: `radial-gradient(ellipse at 50% -10%, ${ambientTop} 0%, ${bg} 62%, ${deepBase} 100%)`,
+    topEdgeColor: ambientTop,
+    bottomEdgeColor: bg,
   };
 }
 
 /**
- * 24-Bin Hue Clustering with Perceptual Weighting.
- * Identifies the authentic artistic dominant color and vibrant accents from cover artwork.
+ * Extracts the average top and bottom edge colors directly from an image.
+ * Uses canvas sampling with CORS proxy fallback to guarantee accurate pixel values.
  */
+export async function extractEdgeColors(imageUrl) {
+  if (!imageUrl || typeof window === "undefined") {
+    return { topColor: "rgba(0,0,0,0.85)", bottomColor: "var(--theme-bg)" };
+  }
+
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+
+    const timer = setTimeout(() => {
+      resolve({ topColor: "rgba(0,0,0,0.85)", bottomColor: "var(--theme-bg)" });
+    }, 4000);
+
+    img.onload = () => {
+      clearTimeout(timer);
+      try {
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d", { willReadFrequently: true });
+        if (!ctx) throw new Error("No canvas context");
+
+        const width = 64;
+        const height = 64;
+        canvas.width = width;
+        canvas.height = height;
+        ctx.drawImage(img, 0, 0, width, height);
+
+        const imgData = ctx.getImageData(0, 0, width, height).data;
+
+        // Sample top row (or top 2 rows)
+        let topR = 0, topG = 0, topB = 0, topCount = 0;
+        for (let y = 0; y < 2; y++) {
+          for (let x = 0; x < width; x++) {
+            const idx = (y * width + x) * 4;
+            if (imgData[idx + 3] > 30) {
+              topR += imgData[idx];
+              topG += imgData[idx + 1];
+              topB += imgData[idx + 2];
+              topCount++;
+            }
+          }
+        }
+
+        // Sample bottom row (or bottom 2 rows)
+        let btmR = 0, btmG = 0, btmB = 0, btmCount = 0;
+        for (let y = height - 2; y < height; y++) {
+          for (let x = 0; x < width; x++) {
+            const idx = (y * width + x) * 4;
+            if (imgData[idx + 3] > 30) {
+              btmR += imgData[idx];
+              btmG += imgData[idx + 1];
+              btmB += imgData[idx + 2];
+              btmCount++;
+            }
+          }
+        }
+
+        const topColor = topCount > 0
+          ? `rgb(${Math.round(topR / topCount)}, ${Math.round(topG / topCount)}, ${Math.round(topB / topCount)})`
+          : "rgba(0,0,0,0.85)";
+
+        const bottomColor = btmCount > 0
+          ? `rgb(${Math.round(btmR / btmCount)}, ${Math.round(btmG / btmCount)}, ${Math.round(btmB / btmCount)})`
+          : "var(--theme-bg)";
+
+        resolve({ topColor, bottomColor });
+      } catch (_) {
+        resolve({ topColor: "rgba(0,0,0,0.85)", bottomColor: "var(--theme-bg)" });
+      }
+    };
+
+    img.onerror = () => {
+      clearTimeout(timer);
+      resolve({ topColor: "rgba(0,0,0,0.85)", bottomColor: "var(--theme-bg)" });
+    };
+
+    if (imageUrl.startsWith("http://") || imageUrl.startsWith("https://")) {
+      img.src = `/api/cover-proxy?url=${encodeURIComponent(imageUrl)}`;
+    } else {
+      img.src = imageUrl;
+    }
+  });
+}
+
 export async function extractAdaptivePalette(imageUrl, fallbackTitle = "groove") {
   if (!imageUrl) {
     return getHarmoniousFallback(fallbackTitle);
@@ -335,6 +420,36 @@ export async function extractAdaptivePalette(imageUrl, fallbackTitle = "groove")
         const accentBg = accentColor;
         const accentFg = isLightBg ? "#FFFFFF" : "#110D14";
 
+        // Sample edge pixels (top and bottom rows) for smooth edge fades
+        let topR = 0, topG = 0, topB = 0, topCount = 0;
+        let btmR = 0, btmG = 0, btmB = 0, btmCount = 0;
+        // Top row
+        for (let x = 0; x < sampleSize; x++) {
+          const idx = x * 4;
+          if (imgData[idx + 3] > 20) {
+            topR += imgData[idx];
+            topG += imgData[idx + 1];
+            topB += imgData[idx + 2];
+            topCount++;
+          }
+        }
+        // Bottom row
+        for (let x = 0; x < sampleSize; x++) {
+          const idx = ((sampleSize - 1) * sampleSize + x) * 4;
+          if (imgData[idx + 3] > 20) {
+            btmR += imgData[idx];
+            btmG += imgData[idx + 1];
+            btmB += imgData[idx + 2];
+            btmCount++;
+          }
+        }
+        const topEdgeColor = topCount > 0
+          ? `rgb(${Math.round(topR / topCount)}, ${Math.round(topG / topCount)}, ${Math.round(topB / topCount)})`
+          : bgHex;
+        const bottomEdgeColor = btmCount > 0
+          ? `rgb(${Math.round(btmR / btmCount)}, ${Math.round(btmG / btmCount)}, ${Math.round(btmB / btmCount)})`
+          : bgHex;
+
         const resultPalette = {
           bg: bgHex,
           ambientTop,
@@ -352,6 +467,8 @@ export async function extractAdaptivePalette(imageUrl, fallbackTitle = "groove")
           muted,
           plum: ambientTop,
           gradient: `linear-gradient(180deg, ${ambientTop} 0%, ${bgHex} 38%, ${bgHex} 100%)`,
+          topEdgeColor,
+          bottomEdgeColor,
         };
 
         paletteCache.set(imageUrl, resultPalette);

@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Bookmark, BookmarkCheck, Users, User, Award, Music, ChevronRight, MoreHorizontal, Play, Share2, ListPlus, Sparkles, Link2, Info, MapPin, Calendar, Clock, ListMusic, BookOpen, Tag, Star, Globe, Disc } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
-import { extractAdaptivePalette } from "@/lib/colorExtractor";
+import { extractAdaptivePalette, extractEdgeColors } from "@/lib/colorExtractor";
 import {
     DropdownMenu,
     DropdownMenuTrigger,
@@ -71,6 +71,7 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
     }, [albums]);
 
     const [activeTab, setActiveTab] = useState("music");
+    const [edgeColors, setEdgeColors] = useState({ topColor: null, bottomColor: null });
     const { theme, setAdaptivePalette, clearAdaptivePalette, colors } = useTheme();
 
     const ARTIST_TABS = useMemo(() => {
@@ -184,8 +185,13 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
 
     const coverUrl = artist.images?.[0]?.url || artist.coverArt || artist.url || 'https://placehold.co/600x600/17020B/E8A87C?text=Artist';
 
-    // Dynamic Artist-Adaptive Theme Effect
+    // Dynamic Artist-Adaptive Theme Effect & Edge Color Sampling
     useEffect(() => {
+        if (coverUrl) {
+            extractEdgeColors(coverUrl).then((edges) => {
+                setEdgeColors(edges);
+            });
+        }
         if (theme === "adaptive" && coverUrl) {
             extractAdaptivePalette(coverUrl, artist?.name || "artist").then((palette) => {
                 setAdaptivePalette(palette);
@@ -276,10 +282,13 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
             className="relative min-h-screen bg-[var(--theme-bg)] text-[var(--theme-fg)] pb-32 transition-colors duration-300 w-full max-w-full overflow-x-hidden"
             style={{ background: theme === 'adaptive' && colors?.gradient ? colors.gradient : undefined }}
         >
-            {/* 1. Artist Hero Header + Unzoomed Full-Width Photo with Top Black Fade & Bottom Page Fade */}
+            {/* 1. Artist Hero Header + Unzoomed Full-Width Photo with Edge Color Fades (Seamless on Mobile & Full Layout on PC) */}
             <div className="relative w-full max-w-full overflow-hidden">
-                {/* Top Navigation Bar in dedicated Black Header Zone (above the artist photo) */}
-                <div className="relative z-20 w-full max-w-full bg-black">
+                {/* Top Navigation Bar with edge-matched background */}
+                <div 
+                    className="relative z-20 w-full max-w-full transition-colors duration-500"
+                    style={{ backgroundColor: edgeColors.topColor || '#000000' }}
+                >
                     <header className="w-full max-w-7xl mx-auto px-4 sm:px-6 md:px-12 pt-4 pb-3 sm:pt-5 sm:pb-4 flex items-center justify-between">
                         {/* Fused Back + GrooveEstrella Brand Pill */}
                         <div className="flex items-center bg-white/10 hover:bg-white/15 backdrop-blur-md rounded-full border border-white/15 shadow-lg p-1 transition-colors">
@@ -311,26 +320,125 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
                     </header>
                 </div>
 
-                {/* Artist Photo Container: Immediately follows black header bar, seamless top black-to-transparent blend directly into full unzoomed image height, smooth bottom fade into theme background */}
-                <div className="relative w-full max-w-full overflow-hidden bg-black">
+                {/* MOBILE HERO: Full unzoomed image with smooth start & end fades based on top and bottom pixel colors */}
+                <div 
+                    className="md:hidden relative w-full max-w-full overflow-hidden transition-colors duration-500"
+                    style={{ backgroundColor: edgeColors.topColor || '#000000' }}
+                >
                     <img 
                         src={coverUrl} 
                         alt={artist.name} 
-                        className="w-full max-w-full h-auto max-h-[125vw] md:h-[460px] lg:h-[520px] md:max-h-[520px] object-cover object-top md:object-center select-none block"
+                        className="w-full max-w-full h-auto max-h-[125vw] object-cover object-top select-none block"
                         onError={(e) => { e.currentTarget.src = 'https://placehold.co/800x800/17020B/E8A87C?text=Artist'; }}
                     />
 
-                    {/* Seamless Top Black-to-Transparent Fade directly onto image top edge (zero hard line or color gap) */}
-                    <div className="absolute inset-x-0 top-0 h-12 sm:h-16 bg-gradient-to-b from-black via-black/55 to-transparent pointer-events-none z-10" />
+                    {/* Smooth start fade: Uses top pixel color with gentle stepped gradient */}
+                    <div 
+                        className="absolute inset-x-0 top-0 h-16 pointer-events-none z-10"
+                        style={{
+                            background: `linear-gradient(to bottom, ${edgeColors.topColor || '#000000'} 0%, ${edgeColors.topColor ? `${edgeColors.topColor.replace('rgb', 'rgba').replace(')', ', 0.65)')}` : 'rgba(0,0,0,0.65)'} 40%, transparent 100%)`
+                        }}
+                    />
 
-                    {/* Gentle Bottom Fade into Natural Page Background so full image height shines while ending softly */}
-                    <div className="absolute inset-x-0 bottom-0 h-28 sm:h-36 bg-gradient-to-t from-[var(--theme-bg)] via-[var(--theme-bg)]/75 via-30% to-transparent pointer-events-none z-10" />
+                    {/* Smooth end fade: Seamlessly dissolves bottom of image into page background */}
+                    <div 
+                        className="absolute inset-x-0 bottom-0 h-32 pointer-events-none z-10"
+                        style={{
+                            background: `linear-gradient(to top, var(--theme-bg) 0%, var(--theme-bg) 20%, ${edgeColors.bottomColor ? `${edgeColors.bottomColor.replace('rgb', 'rgba').replace(')', ', 0.7)')}` : 'rgba(23,2,11,0.7)'} 55%, transparent 100%)`
+                        }}
+                    />
                 </div>
 
-                {/* Artist Title & Primary Category Badges cleanly resting in the bottom fade */}
-                <div className="relative z-20 -mt-12 sm:-mt-16 px-4 sm:px-6 md:px-12 pb-1">
+                {/* PC / DESKTOP HERO: Dedicated widescreen layout where full photo, metadata, name and actions shine together */}
+                <div className="hidden md:block relative w-full max-w-7xl mx-auto px-6 lg:px-12 pt-4 pb-8">
+                    <div className="flex flex-col lg:flex-row lg:items-end gap-8 lg:gap-12">
+                        {/* High-res Artist Artwork with Vinyl Disc peek effect & soft ambient glow */}
+                        <div className="relative group shrink-0 mx-auto lg:mx-0">
+                            <div 
+                                className="w-56 h-56 lg:w-72 lg:h-72 rounded-3xl overflow-hidden shadow-2xl relative z-10 border border-white/15 bg-black/40"
+                                style={{
+                                    boxShadow: `0 24px 60px -15px ${colors?.accent ? `${colors.accent}40` : 'rgba(0,0,0,0.7)'}`
+                                }}
+                            >
+                                <img 
+                                    src={coverUrl} 
+                                    alt={artist.name} 
+                                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                                    onError={(e) => { e.currentTarget.src = 'https://placehold.co/800x800/17020B/E8A87C?text=Artist'; }}
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-tr from-black/30 via-transparent to-white/10 pointer-events-none" />
+                            </div>
+                        </div>
+
+                        {/* Desktop Artist Details & Metadata */}
+                        <div className="flex-1 flex flex-col justify-end min-w-0">
+                            {/* Badges */}
+                            <div className="flex flex-wrap items-center gap-2 mb-3">
+                                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider backdrop-blur-md border shadow-md ${
+                                    isGroup 
+                                        ? 'bg-purple-950/70 text-purple-200 border-purple-400/40' 
+                                        : 'bg-emerald-950/70 text-emerald-200 border-emerald-400/40'
+                                }`}>
+                                    {isGroup ? <Users size={13} /> : <User size={13} />}
+                                    <span>{entityTypeLabel}</span>
+                                </span>
+                                {genres.slice(0, 3).map((g, idx) => (
+                                    <span key={idx} className="px-3 py-1 rounded-full bg-[var(--theme-card)] backdrop-blur-md text-[var(--theme-accent)] text-xs font-bold uppercase tracking-wider border border-[var(--theme-border)]">
+                                        {g}
+                                    </span>
+                                ))}
+                            </div>
+
+                            {/* Prominent Artist Name on PC */}
+                            <h1 className="text-4xl lg:text-6xl font-black leading-tight tracking-tight text-[var(--theme-fg)] font-display drop-shadow-[0_2px_12px_rgba(0,0,0,0.5)]">
+                                {artist.name}
+                            </h1>
+
+                            {/* Location & Lifespan & Rating Bar */}
+                            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mt-3 text-sm text-[var(--theme-muted)]">
+                                {artist.country && artist.country !== 'Global' ? (
+                                    <div className="flex items-center gap-1.5">
+                                        <MapPin size={15} className="text-[var(--theme-accent)] shrink-0" />
+                                        <span>{artist.area ? `${artist.area}, ` : ""}{artist.country}</span>
+                                    </div>
+                                ) : artist.area ? (
+                                    <div className="flex items-center gap-1.5">
+                                        <MapPin size={15} className="text-[var(--theme-accent)] shrink-0" />
+                                        <span>{artist.area}</span>
+                                    </div>
+                                ) : null}
+
+                                {beginYear && (
+                                    <div className="flex items-center gap-1.5">
+                                        <Calendar size={15} className="text-[var(--theme-accent)] shrink-0" />
+                                        <span>
+                                            {isGroup
+                                                ? `Formed ${beginYear}${endYear ? ` · Disbanded ${endYear}` : lifeSpan?.ended ? " · Disbanded" : " · Active"}`
+                                                : `Born ${beginYear}${endYear ? ` · Died ${endYear}` : lifeSpan?.ended ? " · Deceased" : " · Active"}`
+                                            }
+                                        </span>
+                                    </div>
+                                )}
+
+                                <div className="ml-auto">
+                                    <UserRatingWidget
+                                        id={artist.id || id}
+                                        type="artist"
+                                        musicbrainzRating={artist.rating}
+                                        itemTitle={artist.name}
+                                        itemSubtitle={artist.country || artist.area || "Artist Profile"}
+                                        itemImage={coverUrl}
+                                        itemYear={artist.lifeSpan?.begin ? parseInt(String(artist.lifeSpan.begin).slice(0, 4), 10) : null}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Mobile Title & Badges: resting in the bottom fade */}
+                <div className="md:hidden relative z-20 -mt-12 sm:-mt-16 px-4 sm:px-6 pb-1">
                     <div className="max-w-5xl mx-auto">
-                        {/* Entity Type Badge & Primary Genre */}
                         <div className="flex flex-wrap items-center gap-2 mb-2">
                             <span className={`inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-[11px] font-black uppercase tracking-wider backdrop-blur-md border shadow-md ${
                                 isGroup 
@@ -347,17 +455,16 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
                             )}
                         </div>
 
-                        {/* Prominent Artist Name */}
-                        <h1 className="text-3xl sm:text-5xl md:text-6xl font-black leading-tight tracking-tight text-[var(--theme-fg)] font-display drop-shadow-[0_2px_12px_rgba(0,0,0,0.45)]">
+                        <h1 className="text-3xl sm:text-5xl font-black leading-tight tracking-tight text-[var(--theme-fg)] font-display drop-shadow-[0_2px_12px_rgba(0,0,0,0.45)]">
                             {artist.name}
                         </h1>
                     </div>
                 </div>
 
                 {/* 2. Metadata, Rating Capsule, Bio & Action Controls (Directly on Page Background - NO CARDS!) */}
-                <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 md:px-12 pt-2">
-                    {/* Metadata Section: Clean Multi-Line / Wrapped Layout (Never Crammed on Mobile!) */}
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 py-3 border-b border-[var(--theme-border)]/30">
+                <div className="w-full max-w-5xl md:max-w-7xl mx-auto px-4 sm:px-6 md:px-12 pt-2">
+                    {/* Mobile Metadata Section */}
+                    <div className="md:hidden flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 py-3 border-b border-[var(--theme-border)]/30">
                         <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs sm:text-sm font-medium text-[var(--theme-muted)]">
                             {artist.country && artist.country !== 'Global' ? (
                                 <div className="flex items-center gap-1.5">
@@ -384,7 +491,6 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
                             )}
                         </div>
 
-                        {/* Rating Capsule */}
                         <div className="shrink-0 flex items-center">
                             <UserRatingWidget
                                 id={artist.id || id}

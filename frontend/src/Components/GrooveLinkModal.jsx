@@ -339,7 +339,7 @@ export default function GrooveLinkModal({ isOpen, onClose, item, onOpenGrooveCar
   return createPortal(
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[500] flex items-center justify-center p-3 sm:p-5 overflow-y-auto">
+        <div className="fixed inset-0 z-[500] flex items-end sm:items-center justify-center p-0 sm:p-5 overflow-hidden">
           {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -352,15 +352,20 @@ export default function GrooveLinkModal({ isOpen, onClose, item, onOpenGrooveCar
           {/* Modal Container: only rendered when neither full-screen QR nor GrooveCard is open */}
           {!qrFullScreen && !showGrooveCard && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.94, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.94, y: 20 }}
-            transition={{ type: "spring", damping: 25, stiffness: 320 }}
-            className="relative w-full max-w-xl bg-[var(--theme-card)] border border-[var(--theme-border)] rounded-3xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden z-10 font-sans"
+            initial={{ opacity: 0, y: 60, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 60, scale: 0.96 }}
+            transition={{ type: "spring", damping: 28, stiffness: 350 }}
+            className="relative w-full max-w-xl bg-[var(--theme-card)] border-t sm:border border-[var(--theme-border)] rounded-t-[32px] sm:rounded-3xl shadow-2xl flex flex-col h-[85vh] sm:h-auto sm:max-h-[88vh] overflow-hidden z-10 font-sans pb-[env(safe-area-inset-bottom,0px)]"
             onClick={(e) => e.stopPropagation()}
           >
+            {/* Mobile Bottom Sheet Pull Pill */}
+            <div className="sm:hidden w-full flex justify-center pt-2.5 pb-1 shrink-0">
+              <div className="w-12 h-1.5 rounded-full bg-[var(--theme-muted)]/30" />
+            </div>
+
             {/* Header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--theme-border)] bg-[var(--theme-surface)]/80 backdrop-blur-md">
+            <div className="flex items-center justify-between px-5 py-3 sm:py-4 border-b border-[var(--theme-border)] bg-[var(--theme-surface)]/90 backdrop-blur-md shrink-0">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-full bg-[var(--theme-card)] border border-[var(--theme-border)] flex items-center justify-center p-1.5 shadow-sm">
                   <img src="/in.svg" alt="GrooveLink" className="w-full h-full object-contain" />
@@ -382,10 +387,11 @@ export default function GrooveLinkModal({ isOpen, onClose, item, onOpenGrooveCar
 
               <button
                 onClick={onClose}
-                className="p-2 rounded-full hover:bg-[var(--theme-surface)] text-[var(--theme-muted)] hover:text-[var(--theme-fg)] transition-colors cursor-pointer"
+                className="w-8 h-8 rounded-full bg-[var(--theme-surface)] hover:bg-[var(--theme-border)] text-[var(--theme-muted)] hover:text-[var(--theme-fg)] flex items-center justify-center transition-colors cursor-pointer border border-[var(--theme-border)]"
                 title="Close Modal"
+                aria-label="Close"
               >
-                <X size={18} />
+                <X size={17} />
               </button>
             </div>
 
