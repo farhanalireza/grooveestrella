@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight, ArrowRight, Trash2, Smartphone } from "lucide-react";
 import PlaylistCover from "./PlaylistCover";
 import LibraryCoverImage, { FALLBACK_COVER_SVG } from "./LibraryCoverImage";
+import DiscLoader from "./DiscLoader";
 
 const SLIDE_VARIANTS = {
   enter: (direction) => ({
@@ -285,7 +286,7 @@ export default function LibraryTouchSlider({
               )}
               {isNavigating && navigatingId === (currentItem.id || currentItem.trackId || currentItem.trackURI) && (
                 <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px] flex flex-col items-center justify-center gap-2 animate-fade-in z-30">
-                  <div className="w-10 h-10 rounded-full border-3 border-[var(--theme-accent)] border-t-transparent animate-spin" />
+                  <DiscLoader size={40} />
                   <span className="text-[11px] font-bold text-white tracking-widest uppercase">Opening...</span>
                 </div>
               )}
@@ -319,7 +320,7 @@ export default function LibraryTouchSlider({
               >
                 {isNavigating && navigatingId === (currentItem.id || currentItem.trackId || currentItem.trackURI) ? (
                   <>
-                    <div className="w-4 h-4 rounded-full border-2 border-current border-t-transparent animate-spin" />
+                    <DiscLoader size={16} />
                     <span>Opening...</span>
                   </>
                 ) : (

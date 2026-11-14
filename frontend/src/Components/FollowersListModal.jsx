@@ -7,6 +7,7 @@ import { X, Users, UserCheck, UserPlus, Sparkles, ExternalLink, ArrowRight } fro
 import { motion, AnimatePresence } from "framer-motion";
 import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
+import DiscLoader from "@/Components/DiscLoader";
 import { toast } from "@/lib/toast";
 
 export default function FollowersListModal({
@@ -212,7 +213,9 @@ export default function FollowersListModal({
           <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-2.5 divide-y divide-[var(--theme-border)]/20">
             {loading ? (
               <div className="py-16 text-center space-y-3">
-                <div className="w-8 h-8 rounded-full border-2 border-amber-300 border-t-transparent animate-spin mx-auto" />
+                <div className="flex justify-center">
+                  <DiscLoader size={32} />
+                </div>
                 <p className="text-xs font-medium text-[var(--theme-muted)] animate-pulse">
                   Loading {activeTab}...
                 </p>

@@ -3,6 +3,7 @@ import { Bookmark, BookmarkCheck, EllipsisVertical, Link as LinkIcon, Music as M
 import { useState, useEffect, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "@/lib/toast";
+import DiscLoader from "@/Components/DiscLoader";
 import {
     DropdownMenu,
     DropdownMenuTrigger,
@@ -110,7 +111,7 @@ export const AlbumTrackCard = ({
             <div className="flex items-center gap-4 min-w-0 flex-1">
                 <div className="flex-shrink-0 w-6 flex items-center justify-center">
                     {isPending && navigatingTarget === 'track' ? (
-                        <div className="w-3.5 h-3.5 rounded-full border-2 border-[var(--theme-accent)] border-t-transparent animate-spin" />
+                        <DiscLoader size={14} />
                     ) : (
                         <span className="text-[var(--theme-muted)] group-hover:text-[var(--theme-accent)] font-bold text-sm transition-colors">{pos + 1}</span>
                     )}
@@ -136,7 +137,7 @@ export const AlbumTrackCard = ({
                             >
                                 <span>{a.name}{i < artist.length - 1 && ", "}</span>
                                 {isPending && navigatingTarget === `artist-${a.id}` && (
-                                    <span className="w-2.5 h-2.5 rounded-full border-2 border-[var(--theme-accent)] border-t-transparent animate-spin" />
+                                    <DiscLoader size={12} className="inline-block ml-1" />
                                 )}
                             </span>
                         ))}
@@ -706,7 +707,7 @@ export const SmallTrackCardWithCover = ({
                     />
                     {isPending && navigatingTarget === 'track' && (
                         <div className="absolute inset-0 bg-black/60 backdrop-blur-[1px] flex items-center justify-center animate-fade-in z-10">
-                            <div className="w-5 h-5 rounded-full border-2 border-[var(--theme-accent)] border-t-transparent animate-spin" />
+                            <DiscLoader size={20} />
                         </div>
                     )}
                 </div>
@@ -734,7 +735,7 @@ export const SmallTrackCardWithCover = ({
                                 >
                                     <span>{a.name}{i < artist.length - 1 && ", "}</span>
                                     {isPending && navigatingTarget === `artist-${a.id}` && (
-                                        <span className="w-2.5 h-2.5 rounded-full border-2 border-[var(--theme-accent)] border-t-transparent animate-spin" />
+                                        <DiscLoader size={12} className="inline-block ml-1" />
                                     )}
                                 </span>
                             ))

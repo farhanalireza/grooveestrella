@@ -1,26 +1,24 @@
 // src/Components/AppBar.jsx
 "use client";
 
-import { useEffect, useMemo, useCallback } from "react";
+import { useEffect, useMemo, useCallback, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   Search,
   ListMusic,
   Music,
-  Cog,
   Newspaper,
   UserRound,
+  BookOpen,
   Sun,
   Moon,
   Sparkles,
   ListOrdered,
-  ChevronLeft,
-  ChevronRight,
   PanelLeftClose,
   PanelLeftOpen,
 } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, useMotionValue, useSpring, animate } from "framer-motion";
 import { useTheme } from "@/contexts/ThemeContext";
 
 const NAV_ITEMS = [
@@ -35,6 +33,12 @@ const NAV_ITEMS = [
     icon: <Search size={18} />,
     section: "Search",
     route: "/search",
+  },
+  {
+    label: "Journal",
+    icon: <BookOpen size={18} />,
+    section: "Journal",
+    route: "/journal",
   },
   {
     label: "Lists",
@@ -55,12 +59,6 @@ const NAV_ITEMS = [
     route: "/account",
   },
   {
-    label: "Settings",
-    icon: <Cog size={18} />,
-    section: "Settings",
-    route: "/settings",
-  },
-  {
     label: "Review",
     icon: <Newspaper size={18} />,
     section: "Review",
@@ -68,13 +66,13 @@ const NAV_ITEMS = [
   },
 ];
 
-// Mobile App Bar (left -> right): 1. Music, 2. Explore, 3. Account (center), 4. Library, 5. Settings
+// 5 Key Mobile Sections: 1. Music, 2. Explore, 3. Journal, 4. Library, 5. Account (Settings inside Account)
 const MOBILE_NAV_ITEMS = [
   NAV_ITEMS.find((i) => i.label === "Music"),
   NAV_ITEMS.find((i) => i.label === "Explore"),
-  NAV_ITEMS.find((i) => i.label === "Account"),
+  NAV_ITEMS.find((i) => i.label === "Journal"),
   NAV_ITEMS.find((i) => i.label === "Library"),
-  NAV_ITEMS.find((i) => i.label === "Settings"),
+  NAV_ITEMS.find((i) => i.label === "Account"),
 ].filter(Boolean);
 
 const AppBar = ({ 
@@ -87,18 +85,28 @@ const AppBar = ({
   const pathname = usePathname();
   const { theme, isDark, toggleTheme } = useTheme();
 
-  // Instant route-to-section resolution without waiting for useEffect
+  // Mobile draggable active knob tracking
+  const mobileNavRef = useRef(null);
+  const [isDraggingKnob, setIsDraggingKnob] = useState(false);
+  const [hoveredMobileIndex, setHoveredMobileIndex] = useState(null);
+
+  // Instant route-to-section resolution
   const activeSection = useMemo(() => {
     const path = pathname || "";
     if (path === "/") return "Music";
     if (path.startsWith("/search")) return "Search";
+    if (path.startsWith("/journal")) return "Journal";
     if (path.startsWith("/lists")) return "Lists";
-    if (path.startsWith("/account") || path.startsWith("/profile")) return "Account";
+    if (path.startsWith("/library")) return "Playlist";
+    if (path.startsWith("/account") || path.startsWith("/profile") || path.startsWith("/settings")) return "Account";
     if (path.startsWith("/feedback")) return "Review";
-    if (path.startsWith("/settings")) return "Settings";
-    if (path.startsWith("/library") || path.startsWith("/journal")) return "Playlist";
     return selectedSection || "";
   }, [pathname, selectedSection]);
+
+  const activeMobileIndex = useMemo(() => {
+    const idx = MOBILE_NAV_ITEMS.findIndex((i) => i.section === activeSection);
+    return idx >= 0 ? idx : 0;
+  }, [activeSection]);
 
   // Keep parent in sync if setSection is provided
   useEffect(() => {
@@ -117,9 +125,41 @@ const AppBar = ({
   const isSharePage = pathname?.startsWith("/s/");
   const brandName = isSharePage ? "GrooveLink" : "GrooveEstrella";
 
+  // Handle Dragging the Active Knob along the Mobile Tab Bar (Apple / Instagram liquid style)
+  const handleDragKnob = (event, info) => {
+    if (!mobileNavRef.current) return;
+    const rect = mobileNavRef.current.getBoundingClientRect();
+    const touchX = info.point.x - rect.left;
+    const itemWidth = rect.width / MOBILE_NAV_ITEMS.length;
+    const currentHoverIdx = Math.min(
+      Math.max(0, Math.floor(touchX / itemWidth)),
+      MOBILE_NAV_ITEMS.length - 1
+    );
+    setHoveredMobileIndex(currentHoverIdx);
+  };
+
+  const handleDragKnobEnd = (event, info) => {
+    setIsDraggingKnob(false);
+    setHoveredMobileIndex(null);
+    if (!mobileNavRef.current) return;
+    const rect = mobileNavRef.current.getBoundingClientRect();
+    const touchX = info.point.x - rect.left;
+    const itemWidth = rect.width / MOBILE_NAV_ITEMS.length;
+    const targetIdx = Math.min(
+      Math.max(0, Math.floor(touchX / itemWidth)),
+      MOBILE_NAV_ITEMS.length - 1
+    );
+
+    const targetItem = MOBILE_NAV_ITEMS[targetIdx];
+    if (targetItem) {
+      if (setSection) setSection(targetItem.section);
+      router.push(targetItem.route);
+    }
+  };
+
   return (
     <>
-      {/* Desktop PC Side Navigation Bar with Collapsible Toggle (Cleared Top Header) */}
+      {/* Desktop PC Side Navigation Bar with Collapsible Toggle */}
       <aside 
         className={`hidden lg:flex fixed top-0 bottom-0 left-0 bg-[var(--theme-surface-elevated)] backdrop-blur-2xl border-r border-[var(--theme-border)] z-[400] flex-col justify-between transition-all duration-300 select-none ${
           isCollapsed ? "w-20 px-3 py-6" : "w-64 px-5 py-6"
@@ -254,14 +294,47 @@ const AppBar = ({
         </div>
       </aside>
 
-      {/* Floating Mobile Bottom Navigation Bar with Liquid Glass & Fluid Animations */}
+      {/* Floating Mobile Bottom Navigation Bar with Apple-Fluid Draggable Active Knob */}
       <div className="lg:hidden fixed bottom-4 inset-x-4 max-w-md mx-auto z-[350]">
-        <nav className="relative px-2 py-1.5 rounded-4xl bg-[var(--theme-surface-elevated)] backdrop-blur-2xl border border-[var(--theme-border)] shadow-2xl flex justify-around items-center select-none overflow-hidden transition-colors duration-300">
+        <nav 
+          ref={mobileNavRef}
+          className="relative px-1.5 py-1.5 rounded-full bg-[var(--theme-surface-elevated)]/90 backdrop-blur-2xl border border-[var(--theme-border)] shadow-2xl flex justify-around items-center select-none overflow-hidden transition-colors duration-300 touch-none"
+        >
           {/* Liquid Glass Top Reflection */}
           <div className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-[var(--theme-accent)]/30 to-transparent pointer-events-none" />
 
+          {/* FLUID DRAGGABLE APPLE ACTIVE KNOB */}
+          {/* Slides with Apple spring physics or pulls fluidly with thumb and snaps to released tab */}
+          <motion.div
+            drag="x"
+            dragConstraints={mobileNavRef}
+            dragElastic={0.18}
+            onDragStart={() => setIsDraggingKnob(true)}
+            onDrag={handleDragKnob}
+            onDragEnd={handleDragKnobEnd}
+            animate={{
+              left: `${activeMobileIndex * 20}%`,
+            }}
+            transition={{
+              type: "spring",
+              stiffness: 420,
+              damping: 32,
+              mass: 0.8,
+            }}
+            className="absolute top-1.5 bottom-1.5 w-[20%] rounded-full bg-gradient-to-b from-[var(--theme-card)] to-[var(--theme-surface)] border border-[var(--theme-border-active)] shadow-lg shadow-[var(--theme-accent)]/15 z-10 cursor-grab active:cursor-grabbing flex flex-col items-center justify-between py-1 pointer-events-auto"
+          >
+            {/* Apple Pill Pull Bar */}
+            <div className="w-5 h-1 rounded-full bg-[var(--theme-accent)]/60 transition-opacity duration-200" />
+            {isDraggingKnob && (
+              <span className="w-1.5 h-1.5 rounded-full bg-[var(--theme-accent)] animate-ping" />
+            )}
+          </motion.div>
+
+          {/* Nav Tab Items */}
           {MOBILE_NAV_ITEMS.map((item, idx) => {
             const isActive = activeSection === item.section;
+            const isHovered = hoveredMobileIndex === idx;
+
             return (
               <Link
                 key={idx}
@@ -269,34 +342,34 @@ const AppBar = ({
                 prefetch={false}
                 onMouseEnter={() => handlePrefetch(item.route)}
                 onTouchStart={() => handlePrefetch(item.route)}
-                onPointerDown={() => {
+                onClick={() => {
                   if (setSection) setSection(item.section);
                 }}
-                className="relative flex-1 py-1.5 px-1 flex flex-col justify-center items-center gap-1 transition-colors duration-200 cursor-pointer select-none"
+                className="relative flex-1 py-1.5 px-1 flex flex-col justify-center items-center gap-1 transition-colors duration-200 cursor-pointer select-none z-20"
               >
-                {/* Fluid Liquid Active Pill */}
-                {isActive && (
-                  <motion.div
-                    layoutId="mobileNavActivePill"
-                    transition={{ type: "spring", stiffness: 450, damping: 32 }}
-                    className="absolute inset-1 rounded-4xl bg-[var(--theme-accent-bg)]/25 border border-[var(--theme-border-active)] shadow-sm -z-0 w-full h-full top-0 left-0"
-                  />
-                )}
-
                 {/* Animated Icon */}
                 <motion.div
-                  animate={{ scale: isActive ? 1.12 : 1, y: isActive ? -1 : 0 }}
-                  transition={{ type: "spring", stiffness: 500, damping: 25 }}
-                  className={`relative z-10 transition-colors duration-200 ${
-                    isActive ? "text-[var(--theme-accent)]" : "text-[var(--theme-muted)]"
+                  animate={{
+                    scale: isActive ? 1.15 : isHovered ? 1.08 : 1,
+                    y: isActive ? -1 : 0,
+                  }}
+                  transition={{ type: "spring", stiffness: 450, damping: 25 }}
+                  className={`relative z-20 transition-colors duration-200 ${
+                    isActive
+                      ? "text-[var(--theme-accent)]"
+                      : isHovered
+                      ? "text-[var(--theme-fg)]"
+                      : "text-[var(--theme-muted)]"
                   }`}
                 >
                   {item.icon}
                 </motion.div>
 
                 {/* Text Label */}
-                <span className={`relative z-10 text-[9px] font-bold tracking-wider uppercase leading-none transition-colors duration-200 ${
-                  isActive ? "text-[var(--theme-fg)] font-black" : "text-[var(--theme-muted)] font-semibold"
+                <span className={`relative z-20 text-[9px] font-bold tracking-wider uppercase leading-none transition-colors duration-200 ${
+                  isActive
+                    ? "text-[var(--theme-fg)] font-black"
+                    : "text-[var(--theme-muted)] font-semibold"
                 }`}>
                   {item.label}
                 </span>

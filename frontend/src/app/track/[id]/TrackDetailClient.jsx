@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
 import { extractAdaptivePalette } from "@/lib/colorExtractor";
+import DiscLoader from "@/Components/DiscLoader";
 import GrooveLinkModal from "@/Components/GrooveLinkModal";
 import GrooveCardComposer from "@/Components/GrooveCardComposer";
 import MusicLoreAndReviews from "@/Components/MusicLoreAndReviews";
@@ -361,7 +362,7 @@ export default function TrackDetailClient({ id, initialData }) {
                         >
                             <span>{a.name}{i < artistsList.length - 1 && ', '}</span>
                             {isPending && navigatingArtistId === a.id && (
-                                <span className="w-3 h-3 rounded-full border-2 border-[var(--theme-accent)] border-t-transparent animate-spin inline-block" />
+                                <DiscLoader size={12} className="inline-block ml-1" />
                             )}
                         </span>
                     ))}
@@ -383,7 +384,7 @@ export default function TrackDetailClient({ id, initialData }) {
                         >
                             <span>{track.album?.name || track.album}</span>
                             {isPending && navigatingAlbumId === track.album?.id && (
-                                <span className="w-2.5 h-2.5 rounded-full border-2 border-[var(--theme-accent)] border-t-transparent animate-spin inline-block" />
+                                <DiscLoader size={12} className="inline-block ml-1" />
                             )}
                         </span>
                     </div>

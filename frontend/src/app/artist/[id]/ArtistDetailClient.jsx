@@ -23,6 +23,7 @@ import EntityReviewsSection from "@/Components/EntityReviewsSection";
 import RatingPieChart from "@/Components/RatingPieChart";
 import UserRatingWidget from "@/Components/UserRatingWidget";
 import ArtistLinksDrawer from "@/Components/ArtistLinksDrawer";
+import DiscLoader from "@/Components/DiscLoader";
 import ArtistDetailsDrawer from "@/Components/ArtistDetailsDrawer";
 import ArtistBioAndLineupTab from "@/Components/ArtistBioAndLineupTab";
 import ArtistLinksTab from "@/Components/ArtistLinksTab";
@@ -673,7 +674,7 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
                                                         />
                                                         {isPending && navigatingTrackId === track.id && (
                                                             <div className="absolute inset-0 bg-black/60 backdrop-blur-[1px] flex items-center justify-center animate-fade-in z-10">
-                                                                <div className="w-5 h-5 rounded-full border-2 border-[var(--theme-accent)] border-t-transparent animate-spin" />
+                                                                <DiscLoader size={20} />
                                                             </div>
                                                         )}
                                                     </div>
@@ -837,7 +838,7 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
                                                     />
                                                     {isAlbumNavigating && (
                                                         <div className="absolute inset-0 bg-black/60 backdrop-blur-[1px] flex flex-col items-center justify-center gap-1.5 animate-fade-in z-20">
-                                                            <div className="w-8 h-8 rounded-full border-2 border-[var(--theme-accent)] border-t-transparent animate-spin" />
+                                                            <DiscLoader size={32} />
                                                             <span className="text-[10px] font-bold text-white tracking-widest uppercase">Routing...</span>
                                                         </div>
                                                     )}

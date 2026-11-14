@@ -23,6 +23,7 @@ import EntityReviewsSection from "@/Components/EntityReviewsSection";
 import RatingPieChart from "@/Components/RatingPieChart";
 import UserRatingWidget from "@/Components/UserRatingWidget";
 import GrooveLoader from "@/Components/GrooveLoader";
+import DiscLoader from "@/Components/DiscLoader";
 import { toast } from "@/lib/toast";
 import { shareLink } from "@/lib/shareHelper";
 
@@ -591,7 +592,7 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
                         >
                             <span>{a.name}{i < artistsList.length - 1 && ', '}</span>
                             {isPending && navigatingArtistId === a.id && (
-                                <span className="w-3 h-3 rounded-full border-2 border-[var(--album-accent)] border-t-transparent animate-spin inline-block" />
+                                <DiscLoader size={12} className="inline-block ml-1" />
                             )}
                         </span>
                     ))}
@@ -779,7 +780,7 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
                 {/* Switching edition banner */}
                 {loadingTracks && (
                     <div className="mb-6 p-3.5 rounded-2xl bg-[var(--album-surface)] border border-[var(--album-border)] backdrop-blur-xl flex items-center justify-center gap-2.5 text-xs font-semibold text-[var(--album-accent)] animate-pulse">
-                        <span className="w-3 h-3 rounded-full border-2 border-[var(--album-accent)] border-t-transparent animate-spin" />
+                        <DiscLoader size={14} />
                         <span>Switching edition and loading tracklist...</span>
                     </div>
                 )}
@@ -864,7 +865,7 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
                                                                     <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
                                                                         <span className="w-7 text-center text-xs sm:text-sm font-semibold text-[var(--album-muted)] [@media(hover:hover)]:group-hover:text-[var(--album-fg)] shrink-0 flex items-center justify-center">
                                                                             {isPending && navigatingTrackId === tId ? (
-                                                                                <span className="w-3.5 h-3.5 rounded-full border-2 border-[var(--album-accent)] border-t-transparent animate-spin inline-block" />
+                                                                                <DiscLoader size={14} className="inline-block" />
                                                                             ) : (
                                                                                 showVinylSides 
                                                                                     ? (track.trackNumber || track.pos || index + 1) 

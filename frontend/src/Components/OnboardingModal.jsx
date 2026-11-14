@@ -34,6 +34,7 @@ import confetti from "canvas-confetti";
 import { toast } from "@/lib/toast";
 import { generateRandomName } from "@/lib/nameGenerator";
 import UserAvatarIcon, { AVAILABLE_AVATARS } from "./UserAvatarIcon";
+import DiscLoader from "./DiscLoader";
 import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 
@@ -692,7 +693,9 @@ export default function OnboardingModal() {
                       className="w-full bg-[var(--theme-surface)] border border-[var(--theme-border)] focus:border-[var(--theme-accent)] rounded-xl pl-9 pr-8 py-2 text-xs font-medium text-[var(--theme-fg)] outline-none"
                     />
                     {isSearchingArtists && (
-                      <div className="w-3.5 h-3.5 rounded-full border-2 border-[var(--theme-accent)] border-t-transparent animate-spin absolute right-3" />
+                      <div className="absolute right-3">
+                        <DiscLoader size={14} />
+                      </div>
                     )}
                   </div>
 

@@ -3,6 +3,7 @@ import { Fan, Send, Music, Heart, Zap, Coffee, Headphones, ChevronDown, ChevronU
 import { getMoodSuggestions } from '../../lib/chatAPI';
 import { getSpotifyToken, fetchSpotifyData } from '../../hooks/useSpotify';
 import { TrackCard } from '../CardComponents/TracksCard';
+import DiscLoader from '../DiscLoader';
 
 const getSentAudio = () => typeof window !== 'undefined' ? new Audio('/audio/message-send.wav') : null;
 const getReceiveAudio = () => typeof window !== 'undefined' ? new Audio('/audio/message-receive.mp3') : null;
@@ -310,7 +311,7 @@ const MusicChatbot = () => {
                     <div className="text-left">
                         <div className="inline-block bg-[var(--theme-card)] text-[var(--theme-fg)] border border-[var(--theme-border)] px-4 py-2 rounded-lg rounded-bl-none shadow-sm">
                             <div className="flex items-center gap-2">
-                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[var(--theme-accent)]"></div>
+                                <DiscLoader size={16} />
                                 <span className="text-sm">Finding perfect songs for you...</span>
                             </div>
                         </div>

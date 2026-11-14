@@ -12,6 +12,7 @@ import {
   DropdownMenuSeparator,
 } from "../ui/dropdown-menu";
 import { toast } from "@/lib/toast";
+import DiscLoader from "@/Components/DiscLoader";
 
 export const ArtistCard = ({
   url,
@@ -161,7 +162,7 @@ export const ArtistCard = ({
               />
               {isPending && (
                 <div className="absolute inset-0 bg-black/50 flex items-center justify-center animate-fade-in">
-                  <div className="w-5 h-5 rounded-full border-2 border-[var(--theme-accent)] border-t-transparent animate-spin" />
+                  <DiscLoader size={20} />
                 </div>
               )}
             </div>
@@ -198,7 +199,7 @@ export const ArtistCard = ({
             />
             {isPending && (
               <div className="absolute inset-0 bg-black/50 backdrop-blur-[1px] flex items-center justify-center animate-fade-in">
-                <div className="w-8 h-8 rounded-full border-2 border-[var(--theme-accent)] border-t-transparent animate-spin" />
+                <DiscLoader size={32} />
               </div>
             )}
           </div>

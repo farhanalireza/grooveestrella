@@ -11,6 +11,7 @@ import Link from "next/link";
 import axios from "axios";
 import OfficialListCover from "@/Components/OfficialListCover";
 import LandingPage from "@/Components/LandingPage";
+import DiscLoader from "@/Components/DiscLoader";
 import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
 
 const FEATURED_ALBUMS = [
@@ -251,7 +252,7 @@ export default function Home() {
   if (authLoading) {
     return (
       <div className="min-h-[75vh] flex flex-col items-center justify-center gap-3">
-        <div className="w-10 h-10 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
+        <DiscLoader size={40} />
         <span className="text-xs font-bold uppercase tracking-widest text-[var(--theme-muted)]">
           Entering GrooveEstrella...
         </span>
@@ -460,7 +461,7 @@ export default function Home() {
                     {/* Instant Navigation Loading Indicator */}
                     {isCurrentNavigating && (
                       <div className="absolute inset-0 bg-black/65 backdrop-blur-[1px] flex flex-col items-center justify-center gap-1.5 animate-fade-in z-20">
-                        <div className="w-8 h-8 rounded-full border-2 border-[var(--theme-accent)] border-t-transparent animate-spin" />
+                        <DiscLoader size={32} />
                         <span className="text-[10px] font-bold text-white tracking-widest uppercase">Routing...</span>
                       </div>
                     )}
@@ -535,7 +536,7 @@ export default function Home() {
                     />
                     {isCurrentNavigating && (
                       <div className="absolute inset-0 bg-black/60 backdrop-blur-[1px] flex items-center justify-center animate-fade-in z-20">
-                        <div className="w-5 h-5 rounded-full border-2 border-[var(--theme-accent)] border-t-transparent animate-spin" />
+                        <DiscLoader size={24} />
                       </div>
                     )}
                   </div>
@@ -578,7 +579,7 @@ export default function Home() {
                   className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] border border-[var(--theme-border)] hover:border-[var(--theme-accent)]/50 text-[var(--theme-fg)] hover:text-[var(--theme-accent)] text-xs font-bold transition active:scale-95 shadow-sm cursor-pointer disabled:opacity-75 disabled:cursor-wait"
                 >
                   {isCurrentNavigating ? (
-                    <div className="w-3.5 h-3.5 rounded-full border-2 border-current border-t-transparent animate-spin" />
+                    <DiscLoader size={14} />
                   ) : (
                     <IconComp className="w-3.5 h-3.5 text-[var(--theme-accent)]" />
                   )}

@@ -23,6 +23,7 @@ import {
   Hash
 } from "lucide-react";
 import GrooveLoader from "./GrooveLoader";
+import DiscLoader from "./DiscLoader";
 
 function getCountryFlag(code) {
   if (!code || code === 'Global' || code === 'XW') return '🌐';
@@ -496,7 +497,7 @@ export default function AlbumEditionsDrawer({
                                   >
                                     {isCurrentLoading ? (
                                       <span className="flex items-center gap-1.5">
-                                        <span className="w-2.5 h-2.5 rounded-full border-2 border-current border-t-transparent animate-spin" />
+                                        <DiscLoader size={12} />
                                         <span>Switching...</span>
                                       </span>
                                     ) : (
@@ -617,7 +618,7 @@ export default function AlbumEditionsDrawer({
                                           >
                                             {isPressingSwitching ? (
                                               <span className="flex items-center gap-1">
-                                                <span className="w-2 h-2 rounded-full border border-current border-t-transparent animate-spin" />
+                                                <DiscLoader size={11} />
                                                 <span>Loading...</span>
                                               </span>
                                             ) : (

@@ -40,6 +40,7 @@ import UserAvatarIcon, {
   DICEBEAR_STYLES,
   getDiceBearAvatarUrl,
 } from "@/Components/UserAvatarIcon";
+import DiscLoader from "@/Components/DiscLoader";
 import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
 import { toast } from "@/lib/toast";
 
@@ -776,7 +777,9 @@ function SignUpContent() {
                       className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-[var(--theme-surface)] border border-[var(--theme-border)] text-xs text-[var(--theme-fg)] placeholder:text-[var(--theme-muted)]/50 focus:outline-none focus:border-amber-400"
                     />
                     {isSearchingArtists && (
-                      <div className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
+                      <div className="absolute right-3.5 top-1/2 -translate-y-1/2">
+                        <DiscLoader size={16} />
+                      </div>
                     )}
                   </div>
 

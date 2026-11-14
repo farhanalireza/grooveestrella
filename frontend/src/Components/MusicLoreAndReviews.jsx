@@ -9,6 +9,7 @@ import {
   ChevronRight, ChevronDown, Check, GitFork, Barcode
 } from "lucide-react";
 import EntityReviewsSection from "./EntityReviewsSection";
+import DiscLoader from "./DiscLoader";
 
 function getCountryFlag(code) {
   if (!code || code === 'Global' || code === 'XW') return '🌐';
@@ -659,7 +660,7 @@ export default function MusicLoreAndReviews({
                               >
                                 {isSwitching ? (
                                   <span className="flex items-center gap-1.5">
-                                    <span className="w-2.5 h-2.5 rounded-full border-2 border-current border-t-transparent animate-spin" />
+                                    <DiscLoader size={12} />
                                     <span>Switching...</span>
                                   </span>
                                 ) : (
@@ -771,7 +772,7 @@ export default function MusicLoreAndReviews({
                                     >
                                       {isPressingSwitching ? (
                                         <span className="flex items-center gap-1">
-                                          <span className="w-2.5 h-2.5 rounded-full border border-current border-t-transparent animate-spin" />
+                                          <DiscLoader size={11} />
                                           <span>Loading...</span>
                                         </span>
                                       ) : (

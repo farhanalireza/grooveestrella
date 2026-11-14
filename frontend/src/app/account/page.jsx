@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useEffect, useState, useMemo, Suspense } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   User,
@@ -10,6 +10,7 @@ import {
   BookOpen,
   Calendar,
   Disc,
+  Disc3,
   ArrowRight,
   Sparkles,
   Edit3,
@@ -32,7 +33,18 @@ import {
   RefreshCw,
   Users,
   UserCheck,
+  Sun,
+  Moon,
+  Palette,
+  Volume2,
+  Trash2,
+  AlertTriangle,
+  Mail,
+  Shield,
+  Layers,
+  Settings,
 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "@/lib/toast";
 import { generateRandomName, getOrSetUserName } from "@/lib/nameGenerator";
 import UserAvatarIcon, {
@@ -42,8 +54,10 @@ import UserAvatarIcon, {
 } from "@/Components/UserAvatarIcon";
 import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
+import { useTheme } from "@/contexts/ThemeContext";
 import JournalCard from "@/Components/JournalCard";
 import FollowersListModal from "@/Components/FollowersListModal";
+import DiscLoader from "@/Components/DiscLoader";
 import { buildJournalEditorHref } from "@/lib/journalLinks";
 import UserProfileBadge, {
   getProfileBadgeTheme,
@@ -69,16 +83,46 @@ const ALL_GENRES = [
   "Folk",
 ];
 
+const STREAMING_PLATFORMS = [
+  { id: "none", name: "Always Ask (GrooveCard)", desc: "Show options picker instead of auto-redirecting" },
+  { id: "spotify", name: "Spotify", desc: "Launch directly in Spotify app" },
+  { id: "apple_music", name: "Apple Music", desc: "Open inside Apple Music web or player" },
+  { id: "youtube_music", name: "YouTube Music", desc: "Redirect to YouTube Music search or play" },
+  { id: "deezer", name: "Deezer", desc: "Open in Deezer HiFi player" },
+  { id: "tidal", name: "TIDAL", desc: "Open in TIDAL player" },
+];
+
 function AccountDashboardContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, profile: authProfile, signOut, updateProfile, isConfigured, loading: authLoading } = useSupabaseAuth();
+  const { theme, isDark, setTheme } = useTheme();
 
+  // Redirect if not logged in
   useEffect(() => {
     if (!authLoading && !user && isConfigured) {
       router.push("/login?returnTo=%2Faccount");
     }
   }, [user, authLoading, isConfigured, router]);
 
+  // Active section tab: 'taste' | 'activity' | 'settings' | 'curator'
+  const paramTab = searchParams ? searchParams.get("tab") : null;
+  const [activeAccountTab, setActiveAccountTab] = useState(
+    paramTab && ["taste", "activity", "settings", "curator"].includes(paramTab)
+      ? paramTab
+      : "taste"
+  );
+
+  useEffect(() => {
+    if (searchParams) {
+      const tab = searchParams.get("tab");
+      if (tab && ["taste", "activity", "settings", "curator"].includes(tab)) {
+        setActiveAccountTab(tab);
+      }
+    }
+  }, [searchParams]);
+
+  // Profile identity
   const [userName, setUserName] = useState("");
   const [userAvatar, setUserAvatar] = useState("");
   const [bio, setBio] = useState("");
@@ -92,22 +136,26 @@ function AccountDashboardContent() {
   const [editBadge, setEditBadge] = useState("critic");
   const [isEditingAvatar, setIsEditingAvatar] = useState(false);
 
-  // DiceBear Avatar Customization Studio State
+  // DiceBear Avatar Customization Studio
   const [avatarTab, setAvatarTab] = useState("dicebear"); // 'dicebear' | 'icons'
   const [dicebearStyle, setDicebearStyle] = useState("identicon");
   const [dicebearSeed, setDicebearSeed] = useState("");
 
-  // User critic preferences
+  // Critic preferences
   const [favoriteGenres, setFavoriteGenres] = useState([]);
   const [preferredRatingSystem, setPreferredRatingSystem] = useState("stars"); // 'stars' | 'score'
   const [defaultIsPublic, setDefaultIsPublic] = useState(true);
 
-  // Journal & Library stats
+  // Settings preferences (Integrated from /settings)
+  const [preferredPlatform, setPreferredPlatform] = useState("spotify");
+  const [showVinylSides, setShowVinylSides] = useState(true);
+
+  // Stats & Journal logs
   const [journalLogs, setJournalLogs] = useState([]);
   const [savedCounts, setSavedCounts] = useState({ songs: 0, albums: 0, artists: 0, playlists: 0 });
   const [copiedLink, setCopiedLink] = useState(false);
 
-  // Social follows modal
+  // Followers & Following modal
   const [followersCount, setFollowersCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
   const [isFollowsModalOpen, setIsFollowsModalOpen] = useState(false);
@@ -156,6 +204,14 @@ function AccountDashboardContent() {
     const prefPublic = localStorage.getItem("default_journal_public");
     setDefaultIsPublic(prefPublic !== null ? prefPublic === "true" : true);
 
+    const savedPlatform = localStorage.getItem("preferred_music_platform") || "spotify";
+    setPreferredPlatform(savedPlatform);
+
+    const savedSides = localStorage.getItem("groove_show_vinyl_sides");
+    if (savedSides !== null) {
+      setShowVinylSides(savedSides === "true");
+    }
+
     // 3. Saved media counts from library
     try {
       const s = JSON.parse(localStorage.getItem("savedSongs") || "[]").length;
@@ -192,6 +248,7 @@ function AccountDashboardContent() {
         .then(({ count }) => setFollowingCount(count || 0))
         .catch(() => {});
 
+      // Fetch cloud journals
       supabase
         .from("journals")
         .select(`
@@ -201,8 +258,18 @@ function AccountDashboardContent() {
           listened_date,
           is_public,
           created_at,
-          user_ratings ( score, rating_type ),
-          music_entities ( id, mbid, type, title, artist_credit, cover_art_url )
+          user_ratings (
+            score,
+            rating_type
+          ),
+          music_entities (
+            id,
+            mbid,
+            type,
+            title,
+            artist_credit,
+            cover_art_url
+          )
         `)
         .eq("user_id", user.id)
         .order("listened_date", { ascending: false })
@@ -210,7 +277,7 @@ function AccountDashboardContent() {
           if (!error && Array.isArray(data) && data.length > 0) {
             const formatted = data.map((j) => ({
               id: j.id,
-              targetId: j.music_entities?.mbid,
+              targetId: j.music_entities?.mbid || j.music_entities?.id,
               targetType: j.music_entities?.type || "album",
               title: j.music_entities?.title || "Untitled",
               subtitle: j.music_entities?.artist_credit || "",
@@ -220,30 +287,20 @@ function AccountDashboardContent() {
                   ? j.user_ratings.score
                   : Math.round((j.user_ratings?.score || 0) / 10),
               numericalScore: j.user_ratings?.score || 0,
-              ratingSystem: j.user_ratings?.rating_type || "stars",
               date: j.listened_date,
               review: j.entry_text || "",
               mood: j.mood || "",
               is_public: j.is_public,
               createdAt: new Date(j.created_at).getTime(),
             }));
-
-            // Deduplicate by entity targetId to prevent duplicates in UI
-            const seen = new Set();
-            const deduplicated = [];
-            for (const item of formatted) {
-              const k = `${item.targetType}_${item.targetId}`;
-              if (!seen.has(k)) {
-                seen.add(k);
-                deduplicated.push(item);
-              }
-            }
-            setJournalLogs(deduplicated);
+            setJournalLogs(formatted);
           } else {
             setJournalLogs(logs);
           }
         })
-        .catch(() => setJournalLogs(logs));
+        .catch(() => {
+          setJournalLogs(logs);
+        });
     } else {
       setJournalLogs(logs);
     }
@@ -251,41 +308,49 @@ function AccountDashboardContent() {
 
   useEffect(() => {
     loadData();
-    window.addEventListener("groove-profile-updated", loadData);
-    window.addEventListener("groove-journal-updated", loadData);
+    const handleProfileSync = () => loadData();
+    window.addEventListener("groove-profile-updated", handleProfileSync);
+    window.addEventListener("groove-journal-updated", handleProfileSync);
     return () => {
-      window.removeEventListener("groove-profile-updated", loadData);
-      window.removeEventListener("groove-journal-updated", loadData);
+      window.removeEventListener("groove-profile-updated", handleProfileSync);
+      window.removeEventListener("groove-journal-updated", handleProfileSync);
     };
   }, [user, authProfile]);
 
-  // Handle Profile Save
+  // Save Profile Changes
   const handleSaveProfile = async (e) => {
     e.preventDefault();
-    const finalName = editName.trim() || userName;
-    setUserName(finalName);
-    setBio(editBio.trim());
-    const finalBadge = authProfile?.is_admin ? "admin" : editBadge;
-    setUserBadge(finalBadge);
-    localStorage.setItem("userName", finalName);
-    localStorage.setItem("groove_user_bio", editBio.trim());
-    localStorage.setItem("groove_user_badge", finalBadge);
+    const cleanName = editName.trim() || userName;
+    const cleanBio = editBio.trim();
+    const cleanBadge = editBadge;
+
+    setUserName(cleanName);
+    setBio(cleanBio);
+    setUserBadge(cleanBadge);
+    setIsEditingProfile(false);
+
+    try {
+      localStorage.setItem("userName", cleanName);
+      localStorage.setItem("groove_user_bio", cleanBio);
+      localStorage.setItem("groove_user_badge", cleanBadge);
+    } catch (_) {}
 
     if (user && isSupabaseConfigured()) {
-      await updateProfile({
-        display_name: finalName,
-        bio: editBio.trim(),
-        badge: finalBadge,
-        is_verified: finalBadge === "verified",
-        is_critic: finalBadge === "critic",
-        ...(authProfile?.is_admin || finalBadge === "admin" ? { is_admin: true } : {}),
-      });
+      const updates = {
+        display_name: cleanName,
+        bio: cleanBio,
+        badge: cleanBadge === "none" ? null : cleanBadge,
+        is_verified: cleanBadge === "verified",
+        is_critic: cleanBadge === "critic",
+      };
+      await updateProfile(updates);
     }
 
-    setIsEditingProfile(false);
-    toast.success("Profile & Identity Badge updated! ✨");
+    toast.success("Profile & Critic Badge updated! ✨");
+    window.dispatchEvent(new CustomEvent("groove-profile-updated"));
   };
 
+  // Avatar Selection Handlers
   const handleSelectAvatar = (avId) => {
     setUserAvatar(avId);
     localStorage.setItem("userAvatar", avId);
@@ -293,7 +358,7 @@ function AccountDashboardContent() {
     if (user && isSupabaseConfigured()) {
       updateProfile({ avatar_url: avId });
     }
-    toast.success("Avatar updated! ✨");
+    toast.success("Profile avatar updated! 🎨");
   };
 
   const handleSelectDiceBear = (style, seed) => {
@@ -304,16 +369,16 @@ function AccountDashboardContent() {
     if (user && isSupabaseConfigured()) {
       updateProfile({ avatar_url: url });
     }
-    toast.success("DiceBear avatar updated! 🎲✨");
+    toast.success("Avatar updated! 🎲✨");
   };
 
   const handleRandomizeSeed = () => {
     const randomSeed = Math.random().toString(36).substring(2, 9);
     setDicebearSeed(randomSeed);
-    toast.info("Seed randomized! 🎲 Tap any avatar to save.");
+    toast.info("Seed randomized! 🎲 Tap any style to apply.");
   };
 
-  // Toggle Genre
+  // Taste & Genre toggle
   const handleToggleGenre = (g) => {
     let updated;
     if (favoriteGenres.includes(g)) {
@@ -325,14 +390,12 @@ function AccountDashboardContent() {
     localStorage.setItem("favoriteGenres", JSON.stringify(updated));
   };
 
-  // Toggle Rating System
   const handleSelectRatingSystem = (sys) => {
     setPreferredRatingSystem(sys);
     localStorage.setItem("preferred_rating_system", sys);
-    toast.info(`Preferred rating system set to ${sys === "stars" ? "10-Star System" : "0–100 Score"}`);
+    toast.info(`Rating system set to ${sys === "stars" ? "★ 10-Star System" : "0–100 Score"}`);
   };
 
-  // Toggle Default Visibility
   const handleToggleDefaultPublic = () => {
     const nextVal = !defaultIsPublic;
     setDefaultIsPublic(nextVal);
@@ -340,11 +403,35 @@ function AccountDashboardContent() {
     toast.info(`Default entry privacy: ${nextVal ? "Public" : "Private"}`);
   };
 
-  // Export Data JSON
+  // Settings Handlers
+  const handleSelectTheme = (mode) => {
+    setTheme(mode);
+    if (mode === "adaptive") {
+      toast.success("Album-Adaptive mode activated! Detail pages will match album colors.");
+    } else {
+      toast.success(`${mode === "dark" ? "Dark" : "Light"} theme activated`);
+    }
+  };
+
+  const handleSelectPlatform = (id) => {
+    setPreferredPlatform(id);
+    localStorage.setItem("preferred_music_platform", id);
+    const found = STREAMING_PLATFORMS.find((p) => p.id === id);
+    toast.success(`Default platform set to ${found?.name || id}`);
+  };
+
+  const handleToggleVinylSides = () => {
+    const nextVal = !showVinylSides;
+    setShowVinylSides(nextVal);
+    localStorage.setItem("groove_show_vinyl_sides", String(nextVal));
+    toast.info(nextVal ? "Vinyl side dividers enabled" : "Vinyl side dividers disabled");
+  };
+
+  // Data Export & Clear
   const handleExportData = () => {
     try {
       const backup = {
-        profile: { userName, bio, userAvatar },
+        profile: { userName, bio, userAvatar, userBadge },
         favoriteGenres,
         preferredRatingSystem,
         journal: journalLogs,
@@ -358,12 +445,24 @@ function AccountDashboardContent() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `grooveestrella-critic-backup-${Date.now()}.json`;
+      a.download = `grooveestrella-backup-${Date.now()}.json`;
       a.click();
       URL.revokeObjectURL(url);
       toast.success("Data export downloaded! 📦");
     } catch (_) {
       toast.error("Failed to export backup.");
+    }
+  };
+
+  const handleClearAllLibrary = () => {
+    if (window.confirm("Are you sure you want to clear your local library? This deletes saved songs, albums, and artists from this device.")) {
+      localStorage.removeItem("savedSongs");
+      localStorage.removeItem("savedAlbums");
+      localStorage.removeItem("savedArtists");
+      localStorage.removeItem("savedPlaylists");
+      localStorage.removeItem("customPlaylists");
+      setSavedCounts({ songs: 0, albums: 0, artists: 0, playlists: 0 });
+      toast.success("Local library cleared.");
     }
   };
 
@@ -382,7 +481,7 @@ function AccountDashboardContent() {
     }
   };
 
-  // Computed Critic Stats
+  // Computed Stats
   const stats = useMemo(() => {
     const totalListens = journalLogs.length;
     const reviews = journalLogs.filter((l) => l.review && l.review.trim().length > 0).length;
@@ -400,8 +499,8 @@ function AccountDashboardContent() {
   const badgeTheme = getProfileBadgeTheme(userBadge);
 
   return (
-    <div className="min-h-screen text-[var(--theme-fg)] py-10 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto space-y-10">
-      {/* 1. CRITIC PROFILE HERO CARD (Dynamic Badge Theme & Tell) */}
+    <div className="min-h-screen text-[var(--theme-fg)] py-8 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto space-y-8 animate-fade-in font-sans pb-32">
+      {/* 1. EDITORIAL PROFILE HERO (Balanced, Elegant, Seamless on PC & Mobile) */}
       <div
         style={
           badgeTheme.grain
@@ -410,22 +509,23 @@ function AccountDashboardContent() {
               }
             : undefined
         }
-        className={`relative rounded-3xl ${badgeTheme.heroBg} backdrop-blur-2xl border ${badgeTheme.heroBorder} p-7 sm:p-10 ${badgeTheme.heroShadow} ${badgeTheme.heroRing} overflow-hidden transition-all duration-500`}
+        className={`relative rounded-3xl ${badgeTheme.heroBg} backdrop-blur-2xl border ${badgeTheme.heroBorder} p-6 sm:p-9 ${badgeTheme.heroShadow} ${badgeTheme.heroRing} overflow-hidden transition-all duration-500`}
       >
         <div
-          className={`absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent ${badgeTheme.highlightLine} to-transparent pointer-events-none`}
+          className={`absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent ${badgeTheme.highlightLine} to-transparent pointer-events-none`}
         />
-        <div className="flex flex-col sm:flex-row items-center sm:items-start gap-7 sm:gap-8 relative z-10">
-          {/* Avatar with selector trigger */}
+
+        <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 sm:gap-8 relative z-10">
+          {/* Avatar with Studio Trigger */}
           <div className="relative group shrink-0">
             <div
-              className={`w-28 h-28 sm:w-32 sm:h-32 rounded-3xl overflow-hidden ${badgeTheme.avatarBg} border-2 border-white/20 shadow-2xl flex items-center justify-center ${badgeTheme.avatarRing} transition-all duration-500`}
+              className={`w-24 h-24 sm:w-28 sm:h-28 rounded-3xl overflow-hidden ${badgeTheme.avatarBg} border-2 border-white/20 shadow-2xl flex items-center justify-center ${badgeTheme.avatarRing} transition-all duration-500`}
             >
               <UserAvatarIcon
                 avatarId={userAvatar}
                 userName={userName}
                 className="w-full h-full object-cover"
-                iconClassName="w-14 h-14 text-zinc-950"
+                iconClassName="w-12 h-12 text-zinc-950"
               />
             </div>
             <button
@@ -433,73 +533,80 @@ function AccountDashboardContent() {
               className="absolute -bottom-2 -right-2 p-2 rounded-xl bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] border border-[var(--theme-border)] text-[var(--theme-muted)] hover:text-amber-300 transition shadow-lg cursor-pointer"
               title="Change Avatar Icon"
             >
-              <Edit3 size={14} />
+              <Edit3 size={13} />
             </button>
           </div>
 
-          {/* Profile Details */}
-          <div className="flex-1 text-center sm:text-left space-y-3 min-w-0">
+          {/* Profile Identity */}
+          <div className="flex-1 text-center sm:text-left space-y-2.5 min-w-0">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="min-w-0">
-                {/* User Badge & Identity Tell Row (Email badge moved to settings) */}
-                <div className="flex items-center justify-center sm:justify-start gap-2.5 mb-2 flex-wrap">
+                {/* Badge & Aura Tell */}
+                <div className="flex items-center justify-center sm:justify-start gap-2.5 mb-1.5 flex-wrap">
                   <UserProfileBadge badge={userBadge} size="md" />
                   <span className={`text-xs font-semibold ${badgeTheme.accentText} tracking-wide`}>
                     · {badgeTheme.tell}
                   </span>
                 </div>
 
-                <h1 className="text-3xl sm:text-4xl font-black tracking-tight font-display text-[var(--theme-fg)] truncate">
+                <h1 className="text-2xl sm:text-3xl font-black tracking-tight font-display text-[var(--theme-fg)] truncate">
                   {userName}
                 </h1>
 
-                <p className="text-sm text-amber-300 font-bold mt-0.5">
-                  Profile:{" "}
-                  <Link href={`/profile/${profileSlug}`} className="hover:underline">
+                {/* Email Verification Pill & Public Handle */}
+                <div className="flex items-center justify-center sm:justify-start gap-2.5 mt-1 flex-wrap">
+                  <Link href={`/profile/${profileSlug}`} className="text-xs font-bold text-amber-300 hover:underline">
                     @{profileSlug}
                   </Link>
-                </p>
+
+                  {user?.email && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-[10px] font-bold">
+                      <CheckCircle2 size={11} />
+                      <span>{user.email}</span>
+                    </span>
+                  )}
+                </div>
               </div>
 
-              {/* Action Buttons: Public View + Share + Edit */}
-              <div className="flex items-center justify-center sm:justify-end gap-2.5 pt-1 sm:pt-0 shrink-0 flex-wrap">
+              {/* Action Buttons: Public View + Share + Edit + Sign Out */}
+              <div className="flex items-center justify-center sm:justify-end gap-2 pt-1 sm:pt-0 shrink-0 flex-wrap">
                 <Link
                   href={`/profile/${profileSlug}`}
-                  className="px-4 py-2 rounded-2xl bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] border border-[var(--theme-border)] hover:border-amber-400/40 text-xs font-bold text-[var(--theme-fg)] transition flex items-center gap-1.5 shadow-sm"
-                  title="Open your public profile page"
+                  className="px-3.5 py-1.5 rounded-2xl bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] border border-[var(--theme-border)] hover:border-amber-400/40 text-xs font-bold text-[var(--theme-fg)] transition flex items-center gap-1.5 shadow-sm"
+                  title="View Public Profile"
                 >
                   <Globe size={13} className="text-amber-300" />
-                  <span>Public View</span>
+                  <span>Public</span>
                 </Link>
 
                 <button
                   onClick={handleShareProfile}
-                  className="p-2.5 rounded-2xl bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] border border-[var(--theme-border)] text-[var(--theme-muted)] hover:text-[var(--theme-fg)] transition cursor-pointer"
+                  className="p-2 rounded-2xl bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] border border-[var(--theme-border)] text-[var(--theme-muted)] hover:text-[var(--theme-fg)] transition cursor-pointer"
                   title="Share Profile Link"
                 >
-                  {copiedLink ? <Check size={15} className="text-emerald-400" /> : <Share2 size={15} />}
+                  {copiedLink ? <Check size={14} className="text-emerald-400" /> : <Share2 size={14} />}
                 </button>
 
                 <button
                   onClick={() => setIsEditingProfile(true)}
-                  className="p-2.5 rounded-2xl bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] border border-[var(--theme-border)] text-[var(--theme-muted)] hover:text-amber-300 transition cursor-pointer"
+                  className="p-2 rounded-2xl bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] border border-[var(--theme-border)] text-[var(--theme-muted)] hover:text-amber-300 transition cursor-pointer"
                   title="Edit Profile"
                 >
-                  <Edit3 size={15} />
+                  <Edit3 size={14} />
                 </button>
 
                 {user ? (
                   <button
                     onClick={signOut}
-                    className="p-2.5 rounded-2xl bg-[var(--theme-surface)] hover:bg-rose-500/15 border border-[var(--theme-border)] text-[var(--theme-muted)] hover:text-rose-400 transition cursor-pointer"
+                    className="p-2 rounded-2xl bg-[var(--theme-surface)] hover:bg-rose-500/15 border border-[var(--theme-border)] text-[var(--theme-muted)] hover:text-rose-400 transition cursor-pointer"
                     title="Sign Out"
                   >
-                    <LogOut size={15} />
+                    <LogOut size={14} />
                   </button>
                 ) : (
                   <Link
                     href="/login"
-                    className="px-3.5 py-2 rounded-2xl bg-amber-400 text-zinc-950 font-black text-xs hover:scale-105 active:scale-95 transition flex items-center gap-1 shadow-md"
+                    className="px-3 py-1.5 rounded-2xl bg-amber-400 text-zinc-950 font-black text-xs hover:opacity-90 transition flex items-center gap-1 shadow-md"
                   >
                     <LogIn size={13} />
                     <span>Sign In</span>
@@ -509,18 +616,17 @@ function AccountDashboardContent() {
             </div>
 
             {/* Bio */}
-            <p className="text-sm sm:text-base text-[var(--theme-muted)] max-w-2xl leading-relaxed pt-1 font-body">
-              {bio || "Active music explorer and journal keeper on GrooveEstrella."}
+            <p className="text-xs sm:text-sm text-[var(--theme-muted)] max-w-xl leading-relaxed font-body">
+              {bio || "Active music explorer, critic, and journal keeper on GrooveEstrella."}
             </p>
 
-            {/* Social Follower & Following Row */}
+            {/* Followers / Following Counters */}
             {user && (
               <div className="flex items-center justify-center sm:justify-start gap-4 pt-1 flex-wrap">
                 <button
                   type="button"
                   onClick={() => handleOpenFollows("followers")}
                   className="inline-flex items-center gap-1.5 text-xs text-[var(--theme-muted)] hover:text-amber-300 transition cursor-pointer font-medium group"
-                  title="View your followers"
                 >
                   <Users size={13} className="text-amber-300" />
                   <span className="font-black text-sm text-[var(--theme-fg)] group-hover:text-amber-300 transition-colors">
@@ -535,7 +641,6 @@ function AccountDashboardContent() {
                   type="button"
                   onClick={() => handleOpenFollows("following")}
                   className="inline-flex items-center gap-1.5 text-xs text-[var(--theme-muted)] hover:text-amber-300 transition cursor-pointer font-medium group"
-                  title="View critics you follow"
                 >
                   <UserCheck size={13} className="text-amber-300" />
                   <span className="font-black text-sm text-[var(--theme-fg)] group-hover:text-amber-300 transition-colors">
@@ -545,443 +650,591 @@ function AccountDashboardContent() {
                 </button>
               </div>
             )}
+          </div>
+        </div>
 
-            {/* Inline Avatar Icon Selector Drawer (Full DiceBear Studio + Vector Icons) */}
-            {isEditingAvatar && (
-              <div className="mt-4 p-5 rounded-3xl bg-[var(--theme-surface)] border border-[var(--theme-border)] text-left space-y-4 animate-fade-in shadow-xl">
-                <div className="flex items-center justify-between border-b border-[var(--theme-border)]/50 pb-3">
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setAvatarTab("dicebear")}
-                      className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
-                        avatarTab === "dicebear"
-                          ? "bg-amber-400 text-zinc-950 shadow-xs"
-                          : "text-[var(--theme-muted)] hover:text-[var(--theme-fg)]"
-                      }`}
-                    >
-                      <Sparkles size={13} />
-                      <span>DiceBear Studio</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setAvatarTab("icons")}
-                      className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
-                        avatarTab === "icons"
-                          ? "bg-amber-400 text-zinc-950 shadow-xs"
-                          : "text-[var(--theme-muted)] hover:text-[var(--theme-fg)]"
-                      }`}
-                    >
-                      <Headphones size={13} />
-                      <span>Vector Icons</span>
-                    </button>
-                  </div>
+        {/* Inline Avatar Studio Drawer */}
+        {isEditingAvatar && (
+          <div className="mt-6 p-4 sm:p-5 rounded-2xl bg-[var(--theme-surface)] border border-[var(--theme-border)] text-left space-y-4 animate-fade-in shadow-xl">
+            <div className="flex items-center justify-between border-b border-[var(--theme-border)]/50 pb-2.5">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setAvatarTab("dicebear")}
+                  className={`px-3 py-1 rounded-full text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                    avatarTab === "dicebear"
+                      ? "bg-amber-400 text-zinc-950 shadow-xs"
+                      : "text-[var(--theme-muted)] hover:text-[var(--theme-fg)]"
+                  }`}
+                >
+                  <Sparkles size={12} />
+                  <span>DiceBear Studio</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAvatarTab("icons")}
+                  className={`px-3 py-1 rounded-full text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                    avatarTab === "icons"
+                      ? "bg-amber-400 text-zinc-950 shadow-xs"
+                      : "text-[var(--theme-muted)] hover:text-[var(--theme-fg)]"
+                  }`}
+                >
+                  <Headphones size={12} />
+                  <span>Vector Insignias</span>
+                </button>
+              </div>
 
+              <button
+                onClick={() => setIsEditingAvatar(false)}
+                className="p-1 rounded-lg text-xs text-[var(--theme-muted)] hover:text-[var(--theme-fg)] hover:bg-[var(--theme-card)]"
+              >
+                ✕
+              </button>
+            </div>
+
+            {avatarTab === "dicebear" ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={dicebearSeed}
+                    onChange={(e) => setDicebearSeed(e.target.value)}
+                    placeholder="Type avatar seed or moniker..."
+                    className="w-full px-3 py-1.5 rounded-xl bg-[var(--theme-card)] border border-[var(--theme-border)] text-xs font-semibold text-[var(--theme-fg)] focus:outline-none focus:border-amber-400"
+                  />
                   <button
-                    onClick={() => setIsEditingAvatar(false)}
-                    className="p-1 rounded-lg text-xs text-[var(--theme-muted)] hover:text-[var(--theme-fg)] hover:bg-[var(--theme-card)]"
+                    type="button"
+                    onClick={handleRandomizeSeed}
+                    className="px-3 py-1.5 rounded-xl bg-[var(--theme-card)] hover:bg-[var(--theme-surface)] border border-[var(--theme-border)] text-xs font-bold text-amber-300 transition flex items-center gap-1.5 cursor-pointer shrink-0"
                   >
-                    ✕
+                    <Dice5 size={14} />
+                    <span>Roll</span>
                   </button>
                 </div>
 
-                {avatarTab === "dicebear" ? (
-                  <div className="space-y-4">
-                    {/* Seed input bar with Randomize button */}
-                    <div className="flex items-center gap-2">
-                      <div className="relative flex-1">
-                        <input
-                          type="text"
-                          value={dicebearSeed}
-                          onChange={(e) => setDicebearSeed(e.target.value)}
-                          placeholder="Type avatar seed or username..."
-                          className="w-full px-3.5 py-2 rounded-xl bg-[var(--theme-card)] border border-[var(--theme-border)] text-xs font-semibold text-[var(--theme-fg)] focus:outline-none focus:border-amber-400"
-                        />
-                      </div>
+                <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                  {DICEBEAR_STYLES.map((st) => {
+                    const avatarUrl = getDiceBearAvatarUrl(st.id, dicebearSeed || userName || "groove");
+                    const isSelected = userAvatar === avatarUrl;
+                    return (
                       <button
+                        key={st.id}
                         type="button"
-                        onClick={handleRandomizeSeed}
-                        className="px-3.5 py-2 rounded-xl bg-[var(--theme-card)] hover:bg-[var(--theme-surface)] border border-[var(--theme-border)] text-xs font-bold text-amber-300 transition flex items-center gap-1.5 cursor-pointer shrink-0 shadow-xs"
-                        title="Randomize avatar seed"
+                        onClick={() => handleSelectDiceBear(st.id, dicebearSeed || userName || "groove")}
+                        className={`p-2 rounded-xl border text-center flex flex-col items-center gap-1 transition cursor-pointer active:scale-95 group ${
+                          isSelected
+                            ? "bg-amber-400/20 border-amber-400 ring-2 ring-amber-400/30"
+                            : "bg-[var(--theme-card)] border-[var(--theme-border)] hover:border-amber-400/50"
+                        }`}
                       >
-                        <Dice5 size={15} />
-                        <span>Roll Dice</span>
-                      </button>
-                    </div>
-
-                    {/* Style selector pills */}
-                    <div className="flex gap-1.5 overflow-x-auto scrollb-none no-scrollbar py-1">
-                      {DICEBEAR_STYLES.map((st) => (
-                        <button
-                          key={st.id}
-                          type="button"
-                          onClick={() => setDicebearStyle(st.id)}
-                          className={`shrink-0 px-3 py-1 rounded-full text-xs font-bold transition cursor-pointer ${
-                            dicebearStyle === st.id
-                              ? "bg-amber-400 text-zinc-950"
-                              : "bg-[var(--theme-card)] text-[var(--theme-muted)] hover:text-[var(--theme-fg)] border border-[var(--theme-border)]"
-                          }`}
-                        >
+                        <img
+                          src={avatarUrl}
+                          alt={st.label}
+                          className="w-10 h-10 rounded-lg object-cover bg-black/30 group-hover:scale-105 transition-transform"
+                        />
+                        <span className="text-[10px] font-bold text-[var(--theme-fg)] truncate w-full">
                           {st.label}
-                        </button>
-                      ))}
-                    </div>
-
-                    {/* Live Gallery of DiceBear Avatars for chosen seed */}
-                    <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-2.5">
-                      {DICEBEAR_STYLES.map((st) => {
-                        const avatarUrl = getDiceBearAvatarUrl(st.id, dicebearSeed || userName || "groove");
-                        const isSelected = userAvatar === avatarUrl;
-                        return (
-                          <button
-                            key={st.id}
-                            type="button"
-                            onClick={() => handleSelectDiceBear(st.id, dicebearSeed || userName || "groove")}
-                            className={`p-2 rounded-2xl border text-center flex flex-col items-center gap-1.5 transition cursor-pointer active:scale-95 group ${
-                              isSelected || dicebearStyle === st.id
-                                ? "bg-amber-400/20 border-amber-400 ring-2 ring-amber-400/30"
-                                : "bg-[var(--theme-card)] border-[var(--theme-border)] hover:border-amber-400/50"
-                            }`}
-                            title={`${st.label}: ${st.desc}`}
-                          >
-                            <img
-                              src={avatarUrl}
-                              alt={st.label}
-                              className="w-12 h-12 rounded-xl object-cover bg-black/30 group-hover:scale-105 transition-transform"
-                            />
-                            <span className="text-[10px] font-bold text-[var(--theme-fg)] truncate w-full">
-                              {st.label}
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-                    {AVAILABLE_AVATARS.map((av) => {
-                      const IconComp = av.icon;
-                      const isSelected = userAvatar === av.id;
-                      return (
-                        <button
-                          key={av.id}
-                          type="button"
-                          onClick={() => handleSelectAvatar(av.id)}
-                          className={`p-3 rounded-2xl border text-center flex flex-col items-center gap-1.5 transition cursor-pointer active:scale-95 ${
-                            isSelected
-                              ? "bg-amber-400/20 border-amber-400 text-amber-300"
-                              : "bg-[var(--theme-card)] border-[var(--theme-border)] text-[var(--theme-muted)] hover:text-[var(--theme-fg)]"
-                          }`}
-                        >
-                          <IconComp className="w-6 h-6" />
-                          <span className="text-[10px] font-bold truncate">{av.label.split(" ")[0]}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                {AVAILABLE_AVATARS.map((av) => {
+                  const IconComp = av.icon;
+                  const isSelected = userAvatar === av.id;
+                  return (
+                    <button
+                      key={av.id}
+                      type="button"
+                      onClick={() => handleSelectAvatar(av.id)}
+                      className={`p-2.5 rounded-xl border text-center flex flex-col items-center gap-1 transition cursor-pointer active:scale-95 ${
+                        isSelected
+                          ? "bg-amber-400/20 border-amber-400 text-amber-300"
+                          : "bg-[var(--theme-card)] border-[var(--theme-border)] text-[var(--theme-muted)] hover:text-[var(--theme-fg)]"
+                      }`}
+                    >
+                      <IconComp className="w-5 h-5" />
+                      <span className="text-[10px] font-bold truncate">{av.label.split(" ")[0]}</span>
+                    </button>
+                  );
+                })}
               </div>
             )}
-          </div>
-        </div>
-      </div>
-
-      {/* 2. CRITIC METRIC DASHBOARD (4 Sleek Status Cards) */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <Link
-          href="/journal"
-          className="p-5 rounded-3xl bg-[var(--theme-card)]/80 border border-[var(--theme-border)] hover:border-amber-400/40 transition-all shadow-lg hover:-translate-y-0.5 group block"
-        >
-          <div className="flex items-center justify-between text-xs font-semibold text-[var(--theme-muted)] mb-2">
-            <span className="inline-flex items-center gap-1.5">
-              <BookOpen size={14} className="text-amber-300" />
-              <span>Journal Entries</span>
-            </span>
-            <ArrowRight size={13} className="opacity-0 group-hover:opacity-100 transition-opacity text-amber-300" />
-          </div>
-          <div className="text-2xl sm:text-3xl font-black text-[var(--theme-fg)]">
-            {stats.totalListens}
-          </div>
-          <span className="text-[11px] text-[var(--theme-muted)] font-medium">Listens recorded</span>
-        </Link>
-
-        <Link
-          href="/journal"
-          className="p-5 rounded-3xl bg-[var(--theme-card)]/80 border border-[var(--theme-border)] hover:border-amber-400/40 transition-all shadow-lg hover:-translate-y-0.5 group block"
-        >
-          <div className="flex items-center justify-between text-xs font-semibold text-[var(--theme-muted)] mb-2">
-            <span className="inline-flex items-center gap-1.5">
-              <PenTool size={14} className="text-amber-300" />
-              <span>Written Reviews</span>
-            </span>
-            <ArrowRight size={13} className="opacity-0 group-hover:opacity-100 transition-opacity text-amber-300" />
-          </div>
-          <div className="text-2xl sm:text-3xl font-black text-amber-300">
-            {stats.reviews}
-          </div>
-          <span className="text-[11px] text-[var(--theme-muted)] font-medium">Reviews published</span>
-        </Link>
-
-        <div className="p-5 rounded-3xl bg-[var(--theme-card)]/80 border border-[var(--theme-border)] shadow-lg">
-          <div className="flex items-center justify-between text-xs font-semibold text-[var(--theme-muted)] mb-2">
-            <span className="inline-flex items-center gap-1.5">
-              <Star size={14} className="text-amber-300" />
-              <span>Average Rating</span>
-            </span>
-          </div>
-          <div className="text-2xl sm:text-3xl font-black text-amber-300">
-            {stats.avgScore ? `${stats.avgScore}★` : "—"}
-          </div>
-          <span className="text-[11px] text-[var(--theme-muted)] font-medium">Critical score</span>
-        </div>
-
-        <Link
-          href="/library"
-          className="p-5 rounded-3xl bg-[var(--theme-card)]/80 border border-[var(--theme-border)] hover:border-amber-400/40 transition-all shadow-lg hover:-translate-y-0.5 group block"
-        >
-          <div className="flex items-center justify-between text-xs font-semibold text-[var(--theme-muted)] mb-2">
-            <span className="inline-flex items-center gap-1.5">
-              <ListMusic size={14} className="text-amber-300" />
-              <span>Saved in Library</span>
-            </span>
-            <ArrowRight size={13} className="opacity-0 group-hover:opacity-100 transition-opacity text-amber-300" />
-          </div>
-          <div className="text-2xl sm:text-3xl font-black text-[var(--theme-fg)]">
-            {stats.totalLibrary}
-          </div>
-          <span className="text-[11px] text-[var(--theme-muted)] font-medium">Albums, tracks, artists</span>
-        </Link>
-      </div>
-
-      {/* 3. CRITIC PREFERENCES & AESTHETIC GENRES */}
-      <div className="p-7 sm:p-8 rounded-3xl bg-[var(--theme-card)]/80 backdrop-blur-xl border border-[var(--theme-border)] shadow-xl space-y-6">
-        <div>
-          <h2 className="text-xl sm:text-2xl font-black tracking-tight font-display text-[var(--theme-fg)]">
-            Critic Identity & Preferences
-          </h2>
-          <p className="text-xs sm:text-sm text-[var(--theme-muted)] mt-1">
-            Customize your scoring philosophy, listening visibility, and aesthetic music taste tags.
-          </p>
-        </div>
-
-        {/* Favorite Genres Pill Selector */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <label className="text-xs font-bold uppercase tracking-wider text-[var(--theme-muted)]">
-              Music Taste & Favorite Genres ({favoriteGenres.length} selected)
-            </label>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {ALL_GENRES.map((g) => {
-              const isSelected = favoriteGenres.includes(g);
-              return (
-                <button
-                  key={g}
-                  type="button"
-                  onClick={() => handleToggleGenre(g)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-bold transition cursor-pointer active:scale-95 ${
-                    isSelected
-                      ? "bg-amber-400 text-zinc-950 shadow-sm"
-                      : "bg-[var(--theme-surface)] text-[var(--theme-muted)] hover:text-[var(--theme-fg)] border border-[var(--theme-border)]"
-                  }`}
-                >
-                  #{g}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Rating System & Privacy Preferences Row */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-[var(--theme-border)]/70">
-          {/* Scoring System Choice */}
-          <div className="p-4 rounded-2xl bg-[var(--theme-surface)]/80 border border-[var(--theme-border)] space-y-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-[var(--theme-muted)]">
-              Default Rating Scale
-            </span>
-            <div className="flex items-center gap-2 pt-1">
-              <button
-                type="button"
-                onClick={() => handleSelectRatingSystem("stars")}
-                className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition cursor-pointer ${
-                  preferredRatingSystem === "stars"
-                    ? "bg-amber-400 text-zinc-950 shadow-xs"
-                    : "bg-[var(--theme-card)] text-[var(--theme-muted)] hover:text-[var(--theme-fg)] border border-[var(--theme-border)]"
-                }`}
-              >
-                ★ 10-Star System
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSelectRatingSystem("score")}
-                className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition cursor-pointer ${
-                  preferredRatingSystem === "score"
-                    ? "bg-amber-400 text-zinc-950 shadow-xs"
-                    : "bg-[var(--theme-card)] text-[var(--theme-muted)] hover:text-[var(--theme-fg)] border border-[var(--theme-border)]"
-                }`}
-              >
-                0–100 Score
-              </button>
-            </div>
-          </div>
-
-          {/* Default Privacy Choice */}
-          <div className="p-4 rounded-2xl bg-[var(--theme-surface)]/80 border border-[var(--theme-border)] space-y-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-[var(--theme-muted)]">
-              Default Journal Visibility
-            </span>
-            <div className="flex items-center gap-2 pt-1">
-              <button
-                type="button"
-                onClick={handleToggleDefaultPublic}
-                className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition cursor-pointer flex items-center justify-center gap-1.5 ${
-                  defaultIsPublic
-                    ? "bg-emerald-500/15 border border-emerald-500/30 text-emerald-400"
-                    : "bg-zinc-800 text-zinc-400 border border-zinc-700"
-                }`}
-              >
-                <Globe size={13} />
-                <span>{defaultIsPublic ? "Public Logs (Default)" : "Private Only"}</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 4. RECENT CRITIC ACTIVITY (Last 3 Journal Entries using New Card Hierarchy) */}
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <BookOpen size={20} className="text-amber-300" />
-            <h2 className="text-2xl font-black tracking-tight font-display text-[var(--theme-fg)]">
-              Recent Journal Activity
-            </h2>
-          </div>
-          <Link
-            href="/journal"
-            className="text-xs font-bold text-amber-300 hover:underline flex items-center gap-1"
-          >
-            <span>View Complete Archive</span>
-            <ArrowRight size={13} />
-          </Link>
-        </div>
-
-        {journalLogs.length === 0 ? (
-          <div className="p-8 rounded-3xl bg-[var(--theme-card)]/60 border border-[var(--theme-border)] text-center space-y-3">
-            <BookOpen size={28} className="mx-auto text-[var(--theme-muted)]" />
-            <h3 className="text-base font-bold text-[var(--theme-fg)]">No Journal Entries Yet</h3>
-            <p className="text-xs text-[var(--theme-muted)] max-w-sm mx-auto">
-              Whenever you listen to music, tap Rate on any album or track to log reflections and scores.
-            </p>
-            <Link
-              href="/search"
-              className="inline-flex items-center gap-1.5 px-5 py-2 rounded-full bg-amber-400 text-zinc-950 font-black text-xs hover:scale-105 active:scale-95 transition shadow-sm mt-2"
-            >
-              <Sparkles size={13} />
-              <span>Explore & Log Music</span>
-            </Link>
-          </div>
-        ) : (
-          <div className="space-y-5">
-            {journalLogs.slice(0, 3).map((entry) => (
-              <JournalCard
-                key={entry.id}
-                entry={entry}
-                isOwner={true}
-                onEdit={(e) => {
-                  router.push(
-                    buildJournalEditorHref({
-                      mbid: e.targetId,
-                      type: e.targetType || "album",
-                      title: e.title,
-                      subtitle: e.subtitle,
-                      image: e.image,
-                      entryId: e.id,
-                      returnTo: "/account",
-                    })
-                  );
-                }}
-              />
-            ))}
           </div>
         )}
       </div>
 
-      {/* 5. DIRECT SHORTCUT TO LIBRARY & ADMIN OFFICIAL LISTS */}
-      {authProfile?.is_admin && (
-        <div className="p-6 sm:p-7 rounded-3xl bg-gradient-to-r from-amber-500/15 via-[var(--theme-card)] to-[var(--theme-card)] border border-amber-400/40 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-lg">
-          <div className="space-y-1">
-            <div className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-amber-300">
-              <Sparkles size={12} />
-              <span>Admin Curator Access</span>
+      {/* 2. OVERHAULED SECTION SWITCHER (Segmented Architecture: Taste, Activity, Settings, Curator) */}
+      <div className="flex items-center gap-2 border-b border-[var(--theme-border)] pb-3 overflow-x-auto scrollbar-none no-scrollbar">
+        {[
+          { id: "taste", label: "Identity & Taste", icon: Sparkles },
+          { id: "activity", label: "Journal Activity", icon: BookOpen, count: journalLogs.length },
+          { id: "settings", label: "Settings & System", icon: Settings },
+          ...(authProfile?.is_admin ? [{ id: "curator", label: "Curator Tools", icon: Shield }] : []),
+        ].map((tab) => {
+          const Icon = tab.icon;
+          const isActive = activeAccountTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveAccountTab(tab.id)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-2xl text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+                isActive
+                  ? "bg-gradient-to-r from-amber-400 to-amber-300 text-zinc-950 font-black shadow-md shadow-amber-400/20 scale-102"
+                  : "bg-[var(--theme-surface)] text-[var(--theme-muted)] hover:text-[var(--theme-fg)] hover:bg-[var(--theme-card)] border border-[var(--theme-border)]"
+              }`}
+            >
+              <Icon size={14} className={isActive ? "text-zinc-950" : "text-amber-400"} />
+              <span>{tab.label}</span>
+              {typeof tab.count === "number" && (
+                <span
+                  className={`text-[10px] px-2 py-0.5 rounded-full font-black ${
+                    isActive ? "bg-black/20 text-zinc-950" : "bg-[var(--theme-card)] text-amber-300"
+                  }`}
+                >
+                  {tab.count}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* 3. TAB 1: IDENTITY & TASTE */}
+      {activeAccountTab === "taste" && (
+        <div className="space-y-6 animate-fade-in">
+          {/* Quick Metrics Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+            <Link
+              href="/journal"
+              className="p-4 rounded-2xl bg-[var(--theme-card)]/80 border border-[var(--theme-border)] hover:border-amber-400/40 transition-all shadow-sm group block"
+            >
+              <div className="flex items-center justify-between text-xs font-semibold text-[var(--theme-muted)] mb-1">
+                <span>Journal Logs</span>
+                <ArrowRight size={12} className="opacity-0 group-hover:opacity-100 transition-opacity text-amber-300" />
+              </div>
+              <div className="text-2xl font-black text-[var(--theme-fg)]">{stats.totalListens}</div>
+              <span className="text-[10px] text-[var(--theme-muted)]">Listens tracked</span>
+            </Link>
+
+            <Link
+              href="/journal"
+              className="p-4 rounded-2xl bg-[var(--theme-card)]/80 border border-[var(--theme-border)] hover:border-amber-400/40 transition-all shadow-sm group block"
+            >
+              <div className="flex items-center justify-between text-xs font-semibold text-[var(--theme-muted)] mb-1">
+                <span>Written Reviews</span>
+                <ArrowRight size={12} className="opacity-0 group-hover:opacity-100 transition-opacity text-amber-300" />
+              </div>
+              <div className="text-2xl font-black text-amber-300">{stats.reviews}</div>
+              <span className="text-[10px] text-[var(--theme-muted)]">Critiques posted</span>
+            </Link>
+
+            <div className="p-4 rounded-2xl bg-[var(--theme-card)]/80 border border-[var(--theme-border)] shadow-sm">
+              <div className="text-xs font-semibold text-[var(--theme-muted)] mb-1">Avg Score</div>
+              <div className="text-2xl font-black text-amber-300">{stats.avgScore ? `${stats.avgScore}★` : "—"}</div>
+              <span className="text-[10px] text-[var(--theme-muted)]">Letterboxd scale</span>
             </div>
-            <h3 className="text-lg sm:text-xl font-black text-[var(--theme-fg)]">
-              Manage Official Curated Lists
-            </h3>
-            <p className="text-xs sm:text-sm text-[var(--theme-muted)]">
-              Create, reorder, and annotate official GrooveEstrella rankings and editorial collections.
-            </p>
+
+            <Link
+              href="/library"
+              className="p-4 rounded-2xl bg-[var(--theme-card)]/80 border border-[var(--theme-border)] hover:border-amber-400/40 transition-all shadow-sm group block"
+            >
+              <div className="flex items-center justify-between text-xs font-semibold text-[var(--theme-muted)] mb-1">
+                <span>Saved Library</span>
+                <ArrowRight size={12} className="opacity-0 group-hover:opacity-100 transition-opacity text-amber-300" />
+              </div>
+              <div className="text-2xl font-black text-[var(--theme-fg)]">{stats.totalLibrary}</div>
+              <span className="text-[10px] text-[var(--theme-muted)]">Songs, albums, artists</span>
+            </Link>
           </div>
 
-          <div className="flex items-center gap-2.5 shrink-0">
-            <Link
-              href="/lists"
-              className="px-4 py-2.5 rounded-full bg-[var(--theme-surface)] border border-[var(--theme-border)] text-[var(--theme-fg)] font-bold text-xs hover:border-amber-400/50 transition"
-            >
-              All Lists
-            </Link>
-            <Link
-              href="/lists/new"
-              className="px-5 py-2.5 rounded-full bg-amber-400 text-zinc-950 font-black text-xs hover:scale-105 active:scale-95 transition-all shadow-md"
-            >
-              + New Official List
-            </Link>
+          {/* Taste Tags */}
+          <div className="p-5 sm:p-6 rounded-3xl bg-[var(--theme-card)]/80 border border-[var(--theme-border)] space-y-4 shadow-sm">
+            <div>
+              <h3 className="text-base font-black text-[var(--theme-fg)] font-display">
+                Music Taste & Genres ({favoriteGenres.length} pinned)
+              </h3>
+              <p className="text-xs text-[var(--theme-muted)] mt-0.5">
+                Tap genre tags to shape your personalized recommendations.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {ALL_GENRES.map((g) => {
+                const isSelected = favoriteGenres.includes(g);
+                return (
+                  <button
+                    key={g}
+                    type="button"
+                    onClick={() => handleToggleGenre(g)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-bold transition cursor-pointer active:scale-95 ${
+                      isSelected
+                        ? "bg-amber-400 text-zinc-950 font-black shadow-xs"
+                        : "bg-[var(--theme-surface)] text-[var(--theme-muted)] hover:text-[var(--theme-fg)] border border-[var(--theme-border)]"
+                    }`}
+                  >
+                    #{g}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Scoring Philosophy & Privacy */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="p-4 rounded-2xl bg-[var(--theme-card)]/80 border border-[var(--theme-border)] space-y-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-[var(--theme-muted)]">
+                Default Rating Scale
+              </span>
+              <div className="flex items-center gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => handleSelectRatingSystem("stars")}
+                  className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition cursor-pointer ${
+                    preferredRatingSystem === "stars"
+                      ? "bg-amber-400 text-zinc-950 shadow-xs"
+                      : "bg-[var(--theme-surface)] text-[var(--theme-muted)] hover:text-[var(--theme-fg)] border border-[var(--theme-border)]"
+                  }`}
+                >
+                  ★ 10-Star System
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSelectRatingSystem("score")}
+                  className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition cursor-pointer ${
+                    preferredRatingSystem === "score"
+                      ? "bg-amber-400 text-zinc-950 shadow-xs"
+                      : "bg-[var(--theme-surface)] text-[var(--theme-muted)] hover:text-[var(--theme-fg)] border border-[var(--theme-border)]"
+                  }`}
+                >
+                  0–100 Score
+                </button>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-[var(--theme-card)]/80 border border-[var(--theme-border)] space-y-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-[var(--theme-muted)]">
+                Default Entry Privacy
+              </span>
+              <div className="flex items-center gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={handleToggleDefaultPublic}
+                  className={`w-full py-2 px-3 rounded-xl text-xs font-bold transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                    defaultIsPublic
+                      ? "bg-emerald-500/15 border border-emerald-500/30 text-emerald-400"
+                      : "bg-zinc-800 text-zinc-400 border border-zinc-700"
+                  }`}
+                >
+                  <Globe size={13} />
+                  <span>{defaultIsPublic ? "Public Logs (Default)" : "Private Only"}</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
 
-      <div className="p-6 sm:p-7 rounded-3xl bg-gradient-to-r from-amber-400/10 via-[var(--theme-card)] to-[var(--theme-card)] border border-amber-400/25 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-lg">
-        <div className="space-y-1">
-          <div className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-amber-300">
-            <ListMusic size={12} />
-            <span>Saved Music Collection</span>
+      {/* 4. TAB 2: RECENT JOURNAL ACTIVITY */}
+      {activeAccountTab === "activity" && (
+        <div className="space-y-6 animate-fade-in">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-black text-[var(--theme-fg)] font-display">
+                Recent Diary Entries
+              </h3>
+              <p className="text-xs text-[var(--theme-muted)]">
+                Your latest album logs and critical reflections.
+              </p>
+            </div>
+
+            <Link
+              href="/journal"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-gradient-to-r from-amber-400 to-amber-300 text-zinc-950 font-black text-xs hover:scale-105 active:scale-95 transition shadow-sm"
+            >
+              <span>Full Music Diary</span>
+              <ArrowRight size={13} />
+            </Link>
           </div>
-          <h3 className="text-lg sm:text-xl font-black text-[var(--theme-fg)]">
-            Explore Your Library
-          </h3>
-          <p className="text-xs sm:text-sm text-[var(--theme-muted)]">
-            Your {savedCounts.songs} saved tracks, {savedCounts.albums} albums, {savedCounts.artists} artists, and custom playlists are organized in your Library.
-          </p>
+
+          {journalLogs.length === 0 ? (
+            <div className="p-10 rounded-3xl bg-[var(--theme-card)]/60 border border-[var(--theme-border)] text-center space-y-3">
+              <BookOpen size={30} className="mx-auto text-[var(--theme-muted)]" />
+              <h4 className="text-base font-bold text-[var(--theme-fg)]">No Journal Logs Yet</h4>
+              <p className="text-xs text-[var(--theme-muted)] max-w-sm mx-auto">
+                Listen to music and tap Rate on albums or tracks to start filling your diary archive.
+              </p>
+              <Link
+                href="/search"
+                className="inline-flex items-center gap-1.5 px-5 py-2 rounded-full bg-amber-400 text-zinc-950 font-black text-xs hover:scale-105 active:scale-95 transition shadow-sm mt-2"
+              >
+                <Sparkles size={13} />
+                <span>Search Music</span>
+              </Link>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {journalLogs.slice(0, 5).map((entry) => (
+                <JournalCard
+                  key={entry.id}
+                  entry={entry}
+                  isOwner={true}
+                  onEdit={(e) => {
+                    router.push(
+                      buildJournalEditorHref({
+                        mbid: e.targetId,
+                        type: e.targetType || "album",
+                        title: e.title,
+                        subtitle: e.subtitle,
+                        image: e.image,
+                        entryId: e.id,
+                        returnTo: "/account",
+                      })
+                    );
+                  }}
+                />
+              ))}
+            </div>
+          )}
         </div>
+      )}
 
-        <Link
-          href="/library"
-          className="px-5 py-2.5 rounded-full bg-amber-400 text-zinc-950 font-black text-xs hover:scale-105 active:scale-95 transition-all shadow-md flex items-center justify-center gap-1.5 shrink-0"
-        >
-          <span>Open Library</span>
-          <ArrowRight size={13} />
-        </Link>
-      </div>
+      {/* 5. TAB 3: SETTINGS & PREFERENCES (Fully Integrated from /settings) */}
+      {activeAccountTab === "settings" && (
+        <div className="space-y-6 animate-fade-in">
+          {/* Section: Appearance & Display Theme */}
+          <div className="p-5 sm:p-6 rounded-3xl bg-[var(--theme-card)]/80 border border-[var(--theme-border)] space-y-4 shadow-sm">
+            <div className="flex items-center gap-2">
+              <Palette className="w-5 h-5 text-amber-400" />
+              <div>
+                <h3 className="text-base font-bold text-[var(--theme-fg)]">Appearance & Theme</h3>
+                <p className="text-xs text-[var(--theme-muted)]">Select your visual styling mode.</p>
+              </div>
+            </div>
 
-      {/* 6. DATA BACKUP & SESSION MANAGEMENT */}
-      <div className="pt-4 border-t border-[var(--theme-border)]/70 flex flex-col sm:flex-row items-center justify-between gap-4">
-        <button
-          onClick={handleExportData}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] border border-[var(--theme-border)] text-xs font-bold text-[var(--theme-fg)] transition shadow-sm cursor-pointer"
-          title="Download complete JSON backup"
-        >
-          <Download size={14} className="text-amber-300" />
-          <span>Export Critic Data (JSON)</span>
-        </button>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <button
+                type="button"
+                onClick={() => handleSelectTheme("dark")}
+                className={`p-3.5 rounded-2xl border text-left transition cursor-pointer flex flex-col justify-between gap-2 ${
+                  theme === "dark"
+                    ? "bg-amber-400/15 border-amber-400 text-[var(--theme-fg)] ring-1 ring-amber-400/30"
+                    : "bg-[var(--theme-surface)] border-[var(--theme-border)] text-[var(--theme-muted)] hover:text-[var(--theme-fg)]"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <Moon size={18} className="text-amber-400" />
+                  {theme === "dark" && <Check size={14} className="text-amber-400" />}
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-[var(--theme-fg)]">Dark Mode</div>
+                  <p className="text-[10px] text-[var(--theme-muted)]">Classic nighttime aesthetic</p>
+                </div>
+              </button>
 
-        <p className="text-[11px] font-medium text-[var(--theme-muted)]">
-          GrooveEstrella Music Journal · Phase 2
-        </p>
-      </div>
+              <button
+                type="button"
+                onClick={() => handleSelectTheme("light")}
+                className={`p-3.5 rounded-2xl border text-left transition cursor-pointer flex flex-col justify-between gap-2 ${
+                  theme === "light"
+                    ? "bg-amber-400/15 border-amber-400 text-[var(--theme-fg)] ring-1 ring-amber-400/30"
+                    : "bg-[var(--theme-surface)] border-[var(--theme-border)] text-[var(--theme-muted)] hover:text-[var(--theme-fg)]"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <Sun size={18} className="text-amber-400" />
+                  {theme === "light" && <Check size={14} className="text-amber-400" />}
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-[var(--theme-fg)]">Light Mode</div>
+                  <p className="text-[10px] text-[var(--theme-muted)]">Clean bright styling</p>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleSelectTheme("adaptive")}
+                className={`p-3.5 rounded-2xl border text-left transition cursor-pointer flex flex-col justify-between gap-2 ${
+                  theme === "adaptive"
+                    ? "bg-amber-400/15 border-amber-400 text-[var(--theme-fg)] ring-1 ring-amber-400/30"
+                    : "bg-[var(--theme-surface)] border-[var(--theme-border)] text-[var(--theme-muted)] hover:text-[var(--theme-fg)]"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <Sparkles size={18} className="text-amber-400" />
+                  {theme === "adaptive" && <Check size={14} className="text-amber-400" />}
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-[var(--theme-fg)]">Album-Adaptive</div>
+                  <p className="text-[10px] text-[var(--theme-muted)]">Colors match spinning artwork</p>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          {/* Section: Default Streaming Platform */}
+          <div className="p-5 sm:p-6 rounded-3xl bg-[var(--theme-card)]/80 border border-[var(--theme-border)] space-y-4 shadow-sm">
+            <div className="flex items-center gap-2">
+              <Headphones className="w-5 h-5 text-amber-400" />
+              <div>
+                <h3 className="text-base font-bold text-[var(--theme-fg)]">Preferred Streaming Service</h3>
+                <p className="text-xs text-[var(--theme-muted)]">
+                  Where GrooveLinks route when clicking play buttons.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+              {STREAMING_PLATFORMS.map((platform) => {
+                const isSelected = preferredPlatform === platform.id;
+                return (
+                  <button
+                    key={platform.id}
+                    type="button"
+                    onClick={() => handleSelectPlatform(platform.id)}
+                    className={`p-3 rounded-2xl border text-left transition cursor-pointer flex flex-col justify-between gap-1.5 ${
+                      isSelected
+                        ? "bg-amber-400/15 border-amber-400 text-amber-300 ring-1 ring-amber-400/30"
+                        : "bg-[var(--theme-surface)] border-[var(--theme-border)] text-[var(--theme-muted)] hover:text-[var(--theme-fg)]"
+                    }`}
+                  >
+                    <div className="text-xs font-bold text-[var(--theme-fg)]">{platform.name}</div>
+                    <p className="text-[10px] text-[var(--theme-muted)] line-clamp-1">{platform.desc}</p>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Section: Turntable & Vinyl Playback Experience */}
+          <div className="p-5 sm:p-6 rounded-3xl bg-[var(--theme-card)]/80 border border-[var(--theme-border)] space-y-4 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <Disc3 className="w-5 h-5 text-amber-400" />
+                <div>
+                  <h3 className="text-base font-bold text-[var(--theme-fg)]">Vinyl Side Dividers</h3>
+                  <p className="text-xs text-[var(--theme-muted)]">
+                    Display tracks grouped by Side A / Side B on album pages.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleToggleVinylSides}
+                className={`w-12 h-6 rounded-full transition-colors relative cursor-pointer ${
+                  showVinylSides ? "bg-amber-400" : "bg-zinc-700"
+                }`}
+              >
+                <div
+                  className={`w-5 h-5 rounded-full bg-zinc-950 absolute top-0.5 transition-transform ${
+                    showVinylSides ? "left-6.5" : "left-0.5"
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
+
+          {/* Section: Retake Onboarding Setup */}
+          <div className="p-5 sm:p-6 rounded-3xl bg-[var(--theme-card)]/80 border border-[var(--theme-border)] space-y-3 shadow-sm">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div className="flex items-center gap-2.5">
+                <Sparkles className="w-5 h-5 text-amber-400" />
+                <div>
+                  <h3 className="text-base font-bold text-[var(--theme-fg)]">Music Taste Onboarding</h3>
+                  <p className="text-xs text-[var(--theme-muted)]">
+                    Re-run the musical onboarding journey to select artists and preferences.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => window.dispatchEvent(new CustomEvent("open-onboarding"))}
+                className="px-4 py-2 rounded-2xl bg-[var(--theme-surface)] hover:bg-[var(--theme-border)] text-xs font-bold text-amber-300 border border-amber-400/30 transition cursor-pointer flex items-center gap-1.5"
+              >
+                <span>Launch Onboarding</span>
+                <ArrowRight size={13} />
+              </button>
+            </div>
+          </div>
+
+          {/* Section: Data Backup & Storage Management */}
+          <div className="p-5 sm:p-6 rounded-3xl bg-[var(--theme-card)]/80 border border-[var(--theme-border)] space-y-4 shadow-sm">
+            <div className="flex items-center gap-2">
+              <Download className="w-5 h-5 text-amber-400" />
+              <div>
+                <h3 className="text-base font-bold text-[var(--theme-fg)]">Data & Library Management</h3>
+                <p className="text-xs text-[var(--theme-muted)]">
+                  Export backups or reset cached local data on this browser.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 flex-wrap pt-1">
+              <button
+                type="button"
+                onClick={handleExportData}
+                className="px-4 py-2 rounded-2xl bg-[var(--theme-surface)] hover:bg-[var(--theme-border)] border border-[var(--theme-border)] text-xs font-bold text-[var(--theme-fg)] transition cursor-pointer flex items-center gap-1.5"
+              >
+                <Download size={13} className="text-amber-400" />
+                <span>Export JSON Backup</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleClearAllLibrary}
+                className="px-4 py-2 rounded-2xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/25 text-red-400 text-xs font-bold transition cursor-pointer flex items-center gap-1.5"
+              >
+                <Trash2 size={13} />
+                <span>Clear Local Library</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 6. TAB 4: CURATOR TOOLS (Admin Only) */}
+      {activeAccountTab === "curator" && authProfile?.is_admin && (
+        <div className="space-y-6 animate-fade-in">
+          <div className="p-6 rounded-3xl bg-gradient-to-r from-amber-500/15 via-[var(--theme-card)] to-[var(--theme-card)] border border-amber-400/40 space-y-4 shadow-lg">
+            <div className="flex items-center gap-2 text-amber-400 text-xs font-bold uppercase tracking-widest">
+              <Shield size={14} />
+              <span>Admin Curator Dashboard</span>
+            </div>
+            <div>
+              <h3 className="text-xl font-black text-[var(--theme-fg)] font-display">
+                Official Curated Rankings & Editorial Lists
+              </h3>
+              <p className="text-xs text-[var(--theme-muted)] mt-1 max-w-xl">
+                Create and manage official front-page albums and artist ranking collections visible across GrooveEstrella.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3 pt-2">
+              <Link
+                href="/lists/new"
+                className="px-5 py-2.5 rounded-full bg-gradient-to-r from-amber-400 to-amber-300 text-zinc-950 font-black text-xs hover:scale-105 active:scale-95 transition shadow-md"
+              >
+                + New Official List
+              </Link>
+              <Link
+                href="/lists"
+                className="px-4 py-2.5 rounded-full bg-[var(--theme-surface)] border border-[var(--theme-border)] text-xs font-bold text-[var(--theme-fg)] hover:text-amber-300 transition"
+              >
+                View All Lists
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Edit Profile Modal */}
       {isEditingProfile && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-md px-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 backdrop-blur-md px-4">
           <div className="absolute inset-0" onClick={() => setIsEditingProfile(false)} />
           <div className="relative max-w-md w-full bg-[var(--theme-card)] border border-[var(--theme-border)] rounded-3xl p-6 sm:p-8 shadow-2xl z-10 text-[var(--theme-fg)] space-y-5">
             <div className="flex items-center justify-between">
@@ -999,51 +1252,51 @@ function AccountDashboardContent() {
             <form onSubmit={handleSaveProfile} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-[var(--theme-muted)] uppercase tracking-wider mb-1.5">
-                  Display Name
+                  Display Moniker
                 </label>
                 <input
                   type="text"
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
                   placeholder="e.g. Sonic Voyager"
-                  className="w-full px-4 py-2.5 rounded-2xl bg-[var(--theme-surface)] border border-[var(--theme-border)] text-sm font-bold text-[var(--theme-fg)] focus:outline-none focus:border-amber-400/60"
+                  className="w-full px-4 py-2.5 rounded-2xl bg-[var(--theme-surface)] border border-[var(--theme-border)] text-sm font-bold text-[var(--theme-fg)] focus:outline-none focus:border-amber-400"
                   required
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-[var(--theme-muted)] uppercase tracking-wider mb-2">
-                  Select Profile Badge & Identity Aura
+                  Select Badge & Identity Aura
                 </label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {[
                     {
                       id: "admin",
-                      title: "Admin Badge",
-                      desc: "Glowing Red Badge · System Administrator",
+                      title: "Admin",
+                      desc: "Glowing Red Badge",
                       badgeComp: <UserProfileBadge badge="admin" size="sm" />,
                       borderActive: "border-red-500/80 bg-red-950/40 ring-red-500/50",
                     },
                     {
                       id: "verified",
-                      title: "Verified Badge",
-                      desc: "Logo Disc · Authenticated Listener",
+                      title: "Verified",
+                      desc: "Authentic Disc Logo",
                       badgeComp: <UserProfileBadge badge="verified" size="sm" />,
                       borderActive: "border-sky-400/80 bg-sky-950/40 ring-sky-400/50",
                     },
                     {
                       id: "critic",
-                      title: "Critic Badge",
-                      desc: "Golden Disc with Grain · Music Critic",
+                      title: "Critic",
+                      desc: "Golden Disc with Grain",
                       badgeComp: <UserProfileBadge badge="critic" size="sm" />,
                       borderActive: "border-amber-400/80 bg-amber-950/40 ring-amber-400/50",
                     },
                     {
                       id: "none",
                       title: "Citizen",
-                      desc: "Standard Listener · Clean Profile",
+                      desc: "Standard Listener",
                       badgeComp: (
-                        <span className="px-2.5 py-0.5 rounded-full bg-[var(--theme-card)] text-[10px] font-bold text-[var(--theme-muted)] uppercase tracking-wider border border-[var(--theme-border)]">
+                        <span className="px-2 py-0.5 rounded-full bg-[var(--theme-card)] text-[10px] font-bold text-[var(--theme-muted)] uppercase tracking-wider border border-[var(--theme-border)]">
                           Citizen
                         </span>
                       ),
@@ -1056,23 +1309,17 @@ function AccountDashboardContent() {
                         key={option.id}
                         type="button"
                         onClick={() => setEditBadge(option.id)}
-                        className={`p-3 rounded-2xl border text-left flex flex-col justify-between gap-1.5 transition cursor-pointer ${
+                        className={`p-3 rounded-2xl border text-left flex flex-col justify-between gap-1 transition cursor-pointer ${
                           isSelected
                             ? `${option.borderActive} ring-2 shadow-sm`
-                            : "bg-[var(--theme-surface)] border-[var(--theme-border)] hover:border-[var(--theme-border-active)]"
+                            : "bg-[var(--theme-surface)] border-[var(--theme-border)] hover:border-amber-400/40"
                         }`}
                       >
                         <div className="flex items-center justify-between">
                           {option.badgeComp}
-                          {isSelected && (
-                            <span className="w-4 h-4 rounded-full bg-[var(--theme-accent)] text-[var(--theme-accent-fg)] flex items-center justify-center shrink-0">
-                              <Check size={10} strokeWidth={3} />
-                            </span>
-                          )}
+                          {isSelected && <Check size={11} className="text-amber-400 stroke-[3]" />}
                         </div>
-                        <p className="text-[11px] text-[var(--theme-muted)] leading-tight pt-0.5">
-                          {option.desc}
-                        </p>
+                        <p className="text-[10px] text-[var(--theme-muted)] pt-0.5">{option.desc}</p>
                       </button>
                     );
                   })}
@@ -1086,9 +1333,9 @@ function AccountDashboardContent() {
                 <textarea
                   value={editBio}
                   onChange={(e) => setEditBio(e.target.value)}
-                  rows={4}
-                  placeholder="Share your music taste, favorite decades, or critical perspective..."
-                  className="w-full px-4 py-2.5 rounded-2xl bg-[var(--theme-surface)] border border-[var(--theme-border)] text-sm text-[var(--theme-fg)] focus:outline-none focus:border-amber-400/60 resize-none leading-relaxed"
+                  rows={3}
+                  placeholder="Share your musical taste, favorite eras, or critical perspective..."
+                  className="w-full px-4 py-2.5 rounded-2xl bg-[var(--theme-surface)] border border-[var(--theme-border)] text-xs text-[var(--theme-fg)] focus:outline-none focus:border-amber-400 resize-none leading-relaxed"
                 />
               </div>
 
@@ -1130,8 +1377,11 @@ export default function AccountPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen py-24 text-center text-sm font-medium text-[var(--theme-muted)]">
-          Loading critic account...
+        <div className="min-h-screen py-24 flex flex-col items-center justify-center gap-3">
+          <DiscLoader size={36} />
+          <span className="text-xs font-bold uppercase tracking-widest text-[var(--theme-muted)]">
+            Loading Account Sanctuary...
+          </span>
         </div>
       }
     >
