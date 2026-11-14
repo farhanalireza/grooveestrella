@@ -65,8 +65,8 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
         { id: 'about', label: 'About & Info', icon: BookOpen },
         { id: 'lore', label: 'Genres & Lore', icon: Tag },
         { id: 'reviews', label: 'Ratings & Reviews', icon: Star },
-        { id: 'links', label: 'Links & Editions', icon: Globe },
-    ], [tracks.length]);
+        { id: 'links', label: 'Links & Editions', count: album?.editions?.length || undefined, icon: Globe },
+    ], [tracks.length, album?.editions?.length]);
 
     useEffect(() => {
         if (typeof window !== "undefined") {
@@ -1114,6 +1114,11 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
                         externalLinks={album.externalLinks || []}
                         totalDurationMs={totalDurationMs}
                         activeTab={activeTab}
+                        editions={album.editions || []}
+                        selectedReleaseId={selectedReleaseId}
+                        onSwitchEdition={handleSwitchEdition}
+                        loadingTracks={loadingTracks}
+                        onOpenEditionsDrawer={() => setIsEditionsDrawerOpen(true)}
                     />
                 </div>
             )}

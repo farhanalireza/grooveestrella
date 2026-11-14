@@ -291,7 +291,7 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
                 >
                     <header className="w-full max-w-7xl mx-auto px-4 sm:px-6 md:px-12 pt-4 pb-3 sm:pt-5 sm:pb-4 flex items-center justify-between">
                         {/* Fused Back + GrooveEstrella Brand Pill */}
-                        <div className="flex items-center bg-white/10 hover:bg-white/15 backdrop-blur-md rounded-full border border-white/15 shadow-lg p-1 transition-colors">
+                        <div className="flex items-center bg-black/65 hover:bg-black/75 backdrop-blur-xl rounded-full border border-white/20 shadow-2xl p-1 transition-all">
                             <button 
                                 onClick={handleBack}
                                 className="w-8 h-8 sm:w-9 sm:h-9 rounded-full aspect-square shrink-0 hover:bg-white/15 active:scale-95 text-white flex items-center justify-center transition cursor-pointer"
@@ -312,7 +312,7 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
 
                         <button 
                             onClick={handleNativeShare}
-                            className="w-10 h-10 rounded-full aspect-square shrink-0 bg-white/10 hover:bg-white/15 active:scale-95 text-white flex items-center justify-center transition backdrop-blur-md cursor-pointer border border-white/15 shadow-lg"
+                            className="w-10 h-10 rounded-full aspect-square shrink-0 bg-black/65 hover:bg-black/75 active:scale-95 text-white flex items-center justify-center transition backdrop-blur-xl cursor-pointer border border-white/20 shadow-2xl"
                             title="Share Artist"
                         >
                             <Share2 size={18} />
@@ -340,11 +340,16 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
                         }}
                     />
 
-                    {/* Smooth end fade: Seamlessly dissolves bottom of image into page background */}
+                    {/* Smooth photo bottom fade: Merges the base of the image seamlessly into edgeColors.bottomColor */}
                     <div 
-                        className="absolute inset-x-0 bottom-0 h-32 pointer-events-none z-10"
+                        className="absolute inset-x-0 bottom-0 h-36 pointer-events-none z-10"
                         style={{
-                            background: `linear-gradient(to top, var(--theme-bg) 0%, var(--theme-bg) 20%, ${edgeColors.bottomColor ? `${edgeColors.bottomColor.replace('rgb', 'rgba').replace(')', ', 0.7)')}` : 'rgba(23,2,11,0.7)'} 55%, transparent 100%)`
+                            background: `linear-gradient(to bottom, 
+                                transparent 0%, 
+                                ${edgeColors.bottomColor ? `${edgeColors.bottomColor.replace('rgb', 'rgba').replace(')', ', 0.4)')}` : 'rgba(0,0,0,0.4)'} 35%, 
+                                ${edgeColors.bottomColor ? `${edgeColors.bottomColor.replace('rgb', 'rgba').replace(')', ', 0.85)')}` : 'rgba(0,0,0,0.85)'} 75%, 
+                                ${edgeColors.bottomColor || '#000000'} 100%
+                            )`
                         }}
                     />
                 </div>
@@ -436,9 +441,14 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
                     </div>
                 </div>
 
-                {/* Mobile Title & Badges: resting in the bottom fade */}
-                <div className="md:hidden relative z-20 -mt-12 sm:-mt-16 px-4 sm:px-6 pb-1">
-                    <div className="max-w-5xl mx-auto">
+                {/* Mobile Title & Badges: Seamlessly extends with the photo's last pixel edge colors, then dissolves into page background */}
+                <div 
+                    className="md:hidden relative z-20 transition-colors duration-500"
+                    style={{
+                        backgroundColor: edgeColors.bottomColor || '#000000',
+                    }}
+                >
+                    <div className="px-4 sm:px-6 pt-1 pb-3 max-w-5xl mx-auto">
                         <div className="flex flex-wrap items-center gap-2 mb-2">
                             <span className={`inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-[11px] font-black uppercase tracking-wider backdrop-blur-md border shadow-md ${
                                 isGroup 
@@ -459,6 +469,19 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
                             {artist.name}
                         </h1>
                     </div>
+
+                    {/* Smooth bottom transition fade: Extends the last pixel colors and gently dissolves into page theme background */}
+                    <div 
+                        className="w-full h-12 pointer-events-none"
+                        style={{
+                            background: `linear-gradient(to bottom, 
+                                ${edgeColors.bottomColor || '#000000'} 0%, 
+                                ${edgeColors.bottomColor ? `${edgeColors.bottomColor.replace('rgb', 'rgba').replace(')', ', 0.65)')}` : 'rgba(0,0,0,0.65)'} 35%, 
+                                ${edgeColors.bottomColor ? `${edgeColors.bottomColor.replace('rgb', 'rgba').replace(')', ', 0.2)')}` : 'rgba(0,0,0,0.2)'} 75%, 
+                                transparent 100%
+                            )`
+                        }}
+                    />
                 </div>
 
                 {/* 2. Metadata, Rating Capsule, Bio & Action Controls (Directly on Page Background - NO CARDS!) */}

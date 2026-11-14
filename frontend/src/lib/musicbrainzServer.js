@@ -1518,9 +1518,27 @@ export async function fetchMusicBrainzArtistServer(id) {
 }
 
 /**
+ * Helper to get flag emoji for country code
+ */
+export function getCountryFlag(code) {
+  if (!code || code === 'Global' || code === 'XW') return '🌐';
+  if (code === 'XE') return '🇪🇺';
+  if (code.length !== 2) return '🌐';
+  try {
+    const codePoints = code
+      .toUpperCase()
+      .split('')
+      .map((c) => 127397 + c.charCodeAt(0));
+    return String.fromCodePoint(...codePoints);
+  } catch (_) {
+    return '🌐';
+  }
+}
+
+/**
  * Clusters raw MusicBrainz releases into curated, distinct editions.
- * Combines identical regional pressings (e.g. US, UK, DE, JP pressings of the same master)
- * into a single cohesive edition card with aggregated country badges and labels.
+ * Combines identical regional pressings into a hierarchical tree structure:
+ * Parent Edition -> Child Pressings (with country flags, dates, catalog numbers, and formats).
  */
 export function clusterEditions(releases = [], albumTitle = 'Album', firstReleaseDate = '', canonicalOriginalId = null) {
   if (!releases || releases.length === 0) return [];
@@ -1541,7 +1559,7 @@ export function clusterEditions(releases = [], albumTitle = 'Album', firstReleas
   const canonicalTrackCount = (canonicalRelease?.media || []).reduce((acc, m) => acc + (m['track-count'] || 0), 0) || 10;
   const canonicalYear = canonicalRelease?.date ? parseInt(canonicalRelease.date.slice(0, 4), 10) : (firstReleaseDate ? parseInt(firstReleaseDate.slice(0, 4), 10) : null);
 
-  const map = new Map();
+  const editionMap = new Map();
 
   for (const r of sorted) {
     const date = r.date || '';
@@ -1561,88 +1579,81 @@ export function clusterEditions(releases = [], albumTitle = 'Album', firstReleas
     const disambig = (r.disambiguation || '').trim();
     const combo = `${cleanTitle} ${disambig}`.toLowerCase();
 
-    // Check if original
+    // Check specific edition characteristics
+    const isCollector = /collector/i.test(combo);
+    const annivMatch = combo.match(/(\d+)(?:th|st|nd|rd)?\s+anniversary/i);
+    const isImmersion = combo.includes('immersion') || combo.includes('box set');
+    const isDeluxe = !isCollector && !annivMatch && !isImmersion && (
+      /deluxe|expanded|super deluxe|bonus track|bonus disc|special edition/i.test(combo) ||
+      totalTracks > canonicalTrackCount + 2
+    );
+    const isRemaster = /remaster|mobile fidelity|mfsl|ultradisc|audiophile|half-speed/i.test(combo);
+    const isSurround = /quad|surround|5\.1|atmos|spatial/i.test(combo);
+    const isLive = combo.includes('live') && !combo.includes('experience');
+
+    // Canonical original release check
     const isOriginal = (r.id === resolvedCanonicalId) || (
-      canonicalYear && year === canonicalYear && !disambig && (
-        formatFamily === 'Vinyl' || formatFamily === 'Cassette' || formatFamily === (canonicalRelease?.media?.[0]?.format?.includes('Vinyl') ? 'Vinyl' : formatFamily)
-      )
+      !isCollector && !annivMatch && !isImmersion && !isDeluxe && !isRemaster && !isSurround && !isLive &&
+      canonicalYear && year === canonicalYear && (!disambig || /standard|original/i.test(disambig))
     );
 
-    // Determine category
     let category = 'Standard';
-    const annivMatch = combo.match(/(\d+)(?:th|st|nd|rd)?\s+anniversary/i);
-    if (isOriginal) {
+    let editionKey = '';
+    let editionName = '';
+
+    if (isCollector) {
+      category = 'Collector';
+      editionKey = 'COLLECTOR_EDITION';
+      editionName = "Collector's Edition";
+    } else if (isOriginal) {
       category = 'Original';
+      editionKey = `ORIGINAL_RELEASE_${formatFamily}`;
+      editionName = `Original ${canonicalYear || year || ''} Release (${formatFamily})`.trim();
     } else if (annivMatch) {
       category = 'Anniversary';
-    } else if (combo.includes('immersion') || combo.includes('box set') || combo.includes('deluxe') || combo.includes('experience') || totalTracks > canonicalTrackCount + 3) {
-      category = 'Deluxe';
-    } else if (combo.includes('remaster') || combo.includes('mobile fidelity') || combo.includes('mfsl') || combo.includes('ultradisc')) {
-      category = 'Remaster';
-    } else if (combo.includes('quad') || combo.includes('surround') || combo.includes('5.1')) {
-      category = 'Surround';
-    } else if (combo.includes('live')) {
-      category = 'Live';
-    }
-
-    // Determine clean human-readable name
-    let editionName = '';
-    if (category === 'Original') {
-      editionName = `Original ${year || ''} Pressing (${formatFamily})`.trim();
-    } else if (annivMatch) {
+      editionKey = `ANNIV_${annivMatch[1]}`;
       editionName = `${annivMatch[1]}th Anniversary Edition${totalTracks > canonicalTrackCount ? ' (Expanded)' : ''}`;
-    } else if (combo.includes('immersion')) {
-      editionName = 'Immersion Box Set (Multi-Disc Edition)';
-    } else if (combo.includes('experience')) {
-      editionName = `${year ? `${year} ` : ''}Experience Edition (Live & Expanded)`;
-    } else if (combo.includes('deluxe') || category === 'Deluxe') {
+    } else if (isImmersion) {
+      category = 'Deluxe';
+      editionKey = 'BOX_SET_IMMERSION';
+      editionName = 'Box Set / Immersion Edition';
+    } else if (isDeluxe) {
+      category = 'Deluxe';
+      const bonusDiff = totalTracks > canonicalTrackCount ? totalTracks - canonicalTrackCount : 0;
+      editionKey = `DELUXE_${totalTracks}_${bonusDiff}`;
       editionName = `${year ? `${year} ` : ''}Deluxe Edition (${totalTracks} Tracks)`;
-    } else if (combo.includes('mobile fidelity') || combo.includes('mfsl')) {
-      editionName = 'Mobile Fidelity Sound Lab Original Master';
-    } else if (category === 'Surround') {
-      editionName = `Quadraphonic Surround Mix (${formatFamily})`;
-    } else if (category === 'Remaster') {
-      editionName = `${year ? `${year} ` : ''}Digital Remaster (${formatFamily})`;
-    } else if (disambig && disambig.length < 35) {
-      editionName = `${year ? `${year} ` : ''}${disambig} (${formatFamily})`;
+    } else if (isSurround) {
+      category = 'Surround';
+      editionKey = combo.includes('atmos') ? 'ATMOS_SPATIAL' : 'SURROUND_MIX';
+      editionName = combo.includes('atmos') ? 'Dolby Atmos / Spatial Audio Mix' : 'Surround Sound / Quadraphonic Mix';
+    } else if (isRemaster) {
+      category = 'Remaster';
+      const era = year ? Math.floor(year / 5) * 5 : 'REM';
+      editionKey = `REMASTER_${era}_${formatFamily}`;
+      editionName = `${year ? `${year} ` : ''}Remastered Edition (${formatFamily})`;
+    } else if (isLive) {
+      category = 'Live';
+      editionKey = 'LIVE_EDITION';
+      editionName = 'Live / Concert Edition';
     } else {
+      category = 'Standard';
+      const decade = year ? `${Math.floor(year / 10) * 10}s` : 'Reissue';
+      editionKey = `REISSUE_${decade}_${formatFamily}`;
       editionName = `${year ? `${year} ` : ''}${formatFamily} Pressing`;
     }
 
-    // Clustering key: Combine identical regional pressings into one edition
-    let clusterKey = '';
-    if (category === 'Original') {
-      clusterKey = `ORIGINAL_${formatFamily}`;
-    } else if (annivMatch) {
-      clusterKey = `ANNIV_${annivMatch[1]}_${totalTracks > canonicalTrackCount ? 'EXP' : 'STD'}_${formatFamily}`;
-    } else if (combo.includes('immersion')) {
-      clusterKey = 'IMMERSION_BOX_SET';
-    } else if (combo.includes('experience')) {
-      clusterKey = `EXP_EDITION_${totalTracks}`;
-    } else if (combo.includes('mobile fidelity') || combo.includes('mfsl')) {
-      clusterKey = `MFSL_${formatFamily}`;
-    } else if (category === 'Surround') {
-      clusterKey = `SURROUND_${formatFamily}`;
-    } else if (category === 'Remaster') {
-      const era = year ? Math.floor(year / 5) * 5 : 'REM';
-      clusterKey = `REMASTER_${era}_${formatFamily}_${totalTracks}`;
-    } else {
-      const decade = year ? Math.floor(year / 10) * 10 : 'UNK';
-      const titleVariant = cleanTitle.toLowerCase() !== albumTitle.toLowerCase() ? cleanTitle.slice(0, 10) : '';
-      clusterKey = `REISSUE_${decade}s_${formatFamily}_${totalTracks}_${titleVariant}`;
-    }
-
-    if (!map.has(clusterKey)) {
-      map.set(clusterKey, {
+    if (!editionMap.has(editionKey)) {
+      editionMap.set(editionKey, {
         id: r.id,
         title: cleanTitle,
         editionName: editionName,
         category: category,
         isOriginal: category === 'Original',
-        year: year,
+        year: year || canonicalYear,
         date: date,
         format: rawFormat,
         formatFamily: formatFamily,
+        formats: [formatFamily],
         discCount: discCount,
         totalTracks: totalTracks,
         bonusTracks: totalTracks > canonicalTrackCount ? totalTracks - canonicalTrackCount : 0,
@@ -1651,39 +1662,82 @@ export function clusterEditions(releases = [], albumTitle = 'Album', firstReleas
         labels: [],
         coverArt: `https://coverartarchive.org/release/${r.id}/front-500`,
         status: r.status || 'Official',
-        pressingsCount: 0,
         hasOfficial: r.status === 'Official',
+        pressingsCount: 0,
+        pressings: [],
       });
     }
 
-    const ed = map.get(clusterKey);
+    const ed = editionMap.get(editionKey);
     ed.pressingsCount++;
+
+    if (formatFamily && !ed.formats.includes(formatFamily)) {
+      ed.formats.push(formatFamily);
+    }
     if (r.country && !ed.countries.includes(r.country)) {
       ed.countries.push(r.country);
     }
-    const labelNames = (r['label-info'] || []).map((l) => l.label?.name).filter(Boolean);
-    labelNames.forEach((l) => {
-      if (!ed.labels.includes(l)) ed.labels.push(l);
+
+    const labelInfos = (r['label-info'] || []).map((l) => ({
+      name: l.label?.name || '',
+      catNo: l['catalog-number'] || '',
+    })).filter((l) => l.name);
+
+    labelInfos.forEach((l) => {
+      if (!ed.labels.includes(l.name)) ed.labels.push(l.name);
     });
 
-    // Prefer the release that has Official status
+    // Add this regional release to the nested pressings tree
+    ed.pressings.push({
+      id: r.id,
+      title: cleanTitle,
+      disambiguation: disambig || 'Standard Release',
+      country: r.country || 'Global',
+      countryFlag: getCountryFlag(r.country),
+      date: date || 'Unknown Date',
+      year: year,
+      format: rawFormat,
+      formatFamily: formatFamily,
+      barcode: r.barcode || null,
+      catalogNumber: labelInfos[0]?.catNo || null,
+      labels: labelInfos.map((l) => l.name),
+      status: r.status || 'Official',
+      trackCount: totalTracks,
+      discCount: discCount,
+      coverArt: `https://coverartarchive.org/release/${r.id}/front-500`,
+    });
+
+    // Track best release id and cover art
     if (r.status === 'Official' && !ed.hasOfficial) {
       ed.id = r.id;
       ed.hasOfficial = true;
       ed.coverArt = `https://coverartarchive.org/release/${r.id}/front-500`;
     }
-    // Track earliest year
     if (year && (!ed.year || year < ed.year)) {
       ed.year = year;
     }
+    if (totalTracks > ed.totalTracks) {
+      ed.totalTracks = totalTracks;
+      ed.bonusTracks = totalTracks > canonicalTrackCount ? totalTracks - canonicalTrackCount : 0;
+    }
   }
 
-  const editions = Array.from(map.values());
-  // Sort editions: Original first, then Anniversary, Deluxe, Remasters, Surround, Live, Standard
+  const editions = Array.from(editionMap.values());
+
+  // Sort editions: Original first, then Collector, Anniversary, Deluxe, Remaster, Surround, Live, Standard
   editions.sort((a, b) => {
     if (a.isOriginal && !b.isOriginal) return -1;
     if (b.isOriginal && !a.isOriginal) return 1;
-    const catPriority = { 'Original': 1, 'Anniversary': 2, 'Deluxe': 3, 'Remaster': 4, 'Surround': 5, 'Live': 6, 'Standard': 7 };
+    const catPriority = {
+      'Original': 1,
+      'Collector': 2,
+      'Anniversary': 3,
+      'Deluxe': 4,
+      'Remaster': 5,
+      'Surround': 6,
+      'Live': 7,
+      'Standard': 8,
+    };
     const pA = catPriority[a.category] || 9;
     const pB = catPriority[b.category] || 9;
     if (pA !== pB) return pA - pB;
@@ -1998,7 +2052,9 @@ export async function fetchMusicBrainzAlbumServer(id, targetReleaseId = null) {
         : null;
 
       const activeEditionObj = editions.find((e) => e.id === successfulReleaseId) ||
+        editions.find((e) => (e.pressings || []).some((p) => p.id === successfulReleaseId)) ||
         editions.find((e) => e.id === targetReleaseId) ||
+        editions.find((e) => (e.pressings || []).some((p) => p.id === targetReleaseId)) ||
         editions[0] || null;
 
       const album = {
