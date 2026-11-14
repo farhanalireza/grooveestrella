@@ -71,7 +71,13 @@ const ALL_GENRES = [
 
 function AccountDashboardContent() {
   const router = useRouter();
-  const { user, profile: authProfile, signOut, updateProfile, isConfigured } = useSupabaseAuth();
+  const { user, profile: authProfile, signOut, updateProfile, isConfigured, loading: authLoading } = useSupabaseAuth();
+
+  useEffect(() => {
+    if (!authLoading && !user && isConfigured) {
+      router.push("/login?returnTo=%2Faccount");
+    }
+  }, [user, authLoading, isConfigured, router]);
 
   const [userName, setUserName] = useState("");
   const [userAvatar, setUserAvatar] = useState("");

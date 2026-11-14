@@ -43,12 +43,15 @@ const SLIDE_VARIANTS = {
 
 export default function LibraryTouchSlider({
   items = [],
-  currentIndex = 0,
+  currentIndex: propCurrentIndex,
+  activeIndex,
   onIndexChange,
-  activeTab,
+  onChangeIndex,
+  activeTab = "items",
   onOpenItem,
   onDeleteItem,
   getActionLabel,
+  actionLabel,
   getItemTitle,
   getItemSubtitle,
   getItemMeta,
@@ -56,8 +59,57 @@ export default function LibraryTouchSlider({
   isNavigating = false,
   navigatingId = null,
 }) {
+  const currentIndex = propCurrentIndex ?? activeIndex ?? 0;
+  const setIndex = onIndexChange || onChangeIndex || (() => {});
   const [direction, setDirection] = useState(0);
   const isDraggingRef = useRef(false);
+
+  const resolveImage = useCallback((item, size = "large") => {
+    if (!item) return FALLBACK_COVER_SVG;
+    if (typeof getItemImage === "function") {
+      try {
+        return getItemImage(item, size) || FALLBACK_COVER_SVG;
+      } catch (_) {
+        return FALLBACK_COVER_SVG;
+      }
+    }
+    return item.image || item.coverArt || item.url || FALLBACK_COVER_SVG;
+  }, [getItemImage]);
+
+  const resolveTitle = useCallback((item) => {
+    if (!item) return "Untitled";
+    if (typeof getItemTitle === "function") {
+      try {
+        return getItemTitle(item) || "Untitled";
+      } catch (_) {}
+    }
+    return item.title || item.name || "Untitled";
+  }, [getItemTitle]);
+
+  const resolveSubtitle = useCallback((item) => {
+    if (!item) return "";
+    if (typeof getItemSubtitle === "function") {
+      try {
+        return getItemSubtitle(item) || "";
+      } catch (_) {}
+    }
+    if (Array.isArray(item.artist)) return item.artist.map((a) => a.name).join(", ");
+    return item.artist || item.subtitle || "";
+  }, [getItemSubtitle]);
+
+  const resolveActionLabel = useCallback(() => {
+    if (typeof getActionLabel === "function") {
+      try {
+        return getActionLabel();
+      } catch (_) {}
+    }
+    if (typeof actionLabel === "string" && actionLabel) return actionLabel;
+    if (activeTab === "songs") return "View Track";
+    if (activeTab === "albums") return "View Album";
+    if (activeTab === "artists") return "View Artist";
+    if (activeTab === "playlists") return "Open Playlist";
+    return "View";
+  }, [getActionLabel, actionLabel, activeTab]);
 
   // Preload adjacent images in the background so next/previous swipes render with 0 latency
   useEffect(() => {
@@ -72,13 +124,13 @@ export default function LibraryTouchSlider({
 
     indicesToPreload.forEach((idx) => {
       const item = items[idx];
-      const url = getItemImage(item, "large");
+      const url = resolveImage(item, "large");
       if (url && typeof url === "string" && !url.startsWith("data:") && !url.includes("placehold.co")) {
         const img = new Image();
         img.src = url;
       }
     });
-  }, [currentIndex, items, getItemImage]);
+  }, [currentIndex, items, resolveImage]);
 
   // Keyboard navigation (ArrowLeft & ArrowRight)
   useEffect(() => {
@@ -98,10 +150,10 @@ export default function LibraryTouchSlider({
       const nextIndex = currentIndex + newDirection;
       if (nextIndex >= 0 && nextIndex < items.length) {
         setDirection(newDirection);
-        onIndexChange(nextIndex);
+        setIndex(nextIndex);
       }
     },
-    [currentIndex, items.length, onIndexChange]
+    [currentIndex, items.length, setIndex]
   );
 
   const jumpToIndex = useCallback(
@@ -109,9 +161,9 @@ export default function LibraryTouchSlider({
       if (targetIndex === currentIndex) return;
       const newDirection = targetIndex > currentIndex ? 1 : -1;
       setDirection(newDirection);
-      onIndexChange(targetIndex);
+      setIndex(targetIndex);
     },
-    [currentIndex, onIndexChange]
+    [currentIndex, setIndex]
   );
 
   // Drag gesture handlers for touch & mouse
@@ -148,7 +200,7 @@ export default function LibraryTouchSlider({
 
   if (!currentItem) return null;
 
-  const currentImageUrl = getItemImage(currentItem, "large");
+  const currentImageUrl = resolveImage(currentItem, "large");
 
   return (
     <div className="w-full max-w-lg mx-auto flex flex-col items-center select-none">
@@ -156,7 +208,7 @@ export default function LibraryTouchSlider({
       <div className="w-full flex items-center justify-between mb-3 px-2">
         <span className="text-xs font-extrabold uppercase tracking-wider text-[var(--theme-accent)] flex items-center gap-1.5">
           <span className="w-2 h-2 rounded-full bg-[var(--theme-accent)] animate-pulse" />
-          <span>{activeTab.slice(0, -1)} Deck</span>
+          <span>{activeTab ? activeTab.slice(0, -1) : 'Item'} Deck</span>
         </span>
 
         <span className="text-xs font-sans font-bold text-[var(--theme-muted)] bg-[var(--theme-surface)] px-2.5 py-0.5 rounded-full border border-[var(--theme-border)] shadow-inner">
@@ -198,7 +250,7 @@ export default function LibraryTouchSlider({
             whileTap={{ cursor: "grabbing" }}
             className="relative z-10 w-full bg-[var(--theme-card)]/95 backdrop-blur-2xl border border-[var(--theme-border)] rounded-3xl p-6 sm:p-8 shadow-2xl flex flex-col items-center text-center overflow-hidden cursor-grab active:cursor-grabbing transition-colors duration-300"
           >
-            {/* Ambient Background Art Glow (Uses exact same preloaded image URL for 0ms lag) */}
+            {/* Ambient Background Art Glow */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none rounded-3xl">
               <img
                 src={currentImageUrl || FALLBACK_COVER_SVG}
@@ -225,7 +277,7 @@ export default function LibraryTouchSlider({
               ) : (
                 <LibraryCoverImage
                   src={currentImageUrl}
-                  alt={getItemTitle(currentItem)}
+                  alt={resolveTitle(currentItem)}
                   isCircle={activeTab === "artists"}
                   priority={true}
                   className="w-full h-full"
@@ -245,12 +297,12 @@ export default function LibraryTouchSlider({
                 onClick={() => handleCardClick(currentItem)}
                 className="text-xl sm:text-2xl font-black text-[var(--theme-fg)] truncate tracking-tight hover:text-[var(--theme-accent)] transition cursor-pointer"
               >
-                {getItemTitle(currentItem)}
+                {resolveTitle(currentItem)}
               </h2>
               <p className="text-sm font-semibold text-[var(--theme-accent)] truncate mt-1">
-                {getItemSubtitle(currentItem)}
+                {resolveSubtitle(currentItem)}
               </p>
-              {getItemMeta(currentItem) && (
+              {typeof getItemMeta === "function" && getItemMeta(currentItem) && (
                 <p className="text-xs text-[var(--theme-muted)] font-medium mt-1">
                   {getItemMeta(currentItem)}
                 </p>
@@ -272,7 +324,7 @@ export default function LibraryTouchSlider({
                   </>
                 ) : (
                   <>
-                    <span>{getActionLabel()}</span>
+                    <span>{resolveActionLabel()}</span>
                     <ArrowRight size={15} />
                   </>
                 )}

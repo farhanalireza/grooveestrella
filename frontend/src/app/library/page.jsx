@@ -14,6 +14,7 @@ import PlaylistCover from '@/Components/PlaylistCover';
 import LibraryTouchSlider from '@/Components/LibraryTouchSlider';
 import LibraryCoverImage, { FALLBACK_COVER_SVG } from '@/Components/LibraryCoverImage';
 import JournalCard from '@/Components/JournalCard';
+import MusicDiaryEntries from '@/Components/MusicDiaryEntries';
 import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext';
 import { createClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { buildJournalEditorHref } from '@/lib/journalLinks';
@@ -21,9 +22,17 @@ import { buildJournalEditorHref } from '@/lib/journalLinks';
 function LibraryContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user } = useSupabaseAuth();
+  const { user, loading: authLoading, isConfigured } = useSupabaseAuth();
   const [isPending, startTransition] = useTransition();
   const [navigatingId, setNavigatingId] = useState(null);
+
+  useEffect(() => {
+    if (!authLoading && !user && isConfigured) {
+      const currentQuery = searchParams.toString();
+      const returnUrl = `/library${currentQuery ? `?${currentQuery}` : ''}`;
+      router.push(`/login?returnTo=${encodeURIComponent(returnUrl)}`);
+    }
+  }, [user, authLoading, isConfigured, router, searchParams]);
   const [activeTab, setActiveTab] = useState(() => {
     const initialTab = searchParams.get('tab');
     return ['songs', 'albums', 'artists', 'playlists', 'journal'].includes(initialTab)
@@ -515,49 +524,25 @@ function LibraryContent() {
             </div>
           </div>
 
-          {/* Journal Entries List */}
-          {journalEntries.length === 0 ? (
-            <div className="text-center py-16 bg-[var(--theme-card)]/70 border border-[var(--theme-border)] rounded-3xl p-8 max-w-md mx-auto">
-              <div className="w-16 h-16 rounded-full bg-amber-400/10 border border-amber-400/20 flex items-center justify-center text-amber-300 mx-auto mb-4">
-                <BookOpen size={28} />
-              </div>
-              <h3 className="text-lg font-bold text-[var(--theme-fg)] mb-2">Your Journal is Waiting</h3>
-              <p className="text-sm text-[var(--theme-muted)] mb-6 leading-relaxed">
-                Rate albums, score tracks, and jot down your listening reflections to fill your personal music archive!
-              </p>
-              <Link
-                href="/journal/new?returnTo=%2Flibrary%3Ftab%3Djournal"
-                className="inline-flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-amber-400 via-amber-300 to-amber-400 text-zinc-950 font-extrabold text-sm rounded-full hover:scale-105 active:scale-95 transition-all shadow-md cursor-pointer"
-              >
-                <Sparkles size={16} />
-                <span>Write First Journal Log</span>
-              </Link>
-            </div>
-          ) : (
-            <div className="space-y-6">
-              {journalEntries.map((entry) => (
-                <JournalCard
-                  key={entry.id}
-                  entry={entry}
-                  isOwner={true}
-                  onEdit={(e) => {
-                    router.push(
-                      buildJournalEditorHref({
-                        mbid: e.targetId,
-                        type: e.targetType || 'album',
-                        title: e.title,
-                        subtitle: e.subtitle,
-                        image: e.image,
-                        entryId: e.id,
-                        returnTo: '/library?tab=journal',
-                      })
-                    );
-                  }}
-                  onDelete={handleDeleteJournalEntry}
-                />
-              ))}
-            </div>
-          )}
+          {/* Letterboxd-Style Music Diary Entries (No cards, ambient background radiance, Year/Month/Date grouping) */}
+          <MusicDiaryEntries
+            entries={journalEntries}
+            isOwner={true}
+            onEdit={(e) => {
+              router.push(
+                buildJournalEditorHref({
+                  mbid: e.targetId,
+                  type: e.targetType || 'album',
+                  title: e.title,
+                  subtitle: e.subtitle,
+                  image: e.image,
+                  entryId: e.id,
+                  returnTo: '/library?tab=journal',
+                })
+              );
+            }}
+            onDelete={handleDeleteJournalEntry}
+          />
         </div>
       ) : (
         /* STANDARD BOOKMARKS: SONGS, ALBUMS, ARTISTS, PLAYLISTS */
@@ -681,14 +666,18 @@ function LibraryContent() {
                 <div className="w-full flex flex-col items-center justify-center my-4 animate-fade-in">
                   <LibraryTouchSlider
                     items={currentList}
+                    currentIndex={sliderIndex}
                     activeIndex={sliderIndex}
+                    onIndexChange={setSliderIndex}
                     onChangeIndex={setSliderIndex}
                     activeTab={activeTab}
                     getItemImage={getItemImage}
                     getItemTitle={getItemTitle}
                     getItemSubtitle={getItemSubtitle}
+                    getItemMeta={(item) => item?.releaseDate || item?.release_date || item?.year || ''}
                     onOpenItem={openItem}
                     onDeleteItem={deleteItem}
+                    getActionLabel={getActionLabel}
                     actionLabel={getActionLabel()}
                   />
                 </div>

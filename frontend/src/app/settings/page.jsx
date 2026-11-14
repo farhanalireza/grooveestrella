@@ -17,7 +17,13 @@ import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext';
 export default function SettingsPage() {
   const router = useRouter();
   const { theme, isDark, setTheme } = useTheme();
-  const { user, profile, signOut } = useSupabaseAuth();
+  const { user, profile, signOut, loading: authLoading, isConfigured } = useSupabaseAuth();
+
+  useEffect(() => {
+    if (!authLoading && !user && isConfigured) {
+      router.push("/login?returnTo=%2Fsettings");
+    }
+  }, [user, authLoading, isConfigured, router]);
   const [preferredPlatform, setPreferredPlatform] = useState("none");
   const [showVinylSides, setShowVinylSides] = useState(true);
   const [isStandalone, setIsStandalone] = useState(false);

@@ -10,6 +10,8 @@ import {
 import Link from "next/link";
 import axios from "axios";
 import OfficialListCover from "@/Components/OfficialListCover";
+import LandingPage from "@/Components/LandingPage";
+import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
 
 const FEATURED_ALBUMS = [
   {
@@ -150,6 +152,7 @@ const EXPLORE_GENRES = [
 
 export default function Home() {
   const router = useRouter();
+  const { user, loading: authLoading } = useSupabaseAuth();
   const [inputUrl, setInputUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -244,6 +247,22 @@ export default function Home() {
       router.push(`/search?q=${encodeURIComponent(genreQuery)}&type=album`);
     });
   };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-[75vh] flex flex-col items-center justify-center gap-3">
+        <div className="w-10 h-10 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
+        <span className="text-xs font-bold uppercase tracking-widest text-[var(--theme-muted)]">
+          Entering GrooveEstrella...
+        </span>
+      </div>
+    );
+  }
+
+  // Marketing Landing Page for Unauthenticated Visitors
+  if (!user) {
+    return <LandingPage />;
+  }
 
   return (
     <div className="flex-grow flex flex-col items-center justify-start py-10 sm:py-14 px-4 sm:px-6 relative z-10 w-full max-w-5xl mx-auto pb-32">

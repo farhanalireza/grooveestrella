@@ -125,20 +125,28 @@ export function SupabaseAuthProvider({ children }) {
     return { data, error: null };
   };
 
-  const signUpWithPassword = async (email, password, { username, displayName, bio } = {}) => {
+  const signUpWithPassword = async (email, password, { username, displayName, bio, avatarUrl, onboardingData } = {}) => {
     if (!isSupabaseConfigured()) {
       toast.info("Supabase is not yet connected. Running in demo mode.");
       return { data: null, error: new Error("Supabase is not configured.") };
     }
     const supabase = createClient();
+    const resolvedUsername = username || email.split("@")[0];
+    const resolvedDisplayName = displayName || username || "Groove Lover";
+    const resolvedBio = bio || "Exploring music on GrooveEstrella";
+    const resolvedAvatar = avatarUrl || "";
+    const resolvedOnboarding = onboardingData || {};
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: {
-          username: username || email.split("@")[0],
-          display_name: displayName || username || "Groove Lover",
-          bio: bio || "Exploring music on GrooveEstrella",
+          username: resolvedUsername,
+          display_name: resolvedDisplayName,
+          bio: resolvedBio,
+          avatar_url: resolvedAvatar,
+          onboarding_data: resolvedOnboarding,
         },
       },
     });
@@ -150,7 +158,18 @@ export function SupabaseAuthProvider({ children }) {
 
     toast.success("Account created! Check your email to confirm if needed.");
     if (data.user) {
-      await fetchProfile(data.user.id, supabase);
+      try {
+        await supabase.from("profiles").upsert({
+          id: data.user.id,
+          username: resolvedUsername,
+          display_name: resolvedDisplayName,
+          avatar_url: resolvedAvatar,
+          bio: resolvedBio,
+          onboarding_data: resolvedOnboarding,
+          updated_at: new Date().toISOString(),
+        });
+      } catch (_) {}
+      await fetchProfile(data.user.id, supabase, { force: true });
     }
     return { data, error: null };
   };

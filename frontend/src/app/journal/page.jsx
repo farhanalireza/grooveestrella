@@ -24,6 +24,7 @@ import {
   Headphones,
 } from "lucide-react";
 import JournalCard from "@/Components/JournalCard";
+import MusicDiaryEntries from "@/Components/MusicDiaryEntries";
 import { toast } from "@/lib/toast";
 import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
@@ -31,9 +32,15 @@ import { buildJournalEditorHref } from "@/lib/journalLinks";
 
 export default function MusicJournalPage() {
   const router = useRouter();
-  const { user } = useSupabaseAuth();
+  const { user, loading: authLoading, isConfigured } = useSupabaseAuth();
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!authLoading && !user && isConfigured) {
+      router.push("/login?returnTo=%2Fjournal");
+    }
+  }, [user, authLoading, isConfigured, router]);
 
   // Filter & Search states
   const [searchQuery, setSearchQuery] = useState("");
@@ -376,7 +383,7 @@ export default function MusicJournalPage() {
         </div>
       </div>
 
-      {/* Journal Entries List */}
+      {/* Journal Entries List - Letterboxd Diary View */}
       {loading ? (
         <div className="py-24 text-center text-sm font-medium text-[var(--theme-muted)] animate-pulse">
           Loading your journal archive...
@@ -407,29 +414,24 @@ export default function MusicJournalPage() {
           )}
         </div>
       ) : (
-        <div className="space-y-6 sm:space-y-7">
-          {filteredEntries.map((entry) => (
-            <JournalCard
-              key={entry.id}
-              entry={entry}
-              isOwner={true}
-              onEdit={(e) => {
-                router.push(
-                  buildJournalEditorHref({
-                    mbid: e.targetId,
-                    type: e.targetType || "album",
-                    title: e.title,
-                    subtitle: e.subtitle,
-                    image: e.image,
-                    entryId: e.id,
-                    returnTo: "/journal",
-                  })
-                );
-              }}
-              onDelete={handleDeleteEntry}
-            />
-          ))}
-        </div>
+        <MusicDiaryEntries
+          entries={filteredEntries}
+          isOwner={true}
+          onEdit={(e) => {
+            router.push(
+              buildJournalEditorHref({
+                mbid: e.targetId,
+                type: e.targetType || "album",
+                title: e.title,
+                subtitle: e.subtitle,
+                image: e.image,
+                entryId: e.id,
+                returnTo: "/journal",
+              })
+            );
+          }}
+          onDelete={handleDeleteEntry}
+        />
       )}
     </div>
   );

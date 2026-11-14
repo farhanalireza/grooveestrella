@@ -1,15 +1,17 @@
 // src/app/(auth)/login/page.jsx
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, Suspense } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Music, Lock, Mail, ArrowRight, Sparkles, AlertCircle } from "lucide-react";
 import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
 import { toast } from "@/lib/toast";
 
-export default function LoginPage() {
+function LoginContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const returnTo = searchParams.get("returnTo") || "/account";
   const { signInWithPassword, isConfigured } = useSupabaseAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -35,7 +37,8 @@ export default function LoginPage() {
     }
 
     if (data?.user) {
-      router.push("/account");
+      toast.success("Welcome back to GrooveEstrella!");
+      router.push(returnTo);
     }
   };
 
@@ -127,11 +130,19 @@ export default function LoginPage() {
 
         <div className="text-center pt-2 border-t border-[var(--theme-border)]/50 text-xs text-[var(--theme-muted)]">
           <span>Don't have an account? </span>
-          <Link href="/signup" className="font-bold text-amber-300 hover:underline">
+          <Link href={`/signup${returnTo !== '/account' ? `?returnTo=${encodeURIComponent(returnTo)}` : ''}`} className="font-bold text-amber-300 hover:underline">
             Create an account
           </Link>
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-[85vh] flex items-center justify-center text-sm text-[var(--theme-muted)]">Loading...</div>}>
+      <LoginContent />
+    </Suspense>
   );
 }

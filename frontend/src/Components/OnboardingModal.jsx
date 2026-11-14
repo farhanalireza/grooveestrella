@@ -34,6 +34,8 @@ import confetti from "canvas-confetti";
 import { toast } from "@/lib/toast";
 import { generateRandomName } from "@/lib/nameGenerator";
 import UserAvatarIcon, { AVAILABLE_AVATARS } from "./UserAvatarIcon";
+import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
+import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 
 const POPULAR_GENRES = [
   { id: "Rock", label: "Rock", icon: Flame },
@@ -169,6 +171,7 @@ const LISTENING_VIBES = [
 ];
 
 export default function OnboardingModal() {
+  const { user } = useSupabaseAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [step, setStep] = useState(1); // 1 to 5
@@ -379,6 +382,28 @@ export default function OnboardingModal() {
     // Mark completed
     localStorage.setItem("groove_onboarding_completed", "true");
     localStorage.setItem("groove_onboarding_date", new Date().toISOString());
+
+    // Sync to Supabase profiles table in JSONB if authenticated
+    if (user && isSupabaseConfigured()) {
+      try {
+        const supabase = createClient();
+        supabase
+          .from("profiles")
+          .update({
+            display_name: finalName,
+            onboarding_data: {
+              genres: selectedGenres,
+              artists: artistObjects,
+              platform: preferredPlatform,
+              vibe: listeningVibe,
+              showVinylSides: showVinylSides,
+              completed_at: new Date().toISOString(),
+            },
+          })
+          .eq("id", user.id)
+          .then(() => {});
+      } catch (_) {}
+    }
 
     // Dispatch profile update event for live UI reactivity
     window.dispatchEvent(new CustomEvent("groove-profile-updated"));
