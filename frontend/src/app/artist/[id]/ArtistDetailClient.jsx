@@ -72,7 +72,7 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
     }, [albums]);
 
     const [activeTab, setActiveTab] = useState("music");
-    const [edgeColors, setEdgeColors] = useState({ topColor: null, bottomColor: null });
+    const [artistPalette, setArtistPalette] = useState(null);
     const { theme, setAdaptivePalette, clearAdaptivePalette, colors } = useTheme();
 
     const ARTIST_TABS = useMemo(() => {
@@ -185,23 +185,37 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
     }
 
     const coverUrl = artist.images?.[0]?.url || artist.coverArt || artist.url || 'https://placehold.co/600x600/17020B/E8A87C?text=Artist';
+    const displayCoverUrl = (coverUrl && (coverUrl.startsWith('http://') || coverUrl.startsWith('https://')))
+        ? `/api/cover-proxy?url=${encodeURIComponent(coverUrl)}`
+        : coverUrl;
 
-    // Dynamic Artist-Adaptive Theme Effect & Edge Color Sampling
+    // Extract Artist Primary Palette cleanly once per artwork (matches Album page)
     useEffect(() => {
-        if (coverUrl) {
-            extractEdgeColors(coverUrl).then((edges) => {
-                setEdgeColors(edges);
-            });
-        }
-        if (theme === "adaptive" && coverUrl) {
-            extractAdaptivePalette(coverUrl, artist?.name || "artist").then((palette) => {
-                setAdaptivePalette(palette);
-            });
+        if (!coverUrl) return;
+        let active = true;
+        extractAdaptivePalette(coverUrl, artist?.name || "artist").then((palette) => {
+            if (active) setArtistPalette(palette);
+        });
+        return () => { active = false; };
+    }, [coverUrl, artist?.name]);
+
+    // Sync to global theme when adaptive mode is enabled
+    useEffect(() => {
+        if (theme === "adaptive" && artistPalette) {
+            setAdaptivePalette(artistPalette);
         }
         return () => {
             clearAdaptivePalette();
         };
-    }, [theme, coverUrl, artist?.name, setAdaptivePalette, clearAdaptivePalette]);
+    }, [theme, artistPalette, setAdaptivePalette, clearAdaptivePalette]);
+
+    const mainBgColor = artistPalette?.bg || colors?.bg || "#110D14";
+    const mainFgColor = artistPalette?.fg || colors?.fg || "#FFFFFF";
+    const mainAccentColor = artistPalette?.accent || colors?.accent || "#E8A87C";
+    const mainAccentFg = artistPalette?.accentFg || colors?.accentFg || "#110D14";
+    const mainMutedColor = artistPalette?.muted || colors?.muted || "rgba(255, 255, 255, 0.74)";
+    const mainBorderColor = artistPalette?.border || colors?.border || "rgba(255, 255, 255, 0.15)";
+    const mainSurfaceColor = artistPalette?.surface || colors?.surface || "rgba(255, 255, 255, 0.10)";
     const genres = useMemo(() => {
         const rawList = artist.genres || artist.tags || [];
         const valid = [];
@@ -280,97 +294,114 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
 
     return (
         <div 
-            className="relative min-h-screen bg-[var(--theme-bg)] text-[var(--theme-fg)] pb-32 transition-colors duration-300 w-full max-w-full overflow-x-hidden"
-            style={{ background: theme === 'adaptive' && colors?.gradient ? colors.gradient : undefined }}
+            className="relative min-h-screen pb-32 transition-colors duration-300 w-full max-w-full overflow-x-hidden"
+            style={{ 
+                backgroundColor: mainBgColor,
+                color: mainFgColor,
+                '--theme-bg': mainBgColor,
+                '--theme-fg': mainFgColor,
+                '--theme-accent': mainAccentColor,
+                '--theme-accent-fg': mainAccentFg,
+                '--theme-muted': mainMutedColor,
+                '--theme-border': mainBorderColor,
+                '--theme-surface': mainSurfaceColor,
+            }}
         >
-            {/* 1. Artist Hero Header + Unzoomed Full-Width Photo with Edge Color Fades (Seamless on Mobile & Full Layout on PC) */}
-            <div className="relative w-full max-w-full overflow-hidden">
-                {/* Top Navigation Bar with edge-matched background */}
+            {/* 1. Top Artwork Backdrop: Blurred cover behind hero, exactly like Album page */}
+            <div className="absolute top-0 inset-x-0 h-[560px] sm:h-[620px] overflow-hidden pointer-events-none z-0">
                 <div 
-                    className="relative z-20 w-full max-w-full bg-gradient-to-b from-black/80 via-black/50 to-transparent transition-colors duration-500"
-                    style={{ backgroundColor: edgeColors.topColor ? `${edgeColors.topColor.replace('rgb', 'rgba').replace(')', ', 0.65)')}` : 'rgba(0,0,0,0.65)' }}
+                    className="absolute inset-0 bg-cover bg-center scale-105 blur-[12px] opacity-85 saturate-125 transition-all duration-700"
+                    style={{ backgroundImage: `url(${displayCoverUrl})` }}
+                />
+                {/* Subtle Top Header Scrim + Bottom Fade straight into solid mainBgColor (matches album page) */}
+                <div 
+                    className="absolute inset-0"
+                    style={{
+                        background: `linear-gradient(to bottom, rgba(0,0,0,0.38) 0%, rgba(0,0,0,0.12) 28%, ${mainBgColor} 96%, ${mainBgColor} 100%)`
+                    }}
+                />
+            </div>
+
+            {/* Top Navigation: Fused Back + Brand Pill on Left, Share on Right (No solid wrapper div!) */}
+            <header className="relative z-30 w-full flex items-center justify-between mb-4 sm:mb-6 px-4 sm:px-6 md:px-12 pt-4 sm:pt-6 max-w-7xl mx-auto">
+                <div className="flex items-center bg-black/50 hover:bg-black/70 backdrop-blur-md rounded-full border border-white/20 shadow-lg p-1 transition-colors">
+                    <button 
+                        onClick={handleBack}
+                        className="w-8 h-8 sm:w-9 sm:h-9 rounded-full aspect-square shrink-0 hover:bg-white/15 active:scale-95 text-white flex items-center justify-center transition cursor-pointer"
+                        title="Go Back"
+                    >
+                        <ArrowLeft size={17} />
+                    </button>
+                    <div className="h-4 w-px bg-white/20 mx-1" />
+                    <button
+                        onClick={() => router.push("/")}
+                        className="flex items-center gap-1.5 pl-1 pr-3 py-1 hover:bg-white/15 rounded-full active:scale-95 transition cursor-pointer select-none"
+                        title="GrooveEstrella Home"
+                    >
+                        <img src="/in.svg" alt="GrooveEstrella" className="w-4 h-4 sm:w-5 sm:h-5 object-contain shrink-0" />
+                        <span className="text-xs font-bold text-white tracking-tight font-display">GrooveEstrella</span>
+                    </button>
+                </div>
+
+                <button 
+                    onClick={handleNativeShare}
+                    className="w-10 h-10 rounded-full aspect-square shrink-0 bg-black/50 hover:bg-black/70 active:scale-95 text-white flex items-center justify-center transition backdrop-blur-md cursor-pointer border border-white/20 shadow-lg"
+                    title="Share Artist"
                 >
-                    <header className="w-full max-w-7xl mx-auto px-4 sm:px-6 md:px-12 pt-4 pb-3 sm:pt-5 sm:pb-4 flex items-center justify-between">
-                        {/* Fused Back + GrooveEstrella Brand Pill */}
-                        <div className="flex items-center bg-black/75 hover:bg-black/85 backdrop-blur-xl rounded-full border border-white/20 shadow-2xl p-1 transition-all">
-                            <button 
-                                onClick={handleBack}
-                                className="w-8 h-8 sm:w-9 sm:h-9 rounded-full aspect-square shrink-0 hover:bg-white/15 active:scale-95 text-white flex items-center justify-center transition cursor-pointer"
-                                title="Go Back"
-                            >
-                                <ArrowLeft size={17} />
-                            </button>
-                            <div className="h-4 w-px bg-white/20 mx-1" />
-                            <button
-                                onClick={() => router.push("/")}
-                                className="flex items-center gap-1.5 pl-1 pr-3 py-1 hover:bg-white/15 rounded-full active:scale-95 transition cursor-pointer select-none"
-                                title="GrooveEstrella Home"
-                            >
-                                <img src="/in.svg" alt="GrooveEstrella" className="w-4 h-4 sm:w-5 sm:h-5 object-contain shrink-0" />
-                                <span className="text-xs font-bold text-white tracking-tight font-display">GrooveEstrella</span>
-                            </button>
-                        </div>
+                    <Share2 size={18} />
+                </button>
+            </header>
 
-                        <button 
-                            onClick={handleNativeShare}
-                            className="w-10 h-10 rounded-full aspect-square shrink-0 bg-black/75 hover:bg-black/85 active:scale-95 text-white flex items-center justify-center transition backdrop-blur-xl cursor-pointer border border-white/20 shadow-2xl"
-                            title="Share Artist"
-                        >
-                            <Share2 size={18} />
-                        </button>
-                    </header>
+            {/* MOBILE HERO: Full unzoomed image with top & bottom fade matching Album page */}
+            <div className="md:hidden relative z-10 w-full max-w-full overflow-hidden">
+                <div className="relative w-full">
+                    <img 
+                        src={displayCoverUrl} 
+                        alt={artist.name} 
+                        className="w-full max-w-full h-auto max-h-[110vw] object-cover object-top select-none block"
+                        onError={(e) => { e.currentTarget.src = 'https://placehold.co/800x800/17020B/E8A87C?text=Artist'; }}
+                    />
+
+                    {/* Top Scrim Fade (identical to album page line 475) */}
+                    <div 
+                        className="absolute inset-x-0 top-0 h-28 pointer-events-none z-10"
+                        style={{
+                            background: 'linear-gradient(to bottom, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.12) 50%, transparent 100%)'
+                        }}
+                    />
+
+                    {/* Bottom Fade dissolving seamlessly straight into mainBgColor (identical to album page line 475) */}
+                    <div 
+                        className="absolute inset-x-0 bottom-0 h-36 pointer-events-none z-10"
+                        style={{
+                            background: `linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.06) 30%, ${mainBgColor} 94%, ${mainBgColor} 100%)`
+                        }}
+                    />
                 </div>
 
-                {/* MOBILE HERO: Full unzoomed image with seamless, stepped fade directly into page background */}
-                <div className="md:hidden relative w-full max-w-full overflow-hidden bg-[var(--theme-bg)]">
-                    <div className="relative w-full">
-                        <img 
-                            src={coverUrl} 
-                            alt={artist.name} 
-                            className="w-full max-w-full h-auto max-h-[115vw] object-cover object-top select-none block"
-                            onError={(e) => { e.currentTarget.src = 'https://placehold.co/800x800/17020B/E8A87C?text=Artist'; }}
-                        />
-
-                        {/* Top subtle gradient scrim */}
-                        <div className="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-black/60 to-transparent pointer-events-none z-10" />
-
-                        {/* Seamless photo bottom fade: Merges the base of the image directly and seamlessly into var(--theme-bg) */}
-                        <div 
-                            className="absolute inset-x-0 bottom-0 h-44 pointer-events-none z-10"
-                            style={{
-                                background: `linear-gradient(to bottom, 
-                                    transparent 0%, 
-                                    ${edgeColors.bottomColor ? `${edgeColors.bottomColor.replace('rgb', 'rgba').replace(')', ', 0.35)')}` : 'rgba(0,0,0,0.35)'} 30%, 
-                                    ${edgeColors.bottomColor ? `${edgeColors.bottomColor.replace('rgb', 'rgba').replace(')', ', 0.75)')}` : 'rgba(0,0,0,0.75)'} 60%, 
-                                    var(--theme-bg) 100%
-                                )`
-                            }}
-                        />
-                    </div>
-
-                    {/* Mobile Title & Badges: Sits directly on seamless theme background with minimal vertical space */}
-                    <div className="px-4 sm:px-6 pt-1 pb-1 max-w-5xl mx-auto relative z-20">
-                        <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                            <span className={`inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-[11px] font-black uppercase tracking-wider backdrop-blur-md border shadow-md ${
-                                isGroup 
-                                    ? 'bg-purple-950/70 text-purple-200 border-purple-400/40' 
-                                    : 'bg-emerald-950/70 text-emerald-200 border-emerald-400/40'
-                            }`}>
-                                {isGroup ? <Users size={12} /> : <User size={12} />}
-                                <span>{entityTypeLabel}</span>
+                {/* Mobile Title & Badges: Sitting cleanly on the seamless background */}
+                <div className="px-4 sm:px-6 pt-2 pb-1 max-w-5xl mx-auto relative z-20">
+                    <div className="flex flex-wrap items-center gap-2 mb-1.5">
+                        <span className={`inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-[11px] font-black uppercase tracking-wider backdrop-blur-md border shadow-md ${
+                            isGroup 
+                                ? 'bg-purple-950/70 text-purple-200 border-purple-400/40' 
+                                : 'bg-emerald-950/70 text-emerald-200 border-emerald-400/40'
+                        }`}>
+                            {isGroup ? <Users size={12} /> : <User size={12} />}
+                            <span>{entityTypeLabel}</span>
+                        </span>
+                        {genres.length > 0 && (
+                            <span className="px-3 py-0.5 rounded-full bg-black/60 backdrop-blur-md text-[var(--theme-accent)] text-[11px] font-bold uppercase tracking-wider border border-[var(--theme-accent)]/30">
+                                {genres[0]}
                             </span>
-                            {genres.length > 0 && (
-                                <span className="px-3 py-0.5 rounded-full bg-black/60 backdrop-blur-md text-[var(--theme-accent)] text-[11px] font-bold uppercase tracking-wider border border-[var(--theme-accent)]/30">
-                                    {genres[0]}
-                                </span>
-                            )}
-                        </div>
-
-                        <h1 className="text-3xl sm:text-5xl font-black leading-tight tracking-tight text-[var(--theme-fg)] font-display drop-shadow-[0_2px_12px_rgba(0,0,0,0.45)]">
-                            {artist.name}
-                        </h1>
+                        )}
                     </div>
+
+                    <h1 className="text-3xl sm:text-5xl font-black leading-tight tracking-tight text-[var(--theme-fg)] font-display drop-shadow-[0_2px_12px_rgba(0,0,0,0.45)]">
+                        {artist.name}
+                    </h1>
                 </div>
+            </div>
 
                 {/* PC / DESKTOP HERO: Dedicated widescreen layout where full photo, metadata, name and actions shine together */}
                 <div className="hidden md:block relative w-full max-w-7xl mx-auto px-6 lg:px-12 pt-4 pb-8">
@@ -560,7 +591,6 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
                         </button>
                     </div>
                 </div>
-            </div>
 
             {/* 3. Integrated Sticky Navigation Tabs (Part of the Page, Not an Isolated Component) */}
             <div className="sticky top-0 z-30 bg-[var(--theme-bg)]/90 backdrop-blur-xl border-b border-[var(--theme-border)]/30 mt-6 mb-8 transition-colors w-full">
