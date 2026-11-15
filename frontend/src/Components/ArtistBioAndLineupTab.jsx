@@ -67,9 +67,10 @@ function formatSafeRoles(roles, isFounder = false) {
 function checkIsFounder(member, ogIdSet) {
   if (member?.isFounder) return true;
   if (member?.id && ogIdSet.has(member.id)) return true;
+  if (member?.name && ogIdSet.has(member.name)) return true;
   return (
     Array.isArray(member?.roles) &&
-    member.roles.some((r) => typeof r === "string" && /original|founder/i.test(r))
+    member.roles.some((r) => typeof r === "string" && /original|founder|founding/i.test(r))
   );
 }
 
@@ -135,7 +136,7 @@ function MemberCard({ member, isFounder, periodLabel, accentBorder = false }) {
             {member.name || "Musician"}
           </span>
           {isFounder && (
-            <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-400/15 text-amber-300 border border-amber-400/35 shrink-0">
+            <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/40 shrink-0 shadow-xs">
               Founder
             </span>
           )}
@@ -184,7 +185,11 @@ export default function ArtistBioAndLineupTab({
 
   // Build deduplicated list of all band members & founder lookup
   const { ogIdSet, allBandMembers } = useMemo(() => {
-    const founders = new Set(ogMembers.map((m) => m.id).filter(Boolean));
+    const founders = new Set();
+    for (const m of ogMembers) {
+      if (m?.id) founders.add(m.id);
+      if (m?.name) founders.add(m.name);
+    }
     const map = new Map();
     for (const list of [currentMembers, pastMembers, ogMembers]) {
       for (const m of list) {
@@ -285,50 +290,50 @@ export default function ArtistBioAndLineupTab({
         )}
       </section>
 
-      {/* 2. ARCHIVAL SPECS & METADATA GRID */}
+      {/* 2. ARCHIVAL SPECS & METADATA GRID: 1 box per line on mobile/screens less than PC */}
       <section className="space-y-4 pt-2">
         <h3 className="text-xs font-bold text-[var(--theme-muted)] uppercase tracking-wider">
           Archival Timeline &amp; Geographic Roots
         </h3>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
-          <div className="p-3.5 rounded-2xl bg-[var(--theme-surface)]/70 border border-[var(--theme-border)]/60 space-y-1">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-3.5">
+          <div className="p-4 rounded-2xl bg-[var(--theme-surface)]/70 border border-[var(--theme-border)]/60 space-y-1">
             <span className="text-[11px] font-semibold text-[var(--theme-muted)] flex items-center gap-1.5">
-              <Calendar size={13} className="text-[var(--theme-accent)]" />
+              <Calendar size={14} className="text-[var(--theme-accent)]" />
               <span>{isGroup ? "Formed" : "Born / Started"}</span>
             </span>
-            <p className="text-sm font-bold text-[var(--theme-fg)]">
+            <p className="text-sm sm:text-base font-bold text-[var(--theme-fg)]">
               {beginYear || "Unknown"}
             </p>
           </div>
 
-          <div className="p-3.5 rounded-2xl bg-[var(--theme-surface)]/70 border border-[var(--theme-border)]/60 space-y-1">
+          <div className="p-4 rounded-2xl bg-[var(--theme-surface)]/70 border border-[var(--theme-border)]/60 space-y-1">
             <span className="text-[11px] font-semibold text-[var(--theme-muted)] flex items-center gap-1.5">
-              <Clock size={13} className="text-[var(--theme-accent)]" />
+              <Clock size={14} className="text-[var(--theme-accent)]" />
               <span>Status</span>
             </span>
-            <p className="text-sm font-bold text-[var(--theme-fg)]">
+            <p className="text-sm sm:text-base font-bold text-[var(--theme-fg)]">
               {isEnded
                 ? `${isGroup ? "Disbanded" : "Deceased"}${endYear ? ` (${endYear})` : ""}`
                 : "Active"}
             </p>
           </div>
 
-          <div className="p-3.5 rounded-2xl bg-[var(--theme-surface)]/70 border border-[var(--theme-border)]/60 space-y-1">
+          <div className="p-4 rounded-2xl bg-[var(--theme-surface)]/70 border border-[var(--theme-border)]/60 space-y-1">
             <span className="text-[11px] font-semibold text-[var(--theme-muted)] flex items-center gap-1.5">
-              <MapPin size={13} className="text-[var(--theme-accent)]" />
+              <MapPin size={14} className="text-[var(--theme-accent)]" />
               <span>Origin / Country</span>
             </span>
-            <p className="text-sm font-bold text-[var(--theme-fg)] truncate">
+            <p className="text-sm sm:text-base font-bold text-[var(--theme-fg)]">
               {artist.country || artist.area || "Global"}
             </p>
           </div>
 
-          <div className="p-3.5 rounded-2xl bg-[var(--theme-surface)]/70 border border-[var(--theme-border)]/60 space-y-1">
+          <div className="p-4 rounded-2xl bg-[var(--theme-surface)]/70 border border-[var(--theme-border)]/60 space-y-1">
             <span className="text-[11px] font-semibold text-[var(--theme-muted)] flex items-center gap-1.5">
-              <Disc size={13} className="text-[var(--theme-accent)]" />
+              <Disc size={14} className="text-[var(--theme-accent)]" />
               <span>Entity Format</span>
             </span>
-            <p className="text-sm font-bold text-[var(--theme-fg)] truncate">
+            <p className="text-sm sm:text-base font-bold text-[var(--theme-fg)]">
               {isGroup ? "Musical Band / Group" : "Solo Artist"}
             </p>
           </div>
