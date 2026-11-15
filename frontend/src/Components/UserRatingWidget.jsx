@@ -310,15 +310,30 @@ export default function UserRatingWidget({
       ? Number(communitySummary.avg_stars).toFixed(1)
       : null;
 
+  const isArtist = type === "artist";
+
   if (!isLoaded) {
     return null;
   }
 
   return (
     <>
-      <div className={`relative inline-flex items-center gap-2 select-none ${className}`} ref={quickRateRef}>
-        {/* Ratings Component Capsule (Image 4): [ ★ Rate ] | [ 🎀 8.5★ (11) ] */}
-        <div className="inline-flex items-center gap-1.5 p-1 px-2 sm:px-2.5 rounded-full bg-black/40 backdrop-blur-xl border border-white/15 shadow-md transition-all duration-200 hover:border-amber-400/35">
+      <div className={`relative inline-flex items-center gap-2 select-none flex-wrap ${className}`} ref={quickRateRef}>
+        {/* Primary Action for Albums & Tracks: "Log a Listen" */}
+        {!isArtist && (
+          <button
+            type="button"
+            onClick={() => setIsLogModalOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-black text-zinc-950 bg-gradient-to-r from-amber-400 via-amber-300 to-amber-400 hover:opacity-95 active:scale-95 shadow-md shadow-amber-400/20 transition-all duration-200 cursor-pointer group shrink-0"
+            title="Log a listen with rating, date, review & mood"
+          >
+            <BookOpen size={13} className="text-zinc-950 shrink-0" />
+            <span>Log a Listen</span>
+          </button>
+        )}
+
+        {/* Ratings Component Capsule: [ ★ Rate ] | [ 🎀 8.5★ (11) ] */}
+        <div className="inline-flex items-center gap-1.5 p-1 px-2 sm:px-2.5 rounded-full bg-black/40 backdrop-blur-xl border border-white/15 shadow-md transition-all duration-200 hover:border-amber-400/35 shrink-0">
           {/* Rate Button */}
           <button
             type="button"
@@ -351,7 +366,7 @@ export default function UserRatingWidget({
           {/* Vertical Divider */}
           <div className="w-[1px] h-3.5 bg-white/20 mx-0.5" />
 
-          {/* Community or MusicBrainz Score (Purple ribbon / Award icon per Image 4) */}
+          {/* Community or MusicBrainz Score (Purple ribbon / Award icon) */}
           {communitySummary && Number(communitySummary.total_ratings) > 0 && communityDisplay10 ? (
             <div
               className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-300 pr-1 cursor-help"
@@ -385,17 +400,6 @@ export default function UserRatingWidget({
             </div>
           )}
         </div>
-
-        {/* Quick Log Button (Introduced minimally next to rating component) */}
-        <button
-          type="button"
-          onClick={() => setIsLogModalOpen(true)}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold text-[var(--theme-fg)] bg-black/40 hover:bg-white/10 border border-white/15 hover:border-amber-400/40 backdrop-blur-xl transition-all duration-200 cursor-pointer active:scale-95 shadow-md group"
-          title="Log this album with full journal entry, date & notes"
-        >
-          <BookOpen size={13} className="text-amber-400 group-hover:scale-110 transition-transform" />
-          <span>Log</span>
-        </button>
 
         {/* Quick Rate Popover (1-10 stars, auto-logs upon selection) */}
         {showQuickRate && (
@@ -447,20 +451,24 @@ export default function UserRatingWidget({
                 })}
               </div>
 
-              {/* Link to full journal logging */}
+              {/* Footer info in popover */}
               <div className="pt-1 border-t border-[var(--theme-border)]/50 flex items-center justify-between">
-                <span className="text-[10px] text-[var(--theme-muted)]">Auto-logged to journal</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowQuickRate(false);
-                    setIsLogModalOpen(true);
-                  }}
-                  className="text-[10px] font-bold text-amber-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
-                >
-                  <BookOpen size={10} />
-                  <span>Write review & notes →</span>
-                </button>
+                <span className="text-[10px] text-[var(--theme-muted)]">
+                  {isArtist ? "Rating saved publicly" : "Auto-logged to journal"}
+                </span>
+                {!isArtist && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowQuickRate(false);
+                      setIsLogModalOpen(true);
+                    }}
+                    className="text-[10px] font-bold text-amber-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                  >
+                    <BookOpen size={10} />
+                    <span>Write review & notes →</span>
+                  </button>
+                )}
               </div>
             </div>
           </div>

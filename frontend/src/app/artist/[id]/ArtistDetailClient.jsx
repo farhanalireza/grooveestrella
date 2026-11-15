@@ -448,8 +448,8 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
                         )}
                     </div>
 
-                    {/* Rating summary + Rate button + Log button */}
-                    <div className="mt-4 flex items-center gap-2">
+                    {/* Primary: Rate Capsule; Secondary: View Discography */}
+                    <div className="mt-4 flex items-center gap-2.5 flex-wrap">
                         <UserRatingWidget
                             id={artist.id || id}
                             type="artist"
@@ -459,6 +459,15 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
                             itemImage={coverUrl}
                             itemYear={artist.lifeSpan?.begin ? parseInt(String(artist.lifeSpan.begin).slice(0, 4), 10) : null}
                         />
+
+                        <Link
+                            href={`/artist/${artist.id || id}/discography`}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold text-white/90 bg-white/10 hover:bg-white/15 border border-white/15 hover:border-white/30 backdrop-blur-xl transition-all duration-200 cursor-pointer active:scale-95 shadow-md group shrink-0"
+                            title="Explore complete discography"
+                        >
+                            <Disc size={13} className="text-[var(--theme-accent)] group-hover:rotate-45 transition-transform" />
+                            <span>View Discography</span>
+                        </Link>
                     </div>
 
                     {/* Short Bio (with "Read more" if long) */}
@@ -595,8 +604,8 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
                             )}
                         </div>
 
-                        {/* Rating summary + Rate button + Log button */}
-                        <div className="mt-3.5 flex items-center gap-3">
+                        {/* Primary: Rate Capsule; Secondary: View Discography */}
+                        <div className="mt-3.5 flex items-center gap-3 flex-wrap">
                             <UserRatingWidget
                                 id={artist.id || id}
                                 type="artist"
@@ -606,6 +615,15 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
                                 itemImage={coverUrl}
                                 itemYear={artist.lifeSpan?.begin ? parseInt(String(artist.lifeSpan.begin).slice(0, 4), 10) : null}
                             />
+
+                            <Link
+                                href={`/artist/${artist.id || id}/discography`}
+                                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold text-white/90 bg-white/10 hover:bg-white/15 border border-white/15 hover:border-white/30 backdrop-blur-xl transition-all duration-200 cursor-pointer active:scale-95 shadow-md group shrink-0"
+                                title="Explore complete discography"
+                            >
+                                <Disc size={13} className="text-[var(--theme-accent)] group-hover:rotate-45 transition-transform" />
+                                <span>View Discography</span>
+                            </Link>
                         </div>
 
                         {/* Short Bio (with "Read more" if long) */}

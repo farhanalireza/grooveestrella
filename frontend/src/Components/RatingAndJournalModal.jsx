@@ -28,11 +28,11 @@ const RATING_DESCRIPTORS = {
   2: { label: "Terrible", mood: "Heavy flaws" },
   3: { label: "Bad", mood: "Disappointing" },
   4: { label: "Subpar", mood: "Below average" },
-  5: { label: "Mediocre", mood: "Decent ideas, mixed execution" },
+  5: { label: "Mediocre", mood: "Mixed execution" },
   6: { label: "Decent", mood: "Enjoyable listen" },
   7: { label: "Good", mood: "Solid release" },
   8: { label: "Great", mood: "Memorable & strong" },
-  9: { label: "Superb", mood: "Outstanding masterpiece" },
+  9: { label: "Excellent", mood: "Outstanding work" },
   10: { label: "Masterpiece 👑", mood: "Timeless perfection" },
 };
 
@@ -483,149 +483,114 @@ export default function RatingAndJournalModal({
         className="relative w-full sm:max-w-xl max-h-[94vh] sm:max-h-[90vh] rounded-t-3xl sm:rounded-3xl bg-[var(--theme-card)] border border-[var(--theme-border)] shadow-2xl text-[var(--theme-fg)] flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Top Header: Back Button + LOG A LISTEN Pill (Image 5) */}
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-[var(--theme-border)]/40 shrink-0 bg-[var(--theme-surface)]/40">
-          <button
-            type="button"
-            onClick={onClose}
-            className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-[var(--theme-muted)] hover:text-[var(--theme-fg)] transition cursor-pointer"
-          >
-            <ArrowLeft size={16} />
-            <span>Back</span>
-          </button>
+        {/* 1. STICKY TOP HEADER: Artwork + Entity Info + Page Title + Back Button */}
+        <div className="sticky top-0 z-30 flex items-center justify-between px-4 sm:px-5 py-3 border-b border-[var(--theme-border)]/50 bg-[var(--theme-card)]/95 backdrop-blur-xl shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-1.5 rounded-full hover:bg-[var(--theme-surface)] active:scale-95 text-[var(--theme-muted)] hover:text-[var(--theme-fg)] transition cursor-pointer shrink-0"
+              title="Close modal"
+            >
+              <ArrowLeft size={18} />
+            </button>
 
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400/10 border border-amber-400/25 text-amber-300 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider">
-            <BookOpen size={12} />
-            <span>Log a Listen</span>
-          </div>
-        </div>
-
-        {/* Scrollable Content Body */}
-        <div className="p-4 sm:p-6 space-y-4 sm:space-y-5 overflow-y-auto flex-1">
-          {/* Target Media Card (Image 5) */}
-          <div className="flex items-center gap-3.5 p-3.5 rounded-2xl bg-[var(--theme-surface)]/70 border border-[var(--theme-border)]/50">
             {image ? (
               <img
                 src={image}
                 alt={title}
-                className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl object-cover shrink-0 shadow-md ring-1 ring-[var(--theme-border)]"
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg object-cover shrink-0 shadow-sm ring-1 ring-white/15"
                 onError={(e) => {
                   e.currentTarget.src = "https://placehold.co/100x100/17020B/E8A87C?text=Groove";
                 }}
               />
             ) : (
-              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-[var(--theme-card)] flex items-center justify-center text-[var(--theme-muted)] shrink-0 border border-[var(--theme-border)]">
-                <TypeIcon size={24} />
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-[var(--theme-surface)] flex items-center justify-center text-[var(--theme-muted)] shrink-0 border border-[var(--theme-border)]">
+                <TypeIcon size={18} />
               </div>
             )}
-            <div className="min-w-0 flex-1">
-              <span className="inline-flex items-center gap-1 text-[10px] uppercase font-bold tracking-wider text-[var(--theme-accent)]">
-                <TypeIcon size={11} />
-                <span>{type}</span>
-                {effectiveYear && <span>· {effectiveYear}</span>}
-              </span>
-              <h3 className="text-base font-extrabold text-[var(--theme-fg)] truncate">
+
+            <div className="min-w-0">
+              <h3 className="text-xs sm:text-sm font-extrabold text-[var(--theme-fg)] truncate leading-tight">
                 {title}
               </h3>
-              {subtitle && (
-                <p className="text-xs text-[var(--theme-muted)] truncate mt-0.5">
-                  {subtitle}
-                </p>
-              )}
+              <p className="text-[11px] text-[var(--theme-muted)] truncate">
+                {subtitle || (type === "artist" ? "Artist" : type === "track" ? "Track" : "Album")}
+                {effectiveYear ? ` · ${effectiveYear}` : ""}
+              </p>
             </div>
           </div>
 
-          {/* 1. LISTENED DATE (Image 5) */}
-          <div className="p-4 rounded-2xl bg-[var(--theme-surface)]/50 border border-[var(--theme-border)]/60 space-y-2">
-            <div className="flex items-center justify-between">
-              <label
-                htmlFor="modal-listened-date"
-                className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[var(--theme-fg)]"
-              >
-                <Calendar size={13} className="text-amber-400" />
-                <span>1. Listened Date</span>
-              </label>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400/80 bg-amber-400/10 px-2 py-0.5 rounded-full">
-                Required
-              </span>
-            </div>
-
-            <div className="relative">
-              <input
-                id="modal-listened-date"
-                type="date"
-                value={entryDate}
-                onChange={(e) => setEntryDate(e.target.value)}
-                className="w-full rounded-xl bg-[var(--theme-card)] border border-[var(--theme-border)] px-4 py-2.5 text-xs sm:text-sm text-[var(--theme-fg)] font-sans cursor-pointer focus:outline-none focus:border-amber-400/60 transition"
-              />
-            </div>
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400/10 border border-amber-400/25 text-amber-300 text-[10px] sm:text-[11px] font-black uppercase tracking-wider shrink-0 select-none">
+            <BookOpen size={12} />
+            <span>Log a Listen</span>
           </div>
+        </div>
 
-          {/* 2. YOUR RATING (Image 5) */}
-          <div className="p-4 rounded-2xl bg-[var(--theme-surface)]/50 border border-[var(--theme-border)]/60 space-y-3">
+        {/* 2. MAIN SCROLLABLE CONTENT (In Exact Priority Order) */}
+        <div className="p-4 sm:p-6 space-y-5 overflow-y-auto flex-1">
+          {/* SECTION A: YOUR RATING (Most Important Section) */}
+          <div className="p-4 sm:p-5 rounded-2xl bg-[var(--theme-surface)]/60 border border-[var(--theme-border)]/70 space-y-3.5 shadow-sm">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold uppercase tracking-wider text-[var(--theme-fg)] flex items-center gap-1.5">
-                  <Star size={13} className="text-amber-400" />
-                  <span>2. Your Rating</span>
+                <span className="text-sm font-extrabold tracking-tight text-[var(--theme-fg)] flex items-center gap-1.5">
+                  <Star size={15} className="text-amber-400 fill-amber-400" />
+                  <span>Your Rating</span>
                 </span>
-                <span className="text-[9px] text-emerald-400 font-bold bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded-full">
+                <span className="text-[10px] text-emerald-400 font-bold bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
                   Always public
                 </span>
               </div>
 
-              {(starRating > 0 || scoreRating > 0) && (
-                <button
-                  type="button"
-                  onClick={handleClearRating}
-                  className="text-[11px] font-semibold text-rose-400 hover:text-rose-300 hover:underline cursor-pointer"
-                >
-                  Clear Rating
-                </button>
-              )}
+              <div className="flex items-center gap-2">
+                {/* 10 Stars vs 0-100 Switcher */}
+                <div className="flex items-center gap-1 p-0.5 rounded-lg bg-[var(--theme-card)] border border-[var(--theme-border)]">
+                  <button
+                    type="button"
+                    onClick={() => setRatingSystem("stars")}
+                    className={`px-2.5 py-0.5 rounded-md text-[11px] font-bold transition cursor-pointer ${
+                      ratingSystem === "stars"
+                        ? "bg-amber-400 text-zinc-950 shadow-xs"
+                        : "text-[var(--theme-muted)] hover:text-[var(--theme-fg)]"
+                    }`}
+                  >
+                    10 Stars
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRatingSystem("score")}
+                    className={`px-2.5 py-0.5 rounded-md text-[11px] font-bold transition cursor-pointer ${
+                      ratingSystem === "score"
+                        ? "bg-amber-400 text-zinc-950 shadow-xs"
+                        : "text-[var(--theme-muted)] hover:text-[var(--theme-fg)]"
+                    }`}
+                  >
+                    0–100
+                  </button>
+                </div>
+
+                {(starRating > 0 || scoreRating > 0) && (
+                  <button
+                    type="button"
+                    onClick={handleClearRating}
+                    className="text-xs font-semibold text-rose-400 hover:text-rose-300 hover:underline cursor-pointer ml-1"
+                  >
+                    Clear Rating
+                  </button>
+                )}
+              </div>
             </div>
 
-            <p className="text-xs text-[var(--theme-muted)]">
-              Ratings are always public and contribute to community averages.
-            </p>
-
-            {/* Mode Switcher */}
-            <div className="flex items-center gap-1.5 p-0.5 rounded-lg bg-[var(--theme-card)] border border-[var(--theme-border)] w-fit">
-              <button
-                type="button"
-                onClick={() => setRatingSystem("stars")}
-                className={`px-3 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${
-                  ratingSystem === "stars"
-                    ? "bg-amber-400 text-zinc-950 shadow-sm"
-                    : "text-[var(--theme-muted)] hover:text-[var(--theme-fg)]"
-                }`}
-              >
-                10 Stars
-              </button>
-              <button
-                type="button"
-                onClick={() => setRatingSystem("score")}
-                className={`px-3 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${
-                  ratingSystem === "score"
-                    ? "bg-amber-400 text-zinc-950 shadow-sm"
-                    : "text-[var(--theme-muted)] hover:text-[var(--theme-fg)]"
-                }`}
-              >
-                0–100
-              </button>
-            </div>
-
-            {/* 10-Star Scale Selector (Image 5: 2 rows of 5) */}
+            {/* 10-Star Rating Grid (Big, Satisfying Stars) */}
             {ratingSystem === "stars" ? (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <div
-                  className="grid grid-cols-5 gap-1.5 sm:gap-2 px-1 py-1"
+                  className="grid grid-cols-5 sm:grid-cols-10 gap-1.5 sm:gap-2 pt-1"
                   onMouseLeave={() => setHoverRating(0)}
                 >
                   {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((star) => {
                     const isSelected = (hoverRating || starRating) >= star;
-                    const isHoveredExact = hoverRating === star;
-                    const isSelectedExact = starRating === star;
+                    const isSelectedExact = (hoverRating || starRating) === star;
 
                     return (
                       <button
@@ -636,27 +601,29 @@ export default function RatingAndJournalModal({
                           setStarRating(star);
                           setScoreRating(star * 10);
                         }}
-                        className={`p-2 rounded-xl transition-all duration-150 flex flex-col items-center justify-center gap-1 cursor-pointer border ${
+                        className={`p-2 sm:p-2.5 rounded-xl transition-all duration-150 flex flex-col items-center justify-center gap-1 cursor-pointer border active:scale-90 hover:scale-110 ${
                           isSelectedExact
-                            ? "bg-amber-400/15 border-amber-400/50 shadow-[0_0_8px_rgba(251,191,36,0.3)]"
+                            ? "bg-amber-400/20 border-amber-400/60 shadow-[0_0_12px_rgba(251,191,36,0.35)]"
+                            : isSelected
+                            ? "bg-amber-400/10 border-amber-400/30"
                             : "bg-[var(--theme-card)]/80 hover:bg-[var(--theme-card)] border-[var(--theme-border)]"
                         }`}
                         title={`Rate ${star} / 10`}
                       >
                         <Star
-                          size={20}
+                          size={24}
                           fill={isSelected ? "currentColor" : "none"}
                           className={`transition-all duration-150 ${
                             isSelected
-                              ? "text-amber-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.8)] scale-110"
+                              ? "text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.8)]"
                               : "text-zinc-600 hover:text-amber-200"
                           }`}
                         />
                         <span
                           className={`text-xs font-sans font-bold transition-colors ${
-                            isHoveredExact || isSelectedExact
+                            isSelectedExact
                               ? "text-amber-300 font-extrabold"
-                              : "text-[var(--theme-muted)]/70"
+                              : "text-[var(--theme-muted)]/75"
                           }`}
                         >
                           {star}
@@ -666,34 +633,51 @@ export default function RatingAndJournalModal({
                   })}
                 </div>
 
-                <div className="px-3 py-2 rounded-xl bg-[var(--theme-card)] border border-[var(--theme-border)] text-xs min-h-[34px] flex items-center justify-between">
-                  {activeDescriptor ? (
-                    <div className="flex items-center gap-2">
-                      <span className="font-extrabold font-sans text-amber-300 text-sm">
-                        {hoverRating || starRating}/10
-                      </span>
-                      <span className="text-[var(--theme-fg)] font-bold">
-                        {activeDescriptor.label}
-                      </span>
-                      <span className="text-[11px] text-[var(--theme-muted)] hidden sm:inline">
-                        · {activeDescriptor.mood}
+                {/* Live Feedback Label (Special Delight for 10/10 Masterpiece) */}
+                {(hoverRating > 0 || starRating > 0) ? (
+                  (hoverRating === 10 || starRating === 10) ? (
+                    <div className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500/20 via-yellow-400/25 to-amber-500/20 border border-amber-400/50 shadow-[0_0_15px_rgba(251,191,36,0.25)] flex items-center justify-between text-xs animate-fade-in">
+                      <div className="flex items-center gap-2">
+                        <Sparkles size={16} className="text-amber-400 animate-spin-slow" />
+                        <span className="font-black text-amber-300 text-sm">
+                          10/10 · Masterpiece 👑
+                        </span>
+                      </div>
+                      <span className="text-[11px] font-bold text-amber-200/90 uppercase tracking-wide">
+                        Timeless Perfection
                       </span>
                     </div>
                   ) : (
-                    <span className="text-xs text-[var(--theme-muted)]">
-                      Tap a star to score from 1 to 10.
-                    </span>
-                  )}
-                </div>
+                    <div className="px-4 py-2.5 rounded-xl bg-[var(--theme-card)] border border-[var(--theme-border)] text-xs flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="font-extrabold text-amber-300 text-sm">
+                          {hoverRating || starRating}/10
+                        </span>
+                        <span className="text-[var(--theme-fg)] font-bold">
+                          {activeDescriptor?.label}
+                        </span>
+                        {activeDescriptor?.mood && (
+                          <span className="text-[11px] text-[var(--theme-muted)] hidden sm:inline">
+                            · {activeDescriptor.mood}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )
+                ) : (
+                  <div className="px-4 py-2.5 rounded-xl bg-[var(--theme-card)] border border-[var(--theme-border)] text-xs text-[var(--theme-muted)]">
+                    Tap a star to score this release from 1 to 10.
+                  </div>
+                )}
               </div>
             ) : (
-              /* 0-100 Score Slider */
+              /* 0-100 Critic Score Slider */
               <div className="space-y-3 pt-1">
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-[var(--theme-muted)] font-medium">
                     Critic Score (0-100)
                   </span>
-                  <div className="flex items-center gap-1.5 font-sans">
+                  <div className="flex items-baseline gap-1 font-sans">
                     <span className="text-2xl font-black text-amber-300">
                       {scoreRating}
                     </span>
@@ -725,20 +709,36 @@ export default function RatingAndJournalModal({
             )}
           </div>
 
-          {/* 3. REVIEW & THOUGHTS (Image 5) */}
-          <div className="p-4 rounded-2xl bg-[var(--theme-surface)]/50 border border-[var(--theme-border)]/60 space-y-2">
+          {/* SECTION B: LISTENED DATE */}
+          <div className="p-4 sm:p-5 rounded-2xl bg-[var(--theme-surface)]/50 border border-[var(--theme-border)]/60 space-y-2">
+            <label
+              htmlFor="modal-listened-date"
+              className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[var(--theme-fg)]"
+            >
+              <Calendar size={13} className="text-amber-400" />
+              <span>Listened Date</span>
+            </label>
+            <input
+              id="modal-listened-date"
+              type="date"
+              value={entryDate}
+              onChange={(e) => setEntryDate(e.target.value)}
+              className="w-full sm:w-auto min-w-[220px] rounded-xl bg-[var(--theme-card)] border border-[var(--theme-border)] px-4 py-2.5 text-xs sm:text-sm text-[var(--theme-fg)] font-sans cursor-pointer focus:outline-none focus:border-amber-400/60 transition"
+            />
+          </div>
+
+          {/* SECTION C: REVIEW & THOUGHTS */}
+          <div className="p-4 sm:p-5 rounded-2xl bg-[var(--theme-surface)]/50 border border-[var(--theme-border)]/60 space-y-2">
             <div className="space-y-0.5">
               <label
                 htmlFor="modal-review-text"
                 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[var(--theme-fg)]"
               >
                 <BookOpen size={13} className="text-amber-400" />
-                <span>3. Review &amp; Thoughts</span>
+                <span>Review &amp; Thoughts</span>
               </label>
-              <p className="text-xs text-[var(--theme-muted)]">
-                {isPublic
-                  ? "This will appear as your public review on the entity page and your profile."
-                  : "Saved privately to your personal music journal."}
+              <p className="text-[11px] text-[var(--theme-muted)]">
+                This will appear as your public review if you make the entry public.
               </p>
             </div>
 
@@ -746,27 +746,22 @@ export default function RatingAndJournalModal({
               id="modal-review-text"
               value={reflection}
               onChange={(e) => setReflection(e.target.value)}
-              placeholder="Write freely about how this sounded, standout tracks, instrumentation, memories, or production details..."
+              placeholder="What stood out? Favorite tracks, production, lyrics, or how it made you feel..."
               rows={4}
-              className="w-full rounded-2xl bg-[var(--theme-card)] border border-[var(--theme-border)] p-3.5 text-xs sm:text-sm leading-relaxed text-[var(--theme-fg)] placeholder:text-[var(--theme-muted)]/50 focus:outline-none focus:border-amber-400/60 transition resize-none"
+              className="w-full rounded-xl bg-[var(--theme-card)] border border-[var(--theme-border)] p-3.5 text-xs sm:text-sm leading-relaxed text-[var(--theme-fg)] placeholder:text-[var(--theme-muted)]/50 focus:outline-none focus:border-amber-400/60 transition resize-none"
             />
           </div>
 
-          {/* 4. MOOD / CONTEXT (Image 5) */}
-          <div className="p-4 rounded-2xl bg-[var(--theme-surface)]/50 border border-[var(--theme-border)]/60 space-y-2.5">
-            <div className="space-y-0.5">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wider text-[var(--theme-fg)] flex items-center gap-1.5">
-                  <Smile size={13} className="text-amber-400" />
-                  <span>4. Mood / Context</span>
-                </span>
-                <span className="text-[10px] text-[var(--theme-muted)] font-medium">
-                  Optional · Free text
-                </span>
-              </div>
-              <p className="text-xs text-[var(--theme-muted)]">
-                Capture the setting or feeling in your own words — type anything you want.
-              </p>
+          {/* SECTION D: MOOD / CONTEXT (OPTIONAL) */}
+          <div className="p-4 sm:p-5 rounded-2xl bg-[var(--theme-surface)]/50 border border-[var(--theme-border)]/60 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wider text-[var(--theme-fg)] flex items-center gap-1.5">
+                <Smile size={13} className="text-amber-400" />
+                <span>Mood / Context</span>
+              </span>
+              <span className="text-[10px] text-[var(--theme-muted)] font-medium">
+                Optional · Free text
+              </span>
             </div>
 
             <input
@@ -799,19 +794,11 @@ export default function RatingAndJournalModal({
             </div>
           </div>
 
-          {/* 5. ENTRY VISIBILITY (Image 5) */}
-          <div className="p-4 rounded-2xl bg-[var(--theme-surface)]/50 border border-[var(--theme-border)]/60 space-y-2.5">
-            <div className="space-y-0.5">
-              <span className="text-xs font-bold uppercase tracking-wider text-[var(--theme-fg)] block">
-                5. Entry Visibility
-              </span>
-              <p className="text-xs text-[var(--theme-muted)]">
-                Control whether your journal entry and review text are public.{" "}
-                <strong className="text-[var(--theme-fg)]">
-                  Your star rating always remains public.
-                </strong>
-              </p>
-            </div>
+          {/* SECTION E: ENTRY VISIBILITY */}
+          <div className="p-4 sm:p-5 rounded-2xl bg-[var(--theme-surface)]/50 border border-[var(--theme-border)]/60 space-y-2.5">
+            <span className="text-xs font-bold uppercase tracking-wider text-[var(--theme-fg)] block">
+              Entry Visibility
+            </span>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
               <button
@@ -868,11 +855,15 @@ export default function RatingAndJournalModal({
                 </div>
               </button>
             </div>
+
+            <p className="text-[11px] text-[var(--theme-muted)] pt-1">
+              * <strong className="text-[var(--theme-fg)]">Your star rating is always public</strong> and contributes to community averages.
+            </p>
           </div>
         </div>
 
-        {/* Modal Action Buttons Footer (Image 5) */}
-        <div className="p-4 sm:p-5 border-t border-[var(--theme-border)]/40 bg-[var(--theme-surface)]/60 backdrop-blur-xl flex items-center justify-between gap-3 shrink-0">
+        {/* 3. STICKY BOTTOM ACTION BAR: Cancel & Save Listen */}
+        <div className="sticky bottom-0 z-30 p-4 sm:p-5 border-t border-[var(--theme-border)]/50 bg-[var(--theme-card)]/95 backdrop-blur-xl flex items-center justify-between gap-3 shrink-0">
           <div>
             {existingJournalEntry && (
               <button
@@ -900,7 +891,7 @@ export default function RatingAndJournalModal({
               type="button"
               onClick={handleSave}
               disabled={isSaving}
-              className="px-5 py-2 sm:px-6 sm:py-2.5 rounded-full bg-gradient-to-r from-amber-400 via-amber-300 to-amber-400 hover:opacity-95 text-zinc-950 text-xs sm:text-sm font-black transition-all duration-200 active:scale-95 shadow-lg shadow-amber-400/25 flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              className="px-6 py-2 sm:px-7 sm:py-2.5 rounded-full bg-gradient-to-r from-amber-400 via-amber-300 to-amber-400 hover:opacity-95 text-zinc-950 text-xs sm:text-sm font-black transition-all duration-200 active:scale-95 shadow-lg shadow-amber-400/25 flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
             >
               <Sparkles size={14} fill="currentColor" />
               <span>{isSaving ? "Saving..." : "Save Listen"}</span>

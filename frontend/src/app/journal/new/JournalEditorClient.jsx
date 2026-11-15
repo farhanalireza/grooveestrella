@@ -35,13 +35,13 @@ const RATING_DESCRIPTORS = {
   6: { label: "Decent", mood: "Enjoyable listen" },
   7: { label: "Good", mood: "Solid release" },
   8: { label: "Great", mood: "Memorable & strong" },
-  9: { label: "Superb", mood: "Outstanding work" },
-  10: { label: "Masterpiece", mood: "Timeless classic" },
+  9: { label: "Excellent", mood: "Outstanding work" },
+  10: { label: "Masterpiece 👑", mood: "Timeless perfection" },
 };
 
 const LIGHT_CONTEXT_SUGGESTIONS = [
   "Late night headphones",
-  "First full listen",
+  "First listen",
   "Vinyl session",
   "Rainy evening",
   "Deep focus",
@@ -937,42 +937,20 @@ export default function JournalEditorClient() {
         </section>
 
         {/* MAIN JOURNAL FORM */}
-        <form onSubmit={handleSave} className="space-y-7">
+        <form onSubmit={handleSave} className="space-y-6">
           {loadingExisting && (
             <div className="text-xs text-[var(--theme-muted)] animate-pulse px-1">
               Checking for your previous notes and rating...
             </div>
           )}
 
-          {/* 1. LISTENED DATE (Required) */}
-          <div className="rounded-3xl bg-[var(--theme-card)]/70 border border-[var(--theme-border)] p-5 sm:p-6 space-y-2.5">
-            <label
-              htmlFor="listened-date"
-              className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-[var(--theme-fg)]"
-            >
-              <span className="inline-flex items-center gap-2">
-                <Calendar size={14} className="text-[var(--theme-accent)]" />
-                <span>1. Listened Date</span>
-              </span>
-              <span className="text-[10px] text-[var(--theme-accent)] font-semibold">Required</span>
-            </label>
-            <input
-              id="listened-date"
-              type="date"
-              required
-              value={listenedDate}
-              onChange={(e) => setListenedDate(e.target.value)}
-              className="w-full sm:w-auto min-w-[220px] bg-[var(--theme-surface)] border border-[var(--theme-border)] rounded-2xl px-4 py-2.5 text-sm font-semibold text-[var(--theme-fg)] focus:outline-none focus:border-[var(--theme-accent)] cursor-pointer"
-            />
-          </div>
-
-          {/* 2. RATING (Always Public) */}
+          {/* SECTION A: YOUR RATING (Most Important Section) */}
           <div className="rounded-3xl bg-[var(--theme-card)]/70 border border-amber-400/25 p-5 sm:p-6 space-y-4">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <div className="space-y-0.5">
-                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[var(--theme-fg)]">
-                  <Star size={14} className="text-amber-400" fill="currentColor" />
-                  <span>2. Your Rating</span>
+                <div className="flex items-center gap-2 text-sm font-extrabold tracking-tight text-[var(--theme-fg)]">
+                  <Star size={16} className="text-amber-400 fill-amber-400" />
+                  <span>Your Rating</span>
                   <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-[10px] font-bold normal-case tracking-normal">
                     Always public
                   </span>
@@ -1014,7 +992,7 @@ export default function JournalEditorClient() {
                     onClick={handleClearRating}
                     className="text-xs font-semibold text-rose-400 hover:underline cursor-pointer px-1"
                   >
-                    Clear
+                    Clear Rating
                   </button>
                 )}
               </div>
@@ -1023,7 +1001,7 @@ export default function JournalEditorClient() {
             {ratingSystem === "stars" ? (
               <div className="space-y-3">
                 <div
-                  className="grid grid-cols-5 sm:grid-cols-10 gap-1.5 sm:gap-2 pt-1"
+                  className="grid grid-cols-5 sm:grid-cols-10 gap-2 sm:gap-2.5 pt-1"
                   onMouseLeave={() => setHoverRating(0)}
                 >
                   {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((star) => {
@@ -1038,21 +1016,25 @@ export default function JournalEditorClient() {
                           setStarRating(star);
                           setScoreRating(star * 10);
                         }}
-                        className={`py-2 rounded-2xl border flex flex-col items-center justify-center gap-1 transition-all cursor-pointer active:scale-95 ${
-                          isSelected
-                            ? "bg-amber-400/15 border-amber-400/40"
+                        className={`py-2.5 rounded-2xl border flex flex-col items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-90 hover:scale-110 ${
+                          isExact
+                            ? "bg-amber-400/20 border-amber-400/60 shadow-[0_0_12px_rgba(251,191,36,0.35)]"
+                            : isSelected
+                            ? "bg-amber-400/10 border-amber-400/40"
                             : "bg-[var(--theme-surface)]/50 border-[var(--theme-border)]/60 hover:border-amber-400/30"
                         }`}
                         title={`Rate ${star} out of 10`}
                       >
                         <Star
-                          size={20}
+                          size={24}
                           fill={isSelected ? "currentColor" : "none"}
-                          className={isSelected ? "text-amber-400" : "text-[var(--theme-muted)]/50"}
+                          className={`transition-all duration-150 ${
+                            isSelected ? "text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.8)]" : "text-[var(--theme-muted)]/50"
+                          }`}
                         />
                         <span
-                          className={`text-[11px] font-bold ${
-                            isExact ? "text-amber-300" : "text-[var(--theme-muted)]"
+                          className={`text-xs font-bold ${
+                            isExact ? "text-amber-300 font-black" : "text-[var(--theme-muted)]"
                           }`}
                         >
                           {star}
@@ -1062,23 +1044,40 @@ export default function JournalEditorClient() {
                   })}
                 </div>
 
-                <div className="px-3.5 py-2.5 rounded-2xl bg-[var(--theme-surface)]/60 border border-[var(--theme-border)]/70 text-xs flex items-center justify-between">
-                  {activeDescriptor ? (
-                    <div className="flex items-center gap-2">
-                      <span className="font-black text-amber-300 text-sm">
-                        {hoverRating || starRating}/10
+                {/* Live Feedback Card with 10/10 Celebration */}
+                {(hoverRating > 0 || starRating > 0) ? (
+                  (hoverRating === 10 || starRating === 10) ? (
+                    <div className="px-4 py-3 rounded-2xl bg-gradient-to-r from-amber-500/20 via-yellow-400/25 to-amber-500/20 border border-amber-400/50 shadow-[0_0_15px_rgba(251,191,36,0.25)] flex items-center justify-between text-xs animate-fade-in">
+                      <div className="flex items-center gap-2">
+                        <Sparkles size={16} className="text-amber-400 animate-spin-slow" />
+                        <span className="font-black text-amber-300 text-sm">
+                          10/10 · Masterpiece 👑
+                        </span>
+                      </div>
+                      <span className="text-[11px] font-bold text-amber-200/90 uppercase tracking-wide">
+                        Timeless Perfection
                       </span>
-                      <span className="font-bold text-[var(--theme-fg)]">
-                        {activeDescriptor.label}
-                      </span>
-                      <span className="text-[var(--theme-muted)]">· {activeDescriptor.mood}</span>
                     </div>
                   ) : (
-                    <span className="text-[var(--theme-muted)]">
-                      Tap a star to score from 1 to 10.
-                    </span>
-                  )}
-                </div>
+                    <div className="px-4 py-3 rounded-2xl bg-[var(--theme-surface)]/60 border border-[var(--theme-border)]/70 text-xs flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="font-black text-amber-300 text-sm">
+                          {hoverRating || starRating}/10
+                        </span>
+                        <span className="font-bold text-[var(--theme-fg)]">
+                          {activeDescriptor?.label}
+                        </span>
+                        {activeDescriptor?.mood && (
+                          <span className="text-[var(--theme-muted)]">· {activeDescriptor.mood}</span>
+                        )}
+                      </div>
+                    </div>
+                  )
+                ) : (
+                  <div className="px-4 py-3 rounded-2xl bg-[var(--theme-surface)]/60 border border-[var(--theme-border)]/70 text-xs text-[var(--theme-muted)]">
+                    Tap a star to score this release from 1 to 10.
+                  </div>
+                )}
               </div>
             ) : (
               <div className="space-y-3 pt-1">
@@ -1104,8 +1103,8 @@ export default function JournalEditorClient() {
                   }}
                   className="w-full h-2 rounded-lg bg-[var(--theme-surface)] appearance-none cursor-pointer accent-amber-400"
                 />
-                <div className="flex justify-between text-[10px] text-[var(--theme-muted)]">
-                  <span>0</span>
+                <div className="flex justify-between text-[10px] text-[var(--theme-muted)] font-sans">
+                  <span>0 (Unlistenable)</span>
                   <span>50 (Average)</span>
                   <span>75 (Solid)</span>
                   <span>100 (Masterpiece)</span>
@@ -1114,47 +1113,60 @@ export default function JournalEditorClient() {
             )}
           </div>
 
-          {/* 3. REVIEW / THOUGHTS (Large Text Area) */}
+          {/* SECTION B: LISTENED DATE */}
+          <div className="rounded-3xl bg-[var(--theme-card)]/70 border border-[var(--theme-border)] p-5 sm:p-6 space-y-2.5">
+            <label
+              htmlFor="listened-date"
+              className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-[var(--theme-fg)]"
+            >
+              <span className="inline-flex items-center gap-2">
+                <Calendar size={14} className="text-amber-400" />
+                <span>Listened Date</span>
+              </span>
+            </label>
+            <input
+              id="listened-date"
+              type="date"
+              required
+              value={listenedDate}
+              onChange={(e) => setListenedDate(e.target.value)}
+              className="w-full sm:w-auto min-w-[220px] bg-[var(--theme-surface)] border border-[var(--theme-border)] rounded-2xl px-4 py-2.5 text-sm font-semibold text-[var(--theme-fg)] focus:outline-none focus:border-amber-400/60 cursor-pointer"
+            />
+          </div>
+
+          {/* SECTION C: REVIEW & THOUGHTS */}
           <div className="rounded-3xl bg-[var(--theme-card)]/70 border border-[var(--theme-border)] p-5 sm:p-6 space-y-3">
             <div className="space-y-0.5">
               <label
                 htmlFor="review-thoughts"
                 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[var(--theme-fg)]"
               >
-                <BookOpen size={14} className="text-[var(--theme-accent)]" />
-                <span>3. Review &amp; Thoughts</span>
+                <BookOpen size={14} className="text-amber-400" />
+                <span>Review &amp; Thoughts</span>
               </label>
               <p className="text-xs text-[var(--theme-muted)]">
-                {isPublic
-                  ? "This will appear as your public review on the entity page and your profile."
-                  : "Saved privately to your personal music journal."}
+                This will appear as your public review if you make the entry public.
               </p>
             </div>
             <textarea
               id="review-thoughts"
               value={reviewText}
               onChange={(e) => setReviewText(e.target.value)}
-              rows={7}
-              placeholder="Write freely about how this sounded, standout tracks, instrumentation, memories, or production details..."
-              className="w-full rounded-2xl bg-[var(--theme-surface)]/80 border border-[var(--theme-border)] p-4 text-sm sm:text-base leading-relaxed text-[var(--theme-fg)] placeholder:text-[var(--theme-muted)]/50 focus:outline-none focus:border-[var(--theme-accent)] transition resize-y min-h-[160px]"
+              rows={6}
+              placeholder="What stood out? Favorite tracks, production, lyrics, or how it made you feel..."
+              className="w-full rounded-2xl bg-[var(--theme-surface)]/80 border border-[var(--theme-border)] p-4 text-sm sm:text-base leading-relaxed text-[var(--theme-fg)] placeholder:text-[var(--theme-muted)]/50 focus:outline-none focus:border-amber-400/60 transition resize-y min-h-[140px]"
             />
           </div>
 
-          {/* 4. MOOD / CONTEXT (Optional Free Text + Light Suggestions Only) */}
+          {/* SECTION D: MOOD / CONTEXT (Optional) */}
           <div className="rounded-3xl bg-[var(--theme-card)]/70 border border-[var(--theme-border)] p-5 sm:p-6 space-y-3">
-            <div className="space-y-0.5">
-              <label
-                htmlFor="mood-context"
-                className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-[var(--theme-fg)]"
-              >
-                <span>4. Mood / Context</span>
-                <span className="text-[10px] text-[var(--theme-muted)] font-medium normal-case">
-                  Optional · Free text
-                </span>
-              </label>
-              <p className="text-xs text-[var(--theme-muted)]">
-                Capture the setting or feeling in your own words — type anything you want.
-              </p>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wider text-[var(--theme-fg)]">
+                Mood / Context
+              </span>
+              <span className="text-[10px] text-[var(--theme-muted)] font-medium normal-case">
+                Optional · Free text
+              </span>
             </div>
 
             <input
@@ -1164,7 +1176,7 @@ export default function JournalEditorClient() {
               onChange={(e) => setMoodContext(e.target.value)}
               placeholder="e.g. Late night headphones, rainy Sunday spin, nostalgic..."
               maxLength={80}
-              className="w-full rounded-2xl bg-[var(--theme-surface)]/80 border border-[var(--theme-border)] px-4 py-3 text-sm text-[var(--theme-fg)] placeholder:text-[var(--theme-muted)]/50 focus:outline-none focus:border-[var(--theme-accent)] transition"
+              className="w-full rounded-2xl bg-[var(--theme-surface)]/80 border border-[var(--theme-border)] px-4 py-3 text-sm text-[var(--theme-fg)] placeholder:text-[var(--theme-muted)]/50 focus:outline-none focus:border-amber-400/60 transition"
             />
 
             <div className="flex flex-wrap gap-1.5 pt-1">
@@ -1188,19 +1200,11 @@ export default function JournalEditorClient() {
             </div>
           </div>
 
-          {/* 5. VISIBILITY TOGGLE (Public / Private) */}
+          {/* SECTION E: ENTRY VISIBILITY */}
           <div className="rounded-3xl bg-[var(--theme-card)]/70 border border-[var(--theme-border)] p-5 sm:p-6 space-y-3">
-            <div className="space-y-0.5">
-              <span className="text-xs font-bold uppercase tracking-wider text-[var(--theme-fg)] block">
-                5. Entry Visibility
-              </span>
-              <p className="text-xs text-[var(--theme-muted)]">
-                Control whether your journal entry and review text are public.{" "}
-                <strong className="text-[var(--theme-fg)]">
-                  Your star rating always remains public.
-                </strong>
-              </p>
-            </div>
+            <span className="text-xs font-bold uppercase tracking-wider text-[var(--theme-fg)] block">
+              Entry Visibility
+            </span>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
               <button
@@ -1257,17 +1261,21 @@ export default function JournalEditorClient() {
                 </div>
               </button>
             </div>
+
+            <p className="text-xs text-[var(--theme-muted)] pt-1">
+              * <strong className="text-[var(--theme-fg)]">Your star rating is always public</strong> and contributes to community averages.
+            </p>
           </div>
 
-          {/* FORM FOOTER ACTIONS */}
-          <div className="flex items-center justify-between gap-3 pt-2 flex-wrap">
+          {/* STICKY BOTTOM FORM ACTIONS BAR */}
+          <div className="sticky bottom-4 z-20 p-3 sm:p-4 rounded-2xl bg-[var(--theme-card)]/90 backdrop-blur-xl border border-[var(--theme-border)]/80 shadow-2xl flex items-center justify-between gap-3">
             <div>
               {existingJournalId && (
                 <button
                   type="button"
                   onClick={handleDelete}
                   disabled={isSaving}
-                  className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full text-xs font-bold text-rose-400 hover:bg-rose-500/10 border border-rose-500/20 transition cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-rose-400 hover:bg-rose-500/10 border border-rose-500/20 transition cursor-pointer"
                 >
                   <Trash2 size={14} />
                   <span>Delete Entry</span>
@@ -1287,7 +1295,7 @@ export default function JournalEditorClient() {
               <button
                 type="submit"
                 disabled={isSaving || !selectedEntity?.mbid}
-                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-gradient-to-r from-amber-400 via-amber-300 to-amber-400 text-zinc-950 font-black text-xs sm:text-sm hover:opacity-95 active:scale-95 transition shadow-lg shadow-amber-400/20 cursor-pointer disabled:opacity-50"
+                className="inline-flex items-center gap-2 px-7 py-2.5 rounded-full bg-gradient-to-r from-amber-400 via-amber-300 to-amber-400 text-zinc-950 font-black text-xs sm:text-sm hover:opacity-95 active:scale-95 transition shadow-lg shadow-amber-400/20 cursor-pointer disabled:opacity-50"
               >
                 <Sparkles size={15} fill="currentColor" />
                 <span>{isSaving ? "Saving..." : existingJournalId ? "Update Entry" : "Save Listen"}</span>
