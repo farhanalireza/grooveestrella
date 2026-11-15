@@ -18,7 +18,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
 } from "lucide-react";
-import { motion, useMotionValue, useSpring, animate } from "framer-motion";
+import { motion } from "framer-motion";
 import { useTheme } from "@/contexts/ThemeContext";
 
 const NAV_ITEMS = [
@@ -85,11 +85,6 @@ const AppBar = ({
   const pathname = usePathname();
   const { theme, isDark, toggleTheme } = useTheme();
 
-  // Mobile draggable active knob tracking
-  const mobileNavRef = useRef(null);
-  const [isDraggingKnob, setIsDraggingKnob] = useState(false);
-  const [hoveredMobileIndex, setHoveredMobileIndex] = useState(null);
-
   // Instant route-to-section resolution
   const activeSection = useMemo(() => {
     const path = pathname || "";
@@ -102,11 +97,6 @@ const AppBar = ({
     if (path.startsWith("/feedback")) return "Review";
     return selectedSection || "";
   }, [pathname, selectedSection]);
-
-  const activeMobileIndex = useMemo(() => {
-    const idx = MOBILE_NAV_ITEMS.findIndex((i) => i.section === activeSection);
-    return idx >= 0 ? idx : 0;
-  }, [activeSection]);
 
   // Keep parent in sync if setSection is provided
   useEffect(() => {
@@ -124,38 +114,6 @@ const AppBar = ({
   const isDetailPage = pathname?.startsWith("/track/") || pathname?.startsWith("/album/") || pathname?.startsWith("/artist/") || pathname?.startsWith("/playlist/");
   const isSharePage = pathname?.startsWith("/s/");
   const brandName = isSharePage ? "GrooveLink" : "GrooveEstrella";
-
-  // Handle Dragging the Active Knob along the Mobile Tab Bar (Apple / Instagram liquid style)
-  const handleDragKnob = (event, info) => {
-    if (!mobileNavRef.current) return;
-    const rect = mobileNavRef.current.getBoundingClientRect();
-    const touchX = info.point.x - rect.left;
-    const itemWidth = rect.width / MOBILE_NAV_ITEMS.length;
-    const currentHoverIdx = Math.min(
-      Math.max(0, Math.floor(touchX / itemWidth)),
-      MOBILE_NAV_ITEMS.length - 1
-    );
-    setHoveredMobileIndex(currentHoverIdx);
-  };
-
-  const handleDragKnobEnd = (event, info) => {
-    setIsDraggingKnob(false);
-    setHoveredMobileIndex(null);
-    if (!mobileNavRef.current) return;
-    const rect = mobileNavRef.current.getBoundingClientRect();
-    const touchX = info.point.x - rect.left;
-    const itemWidth = rect.width / MOBILE_NAV_ITEMS.length;
-    const targetIdx = Math.min(
-      Math.max(0, Math.floor(touchX / itemWidth)),
-      MOBILE_NAV_ITEMS.length - 1
-    );
-
-    const targetItem = MOBILE_NAV_ITEMS[targetIdx];
-    if (targetItem) {
-      if (setSection) setSection(targetItem.section);
-      router.push(targetItem.route);
-    }
-  };
 
   return (
     <>
@@ -294,46 +252,16 @@ const AppBar = ({
         </div>
       </aside>
 
-      {/* Floating Mobile Bottom Navigation Bar with Apple-Fluid Draggable Active Knob */}
-      <div className="lg:hidden fixed bottom-4 inset-x-4 max-w-md mx-auto z-[350]">
+      {/* Floating Mobile Bottom Navigation Bar with Apple-Fluid Active Tab Indicator */}
+      <div className="lg:hidden fixed bottom-3 inset-x-3 max-w-md mx-auto z-[450] pointer-events-auto">
         <nav 
-          ref={mobileNavRef}
-          className="relative px-1.5 py-1.5 rounded-full bg-[var(--theme-surface-elevated)]/90 backdrop-blur-2xl border border-[var(--theme-border)] shadow-2xl flex justify-around items-center select-none overflow-hidden transition-colors duration-300 touch-none"
+          className="relative px-1.5 py-1.5 rounded-full bg-[var(--theme-surface-elevated)]/90 backdrop-blur-2xl border border-[var(--theme-border)] shadow-2xl flex justify-between items-center select-none overflow-hidden transition-colors duration-300"
         >
-          {/* Liquid Glass Top Reflection */}
-          <div className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-[var(--theme-accent)]/30 to-transparent pointer-events-none" />
+          {/* Subtle Top Glass Reflection */}
+          <div className="absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-[var(--theme-accent)]/25 to-transparent pointer-events-none" />
 
-          {/* FLUID DRAGGABLE APPLE ACTIVE KNOB */}
-          {/* Slides with Apple spring physics or pulls fluidly with thumb and snaps to released tab */}
-          <motion.div
-            drag="x"
-            dragConstraints={mobileNavRef}
-            dragElastic={0.18}
-            onDragStart={() => setIsDraggingKnob(true)}
-            onDrag={handleDragKnob}
-            onDragEnd={handleDragKnobEnd}
-            animate={{
-              left: `${activeMobileIndex * 20}%`,
-            }}
-            transition={{
-              type: "spring",
-              stiffness: 420,
-              damping: 32,
-              mass: 0.8,
-            }}
-            className="absolute top-1.5 bottom-1.5 w-[20%] rounded-full bg-gradient-to-b from-[var(--theme-card)] to-[var(--theme-surface)] border border-[var(--theme-border-active)] shadow-lg shadow-[var(--theme-accent)]/15 z-10 cursor-grab active:cursor-grabbing flex flex-col items-center justify-between py-1 pointer-events-auto"
-          >
-            {/* Apple Pill Pull Bar */}
-            <div className="w-5 h-1 rounded-full bg-[var(--theme-accent)]/60 transition-opacity duration-200" />
-            {isDraggingKnob && (
-              <span className="w-1.5 h-1.5 rounded-full bg-[var(--theme-accent)] animate-ping" />
-            )}
-          </motion.div>
-
-          {/* Nav Tab Items */}
           {MOBILE_NAV_ITEMS.map((item, idx) => {
             const isActive = activeSection === item.section;
-            const isHovered = hoveredMobileIndex === idx;
 
             return (
               <Link
@@ -345,28 +273,38 @@ const AppBar = ({
                 onClick={() => {
                   if (setSection) setSection(item.section);
                 }}
-                className="relative flex-1 py-1.5 px-1 flex flex-col justify-center items-center gap-1 transition-colors duration-200 cursor-pointer select-none z-20"
+                className={`relative flex-1 py-1.5 px-1 flex flex-col justify-center items-center gap-1 rounded-full transition-colors duration-200 cursor-pointer select-none z-10 ${
+                  isActive ? "text-[var(--theme-accent)]" : "text-[var(--theme-muted)] hover:text-[var(--theme-fg)]"
+                }`}
               >
-                {/* Animated Icon */}
+                {/* Active Sliding Pill (Behind Icon & Label with Apple Spring Physics) */}
+                {isActive && (
+                  <motion.div
+                    layoutId="mobileActiveTabPill"
+                    transition={{
+                      type: "spring",
+                      stiffness: 480,
+                      damping: 34,
+                      mass: 0.8,
+                    }}
+                    className="absolute inset-0 rounded-full bg-[var(--theme-card)] border border-[var(--theme-accent)]/30 shadow-md shadow-[var(--theme-accent)]/15 -z-10"
+                  />
+                )}
+
+                {/* Animated Tab Icon */}
                 <motion.div
                   animate={{
-                    scale: isActive ? 1.15 : isHovered ? 1.08 : 1,
-                    y: isActive ? -1 : 0,
+                    scale: isActive ? 1.12 : 1,
+                    y: isActive ? -0.5 : 0,
                   }}
                   transition={{ type: "spring", stiffness: 450, damping: 25 }}
-                  className={`relative z-20 transition-colors duration-200 ${
-                    isActive
-                      ? "text-[var(--theme-accent)]"
-                      : isHovered
-                      ? "text-[var(--theme-fg)]"
-                      : "text-[var(--theme-muted)]"
-                  }`}
+                  className="relative z-10 transition-colors duration-200"
                 >
                   {item.icon}
                 </motion.div>
 
                 {/* Text Label */}
-                <span className={`relative z-20 text-[9px] font-bold tracking-wider uppercase leading-none transition-colors duration-200 ${
+                <span className={`relative z-10 text-[9px] font-bold tracking-wider uppercase leading-none transition-colors duration-200 ${
                   isActive
                     ? "text-[var(--theme-fg)] font-black"
                     : "text-[var(--theme-muted)] font-semibold"

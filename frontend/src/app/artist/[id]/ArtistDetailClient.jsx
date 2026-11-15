@@ -287,12 +287,12 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
             <div className="relative w-full max-w-full overflow-hidden">
                 {/* Top Navigation Bar with edge-matched background */}
                 <div 
-                    className="relative z-20 w-full max-w-full transition-colors duration-500"
-                    style={{ backgroundColor: edgeColors.topColor || '#000000' }}
+                    className="relative z-20 w-full max-w-full bg-gradient-to-b from-black/80 via-black/50 to-transparent transition-colors duration-500"
+                    style={{ backgroundColor: edgeColors.topColor ? `${edgeColors.topColor.replace('rgb', 'rgba').replace(')', ', 0.65)')}` : 'rgba(0,0,0,0.65)' }}
                 >
                     <header className="w-full max-w-7xl mx-auto px-4 sm:px-6 md:px-12 pt-4 pb-3 sm:pt-5 sm:pb-4 flex items-center justify-between">
                         {/* Fused Back + GrooveEstrella Brand Pill */}
-                        <div className="flex items-center bg-black/65 hover:bg-black/75 backdrop-blur-xl rounded-full border border-white/20 shadow-2xl p-1 transition-all">
+                        <div className="flex items-center bg-black/75 hover:bg-black/85 backdrop-blur-xl rounded-full border border-white/20 shadow-2xl p-1 transition-all">
                             <button 
                                 onClick={handleBack}
                                 className="w-8 h-8 sm:w-9 sm:h-9 rounded-full aspect-square shrink-0 hover:bg-white/15 active:scale-95 text-white flex items-center justify-center transition cursor-pointer"
@@ -313,7 +313,7 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
 
                         <button 
                             onClick={handleNativeShare}
-                            className="w-10 h-10 rounded-full aspect-square shrink-0 bg-black/65 hover:bg-black/75 active:scale-95 text-white flex items-center justify-center transition backdrop-blur-xl cursor-pointer border border-white/20 shadow-2xl"
+                            className="w-10 h-10 rounded-full aspect-square shrink-0 bg-black/75 hover:bg-black/85 active:scale-95 text-white flex items-center justify-center transition backdrop-blur-xl cursor-pointer border border-white/20 shadow-2xl"
                             title="Share Artist"
                         >
                             <Share2 size={18} />
@@ -321,38 +321,55 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
                     </header>
                 </div>
 
-                {/* MOBILE HERO: Full unzoomed image with smooth start & end fades based on top and bottom pixel colors */}
-                <div 
-                    className="md:hidden relative w-full max-w-full overflow-hidden transition-colors duration-500"
-                    style={{ backgroundColor: edgeColors.topColor || '#000000' }}
-                >
-                    <img 
-                        src={coverUrl} 
-                        alt={artist.name} 
-                        className="w-full max-w-full h-auto max-h-[125vw] object-cover object-top select-none block"
-                        onError={(e) => { e.currentTarget.src = 'https://placehold.co/800x800/17020B/E8A87C?text=Artist'; }}
-                    />
+                {/* MOBILE HERO: Full unzoomed image with seamless, stepped fade directly into page background */}
+                <div className="md:hidden relative w-full max-w-full overflow-hidden bg-[var(--theme-bg)]">
+                    <div className="relative w-full">
+                        <img 
+                            src={coverUrl} 
+                            alt={artist.name} 
+                            className="w-full max-w-full h-auto max-h-[115vw] object-cover object-top select-none block"
+                            onError={(e) => { e.currentTarget.src = 'https://placehold.co/800x800/17020B/E8A87C?text=Artist'; }}
+                        />
 
-                    {/* Smooth start fade: Uses top pixel color with gentle stepped gradient */}
-                    <div 
-                        className="absolute inset-x-0 top-0 h-16 pointer-events-none z-10"
-                        style={{
-                            background: `linear-gradient(to bottom, ${edgeColors.topColor || '#000000'} 0%, ${edgeColors.topColor ? `${edgeColors.topColor.replace('rgb', 'rgba').replace(')', ', 0.65)')}` : 'rgba(0,0,0,0.65)'} 40%, transparent 100%)`
-                        }}
-                    />
+                        {/* Top subtle gradient scrim */}
+                        <div className="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-black/60 to-transparent pointer-events-none z-10" />
 
-                    {/* Smooth photo bottom fade: Merges the base of the image seamlessly into edgeColors.bottomColor */}
-                    <div 
-                        className="absolute inset-x-0 bottom-0 h-36 pointer-events-none z-10"
-                        style={{
-                            background: `linear-gradient(to bottom, 
-                                transparent 0%, 
-                                ${edgeColors.bottomColor ? `${edgeColors.bottomColor.replace('rgb', 'rgba').replace(')', ', 0.4)')}` : 'rgba(0,0,0,0.4)'} 35%, 
-                                ${edgeColors.bottomColor ? `${edgeColors.bottomColor.replace('rgb', 'rgba').replace(')', ', 0.85)')}` : 'rgba(0,0,0,0.85)'} 75%, 
-                                ${edgeColors.bottomColor || '#000000'} 100%
-                            )`
-                        }}
-                    />
+                        {/* Seamless photo bottom fade: Merges the base of the image directly and seamlessly into var(--theme-bg) */}
+                        <div 
+                            className="absolute inset-x-0 bottom-0 h-44 pointer-events-none z-10"
+                            style={{
+                                background: `linear-gradient(to bottom, 
+                                    transparent 0%, 
+                                    ${edgeColors.bottomColor ? `${edgeColors.bottomColor.replace('rgb', 'rgba').replace(')', ', 0.35)')}` : 'rgba(0,0,0,0.35)'} 30%, 
+                                    ${edgeColors.bottomColor ? `${edgeColors.bottomColor.replace('rgb', 'rgba').replace(')', ', 0.75)')}` : 'rgba(0,0,0,0.75)'} 60%, 
+                                    var(--theme-bg) 100%
+                                )`
+                            }}
+                        />
+                    </div>
+
+                    {/* Mobile Title & Badges: Sits directly on seamless theme background with minimal vertical space */}
+                    <div className="px-4 sm:px-6 pt-1 pb-1 max-w-5xl mx-auto relative z-20">
+                        <div className="flex flex-wrap items-center gap-2 mb-1.5">
+                            <span className={`inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-[11px] font-black uppercase tracking-wider backdrop-blur-md border shadow-md ${
+                                isGroup 
+                                    ? 'bg-purple-950/70 text-purple-200 border-purple-400/40' 
+                                    : 'bg-emerald-950/70 text-emerald-200 border-emerald-400/40'
+                            }`}>
+                                {isGroup ? <Users size={12} /> : <User size={12} />}
+                                <span>{entityTypeLabel}</span>
+                            </span>
+                            {genres.length > 0 && (
+                                <span className="px-3 py-0.5 rounded-full bg-black/60 backdrop-blur-md text-[var(--theme-accent)] text-[11px] font-bold uppercase tracking-wider border border-[var(--theme-accent)]/30">
+                                    {genres[0]}
+                                </span>
+                            )}
+                        </div>
+
+                        <h1 className="text-3xl sm:text-5xl font-black leading-tight tracking-tight text-[var(--theme-fg)] font-display drop-shadow-[0_2px_12px_rgba(0,0,0,0.45)]">
+                            {artist.name}
+                        </h1>
+                    </div>
                 </div>
 
                 {/* PC / DESKTOP HERO: Dedicated widescreen layout where full photo, metadata, name and actions shine together */}
@@ -442,53 +459,10 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
                     </div>
                 </div>
 
-                {/* Mobile Title & Badges: Seamlessly extends with the photo's last pixel edge colors, then dissolves into page background */}
-                <div 
-                    className="md:hidden relative z-20 transition-colors duration-500"
-                    style={{
-                        backgroundColor: edgeColors.bottomColor || '#000000',
-                    }}
-                >
-                    <div className="px-4 sm:px-6 pt-1 pb-3 max-w-5xl mx-auto">
-                        <div className="flex flex-wrap items-center gap-2 mb-2">
-                            <span className={`inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-[11px] font-black uppercase tracking-wider backdrop-blur-md border shadow-md ${
-                                isGroup 
-                                    ? 'bg-purple-950/70 text-purple-200 border-purple-400/40' 
-                                    : 'bg-emerald-950/70 text-emerald-200 border-emerald-400/40'
-                            }`}>
-                                {isGroup ? <Users size={12} /> : <User size={12} />}
-                                <span>{entityTypeLabel}</span>
-                            </span>
-                            {genres.length > 0 && (
-                                <span className="px-3 py-0.5 rounded-full bg-black/60 backdrop-blur-md text-[var(--theme-accent)] text-[11px] font-bold uppercase tracking-wider border border-[var(--theme-accent)]/30">
-                                    {genres[0]}
-                                </span>
-                            )}
-                        </div>
-
-                        <h1 className="text-3xl sm:text-5xl font-black leading-tight tracking-tight text-[var(--theme-fg)] font-display drop-shadow-[0_2px_12px_rgba(0,0,0,0.45)]">
-                            {artist.name}
-                        </h1>
-                    </div>
-
-                    {/* Smooth bottom transition fade: Extends the last pixel colors and gently dissolves into page theme background */}
-                    <div 
-                        className="w-full h-12 pointer-events-none"
-                        style={{
-                            background: `linear-gradient(to bottom, 
-                                ${edgeColors.bottomColor || '#000000'} 0%, 
-                                ${edgeColors.bottomColor ? `${edgeColors.bottomColor.replace('rgb', 'rgba').replace(')', ', 0.65)')}` : 'rgba(0,0,0,0.65)'} 35%, 
-                                ${edgeColors.bottomColor ? `${edgeColors.bottomColor.replace('rgb', 'rgba').replace(')', ', 0.2)')}` : 'rgba(0,0,0,0.2)'} 75%, 
-                                transparent 100%
-                            )`
-                        }}
-                    />
-                </div>
-
                 {/* 2. Metadata, Rating Capsule, Bio & Action Controls (Directly on Page Background - NO CARDS!) */}
-                <div className="w-full max-w-5xl md:max-w-7xl mx-auto px-4 sm:px-6 md:px-12 pt-2">
+                <div className="w-full max-w-5xl md:max-w-7xl mx-auto px-4 sm:px-6 md:px-12 pt-1">
                     {/* Mobile Metadata Section */}
-                    <div className="md:hidden flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 py-3 border-b border-[var(--theme-border)]/30">
+                    <div className="md:hidden flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 py-1.5">
                         <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs sm:text-sm font-medium text-[var(--theme-muted)]">
                             {artist.country && artist.country !== 'Global' ? (
                                 <div className="flex items-center gap-1.5">

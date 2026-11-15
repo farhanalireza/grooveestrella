@@ -1518,27 +1518,25 @@ export async function fetchMusicBrainzArtistServer(id) {
 }
 
 /**
- * Helper to get flag emoji for country code
+ * Helper to get clean country code text (no emoji flags)
+ */
+export function getCountryCode(code) {
+  if (!code || code === 'Global' || code === 'XW') return 'Worldwide';
+  if (code === 'XE') return 'Europe';
+  return code.toUpperCase();
+}
+
+/**
+ * Backward-compatible helper returning clean country code
  */
 export function getCountryFlag(code) {
-  if (!code || code === 'Global' || code === 'XW') return '🌐';
-  if (code === 'XE') return '🇪🇺';
-  if (code.length !== 2) return '🌐';
-  try {
-    const codePoints = code
-      .toUpperCase()
-      .split('')
-      .map((c) => 127397 + c.charCodeAt(0));
-    return String.fromCodePoint(...codePoints);
-  } catch (_) {
-    return '🌐';
-  }
+  return getCountryCode(code);
 }
 
 /**
  * Clusters raw MusicBrainz releases into curated, distinct editions.
- * Combines identical regional pressings into a hierarchical tree structure:
- * Parent Edition -> Child Pressings (with country flags, dates, catalog numbers, and formats).
+ * Combines identical regional pressings and multi-formats into a single hierarchical edition tree:
+ * Parent Edition (contains Vinyl, CD, Cassette, Digital) -> Child Pressings (with country codes, dates, catalog numbers, and format specs).
  */
 export function clusterEditions(releases = [], albumTitle = 'Album', firstReleaseDate = '', canonicalOriginalId = null) {
   if (!releases || releases.length === 0) return [];
@@ -1607,8 +1605,8 @@ export function clusterEditions(releases = [], albumTitle = 'Album', firstReleas
       editionName = "Collector's Edition";
     } else if (isOriginal) {
       category = 'Original';
-      editionKey = `ORIGINAL_RELEASE_${formatFamily}`;
-      editionName = `Original ${canonicalYear || year || ''} Release (${formatFamily})`.trim();
+      editionKey = 'ORIGINAL_RELEASE';
+      editionName = `Original ${canonicalYear || year || ''} Release`.trim();
     } else if (annivMatch) {
       category = 'Anniversary';
       editionKey = `ANNIV_${annivMatch[1]}`;
@@ -1629,8 +1627,8 @@ export function clusterEditions(releases = [], albumTitle = 'Album', firstReleas
     } else if (isRemaster) {
       category = 'Remaster';
       const era = year ? Math.floor(year / 5) * 5 : 'REM';
-      editionKey = `REMASTER_${era}_${formatFamily}`;
-      editionName = `${year ? `${year} ` : ''}Remastered Edition (${formatFamily})`;
+      editionKey = `REMASTER_${era}`;
+      editionName = `${year ? `${year} ` : ''}Remastered Edition`;
     } else if (isLive) {
       category = 'Live';
       editionKey = 'LIVE_EDITION';
@@ -1638,8 +1636,8 @@ export function clusterEditions(releases = [], albumTitle = 'Album', firstReleas
     } else {
       category = 'Standard';
       const decade = year ? `${Math.floor(year / 10) * 10}s` : 'Reissue';
-      editionKey = `REISSUE_${decade}_${formatFamily}`;
-      editionName = `${year ? `${year} ` : ''}${formatFamily} Pressing`;
+      editionKey = `REISSUE_${decade}`;
+      editionName = `${year ? `${year} ` : ''}Reissue`;
     }
 
     if (!editionMap.has(editionKey)) {
@@ -1687,13 +1685,15 @@ export function clusterEditions(releases = [], albumTitle = 'Album', firstReleas
       if (!ed.labels.includes(l.name)) ed.labels.push(l.name);
     });
 
-    // Add this regional release to the nested pressings tree
+    // Add this regional release to the nested pressings tree (clean country codes, NO emoji flags)
+    const code = getCountryCode(r.country);
     ed.pressings.push({
       id: r.id,
       title: cleanTitle,
       disambiguation: disambig || 'Standard Release',
       country: r.country || 'Global',
-      countryFlag: getCountryFlag(r.country),
+      countryCode: code,
+      countryFlag: code,
       date: date || 'Unknown Date',
       year: year,
       format: rawFormat,

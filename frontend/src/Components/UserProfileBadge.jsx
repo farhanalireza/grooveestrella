@@ -175,7 +175,6 @@ export default function UserProfileBadge({
           className={`inline-flex items-center rounded-full font-black uppercase tracking-widest bg-gradient-to-r from-red-950 via-rose-900 to-red-950 border border-red-500/80 text-red-200 shadow-[0_0_15px_rgba(239,68,68,0.55)] ring-1 ring-red-400/40 select-none ${sizeClasses}`}
         >
           <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
             <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500 shadow-[0_0_8px_#ef4444]" />
           </span>
           <ShieldAlert size={size === "sm" ? 11 : 13} className="text-red-400 shrink-0" />
@@ -241,7 +240,7 @@ export default function UserProfileBadge({
           className={`relative inline-flex items-center rounded-full font-black uppercase tracking-wider bg-gradient-to-r from-[#241303] via-[#3d2005] to-[#1c0e02] border border-amber-500/70 text-amber-200 shadow-[0_0_18px_rgba(245,158,11,0.4)] ring-1 ring-amber-400/35 overflow-hidden select-none ${sizeClasses}`}
         >
           {/* Golden Disc */}
-          <GoldenDiscIcon className={discSize} animated={true} />
+          <GoldenDiscIcon className={discSize} animated={false} />
           <span className="text-amber-200 font-black tracking-widest drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
             Critic
           </span>

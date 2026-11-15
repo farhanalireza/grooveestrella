@@ -11,19 +11,10 @@ import {
 import EntityReviewsSection from "./EntityReviewsSection";
 import DiscLoader from "./DiscLoader";
 
-function getCountryFlag(code) {
-  if (!code || code === 'Global' || code === 'XW') return '🌐';
-  if (code === 'XE') return '🇪🇺';
-  if (code.length !== 2) return '🌐';
-  try {
-    const codePoints = code
-      .toUpperCase()
-      .split('')
-      .map((c) => 127397 + c.charCodeAt(0));
-    return String.fromCodePoint(...codePoints);
-  } catch (_) {
-    return '🌐';
-  }
+function getCountryCode(code) {
+  if (!code || code === 'Global' || code === 'XW') return 'Worldwide';
+  if (code === 'XE') return 'Europe';
+  return code.toUpperCase();
 }
 
 export default function MusicLoreAndReviews({
@@ -628,11 +619,10 @@ export default function MusicLoreAndReviews({
                               ed.countries.slice(0, 5).map((c) => (
                                 <span
                                   key={c}
-                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/5 border border-white/5 text-[11px] font-sans font-medium text-[var(--theme-fg)]/90"
+                                  className="inline-flex items-center px-1.5 py-0.5 rounded bg-white/5 border border-white/10 font-mono text-[10px] font-bold text-[var(--theme-fg)]/90"
                                   title={c}
                                 >
-                                  <span>{getCountryFlag(c)}</span>
-                                  <span>{c}</span>
+                                  <span>{getCountryCode(c)}</span>
                                 </span>
                               ))
                             ) : (
