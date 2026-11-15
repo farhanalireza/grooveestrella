@@ -73,6 +73,7 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
 
     const [activeTab, setActiveTab] = useState("music");
     const [artistPalette, setArtistPalette] = useState(null);
+    const [edgeColors, setEdgeColors] = useState({ topColor: null, bottomColor: null });
     const { theme, setAdaptivePalette, clearAdaptivePalette, colors } = useTheme();
 
     const ARTIST_TABS = useMemo(() => {
@@ -199,6 +200,18 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
         return () => { active = false; };
     }, [coverUrl, artist?.name]);
 
+    // Extract exact edge colors for Mobile seamless shadow & blur fade
+    useEffect(() => {
+        if (!displayCoverUrl) return;
+        let active = true;
+        extractEdgeColors(displayCoverUrl).then((colors) => {
+            if (active && colors) {
+                setEdgeColors(colors);
+            }
+        });
+        return () => { active = false; };
+    }, [displayCoverUrl]);
+
     // Sync to global theme when adaptive mode is enabled
     useEffect(() => {
         if (theme === "adaptive" && artistPalette) {
@@ -216,6 +229,8 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
     const mainMutedColor = artistPalette?.muted || colors?.muted || "rgba(255, 255, 255, 0.74)";
     const mainBorderColor = artistPalette?.border || colors?.border || "rgba(255, 255, 255, 0.15)";
     const mainSurfaceColor = artistPalette?.surface || colors?.surface || "rgba(255, 255, 255, 0.10)";
+    const mobileTopColor = edgeColors.topColor || artistPalette?.ambientTop || artistPalette?.bg || mainBgColor;
+    const mobileBottomColor = edgeColors.bottomColor || artistPalette?.deepBase || artistPalette?.bg || mainBgColor;
     const genres = useMemo(() => {
         const rawList = artist.genres || artist.tags || [];
         const valid = [];
@@ -307,10 +322,10 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
                 '--theme-surface': mainSurfaceColor,
             }}
         >
-            {/* 1. Top Artwork Backdrop: Blurred cover behind hero, exactly like Album page */}
-            <div className="absolute top-0 inset-x-0 h-[560px] sm:h-[620px] overflow-hidden pointer-events-none z-0">
+            {/* 1. Top Artwork Backdrop: Blurred cover behind hero — PC only (mobile uses full-bleed image) */}
+            <div className="hidden md:block absolute top-0 inset-x-0 h-[560px] sm:h-[620px] overflow-hidden pointer-events-none z-0">
                 <div 
-                    className="absolute inset-0 bg-cover bg-center scale-105 blur-[12px] opacity-85 saturate-125 transition-all duration-700"
+                    className="absolute inset-0 bg-cover bg-center scale-105 blur-[10px] opacity-90 saturate-125 transition-all duration-700"
                     style={{ backgroundImage: `url(${displayCoverUrl})` }}
                 />
                 {/* Subtle Top Header Scrim + Bottom Fade straight into solid mainBgColor (matches album page) */}
@@ -352,37 +367,45 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
                 </button>
             </header>
 
-            {/* MOBILE HERO: Full unzoomed image with top & bottom fade matching Album page */}
-            <div className="md:hidden relative z-10 w-full max-w-full overflow-hidden">
-                <div className="relative w-full">
-                    <img 
-                        src={displayCoverUrl} 
-                        alt={artist.name} 
-                        className="w-full max-w-full h-auto max-h-[110vw] object-cover object-top select-none block"
-                        onError={(e) => { e.currentTarget.src = 'https://placehold.co/800x800/17020B/E8A87C?text=Artist'; }}
-                    />
-
-                    {/* Top Scrim Fade (identical to album page line 475) */}
+            {/* MOBILE HERO: Full unhidden image with top pixels color fading into image as shadows, and bottom blur fade */}
+            <div className="md:hidden relative z-10 w-full max-w-full">
+                {/* Image Container with Top Pixels Color */}
+                <div className="relative w-full overflow-hidden" style={{ backgroundColor: mobileTopColor }}>
+                    {/* Top color shadow fade: starts as top pixels color behind header, then fades to transparent when the buttons end */}
                     <div 
-                        className="absolute inset-x-0 top-0 h-28 pointer-events-none z-10"
+                        className="absolute inset-x-0 top-0 h-28 pointer-events-none z-20"
                         style={{
-                            background: 'linear-gradient(to bottom, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.12) 50%, transparent 100%)'
+                            background: `linear-gradient(to bottom, ${mobileTopColor} 0%, ${mobileTopColor}EE 40%, ${mobileTopColor}44 75%, transparent 100%)`
                         }}
                     />
 
-                    {/* Bottom Fade dissolving seamlessly straight into mainBgColor (identical to album page line 475) */}
+                    {/* Full Image: full width of screen, full height, no parts hidden */}
+                    <img 
+                        src={displayCoverUrl} 
+                        alt={artist.name} 
+                        className="w-full h-auto block select-none"
+                        onError={(e) => { e.currentTarget.src = 'https://placehold.co/800x800/17020B/E8A87C?text=Artist'; }}
+                    />
+
+                    {/* Subtle bottom edge blend */}
                     <div 
-                        className="absolute inset-x-0 bottom-0 h-36 pointer-events-none z-10"
+                        className="absolute inset-x-0 bottom-0 h-16 pointer-events-none z-10"
                         style={{
-                            background: `linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.06) 30%, ${mainBgColor} 94%, ${mainBgColor} 100%)`
+                            background: `linear-gradient(to bottom, transparent 0%, ${mobileBottomColor}88 60%, ${mobileBottomColor} 100%)`
                         }}
                     />
                 </div>
 
-                {/* Mobile Title & Badges: Sitting cleanly on the seamless background */}
-                <div className="px-4 sm:px-6 pt-2 pb-1 max-w-5xl mx-auto relative z-20">
-                    <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                        <span className={`inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-[11px] font-black uppercase tracking-wider backdrop-blur-md border shadow-md ${
+                {/* Blur fade extension after image ends: shows badges, name, location, lifespan & rating (not on image!) */}
+                <div 
+                    className="relative z-20 w-full px-4 sm:px-6 pt-5 pb-3 transition-colors"
+                    style={{
+                        background: `linear-gradient(to bottom, ${mobileBottomColor} 0%, ${mainBgColor} 100%)`
+                    }}
+                >
+                    {/* Badges: Type & Genres */}
+                    <div className="flex flex-wrap items-center gap-2 mb-2">
+                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider backdrop-blur-md border shadow-sm ${
                             isGroup 
                                 ? 'bg-purple-950/70 text-purple-200 border-purple-400/40' 
                                 : 'bg-emerald-950/70 text-emerald-200 border-emerald-400/40'
@@ -390,126 +413,122 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
                             {isGroup ? <Users size={12} /> : <User size={12} />}
                             <span>{entityTypeLabel}</span>
                         </span>
-                        {genres.length > 0 && (
-                            <span className="px-3 py-0.5 rounded-full bg-black/60 backdrop-blur-md text-[var(--theme-accent)] text-[11px] font-bold uppercase tracking-wider border border-[var(--theme-accent)]/30">
-                                {genres[0]}
+                        {genres.slice(0, 3).map((g, idx) => (
+                            <span key={idx} className="px-3 py-1 rounded-full bg-black/40 backdrop-blur-md text-[var(--theme-accent)] text-[11px] font-bold uppercase tracking-wider border border-[var(--theme-border)]">
+                                {g}
                             </span>
+                        ))}
+                    </div>
+
+                    {/* Artist Name */}
+                    <h1 className="text-3xl sm:text-4xl font-black leading-tight tracking-tight text-[var(--theme-fg)] font-display drop-shadow-[0_2px_8px_rgba(0,0,0,0.5)]">
+                        {artist.name}
+                    </h1>
+
+                    {/* Location & Lifespan details (100% visible, no cut off!) */}
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs font-medium text-[var(--theme-muted)] mt-2">
+                        {artist.country && artist.country !== 'Global' ? (
+                            <div className="flex items-center gap-1.5">
+                                <MapPin size={14} className="text-[var(--theme-accent)] shrink-0" />
+                                <span>{artist.area ? `${artist.area}, ` : ""}{artist.country}</span>
+                            </div>
+                        ) : artist.area ? (
+                            <div className="flex items-center gap-1.5">
+                                <MapPin size={14} className="text-[var(--theme-accent)] shrink-0" />
+                                <span>{artist.area}</span>
+                            </div>
+                        ) : null}
+
+                        {beginYear && (
+                            <div className="flex items-center gap-1.5">
+                                <Calendar size={14} className="text-[var(--theme-accent)] shrink-0" />
+                                <span>
+                                    {isGroup
+                                        ? `Formed ${beginYear}${endYear ? ` · Disbanded ${endYear}` : lifeSpan?.ended ? " · Disbanded" : " · Active"}`
+                                        : `Born ${beginYear}${endYear ? ` · Died ${endYear}` : lifeSpan?.ended ? " · Deceased" : " · Active"}`
+                                    }
+                                </span>
+                            </div>
                         )}
                     </div>
 
-                    <h1 className="text-3xl sm:text-5xl font-black leading-tight tracking-tight text-[var(--theme-fg)] font-display drop-shadow-[0_2px_12px_rgba(0,0,0,0.45)]">
-                        {artist.name}
-                    </h1>
+                    {/* Rating Component & Quick Log Button */}
+                    <div className="mt-3.5 flex items-center gap-2">
+                        <UserRatingWidget
+                            id={artist.id || id}
+                            type="artist"
+                            musicbrainzRating={artist.rating}
+                            itemTitle={artist.name}
+                            itemSubtitle={artist.country || artist.area || "Artist Profile"}
+                            itemImage={coverUrl}
+                            itemYear={artist.lifeSpan?.begin ? parseInt(String(artist.lifeSpan.begin).slice(0, 4), 10) : null}
+                        />
+                    </div>
                 </div>
             </div>
 
-                {/* PC / DESKTOP HERO: Dedicated widescreen layout where full photo, metadata, name and actions shine together */}
-                <div className="hidden md:block relative w-full max-w-7xl mx-auto px-6 lg:px-12 pt-4 pb-8">
-                    <div className="flex flex-col lg:flex-row lg:items-end gap-8 lg:gap-12">
-                        {/* High-res Artist Artwork with Vinyl Disc peek effect & soft ambient glow */}
-                        <div className="relative group shrink-0 mx-auto lg:mx-0">
-                            <div 
-                                className="w-56 h-56 lg:w-72 lg:h-72 rounded-3xl overflow-hidden shadow-2xl relative z-10 border border-white/15 bg-black/40"
-                                style={{
-                                    boxShadow: `0 24px 60px -15px ${colors?.accent ? `${colors.accent}40` : 'rgba(0,0,0,0.7)'}`
-                                }}
-                            >
-                                <img 
-                                    src={coverUrl} 
-                                    alt={artist.name} 
-                                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                                    onError={(e) => { e.currentTarget.src = 'https://placehold.co/800x800/17020B/E8A87C?text=Artist'; }}
-                                />
-                                <div className="absolute inset-0 bg-gradient-to-tr from-black/30 via-transparent to-white/10 pointer-events-none" />
-                            </div>
-                        </div>
-
-                        {/* Desktop Artist Details & Metadata */}
-                        <div className="flex-1 flex flex-col justify-end min-w-0">
-                            {/* Badges */}
-                            <div className="flex flex-wrap items-center gap-2 mb-3">
-                                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider backdrop-blur-md border shadow-md ${
-                                    isGroup 
-                                        ? 'bg-purple-950/70 text-purple-200 border-purple-400/40' 
-                                        : 'bg-emerald-950/70 text-emerald-200 border-emerald-400/40'
-                                }`}>
-                                    {isGroup ? <Users size={13} /> : <User size={13} />}
-                                    <span>{entityTypeLabel}</span>
-                                </span>
-                                {genres.slice(0, 3).map((g, idx) => (
-                                    <span key={idx} className="px-3 py-1 rounded-full bg-[var(--theme-card)] backdrop-blur-md text-[var(--theme-accent)] text-xs font-bold uppercase tracking-wider border border-[var(--theme-border)]">
-                                        {g}
-                                    </span>
-                                ))}
-                            </div>
-
-                            {/* Prominent Artist Name on PC */}
-                            <h1 className="text-4xl lg:text-6xl font-black leading-tight tracking-tight text-[var(--theme-fg)] font-display drop-shadow-[0_2px_12px_rgba(0,0,0,0.5)]">
-                                {artist.name}
-                            </h1>
-
-                            {/* Location & Lifespan & Rating Bar */}
-                            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mt-3 text-sm text-[var(--theme-muted)]">
-                                {artist.country && artist.country !== 'Global' ? (
-                                    <div className="flex items-center gap-1.5">
-                                        <MapPin size={15} className="text-[var(--theme-accent)] shrink-0" />
-                                        <span>{artist.area ? `${artist.area}, ` : ""}{artist.country}</span>
-                                    </div>
-                                ) : artist.area ? (
-                                    <div className="flex items-center gap-1.5">
-                                        <MapPin size={15} className="text-[var(--theme-accent)] shrink-0" />
-                                        <span>{artist.area}</span>
-                                    </div>
-                                ) : null}
-
-                                {beginYear && (
-                                    <div className="flex items-center gap-1.5">
-                                        <Calendar size={15} className="text-[var(--theme-accent)] shrink-0" />
-                                        <span>
-                                            {isGroup
-                                                ? `Formed ${beginYear}${endYear ? ` · Disbanded ${endYear}` : lifeSpan?.ended ? " · Disbanded" : " · Active"}`
-                                                : `Born ${beginYear}${endYear ? ` · Died ${endYear}` : lifeSpan?.ended ? " · Deceased" : " · Active"}`
-                                            }
-                                        </span>
-                                    </div>
-                                )}
-
-                                <div className="ml-auto">
-                                    <UserRatingWidget
-                                        id={artist.id || id}
-                                        type="artist"
-                                        musicbrainzRating={artist.rating}
-                                        itemTitle={artist.name}
-                                        itemSubtitle={artist.country || artist.area || "Artist Profile"}
-                                        itemImage={coverUrl}
-                                        itemYear={artist.lifeSpan?.begin ? parseInt(String(artist.lifeSpan.begin).slice(0, 4), 10) : null}
-                                    />
-                                </div>
-                            </div>
+            {/* PC / DESKTOP HERO: Dedicated widescreen layout where photo, metadata, name and actions shine together */}
+            <div className="hidden md:block relative z-10 w-full max-w-7xl mx-auto px-6 lg:px-12 pt-4 pb-6">
+                <div className="flex flex-col lg:flex-row lg:items-end gap-8 lg:gap-12">
+                    {/* High-res Artist Artwork with soft ambient glow */}
+                    <div className="relative group shrink-0 mx-auto lg:mx-0">
+                        <div 
+                            className="w-56 h-56 lg:w-72 lg:h-72 rounded-3xl overflow-hidden shadow-2xl relative z-10 border border-white/15 bg-black/40"
+                            style={{
+                                boxShadow: `0 24px 60px -15px ${mainAccentColor ? `${mainAccentColor}40` : 'rgba(0,0,0,0.7)'}`
+                            }}
+                        >
+                            <img 
+                                src={displayCoverUrl} 
+                                alt={artist.name} 
+                                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                                onError={(e) => { e.currentTarget.src = 'https://placehold.co/800x800/17020B/E8A87C?text=Artist'; }}
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-tr from-black/30 via-transparent to-white/10 pointer-events-none" />
                         </div>
                     </div>
-                </div>
 
-                {/* 2. Metadata, Rating Capsule, Bio & Action Controls (Directly on Page Background - NO CARDS!) */}
-                <div className="w-full max-w-5xl md:max-w-7xl mx-auto px-4 sm:px-6 md:px-12 pt-1">
-                    {/* Mobile Metadata Section */}
-                    <div className="md:hidden flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 py-1.5">
-                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs sm:text-sm font-medium text-[var(--theme-muted)]">
+                    {/* Desktop Artist Details & Metadata */}
+                    <div className="flex-1 flex flex-col justify-end min-w-0">
+                        {/* Badges */}
+                        <div className="flex flex-wrap items-center gap-2 mb-3">
+                            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider backdrop-blur-md border shadow-md ${
+                                isGroup 
+                                ? 'bg-purple-950/70 text-purple-200 border-purple-400/40' 
+                                : 'bg-emerald-950/70 text-emerald-200 border-emerald-400/40'
+                            }`}>
+                                {isGroup ? <Users size={13} /> : <User size={13} />}
+                                <span>{entityTypeLabel}</span>
+                            </span>
+                            {genres.slice(0, 3).map((g, idx) => (
+                                <span key={idx} className="px-3 py-1 rounded-full bg-[var(--theme-surface)] backdrop-blur-md text-[var(--theme-accent)] text-xs font-bold uppercase tracking-wider border border-[var(--theme-border)]">
+                                    {g}
+                                </span>
+                            ))}
+                        </div>
+
+                        {/* Prominent Artist Name on PC */}
+                        <h1 className="text-4xl lg:text-6xl font-black leading-tight tracking-tight text-[var(--theme-fg)] font-display drop-shadow-[0_2px_12px_rgba(0,0,0,0.5)]">
+                            {artist.name}
+                        </h1>
+
+                        {/* Location & Lifespan */}
+                        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mt-3 text-sm text-[var(--theme-muted)]">
                             {artist.country && artist.country !== 'Global' ? (
                                 <div className="flex items-center gap-1.5">
-                                    <MapPin size={14} className="text-[var(--theme-accent)] shrink-0" />
+                                    <MapPin size={15} className="text-[var(--theme-accent)] shrink-0" />
                                     <span>{artist.area ? `${artist.area}, ` : ""}{artist.country}</span>
                                 </div>
                             ) : artist.area ? (
                                 <div className="flex items-center gap-1.5">
-                                    <MapPin size={14} className="text-[var(--theme-accent)] shrink-0" />
+                                    <MapPin size={15} className="text-[var(--theme-accent)] shrink-0" />
                                     <span>{artist.area}</span>
                                 </div>
                             ) : null}
 
                             {beginYear && (
                                 <div className="flex items-center gap-1.5">
-                                    <Calendar size={14} className="text-[var(--theme-accent)] shrink-0" />
+                                    <Calendar size={15} className="text-[var(--theme-accent)] shrink-0" />
                                     <span>
                                         {isGroup
                                             ? `Formed ${beginYear}${endYear ? ` · Disbanded ${endYear}` : lifeSpan?.ended ? " · Disbanded" : " · Active"}`
@@ -520,7 +539,8 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
                             )}
                         </div>
 
-                        <div className="shrink-0 flex items-center">
+                        {/* Rating Widget - placed minimally below name & location, cleanly aligned! */}
+                        <div className="mt-3.5 flex items-center gap-3">
                             <UserRatingWidget
                                 id={artist.id || id}
                                 type="artist"
@@ -532,68 +552,75 @@ export default function ArtistDetailClient({ id, initialArtist, initialTopTracks
                             />
                         </div>
                     </div>
-
-                    {/* Editorial Bio Snippet with Inline Expander */}
-                    {artist.description && (
-                        <div className="mt-3.5">
-                            <p className={`text-xs sm:text-sm text-[var(--theme-muted)] leading-relaxed font-body ${!expandedHeroDesc ? "line-clamp-2" : ""}`}>
-                                {artist.description}
-                            </p>
-                            <div className="flex items-center gap-3 mt-1.5">
-                                {artist.description.length > 120 && (
-                                    <button
-                                        onClick={() => setExpandedHeroDesc(!expandedHeroDesc)}
-                                        className="text-xs font-bold text-[var(--theme-accent)] hover:opacity-80 transition inline-flex items-center gap-1 cursor-pointer"
-                                    >
-                                        <span>{expandedHeroDesc ? "Show less" : "Read inline"}</span>
-                                    </button>
-                                )}
-                                <button
-                                    onClick={() => setActiveTab("about")}
-                                    className="text-xs font-bold text-[var(--theme-muted)] hover:text-[var(--theme-fg)] transition inline-flex items-center gap-1 cursor-pointer"
-                                >
-                                    <Info size={12} />
-                                    <span>Full lore & facts</span>
-                                </button>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Action Buttons Row */}
-                    <div className="mt-5 flex items-center gap-3 flex-wrap">
-                        {/* Create GrooveCard */}
-                        <button
-                            onClick={() => setIsGrooveCardOpen(true)}
-                            className="w-11 h-11 sm:w-12 sm:h-12 rounded-full aspect-square shrink-0 bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] active:scale-95 text-[var(--theme-fg)] flex items-center justify-center transition-all duration-200 backdrop-blur-md cursor-pointer shadow-md border border-[var(--theme-border)] group"
-                            title="Create GrooveCard"
-                        >
-                            <Sparkles size={19} className="text-[var(--theme-fg)] group-hover:text-[var(--theme-accent)] transition-colors" />
-                        </button>
-
-                        {/* Open GrooveLink */}
-                        <button
-                            onClick={() => setIsGrooveLinkOpen(true)}
-                            className="h-11 sm:h-12 px-6 sm:px-8 rounded-full bg-[var(--theme-accent)] hover:opacity-95 active:scale-95 text-[var(--theme-accent-fg)] font-black text-xs sm:text-sm tracking-wide flex items-center justify-center gap-2 transition-all duration-200 shadow-lg cursor-pointer shrink-0 whitespace-nowrap"
-                            title="Open GrooveLink"
-                        >
-                            <img src="/in.svg" alt="GrooveLink" className="w-4 h-4 sm:w-5 sm:h-5 object-contain shrink-0" />
-                            <span className="whitespace-nowrap">Open GrooveLink</span>
-                            <ChevronRight size={15} className="shrink-0" />
-                        </button>
-
-                        {/* Bookmark / Library Save */}
-                        <button
-                            onClick={toggleSave}
-                            className="w-11 h-11 sm:w-12 sm:h-12 rounded-full aspect-square shrink-0 bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] active:scale-95 text-[var(--theme-fg)] flex items-center justify-center transition-all duration-200 backdrop-blur-md cursor-pointer shadow-md border border-[var(--theme-border)]"
-                            title={saved ? "Remove from Library" : "Add to Library"}
-                        >
-                            {saved ? <BookmarkCheck size={19} className="text-[var(--theme-accent)]" /> : <Bookmark size={19} />}
-                        </button>
-                    </div>
                 </div>
+            </div>
+
+            {/* 2. Bio Snippet & Action Controls (Flows Directly on Page Background) */}
+            <div className="w-full max-w-5xl md:max-w-7xl mx-auto px-4 sm:px-6 md:px-12 pt-2">
+                {/* Editorial Bio Snippet with high-contrast text */}
+                {artist.description && (
+                    <div className="mt-2 max-w-4xl">
+                        <p className={`text-xs sm:text-sm text-[var(--theme-fg)]/85 leading-relaxed font-body ${!expandedHeroDesc ? "line-clamp-2" : ""}`}>
+                            {artist.description}
+                        </p>
+                        <div className="flex items-center gap-3 mt-1.5">
+                            {artist.description.length > 120 && (
+                                <button
+                                    onClick={() => setExpandedHeroDesc(!expandedHeroDesc)}
+                                    className="text-xs font-bold text-[var(--theme-accent)] hover:opacity-80 transition inline-flex items-center gap-1 cursor-pointer"
+                                >
+                                    <span>{expandedHeroDesc ? "Show less" : "Read inline"}</span>
+                                </button>
+                            )}
+                            <button
+                                onClick={() => setActiveTab("about")}
+                                className="text-xs font-bold text-[var(--theme-muted)] hover:text-[var(--theme-fg)] transition inline-flex items-center gap-1 cursor-pointer"
+                            >
+                                <Info size={12} />
+                                <span>Full lore & facts</span>
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* Action Buttons Row */}
+                <div className="mt-4 flex items-center gap-3 flex-wrap">
+                    {/* Create GrooveCard */}
+                    <button
+                        onClick={() => setIsGrooveCardOpen(true)}
+                        className="w-11 h-11 sm:w-12 sm:h-12 rounded-full aspect-square shrink-0 bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] active:scale-95 text-[var(--theme-fg)] flex items-center justify-center transition-all duration-200 backdrop-blur-md cursor-pointer shadow-md border border-[var(--theme-border)] group"
+                        title="Create GrooveCard"
+                    >
+                        <Sparkles size={19} className="text-[var(--theme-fg)] group-hover:text-[var(--theme-accent)] transition-colors" />
+                    </button>
+
+                    {/* Open GrooveLink */}
+                    <button
+                        onClick={() => setIsGrooveLinkOpen(true)}
+                        className="h-11 sm:h-12 px-6 sm:px-8 rounded-full bg-[var(--theme-accent)] hover:opacity-95 active:scale-95 text-[var(--theme-accent-fg)] font-black text-xs sm:text-sm tracking-wide flex items-center justify-center gap-2 transition-all duration-200 shadow-lg cursor-pointer shrink-0 whitespace-nowrap"
+                        title="Open GrooveLink"
+                    >
+                        <img src="/in.svg" alt="GrooveLink" className="w-4 h-4 sm:w-5 sm:h-5 object-contain shrink-0" />
+                        <span className="whitespace-nowrap">Open GrooveLink</span>
+                        <ChevronRight size={15} className="shrink-0" />
+                    </button>
+
+                    {/* Bookmark / Library Save */}
+                    <button
+                        onClick={toggleSave}
+                        className="w-11 h-11 sm:w-12 sm:h-12 rounded-full aspect-square shrink-0 bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] active:scale-95 text-[var(--theme-fg)] flex items-center justify-center transition-all duration-200 backdrop-blur-md cursor-pointer shadow-md border border-[var(--theme-border)]"
+                        title={saved ? "Remove from Library" : "Add to Library"}
+                    >
+                        {saved ? <BookmarkCheck size={19} className="text-[var(--theme-accent)]" /> : <Bookmark size={19} />}
+                    </button>
+                </div>
+            </div>
 
             {/* 3. Integrated Sticky Navigation Tabs (Part of the Page, Not an Isolated Component) */}
-            <div className="sticky top-0 z-30 bg-[var(--theme-bg)]/90 backdrop-blur-xl border-b border-[var(--theme-border)]/30 mt-6 mb-8 transition-colors w-full">
+            <div 
+                className="sticky top-0 z-30 backdrop-blur-xl border-b border-[var(--theme-border)]/30 mt-6 mb-8 transition-colors w-full"
+                style={{ backgroundColor: `color-mix(in srgb, ${mainBgColor} 92%, transparent)` }}
+            >
                 <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 md:px-12">
                     <div className="overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden scrollb-none no-scrollbar">
                         <div className="flex items-center gap-1 sm:gap-2 min-w-max px-1 sm:px-2">

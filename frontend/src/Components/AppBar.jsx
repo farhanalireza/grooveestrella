@@ -112,6 +112,7 @@ const AppBar = ({
   }, [router]);
 
   const isDetailPage = pathname?.startsWith("/track/") || pathname?.startsWith("/album/") || pathname?.startsWith("/artist/") || pathname?.startsWith("/playlist/");
+  const isJournalEditor = pathname?.startsWith("/journal/new") || pathname?.startsWith("/journal/edit");
   const isSharePage = pathname?.startsWith("/s/");
   const brandName = isSharePage ? "GrooveLink" : "GrooveEstrella";
 
@@ -253,69 +254,71 @@ const AppBar = ({
       </aside>
 
       {/* Floating Mobile Bottom Navigation Bar with Apple-Fluid Active Tab Indicator */}
-      <div className="lg:hidden fixed bottom-3 inset-x-3 max-w-md mx-auto z-[450] pointer-events-auto">
-        <nav 
-          className="relative px-1.5 py-1.5 rounded-full bg-[var(--theme-surface-elevated)]/90 backdrop-blur-2xl border border-[var(--theme-border)] shadow-2xl flex justify-between items-center select-none overflow-hidden transition-colors duration-300"
-        >
-          {/* Subtle Top Glass Reflection */}
-          <div className="absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-[var(--theme-accent)]/25 to-transparent pointer-events-none" />
+      {!isJournalEditor && (
+        <div className="lg:hidden fixed bottom-3 inset-x-3 max-w-md mx-auto z-[450] pointer-events-auto">
+          <nav 
+            className="relative px-1.5 py-1.5 rounded-full bg-[var(--theme-surface-elevated)]/90 backdrop-blur-2xl border border-[var(--theme-border)] shadow-2xl flex justify-between items-center select-none overflow-hidden transition-colors duration-300"
+          >
+            {/* Subtle Top Glass Reflection */}
+            <div className="absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-[var(--theme-accent)]/25 to-transparent pointer-events-none" />
 
-          {MOBILE_NAV_ITEMS.map((item, idx) => {
-            const isActive = activeSection === item.section;
+            {MOBILE_NAV_ITEMS.map((item, idx) => {
+              const isActive = activeSection === item.section;
 
-            return (
-              <Link
-                key={idx}
-                href={item.route}
-                prefetch={false}
-                onMouseEnter={() => handlePrefetch(item.route)}
-                onTouchStart={() => handlePrefetch(item.route)}
-                onClick={() => {
-                  if (setSection) setSection(item.section);
-                }}
-                className={`relative flex-1 py-1.5 px-1 flex flex-col justify-center items-center gap-1 rounded-full transition-colors duration-200 cursor-pointer select-none z-10 ${
-                  isActive ? "text-[var(--theme-accent)]" : "text-[var(--theme-muted)] hover:text-[var(--theme-fg)]"
-                }`}
-              >
-                {/* Active Sliding Pill (Behind Icon & Label with Apple Spring Physics) */}
-                {isActive && (
-                  <motion.div
-                    layoutId="mobileActiveTabPill"
-                    transition={{
-                      type: "spring",
-                      stiffness: 480,
-                      damping: 34,
-                      mass: 0.8,
-                    }}
-                    className="absolute inset-0 rounded-full bg-[var(--theme-card)] border border-[var(--theme-accent)]/30 shadow-md shadow-[var(--theme-accent)]/15 -z-10"
-                  />
-                )}
-
-                {/* Animated Tab Icon */}
-                <motion.div
-                  animate={{
-                    scale: isActive ? 1.12 : 1,
-                    y: isActive ? -0.5 : 0,
+              return (
+                <Link
+                  key={idx}
+                  href={item.route}
+                  prefetch={false}
+                  onMouseEnter={() => handlePrefetch(item.route)}
+                  onTouchStart={() => handlePrefetch(item.route)}
+                  onClick={() => {
+                    if (setSection) setSection(item.section);
                   }}
-                  transition={{ type: "spring", stiffness: 450, damping: 25 }}
-                  className="relative z-10 transition-colors duration-200"
+                  className={`relative flex-1 py-1.5 px-1 flex flex-col justify-center items-center gap-1 rounded-full transition-colors duration-200 cursor-pointer select-none z-10 ${
+                    isActive ? "text-[var(--theme-accent)]" : "text-[var(--theme-muted)] hover:text-[var(--theme-fg)]"
+                  }`}
                 >
-                  {item.icon}
-                </motion.div>
+                  {/* Active Sliding Pill (Behind Icon & Label with Apple Spring Physics) */}
+                  {isActive && (
+                    <motion.div
+                      layoutId="mobileActiveTabPill"
+                      transition={{
+                        type: "spring",
+                        stiffness: 480,
+                        damping: 34,
+                        mass: 0.8,
+                      }}
+                      className="absolute inset-0 rounded-full bg-[var(--theme-card)] border border-[var(--theme-accent)]/30 shadow-md shadow-[var(--theme-accent)]/15 -z-10"
+                    />
+                  )}
 
-                {/* Text Label */}
-                <span className={`relative z-10 text-[9px] font-bold tracking-wider uppercase leading-none transition-colors duration-200 ${
-                  isActive
-                    ? "text-[var(--theme-fg)] font-black"
-                    : "text-[var(--theme-muted)] font-semibold"
-                }`}>
-                  {item.label}
-                </span>
-              </Link>
-            );
-          })}
-        </nav>
-      </div>
+                  {/* Animated Tab Icon */}
+                  <motion.div
+                    animate={{
+                      scale: isActive ? 1.12 : 1,
+                      y: isActive ? -0.5 : 0,
+                    }}
+                    transition={{ type: "spring", stiffness: 450, damping: 25 }}
+                    className="relative z-10 transition-colors duration-200"
+                  >
+                    {item.icon}
+                  </motion.div>
+
+                  {/* Text Label */}
+                  <span className={`relative z-10 text-[9px] font-bold tracking-wider uppercase leading-none transition-colors duration-200 ${
+                    isActive
+                      ? "text-[var(--theme-fg)] font-black"
+                      : "text-[var(--theme-muted)] font-semibold"
+                  }`}>
+                    {item.label}
+                  </span>
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
+      )}
     </>
   );
 };

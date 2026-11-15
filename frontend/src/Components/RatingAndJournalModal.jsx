@@ -4,19 +4,20 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import {
+  ArrowLeft,
   X,
   Star,
   BookOpen,
   Calendar,
   Sparkles,
-  Tag,
   Check,
   Trash2,
   Lock,
   Globe,
-  Sliders,
   Smile,
   Disc,
+  User,
+  Music,
 } from "lucide-react";
 import { toast } from "@/lib/toast";
 import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
@@ -36,19 +37,13 @@ const RATING_DESCRIPTORS = {
 };
 
 const SUGGESTED_MOODS = [
-  { id: "Euphoric", label: "✨ Euphoric" },
-  { id: "Late Night", label: "🌙 Late Night" },
-  { id: "Introspective", label: "💭 Introspective" },
-  { id: "Chill", label: "☕ Chill" },
-  { id: "Melancholic", label: "🌧️ Melancholic" },
-  { id: "Energetic", label: "⚡ Energetic" },
-  { id: "Road Trip", label: "🚗 Road Trip" },
-  { id: "Focus", label: "🎧 Focus" },
-];
-
-const SUGGESTED_TAGS = [
-  "Vinyl Session", "Headphones", "Audiophile", "Nostalgic", 
-  "Favorite Pressing", "Summer Vibe", "First Listen", "Masterclass"
+  "Late night headphones",
+  "First full listen",
+  "Vinyl session",
+  "Rainy evening",
+  "Deep focus",
+  "Morning coffee",
+  "Live memories",
 ];
 
 export default function RatingAndJournalModal({
@@ -75,8 +70,7 @@ export default function RatingAndJournalModal({
   const [scoreRating, setScoreRating] = useState(initialRating ? initialRating * 10 : 80);
 
   const [reflection, setReflection] = useState(initialReview || "");
-  const [selectedMood, setSelectedMood] = useState("");
-  const [selectedTags, setSelectedTags] = useState([]);
+  const [moodContext, setMoodContext] = useState("");
   const [isPublic, setIsPublic] = useState(true);
   const [entryDate, setEntryDate] = useState(() => {
     return new Date().toISOString().split("T")[0];
@@ -135,8 +129,7 @@ export default function RatingAndJournalModal({
         if (match) {
           setExistingJournalEntry(match);
           setReflection(match.review || match.reflection || match.entry_text || "");
-          setSelectedTags(Array.isArray(match.tags) ? match.tags : []);
-          setSelectedMood(match.mood || "");
+          setMoodContext(match.mood || "");
           setIsPublic(match.is_public !== undefined ? match.is_public : true);
           if (match.date || match.listened_date) {
             const rawDate = match.date || match.listened_date;
@@ -149,13 +142,12 @@ export default function RatingAndJournalModal({
         } else {
           setExistingJournalEntry(null);
           setReflection(initialReview || "");
-          setSelectedTags([]);
-          setSelectedMood("");
+          setMoodContext("");
           setIsPublic(true);
         }
       }
 
-      // 3. Check Supabase Cloud if user is authenticated to accurately load cloud journal
+      // 3. Supabase Cloud Sync check
       if (user && isSupabaseConfigured()) {
         const supabase = createClient();
         (async () => {
@@ -193,7 +185,7 @@ export default function RatingAndJournalModal({
                   is_public: cloudEntry.is_public,
                 }));
                 if (cloudEntry.entry_text) setReflection(cloudEntry.entry_text);
-                if (cloudEntry.mood) setSelectedMood(cloudEntry.mood);
+                if (cloudEntry.mood) setMoodContext(cloudEntry.mood);
                 if (cloudEntry.listened_date) setEntryDate(cloudEntry.listened_date.split("T")[0]);
                 if (cloudEntry.is_public !== undefined) setIsPublic(cloudEntry.is_public);
                 if (cloudEntry.user_ratings) {
@@ -232,12 +224,6 @@ export default function RatingAndJournalModal({
     return RATING_DESCRIPTORS[activeScore] || null;
   }, [hoverRating, starRating]);
 
-  const toggleTag = (tag) => {
-    setSelectedTags((prev) =>
-      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
-    );
-  };
-
   const handleClearRating = () => {
     setStarRating(0);
     setScoreRating(0);
@@ -255,7 +241,7 @@ export default function RatingAndJournalModal({
   const handleSave = async () => {
     const activeScore = ratingSystem === "stars" ? starRating : scoreRating;
     if (activeScore === 0 && !reflection.trim()) {
-      toast.warning("Please choose a rating or write a journal note.");
+      toast.warning("Please choose a rating or write a review note.");
       return;
     }
 
@@ -303,8 +289,8 @@ export default function RatingAndJournalModal({
         ratingSystem,
         date: entryDate,
         review: reflection.trim(),
-        mood: selectedMood,
-        tags: selectedTags,
+        mood: moodContext.trim(),
+        tags: [],
         is_public: isPublic,
         updatedAt: Date.now(),
         createdAt: existingJournalEntry?.createdAt || Date.now(),
@@ -316,19 +302,17 @@ export default function RatingAndJournalModal({
       logs.unshift(newEntry);
       localStorage.setItem("groove_journal_logs", JSON.stringify(logs));
 
-      // 3. Supabase Cloud Sync (if user is authenticated and Supabase is configured)
+      // 3. Supabase Cloud Sync
       if (user && isSupabaseConfigured()) {
         try {
           const supabase = createClient();
-          // Step A: Ensure entity exists in music_entities with full year and metadata
           let entityRecordId = null;
           const effectiveYear = Number.isInteger(year) ? year : Number.isInteger(itemYear) ? itemYear : null;
 
-          // Attempt sync via /api/entity/sync to guarantee complete MusicBrainz data, year, and groovelinks
           try {
-            const syncRes = await fetch('/api/entity/sync', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+            const syncRes = await fetch("/api/entity/sync", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 mbid: id,
                 type: type === "track" ? "track" : type === "artist" ? "artist" : "album",
@@ -344,11 +328,8 @@ export default function RatingAndJournalModal({
                 entityRecordId = syncData.entity.id;
               }
             }
-          } catch (syncErr) {
-            console.warn("Entity sync API skipped or offline:", syncErr?.message);
-          }
+          } catch (_) {}
 
-          // Fallback if API was unavailable: direct database lookup / clean upsert
           if (!entityRecordId) {
             const { data: existingEntity } = await supabase
               .from("music_entities")
@@ -358,12 +339,6 @@ export default function RatingAndJournalModal({
 
             if (existingEntity) {
               entityRecordId = existingEntity.id;
-              if (existingEntity.year === null && effectiveYear) {
-                await supabase
-                  .from("music_entities")
-                  .update({ year: effectiveYear })
-                  .eq("id", existingEntity.id);
-              }
             } else {
               const { data: insertedEntity } = await supabase
                 .from("music_entities")
@@ -383,7 +358,6 @@ export default function RatingAndJournalModal({
           }
 
           if (entityRecordId) {
-            // Step B: Save user rating
             let ratingRecordId = null;
             if (activeScore > 0) {
               const { data: ratingData } = await supabase
@@ -405,12 +379,6 @@ export default function RatingAndJournalModal({
               if (ratingData) ratingRecordId = ratingData.id;
             }
 
-            // Step C: Save or update journal entry (NEVER create duplicates!)
-            const isUuid = (val) =>
-              typeof val === "string" &&
-              /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
-
-            // Check if user already has an existing journal entry for this entity
             const { data: existingJournals } = await supabase
               .from("journals")
               .select("id")
@@ -419,44 +387,30 @@ export default function RatingAndJournalModal({
               .order("created_at", { ascending: false });
 
             let targetJournalId = null;
-            if (journalEntryId && isUuid(journalEntryId)) {
-              targetJournalId = journalEntryId;
-            } else if (existingJournalEntry?.id && isUuid(existingJournalEntry.id)) {
+            if (existingJournalEntry?.id && typeof existingJournalEntry.id === "string") {
               targetJournalId = existingJournalEntry.id;
             } else if (existingJournals && existingJournals.length > 0) {
               targetJournalId = existingJournals[0].id;
             }
 
             if (targetJournalId) {
-              // UPDATE the existing journal row
               await supabase
                 .from("journals")
                 .update({
                   entry_text: reflection.trim() || null,
-                  mood: selectedMood || null,
+                  mood: moodContext.trim() || null,
                   listened_date: entryDate,
                   rating_id: ratingRecordId,
                   is_public: isPublic,
                   updated_at: new Date().toISOString(),
                 })
                 .eq("id", targetJournalId);
-
-              // Auto-heal: If duplicate entries existed from previous attempts, delete the extras!
-              if (existingJournals && existingJournals.length > 1) {
-                const staleIds = existingJournals
-                  .filter((j) => j.id !== targetJournalId)
-                  .map((j) => j.id);
-                if (staleIds.length > 0) {
-                  await supabase.from("journals").delete().in("id", staleIds);
-                }
-              }
             } else {
-              // INSERT a single new journal entry
               await supabase.from("journals").insert({
                 user_id: user.id,
                 entity_id: entityRecordId,
                 entry_text: reflection.trim() || null,
-                mood: selectedMood || null,
+                mood: moodContext.trim() || null,
                 listened_date: entryDate,
                 rating_id: ratingRecordId,
                 is_public: isPublic,
@@ -464,7 +418,7 @@ export default function RatingAndJournalModal({
             }
           }
         } catch (cloudErr) {
-          console.warn("Could not sync journal to Supabase cloud:", cloudErr?.message);
+          console.warn("Could not sync to Supabase:", cloudErr?.message);
         }
       }
 
@@ -491,14 +445,12 @@ export default function RatingAndJournalModal({
   const handleDeleteEntry = async () => {
     if (!existingJournalEntry) return;
     try {
-      // Local removal
       const rawJournal = localStorage.getItem("groove_journal_logs");
       if (rawJournal) {
         const logs = JSON.parse(rawJournal).filter((l) => l.id !== existingJournalEntry.id);
         localStorage.setItem("groove_journal_logs", JSON.stringify(logs));
       }
 
-      // Supabase removal
       if (user && isSupabaseConfigured() && existingJournalEntry.id) {
         try {
           const supabase = createClient();
@@ -518,43 +470,40 @@ export default function RatingAndJournalModal({
 
   if (!isOpen || !mounted) return null;
 
+  const TypeIcon = type === "artist" ? User : type === "track" ? Music : Disc;
+  const effectiveYear = Number.isInteger(year) ? year : Number.isInteger(itemYear) ? itemYear : null;
+
   // Render via React Portal to document.body to ensure it floats above all navbars and cards!
   return createPortal(
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-md animate-fade-in"
+      className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center bg-black/85 backdrop-blur-md animate-fade-in p-0 sm:p-4"
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-xl max-h-[90vh] rounded-3xl bg-[var(--theme-card)] border border-[var(--theme-border)] shadow-2xl text-[var(--theme-fg)] flex flex-col overflow-hidden"
+        className="relative w-full sm:max-w-xl max-h-[94vh] sm:max-h-[90vh] rounded-t-3xl sm:rounded-3xl bg-[var(--theme-card)] border border-[var(--theme-border)] shadow-2xl text-[var(--theme-fg)] flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header Strip with high z-index and clean controls */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--theme-border)]/60 bg-[var(--theme-surface-elevated)] backdrop-blur-xl shrink-0">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-full bg-amber-400/15 border border-amber-400/30 flex items-center justify-center text-amber-300">
-              <BookOpen size={16} />
-            </div>
-            <div>
-              <h2 className="text-sm font-bold tracking-tight text-[var(--theme-fg)] flex items-center gap-2">
-                <span>Music Journal & Rating</span>
-              </h2>
-              <p className="text-[11px] text-[var(--theme-muted)]">Log this listen, score it, and save your notes.</p>
-            </div>
-          </div>
-
+        {/* Top Header: Back Button + LOG A LISTEN Pill (Image 5) */}
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-[var(--theme-border)]/40 shrink-0 bg-[var(--theme-surface)]/40">
           <button
+            type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-[var(--theme-card)] hover:bg-[var(--theme-surface)] border border-[var(--theme-border)] flex items-center justify-center text-[var(--theme-muted)] hover:text-[var(--theme-fg)] transition cursor-pointer"
-            title="Close"
+            className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-[var(--theme-muted)] hover:text-[var(--theme-fg)] transition cursor-pointer"
           >
-            <X size={16} />
+            <ArrowLeft size={16} />
+            <span>Back</span>
           </button>
+
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400/10 border border-amber-400/25 text-amber-300 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider">
+            <BookOpen size={12} />
+            <span>Log a Listen</span>
+          </div>
         </div>
 
         {/* Scrollable Content Body */}
-        <div className="p-5 sm:p-6 space-y-5 overflow-y-auto flex-1">
-          {/* Target Media Card */}
-          <div className="flex items-center gap-3.5 p-3 rounded-2xl bg-[var(--theme-surface)]/60 border border-[var(--theme-border)]/50">
+        <div className="p-4 sm:p-6 space-y-4 sm:space-y-5 overflow-y-auto flex-1">
+          {/* Target Media Card (Image 5) */}
+          <div className="flex items-center gap-3.5 p-3.5 rounded-2xl bg-[var(--theme-surface)]/70 border border-[var(--theme-border)]/50">
             {image ? (
               <img
                 src={image}
@@ -566,12 +515,14 @@ export default function RatingAndJournalModal({
               />
             ) : (
               <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-[var(--theme-card)] flex items-center justify-center text-[var(--theme-muted)] shrink-0 border border-[var(--theme-border)]">
-                <Disc size={24} />
+                <TypeIcon size={24} />
               </div>
             )}
             <div className="min-w-0 flex-1">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-[var(--theme-accent)]">
-                {type}
+              <span className="inline-flex items-center gap-1 text-[10px] uppercase font-bold tracking-wider text-[var(--theme-accent)]">
+                <TypeIcon size={11} />
+                <span>{type}</span>
+                {effectiveYear && <span>· {effectiveYear}</span>}
               </span>
               <h3 className="text-base font-extrabold text-[var(--theme-fg)] truncate">
                 {title}
@@ -584,32 +535,43 @@ export default function RatingAndJournalModal({
             </div>
           </div>
 
-          {/* Dual Rating System Switcher: 10-Star Scale vs 0-100 Score */}
-          <div className="space-y-3 p-4 rounded-2xl bg-gradient-to-b from-amber-400/5 to-transparent border border-amber-400/20">
+          {/* 1. LISTENED DATE (Image 5) */}
+          <div className="p-4 rounded-2xl bg-[var(--theme-surface)]/50 border border-[var(--theme-border)]/60 space-y-2">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5 p-0.5 rounded-lg bg-[var(--theme-card)] border border-[var(--theme-border)]">
-                <button
-                  type="button"
-                  onClick={() => setRatingSystem("stars")}
-                  className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${
-                    ratingSystem === "stars"
-                      ? "bg-amber-400 text-zinc-950 shadow-sm"
-                      : "text-[var(--theme-muted)] hover:text-[var(--theme-fg)]"
-                  }`}
-                >
-                  10-Star Scale
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setRatingSystem("score")}
-                  className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${
-                    ratingSystem === "score"
-                      ? "bg-amber-400 text-zinc-950 shadow-sm"
-                      : "text-[var(--theme-muted)] hover:text-[var(--theme-fg)]"
-                  }`}
-                >
-                  0–100 Score
-                </button>
+              <label
+                htmlFor="modal-listened-date"
+                className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[var(--theme-fg)]"
+              >
+                <Calendar size={13} className="text-amber-400" />
+                <span>1. Listened Date</span>
+              </label>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400/80 bg-amber-400/10 px-2 py-0.5 rounded-full">
+                Required
+              </span>
+            </div>
+
+            <div className="relative">
+              <input
+                id="modal-listened-date"
+                type="date"
+                value={entryDate}
+                onChange={(e) => setEntryDate(e.target.value)}
+                className="w-full rounded-xl bg-[var(--theme-card)] border border-[var(--theme-border)] px-4 py-2.5 text-xs sm:text-sm text-[var(--theme-fg)] font-sans cursor-pointer focus:outline-none focus:border-amber-400/60 transition"
+              />
+            </div>
+          </div>
+
+          {/* 2. YOUR RATING (Image 5) */}
+          <div className="p-4 rounded-2xl bg-[var(--theme-surface)]/50 border border-[var(--theme-border)]/60 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-[var(--theme-fg)] flex items-center gap-1.5">
+                  <Star size={13} className="text-amber-400" />
+                  <span>2. Your Rating</span>
+                </span>
+                <span className="text-[9px] text-emerald-400 font-bold bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded-full">
+                  Always public
+                </span>
               </div>
 
               {(starRating > 0 || scoreRating > 0) && (
@@ -623,11 +585,41 @@ export default function RatingAndJournalModal({
               )}
             </div>
 
-            {/* 10-Star Scale Selector */}
+            <p className="text-xs text-[var(--theme-muted)]">
+              Ratings are always public and contribute to community averages.
+            </p>
+
+            {/* Mode Switcher */}
+            <div className="flex items-center gap-1.5 p-0.5 rounded-lg bg-[var(--theme-card)] border border-[var(--theme-border)] w-fit">
+              <button
+                type="button"
+                onClick={() => setRatingSystem("stars")}
+                className={`px-3 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${
+                  ratingSystem === "stars"
+                    ? "bg-amber-400 text-zinc-950 shadow-sm"
+                    : "text-[var(--theme-muted)] hover:text-[var(--theme-fg)]"
+                }`}
+              >
+                10 Stars
+              </button>
+              <button
+                type="button"
+                onClick={() => setRatingSystem("score")}
+                className={`px-3 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${
+                  ratingSystem === "score"
+                    ? "bg-amber-400 text-zinc-950 shadow-sm"
+                    : "text-[var(--theme-muted)] hover:text-[var(--theme-fg)]"
+                }`}
+              >
+                0–100
+              </button>
+            </div>
+
+            {/* 10-Star Scale Selector (Image 5: 2 rows of 5) */}
             {ratingSystem === "stars" ? (
               <div className="space-y-2">
                 <div
-                  className="flex items-center justify-between gap-1 sm:gap-2 px-1 py-2 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+                  className="grid grid-cols-5 gap-1.5 sm:gap-2 px-1 py-1"
                   onMouseLeave={() => setHoverRating(0)}
                 >
                   {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((star) => {
@@ -644,23 +636,27 @@ export default function RatingAndJournalModal({
                           setStarRating(star);
                           setScoreRating(star * 10);
                         }}
-                        className="p-1 sm:p-1.5 rounded-lg transition-transform duration-150 hover:scale-125 active:scale-95 cursor-pointer focus:outline-none flex flex-col items-center group"
+                        className={`p-2 rounded-xl transition-all duration-150 flex flex-col items-center justify-center gap-1 cursor-pointer border ${
+                          isSelectedExact
+                            ? "bg-amber-400/15 border-amber-400/50 shadow-[0_0_8px_rgba(251,191,36,0.3)]"
+                            : "bg-[var(--theme-card)]/80 hover:bg-[var(--theme-card)] border-[var(--theme-border)]"
+                        }`}
                         title={`Rate ${star} / 10`}
                       >
                         <Star
-                          size={24}
+                          size={20}
                           fill={isSelected ? "currentColor" : "none"}
-                          className={`transition-all duration-200 ${
+                          className={`transition-all duration-150 ${
                             isSelected
-                              ? "text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.85)] scale-105"
+                              ? "text-amber-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.8)] scale-110"
                               : "text-zinc-600 hover:text-amber-200"
                           }`}
                         />
                         <span
-                          className={`text-[10px] font-sans mt-0.5 font-bold transition-colors ${
+                          className={`text-xs font-sans font-bold transition-colors ${
                             isHoveredExact || isSelectedExact
                               ? "text-amber-300 font-extrabold"
-                              : "text-[var(--theme-muted)]/60"
+                              : "text-[var(--theme-muted)]/70"
                           }`}
                         >
                           {star}
@@ -670,8 +666,7 @@ export default function RatingAndJournalModal({
                   })}
                 </div>
 
-                {/* Descriptor Feedback Banner */}
-                <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-[var(--theme-card)]/90 border border-[var(--theme-border)] text-xs min-h-[38px]">
+                <div className="px-3 py-2 rounded-xl bg-[var(--theme-card)] border border-[var(--theme-border)] text-xs min-h-[34px] flex items-center justify-between">
                   {activeDescriptor ? (
                     <div className="flex items-center gap-2">
                       <span className="font-extrabold font-sans text-amber-300 text-sm">
@@ -685,14 +680,14 @@ export default function RatingAndJournalModal({
                       </span>
                     </div>
                   ) : (
-                    <span className="text-xs text-[var(--theme-muted)] italic">
-                      Tap any star above to rate on the 10-point scale
+                    <span className="text-xs text-[var(--theme-muted)]">
+                      Tap a star to score from 1 to 10.
                     </span>
                   )}
                 </div>
               </div>
             ) : (
-              /* 0-100 Numerical Score Slider */
+              /* 0-100 Score Slider */
               <div className="space-y-3 pt-1">
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-[var(--theme-muted)] font-medium">
@@ -717,7 +712,7 @@ export default function RatingAndJournalModal({
                     setScoreRating(val);
                     setStarRating(Math.round(val / 10));
                   }}
-                  className="w-full h-2 rounded-lg bg-[var(--theme-surface)] appearance-none cursor-pointer accent-amber-400"
+                  className="w-full h-2 rounded-lg bg-[var(--theme-card)] appearance-none cursor-pointer accent-amber-400"
                 />
 
                 <div className="flex justify-between text-[10px] text-[var(--theme-muted)] font-sans">
@@ -730,112 +725,154 @@ export default function RatingAndJournalModal({
             )}
           </div>
 
-          {/* Music Journal Reflection Section */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-[var(--theme-fg)] flex items-center gap-1.5">
-                <BookOpen size={13} className="text-[var(--theme-accent)]" />
-                <span>Journal Notes & Reflections</span>
-              </span>
-
-              {/* Date Stamp */}
-              <div className="flex items-center gap-1.5 text-xs text-[var(--theme-muted)] font-sans">
-                <Calendar size={13} className="text-[var(--theme-accent)]" />
-                <input
-                  type="date"
-                  value={entryDate}
-                  onChange={(e) => setEntryDate(e.target.value)}
-                  className="bg-[var(--theme-card)] border border-[var(--theme-border)] rounded-lg px-2 py-1 text-xs text-[var(--theme-fg)] cursor-pointer focus:outline-none focus:border-[var(--theme-accent)]"
-                />
-              </div>
+          {/* 3. REVIEW & THOUGHTS (Image 5) */}
+          <div className="p-4 rounded-2xl bg-[var(--theme-surface)]/50 border border-[var(--theme-border)]/60 space-y-2">
+            <div className="space-y-0.5">
+              <label
+                htmlFor="modal-review-text"
+                className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[var(--theme-fg)]"
+              >
+                <BookOpen size={13} className="text-amber-400" />
+                <span>3. Review &amp; Thoughts</span>
+              </label>
+              <p className="text-xs text-[var(--theme-muted)]">
+                {isPublic
+                  ? "This will appear as your public review on the entity page and your profile."
+                  : "Saved privately to your personal music journal."}
+              </p>
             </div>
 
             <textarea
+              id="modal-review-text"
               value={reflection}
               onChange={(e) => setReflection(e.target.value)}
-              placeholder="What made this listen stand out? Production details, favorite tracks, emotional resonance, vinyl pressing notes..."
+              placeholder="Write freely about how this sounded, standout tracks, instrumentation, memories, or production details..."
               rows={4}
-              className="w-full rounded-2xl bg-[var(--theme-surface)]/70 border border-[var(--theme-border)] p-3.5 text-sm sm:text-base leading-relaxed text-[var(--theme-fg)] placeholder:text-[var(--theme-muted)]/50 focus:outline-none focus:border-[var(--theme-accent)] resize-none"
+              className="w-full rounded-2xl bg-[var(--theme-card)] border border-[var(--theme-border)] p-3.5 text-xs sm:text-sm leading-relaxed text-[var(--theme-fg)] placeholder:text-[var(--theme-muted)]/50 focus:outline-none focus:border-amber-400/60 transition resize-none"
             />
           </div>
 
-          {/* Listening Mood Pills */}
-          <div className="space-y-2">
-            <span className="text-xs font-semibold text-[var(--theme-muted)] flex items-center gap-1">
-              <Smile size={12} className="text-[var(--theme-accent)]" />
-              <span>Listening Mood</span>
-            </span>
-            <div className="flex flex-wrap gap-1.5">
-              {SUGGESTED_MOODS.map((mood) => {
-                const isSelected = selectedMood === mood.id;
+          {/* 4. MOOD / CONTEXT (Image 5) */}
+          <div className="p-4 rounded-2xl bg-[var(--theme-surface)]/50 border border-[var(--theme-border)]/60 space-y-2.5">
+            <div className="space-y-0.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-[var(--theme-fg)] flex items-center gap-1.5">
+                  <Smile size={13} className="text-amber-400" />
+                  <span>4. Mood / Context</span>
+                </span>
+                <span className="text-[10px] text-[var(--theme-muted)] font-medium">
+                  Optional · Free text
+                </span>
+              </div>
+              <p className="text-xs text-[var(--theme-muted)]">
+                Capture the setting or feeling in your own words — type anything you want.
+              </p>
+            </div>
+
+            <input
+              type="text"
+              value={moodContext}
+              onChange={(e) => setMoodContext(e.target.value)}
+              placeholder="e.g. Late night headphones, rainy Sunday spin..."
+              maxLength={80}
+              className="w-full rounded-xl bg-[var(--theme-card)] border border-[var(--theme-border)] px-4 py-2 text-xs sm:text-sm text-[var(--theme-fg)] placeholder:text-[var(--theme-muted)]/50 focus:outline-none focus:border-amber-400/60 transition"
+            />
+
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              {SUGGESTED_MOODS.map((suggestion) => {
+                const isSelected = moodContext.trim().toLowerCase() === suggestion.toLowerCase();
                 return (
                   <button
-                    key={mood.id}
+                    key={suggestion}
                     type="button"
-                    onClick={() => setSelectedMood(isSelected ? "" : mood.id)}
-                    className={`px-3 py-1 rounded-full text-xs font-medium transition cursor-pointer ${
+                    onClick={() => setMoodContext(isSelected ? "" : suggestion)}
+                    className={`px-3 py-1 rounded-full text-[11px] font-medium transition cursor-pointer ${
                       isSelected
-                        ? "bg-amber-400 text-zinc-950 font-bold shadow-xs"
-                        : "bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] text-[var(--theme-muted)] border border-[var(--theme-border)]"
+                        ? "bg-amber-400/20 border border-amber-400/40 text-amber-300 font-semibold"
+                        : "bg-[var(--theme-card)] border border-[var(--theme-border)] text-[var(--theme-muted)] hover:text-[var(--theme-fg)]"
                     }`}
                   >
-                    {mood.label}
+                    {suggestion}
                   </button>
                 );
               })}
             </div>
           </div>
 
-          {/* Vibe Tags & Public/Private Toggle */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1 border-t border-[var(--theme-border)]/50">
-            {/* Tags */}
-            <div className="space-y-1.5 flex-1">
-              <span className="text-[11px] font-semibold text-[var(--theme-muted)] flex items-center gap-1">
-                <Tag size={11} className="text-[var(--theme-accent)]" />
-                <span>Context Tags</span>
+          {/* 5. ENTRY VISIBILITY (Image 5) */}
+          <div className="p-4 rounded-2xl bg-[var(--theme-surface)]/50 border border-[var(--theme-border)]/60 space-y-2.5">
+            <div className="space-y-0.5">
+              <span className="text-xs font-bold uppercase tracking-wider text-[var(--theme-fg)] block">
+                5. Entry Visibility
               </span>
-              <div className="flex flex-wrap gap-1">
-                {SUGGESTED_TAGS.map((tag) => {
-                  const isSelected = selectedTags.includes(tag);
-                  return (
-                    <button
-                      key={tag}
-                      type="button"
-                      onClick={() => toggleTag(tag)}
-                      className={`px-2 py-0.5 rounded-full text-[11px] transition cursor-pointer ${
-                        isSelected
-                          ? "bg-white/15 text-[var(--theme-fg)] font-bold border border-white/30"
-                          : "text-[var(--theme-muted)] hover:text-[var(--theme-fg)] bg-transparent border border-transparent"
-                      }`}
-                    >
-                      {isSelected ? `✓ ${tag}` : `+ ${tag}`}
-                    </button>
-                  );
-                })}
-              </div>
+              <p className="text-xs text-[var(--theme-muted)]">
+                Control whether your journal entry and review text are public.{" "}
+                <strong className="text-[var(--theme-fg)]">
+                  Your star rating always remains public.
+                </strong>
+              </p>
             </div>
 
-            {/* Public / Private Toggle */}
-            <div className="shrink-0 flex items-center gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
               <button
                 type="button"
-                onClick={() => setIsPublic(!isPublic)}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition cursor-pointer ${
+                onClick={() => setIsPublic(true)}
+                className={`p-3.5 rounded-2xl border text-left transition cursor-pointer flex items-start gap-3 ${
                   isPublic
-                    ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
-                    : "bg-zinc-800 border-zinc-700 text-zinc-300"
+                    ? "bg-emerald-500/10 border-emerald-500/40 text-[var(--theme-fg)]"
+                    : "bg-[var(--theme-card)] border-[var(--theme-border)] text-[var(--theme-muted)] hover:text-[var(--theme-fg)]"
                 }`}
-                title={isPublic ? "Visible on your public profile" : "Only visible to you"}
               >
-                {isPublic ? <Globe size={13} /> : <Lock size={13} />}
-                <span>{isPublic ? "Public Log" : "Private"}</span>
+                <div
+                  className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
+                    isPublic ? "bg-emerald-500/20 text-emerald-400" : "bg-white/5 text-[var(--theme-muted)]"
+                  }`}
+                >
+                  <Globe size={15} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs sm:text-sm font-bold">Public Review</span>
+                    {isPublic && <Check size={14} className="text-emerald-400" />}
+                  </div>
+                  <p className="text-[11px] text-[var(--theme-muted)] mt-0.5">
+                    Visible on your public profile and the entity page.
+                  </p>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsPublic(false)}
+                className={`p-3.5 rounded-2xl border text-left transition cursor-pointer flex items-start gap-3 ${
+                  !isPublic
+                    ? "bg-amber-400/10 border-amber-400/40 text-[var(--theme-fg)]"
+                    : "bg-[var(--theme-card)] border-[var(--theme-border)] text-[var(--theme-muted)] hover:text-[var(--theme-fg)]"
+                }`}
+              >
+                <div
+                  className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
+                    !isPublic ? "bg-amber-400/20 text-amber-300" : "bg-white/5 text-[var(--theme-muted)]"
+                  }`}
+                >
+                  <Lock size={15} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs sm:text-sm font-bold">Private Log</span>
+                    {!isPublic && <Check size={14} className="text-amber-300" />}
+                  </div>
+                  <p className="text-[11px] text-[var(--theme-muted)] mt-0.5">
+                    Only you see your notes. Rating still stays public.
+                  </p>
+                </div>
               </button>
             </div>
           </div>
         </div>
 
-        {/* Modal Action Buttons Footer */}
-        <div className="p-4 sm:p-5 border-t border-[var(--theme-border)]/60 bg-[var(--theme-surface-elevated)] backdrop-blur-xl flex items-center justify-between gap-3 shrink-0">
+        {/* Modal Action Buttons Footer (Image 5) */}
+        <div className="p-4 sm:p-5 border-t border-[var(--theme-border)]/40 bg-[var(--theme-surface)]/60 backdrop-blur-xl flex items-center justify-between gap-3 shrink-0">
           <div>
             {existingJournalEntry && (
               <button
@@ -850,12 +887,12 @@ export default function RatingAndJournalModal({
             )}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5 ml-auto">
             <button
               type="button"
               onClick={onClose}
               disabled={isSaving}
-              className="px-4 py-2 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-card)] hover:bg-[var(--theme-surface)] text-xs font-semibold text-[var(--theme-muted)] hover:text-[var(--theme-fg)] transition cursor-pointer"
+              className="px-4 py-2 sm:px-5 sm:py-2.5 rounded-full border border-[var(--theme-border)] bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] text-xs sm:text-sm font-bold text-[var(--theme-muted)] hover:text-[var(--theme-fg)] transition cursor-pointer"
             >
               Cancel
             </button>
@@ -863,10 +900,10 @@ export default function RatingAndJournalModal({
               type="button"
               onClick={handleSave}
               disabled={isSaving}
-              className="px-5 py-2 rounded-xl bg-gradient-to-r from-amber-400 via-amber-300 to-amber-400 hover:opacity-95 text-zinc-950 text-xs sm:text-sm font-extrabold transition-all duration-200 active:scale-95 shadow-lg shadow-amber-400/25 flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              className="px-5 py-2 sm:px-6 sm:py-2.5 rounded-full bg-gradient-to-r from-amber-400 via-amber-300 to-amber-400 hover:opacity-95 text-zinc-950 text-xs sm:text-sm font-black transition-all duration-200 active:scale-95 shadow-lg shadow-amber-400/25 flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
             >
               <Sparkles size={14} fill="currentColor" />
-              <span>{isSaving ? "Saving..." : "Save to Journal"}</span>
+              <span>{isSaving ? "Saving..." : "Save Listen"}</span>
             </button>
           </div>
         </div>
