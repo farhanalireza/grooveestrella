@@ -1,18 +1,29 @@
 // src/app/AppLayout.jsx
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import AppBar from '@/Components/AppBar';
-import GrooveLoader from '@/Components/GrooveLoader';
-import PlaylistPickerModal from '@/Components/PlaylistPickerModal';
-import PWAInstallPrompt from '@/Components/PWAInstallPrompt';
-import OnboardingModal from '@/Components/OnboardingModal';
 import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext';
 import { isSupabaseConfigured } from '@/lib/supabase/client';
 
+// Defer non-critical modals out of the initial critical rendering path
+const PlaylistPickerModal = dynamic(() => import('@/Components/PlaylistPickerModal'), { ssr: false });
+const PWAInstallPrompt = dynamic(() => import('@/Components/PWAInstallPrompt'), { ssr: false });
+const OnboardingModal = dynamic(() => import('@/Components/OnboardingModal'), { ssr: false });
+const LiquidToastContainer = dynamic(() => import('@/Components/LiquidToastContainer'), { ssr: false });
+
+const PROTECTED_PREFIXES = [
+  "/account",
+  "/settings",
+  "/library",
+  "/journal/new",
+  "/journal/edit",
+  "/lists/new",
+];
+
 export default function AppLayout({ children }) {
   const [mounted, setMounted] = useState(false);
-  const [section, setSection] = useState("");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
@@ -26,33 +37,37 @@ export default function AppLayout({ children }) {
     }
   }, []);
 
-  const handleToggleSidebar = () => {
+  const handleToggleSidebar = useCallback(() => {
     setSidebarCollapsed((prev) => {
       const next = !prev;
       localStorage.setItem("groove_sidebar_collapsed", String(next));
       return next;
     });
-  };
+  }, []);
 
   const isAuthPage = pathname === "/login" || pathname === "/signup";
-  const isLanding = !authLoading && !user && pathname === "/";
+  // Landing page on '/' for unauthenticated visitors hides the internal sidebar chrome
+  const isLanding = pathname === "/" && !user;
   const hideAppChrome = isAuthPage || isLanding;
 
-  // Protect internal routes if unauthenticated
+  // Protect ONLY authenticated private routes; public music/info pages load freely
+  const isProtectedRoute = useMemo(() => {
+    if (!pathname) return false;
+    return PROTECTED_PREFIXES.some(
+      (prefix) => pathname === prefix || pathname.startsWith(prefix + "/")
+    );
+  }, [pathname]);
+
   useEffect(() => {
-    if (!authLoading && !user && isSupabaseConfigured()) {
-      if (pathname && pathname !== "/" && !isAuthPage && !pathname.startsWith("/api") && !pathname.startsWith("/s/")) {
-        router.push(`/login?returnTo=${encodeURIComponent(pathname)}`);
-      }
+    if (!authLoading && !user && isSupabaseConfigured() && isProtectedRoute) {
+      router.push(`/login?returnTo=${encodeURIComponent(pathname)}`);
     }
-  }, [user, authLoading, pathname, isAuthPage, router]);
+  }, [user, authLoading, isProtectedRoute, pathname, router]);
 
   return (
     <div className="min-h-screen bg-[var(--theme-bg)] text-[var(--theme-fg)] font-sans flex flex-col lg:flex-row transition-colors duration-300">
       {!hideAppChrome && (
         <AppBar 
-          selectedSection={section} 
-          setSection={setSection} 
           isCollapsed={sidebarCollapsed}
           onToggleSidebar={handleToggleSidebar}
         />
@@ -72,6 +87,7 @@ export default function AppLayout({ children }) {
           {user && <OnboardingModal />}
         </>
       )}
+      {mounted && <LiquidToastContainer />}
     </div>
   );
 }

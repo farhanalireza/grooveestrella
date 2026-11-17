@@ -2,7 +2,6 @@ import "./globals.css";
 import { Providers } from "./providers";
 import AppLayout from "./AppLayout";
 import { Space_Grotesk, Inter } from "next/font/google";
-import LiquidToastContainer from "@/Components/LiquidToastContainer";
 
 const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
@@ -83,7 +82,6 @@ export default function RootLayout({ children }) {
         <Providers>
           <AppLayout>{children}</AppLayout>
         </Providers>
-        <LiquidToastContainer />
       </body>
     </html>
   );

@@ -22,11 +22,13 @@ import {
     Globe
 } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
+import dynamic from "next/dynamic";
 import { extractAdaptivePalette } from "@/lib/colorExtractor";
 import DiscLoader from "@/Components/DiscLoader";
-import GrooveLinkModal from "@/Components/GrooveLinkModal";
-import GrooveCardComposer from "@/Components/GrooveCardComposer";
-import MusicLoreAndReviews from "@/Components/MusicLoreAndReviews";
+
+const GrooveLinkModal = dynamic(() => import("@/Components/GrooveLinkModal"), { ssr: false });
+const GrooveCardComposer = dynamic(() => import("@/Components/GrooveCardComposer"), { ssr: false });
+const MusicLoreAndReviews = dynamic(() => import("@/Components/MusicLoreAndReviews"), { ssr: false });
 import EntityReviewsSection from "@/Components/EntityReviewsSection";
 import RatingPieChart from "@/Components/RatingPieChart";
 import UserRatingWidget from "@/Components/UserRatingWidget";

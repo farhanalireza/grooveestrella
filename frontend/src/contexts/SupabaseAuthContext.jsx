@@ -1,7 +1,7 @@
 // src/contexts/SupabaseAuthContext.jsx
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import { toast } from "@/lib/toast";
 
@@ -79,6 +79,27 @@ export function SupabaseAuthProvider({ children }) {
 
     const supabase = createClient();
 
+    // Fast check: If no Supabase tokens exist in storage/cookies, user is a guest; don't block render
+    let hasStoredSession = false;
+    try {
+      if (typeof window !== "undefined") {
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && (key.startsWith("sb-") || key.includes("supabase.auth"))) {
+            hasStoredSession = true;
+            break;
+          }
+        }
+        if (!hasStoredSession && document.cookie.includes("sb-")) {
+          hasStoredSession = true;
+        }
+      }
+    } catch (_) {}
+
+    if (!hasStoredSession) {
+      setLoading(false);
+    }
+
     // Listen for initial session + auth state changes (avoids double query vs getSession)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
@@ -102,7 +123,7 @@ export function SupabaseAuthProvider({ children }) {
     };
   }, [fetchProfile]);
 
-  const signInWithPassword = async (email, password) => {
+  const signInWithPassword = useCallback(async (email, password) => {
     if (!isSupabaseConfigured()) {
       toast.info("Supabase is not yet connected. Running in demo mode.");
       return { data: null, error: new Error("Supabase is not configured.") };
@@ -123,9 +144,9 @@ export function SupabaseAuthProvider({ children }) {
       await fetchProfile(data.user.id, supabase);
     }
     return { data, error: null };
-  };
+  }, [fetchProfile]);
 
-  const signUpWithPassword = async (email, password, { username, displayName, bio, avatarUrl, onboardingData } = {}) => {
+  const signUpWithPassword = useCallback(async (email, password, { username, displayName, bio, avatarUrl, onboardingData } = {}) => {
     if (!isSupabaseConfigured()) {
       toast.info("Supabase is not yet connected. Running in demo mode.");
       return { data: null, error: new Error("Supabase is not configured.") };
@@ -172,9 +193,9 @@ export function SupabaseAuthProvider({ children }) {
       await fetchProfile(data.user.id, supabase, { force: true });
     }
     return { data, error: null };
-  };
+  }, [fetchProfile]);
 
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
     if (isSupabaseConfigured()) {
       const supabase = createClient();
       await supabase.auth.signOut();
@@ -184,9 +205,9 @@ export function SupabaseAuthProvider({ children }) {
     setProfile(null);
     setSession(null);
     toast.info("Signed out successfully");
-  };
+  }, []);
 
-  const updateProfile = async (updates) => {
+  const updateProfile = useCallback(async (updates) => {
     if (!user) {
       toast.error("You must be logged in to update your profile");
       return { data: null, error: new Error("Not authenticated") };
@@ -211,30 +232,41 @@ export function SupabaseAuthProvider({ children }) {
     setProfile(data);
     toast.success("Profile updated! ✨");
     return { data, error: null };
-  };
+  }, [user]);
 
-  const refreshProfile = async () => {
+  const refreshProfile = useCallback(async () => {
     if (user) {
       const supabase = createClient();
       await fetchProfile(user.id, supabase, { force: true });
     }
-  };
+  }, [user, fetchProfile]);
+
+  const contextValue = useMemo(() => ({
+    user,
+    profile,
+    session,
+    loading,
+    isConfigured: configured,
+    signInWithPassword,
+    signUpWithPassword,
+    signOut,
+    updateProfile,
+    refreshProfile,
+  }), [
+    user,
+    profile,
+    session,
+    loading,
+    configured,
+    signInWithPassword,
+    signUpWithPassword,
+    signOut,
+    updateProfile,
+    refreshProfile,
+  ]);
 
   return (
-    <SupabaseAuthContext.Provider
-      value={{
-        user,
-        profile,
-        session,
-        loading,
-        isConfigured: configured,
-        signInWithPassword,
-        signUpWithPassword,
-        signOut,
-        updateProfile,
-        refreshProfile,
-      }}
-    >
+    <SupabaseAuthContext.Provider value={contextValue}>
       {children}
     </SupabaseAuthContext.Provider>
   );

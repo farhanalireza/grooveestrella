@@ -1,26 +1,14 @@
 // src/app/credits/page.jsx
-"use client";
+import React from 'react';
 
-import React, { useEffect } from 'react';
-import { motion } from 'framer-motion';
+export const metadata = {
+  title: "Credits & Acknowledgements",
+  description: "Recognizing the creators and contributors behind GrooveEstrella.",
+};
 
 export default function CreditsPage() {
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, []);
-
-  const fadeUp = {
-    hidden: { opacity: 0, y: 40 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: 'easeOut' } },
-  };
-
   return (
-    <motion.div
-      className="min-h-screen bg-[var(--theme-bg)] text-[var(--theme-fg)] flex flex-col justify-center items-center p-6 space-grotesk"
-      initial="hidden"
-      animate="visible"
-      variants={fadeUp}
-    >
+    <div className="min-h-screen bg-[var(--theme-bg)] text-[var(--theme-fg)] flex flex-col justify-center items-center p-6 space-grotesk animate-in fade-in slide-in-from-bottom-3 duration-500">
       <h1 className="text-4xl md:text-5xl font-bold mb-6 text-center text-[var(--theme-fg)]">
         Credits & Acknowledgements
       </h1>
@@ -64,6 +52,6 @@ export default function CreditsPage() {
       <p className="text-xs text-[var(--theme-muted)] mt-12 text-center max-w-md">
         © 2026 The CodeBreakers. This app is licensed under the MIT License. All trademarks and logos are property of their respective owners.
       </p>
-    </motion.div>
+    </div>
   );
 }

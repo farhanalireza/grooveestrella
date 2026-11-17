@@ -1,7 +1,7 @@
 // src/Components/CardComponents/AlbumsCard.jsx
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
+import React, { useState, useEffect, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { MoreVertical, Bookmark, BookmarkCheck, Share2, Copy } from "lucide-react";
 import {
@@ -14,7 +14,7 @@ import {
 import { toast } from "@/lib/toast";
 import DiscLoader from "@/Components/DiscLoader";
 
-export const AlbumCard = ({
+export const AlbumCard = React.memo(({
   id,
   url,
   title,
@@ -197,4 +197,4 @@ export const AlbumCard = ({
       </div>
     </div>
   );
-};
+});

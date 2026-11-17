@@ -1,7 +1,7 @@
 // src/contexts/ThemeContext.jsx
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from "react";
 
 const THEME_PALETTE = {
   plum: "#470B24",
@@ -145,7 +145,7 @@ export function ThemeProvider({ children }) {
     setMounted(true);
   }, [applyThemeToDOM]);
 
-  const setTheme = (newTheme) => {
+  const setTheme = useCallback((newTheme) => {
     const validTheme = ["dark", "light", "adaptive"].includes(newTheme) ? newTheme : "dark";
     setThemeState(validTheme);
     applyThemeToDOM(validTheme);
@@ -159,7 +159,7 @@ export function ThemeProvider({ children }) {
     try {
       localStorage.setItem("groove_theme", validTheme);
     } catch (_) {}
-  };
+  }, [applyThemeToDOM, applyCustomVarsToDOM]);
 
   const setAdaptivePalette = useCallback((palette) => {
     if (theme !== "adaptive") return;
@@ -172,36 +172,60 @@ export function ThemeProvider({ children }) {
     applyCustomVarsToDOM(null);
   }, [applyCustomVarsToDOM]);
 
-  const toggleTheme = () => {
-    let nextTheme;
-    if (theme === "dark") nextTheme = "light";
-    else if (theme === "light") nextTheme = "adaptive";
-    else nextTheme = "dark";
-    setTheme(nextTheme);
-  };
+  const toggleTheme = useCallback(() => {
+    setThemeState((currentTheme) => {
+      let nextTheme;
+      if (currentTheme === "dark") nextTheme = "light";
+      else if (currentTheme === "light") nextTheme = "adaptive";
+      else nextTheme = "dark";
+
+      applyThemeToDOM(nextTheme);
+      if (nextTheme !== "adaptive") {
+        setAdaptivePaletteState(null);
+        applyCustomVarsToDOM(null);
+      }
+      try {
+        localStorage.setItem("groove_theme", nextTheme);
+      } catch (_) {}
+      return nextTheme;
+    });
+  }, [applyThemeToDOM, applyCustomVarsToDOM]);
 
   const isDark = theme !== "light"; // adaptive defaults to dark mode
   const isAdaptive = theme === "adaptive";
-  const colors = (theme === "adaptive" && adaptivePalette)
-    ? adaptivePalette
-    : (THEME_CONFIG[theme] || THEME_CONFIG.dark);
+  const colors = useMemo(() => {
+    return (theme === "adaptive" && adaptivePalette)
+      ? adaptivePalette
+      : (THEME_CONFIG[theme] || THEME_CONFIG.dark);
+  }, [theme, adaptivePalette]);
+
+  const contextValue = useMemo(() => ({
+    theme,
+    isDark,
+    isAdaptive,
+    toggleTheme,
+    setTheme,
+    setAdaptivePalette,
+    clearAdaptivePalette,
+    adaptivePalette,
+    colors,
+    palette: THEME_PALETTE,
+    mounted,
+  }), [
+    theme,
+    isDark,
+    isAdaptive,
+    toggleTheme,
+    setTheme,
+    setAdaptivePalette,
+    clearAdaptivePalette,
+    adaptivePalette,
+    colors,
+    mounted,
+  ]);
 
   return (
-    <ThemeContext.Provider
-      value={{
-        theme,
-        isDark,
-        isAdaptive,
-        toggleTheme,
-        setTheme,
-        setAdaptivePalette,
-        clearAdaptivePalette,
-        adaptivePalette,
-        colors,
-        palette: THEME_PALETTE,
-        mounted,
-      }}
-    >
+    <ThemeContext.Provider value={contextValue}>
       {children}
     </ThemeContext.Provider>
   );

@@ -8,11 +8,13 @@ import {
   Flame, Zap, Headphones, Disc, Disc3, Mic, ChevronRight, Compass, Award
 } from "lucide-react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import axios from "axios";
 import OfficialListCover from "@/Components/OfficialListCover";
-import LandingPage from "@/Components/LandingPage";
 import DiscLoader from "@/Components/DiscLoader";
 import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
+
+const LandingPage = dynamic(() => import("@/Components/LandingPage"), { ssr: true });
 
 const FEATURED_ALBUMS = [
   {
@@ -249,18 +251,7 @@ export default function Home() {
     });
   };
 
-  if (authLoading) {
-    return (
-      <div className="min-h-[75vh] flex flex-col items-center justify-center gap-3">
-        <DiscLoader size={40} />
-        <span className="text-xs font-bold uppercase tracking-widest text-[var(--theme-muted)]">
-          Entering GrooveEstrella...
-        </span>
-      </div>
-    );
-  }
-
-  // Marketing Landing Page for Unauthenticated Visitors
+  // If visitor is unauthenticated, show marketing landing showcase immediately without blocking
   if (!user) {
     return <LandingPage />;
   }

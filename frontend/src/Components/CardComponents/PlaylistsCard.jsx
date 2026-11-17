@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { ShareTrackComponent } from "./ShareTrackComponent";
 import { toast } from "@/lib/toast";
 
-export const PlaylistCard = ({
+export const PlaylistCard = React.memo(({
   url,
   title,
   spoURL,
@@ -149,4 +149,4 @@ export const PlaylistCard = ({
       </div>
     </div>
   );
-};
+});

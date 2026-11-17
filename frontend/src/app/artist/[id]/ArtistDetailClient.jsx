@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Bookmark, BookmarkCheck, Users, User, Music, ChevronRight, MoreHorizontal, Share2, ListPlus, Sparkles, Info, MapPin, Calendar, ListMusic, BookOpen, Tag, Star, Globe, Disc } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
 import { extractAdaptivePalette, extractEdgeColors } from "@/lib/colorExtractor";
+import dynamic from "next/dynamic";
 import {
     DropdownMenu,
     DropdownMenuTrigger,
@@ -14,14 +15,15 @@ import {
     DropdownMenuItem,
     DropdownMenuSeparator,
 } from "@/Components/ui/dropdown-menu";
-import GrooveLinkModal from "@/Components/GrooveLinkModal";
-import GrooveCardComposer from "@/Components/GrooveCardComposer";
-import MusicLoreAndReviews from "@/Components/MusicLoreAndReviews";
+
+const GrooveLinkModal = dynamic(() => import("@/Components/GrooveLinkModal"), { ssr: false });
+const GrooveCardComposer = dynamic(() => import("@/Components/GrooveCardComposer"), { ssr: false });
+const MusicLoreAndReviews = dynamic(() => import("@/Components/MusicLoreAndReviews"), { ssr: false });
+const ArtistLinksDrawer = dynamic(() => import("@/Components/ArtistLinksDrawer"), { ssr: false });
+const ArtistDetailsDrawer = dynamic(() => import("@/Components/ArtistDetailsDrawer"), { ssr: false });
 import EntityReviewsSection from "@/Components/EntityReviewsSection";
 import UserRatingWidget from "@/Components/UserRatingWidget";
-import ArtistLinksDrawer from "@/Components/ArtistLinksDrawer";
 import DiscLoader from "@/Components/DiscLoader";
-import ArtistDetailsDrawer from "@/Components/ArtistDetailsDrawer";
 import ArtistBioAndLineupTab from "@/Components/ArtistBioAndLineupTab";
 import ArtistLinksTab from "@/Components/ArtistLinksTab";
 import GrooveLoader from "@/Components/GrooveLoader";

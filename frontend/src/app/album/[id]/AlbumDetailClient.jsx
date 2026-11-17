@@ -14,11 +14,13 @@ import {
     DropdownMenuItem,
     DropdownMenuSeparator,
 } from "@/Components/ui/dropdown-menu";
+import dynamic from "next/dynamic";
 import { AlbumTrackCard } from "@/Components/CardComponents/SmallTracksCard";
-import GrooveLinkModal from "@/Components/GrooveLinkModal";
-import GrooveCardComposer from "@/Components/GrooveCardComposer";
-import AlbumEditionsDrawer from "@/Components/AlbumEditionsDrawer";
-import MusicLoreAndReviews from "@/Components/MusicLoreAndReviews";
+
+const GrooveLinkModal = dynamic(() => import("@/Components/GrooveLinkModal"), { ssr: false });
+const GrooveCardComposer = dynamic(() => import("@/Components/GrooveCardComposer"), { ssr: false });
+const AlbumEditionsDrawer = dynamic(() => import("@/Components/AlbumEditionsDrawer"), { ssr: false });
+const MusicLoreAndReviews = dynamic(() => import("@/Components/MusicLoreAndReviews"), { ssr: false });
 import EntityReviewsSection from "@/Components/EntityReviewsSection";
 import RatingPieChart from "@/Components/RatingPieChart";
 import UserRatingWidget from "@/Components/UserRatingWidget";

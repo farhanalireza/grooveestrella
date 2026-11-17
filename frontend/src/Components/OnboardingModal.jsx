@@ -262,6 +262,15 @@ export default function OnboardingModal() {
     return () => window.removeEventListener("open-onboarding", handleReplay);
   }, []);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") handleSkip();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen]);
+
   const handleRollName = () => {
     const fresh = generateRandomName();
     setName(fresh);
@@ -424,7 +433,12 @@ export default function OnboardingModal() {
   if (!mounted || !isOpen) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[100000] flex items-center justify-center p-4 sm:p-6 bg-black/80 backdrop-blur-md">
+    <div 
+      className="fixed inset-0 z-[100000] flex items-center justify-center p-4 sm:p-6 bg-black/80 backdrop-blur-md"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) handleSkip();
+      }}
+    >
       <div className="relative w-full max-w-lg bg-[var(--theme-card)] border border-[var(--theme-border)] rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
         {/* Progress Bar & Header */}
         <div className="p-5 pb-3 border-b border-[var(--theme-border)] bg-[var(--theme-surface)]/50">

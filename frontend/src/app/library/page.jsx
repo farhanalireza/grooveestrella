@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useEffect, useState, useMemo, useCallback, useTransition, Suspense } from 'react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { 
@@ -9,7 +10,8 @@ import {
   Plus, UploadCloud, Layers, LayoutGrid, List, BookOpen, Star, Calendar, Sparkles, Edit3
 } from 'lucide-react';
 import { toast } from '@/lib/toast';
-import ImportPlaylistModal from '@/Components/ImportPlaylistModal';
+
+const ImportPlaylistModal = dynamic(() => import('@/Components/ImportPlaylistModal'), { ssr: false });
 import PlaylistCover from '@/Components/PlaylistCover';
 import LibraryTouchSlider from '@/Components/LibraryTouchSlider';
 import LibraryCoverImage, { FALLBACK_COVER_SVG } from '@/Components/LibraryCoverImage';

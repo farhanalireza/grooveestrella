@@ -1,7 +1,7 @@
 // src/Components/AppBar.jsx
 "use client";
 
-import { useEffect, useMemo, useCallback, useRef, useState } from "react";
+import React, { useEffect, useMemo, useCallback, useRef, useState, memo } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -323,4 +323,4 @@ const AppBar = ({
   );
 };
 
-export default AppBar;
+export default memo(AppBar);
