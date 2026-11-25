@@ -1,11 +1,12 @@
 // src/app/terms/page.jsx
 "use client";
 
-import React, { useEffect } from 'react';
-import { ArrowLeft, Shield, Music, AlertTriangle, Headphones } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import React, { useEffect } from "react";
+import Link from "next/link";
+import { ArrowLeft, Shield, FileText, ExternalLink, Mail, CheckCircle2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 
-export default function TermsAndConditions() {
+export default function TermsOfServicePage() {
   const router = useRouter();
 
   useEffect(() => {
@@ -13,179 +14,270 @@ export default function TermsAndConditions() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[var(--theme-bg)] text-[var(--theme-fg)]">
-      {/* Header */}
-      <div className="bg-[var(--theme-card)]/80 backdrop-blur-md border-b border-[var(--theme-border)] px-4 py-3 flex items-center gap-3 sticky top-0 z-40">
-        <button
-          onClick={() => router.back()}
-          className="text-[var(--theme-muted)] hover:text-[var(--theme-fg)] transition-colors p-2 hover:bg-[var(--theme-surface)] rounded-lg cursor-pointer bg-transparent border-none"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </button>
+    <div className="min-h-screen bg-[var(--theme-bg)] text-[var(--theme-fg)] font-sans pb-24">
+      {/* Sticky Header */}
+      <header className="bg-[var(--theme-card)]/80 backdrop-blur-md border-b border-[var(--theme-border)] px-4 sm:px-6 py-3.5 flex items-center justify-between sticky top-0 z-40">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => router.back()}
+            className="text-[var(--theme-muted)] hover:text-[var(--theme-fg)] transition-colors p-2 hover:bg-[var(--theme-surface)] rounded-xl cursor-pointer bg-transparent border-none"
+            aria-label="Go back"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <div className="flex items-center gap-2">
+            <Shield className="w-5 h-5 text-amber-400" />
+            <h1 className="text-[var(--theme-fg)] font-bold text-base sm:text-lg font-display">
+              Terms of Service
+            </h1>
+          </div>
+        </div>
+
         <div className="flex items-center gap-2">
-          <Shield className="w-5 h-5 text-[var(--theme-accent)]" />
-          <h1 className="text-[var(--theme-fg)] font-semibold text-lg">Terms and Conditions</h1>
+          <Link
+            href="/privacy"
+            className="text-xs font-semibold text-[var(--theme-muted)] hover:text-[var(--theme-fg)] px-3 py-1.5 rounded-full hover:bg-[var(--theme-surface)] transition"
+          >
+            Privacy Policy
+          </Link>
+          <Link
+            href="/guidelines"
+            className="text-xs font-semibold text-amber-300 hover:text-amber-200 px-3 py-1.5 rounded-full bg-amber-400/10 border border-amber-400/25 transition"
+          >
+            Community Guidelines
+          </Link>
         </div>
-      </div>
+      </header>
 
-      {/* Content */}
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        <div className="bg-[var(--theme-card)]/80 border border-[var(--theme-border)] backdrop-blur-sm rounded-2xl shadow-xl p-8 space-y-6">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-[var(--theme-fg)] mb-2">Terms and Conditions</h1>
-            <p className="text-[var(--theme-muted)]">Last Updated: {new Date().toLocaleDateString()}</p>
+      {/* Main Container */}
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+        <div className="bg-[var(--theme-card)]/85 border border-[var(--theme-border)] backdrop-blur-xl rounded-3xl shadow-2xl p-6 sm:p-10 space-y-8">
+          {/* Document Title Header */}
+          <div className="text-center pb-6 border-b border-[var(--theme-border)]/50 space-y-2">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400/10 border border-amber-400/25 text-amber-300 text-xs font-black uppercase tracking-wider">
+              <FileText size={13} />
+              <span>Legal Agreement</span>
+            </div>
+            <h1 className="text-3xl sm:text-4xl font-black text-[var(--theme-fg)] font-display tracking-tight">
+              Terms of Service
+            </h1>
+            <p className="text-xs sm:text-sm text-[var(--theme-muted)] font-medium">
+              Last Updated: November 25, 2026
+            </p>
           </div>
 
-          <section className="space-y-4">
-            <h2 className="text-2xl font-semibold text-[var(--theme-fg)] flex items-center gap-2">
-              <Music className="w-6 h-6 text-[var(--theme-accent)]" />
-              1. Acceptance of Terms
+          <div className="p-4 rounded-2xl bg-amber-400/10 border border-amber-400/20 text-xs text-amber-200/90 leading-relaxed">
+            Welcome to GrooveEstrella. These Terms of Service (“Terms”) govern your access to and use of the GrooveEstrella website, applications, and related services (the “Service”). By creating an account or using the Service, you agree to these Terms. If you do not agree, do not use the Service.
+          </div>
+
+          {/* Section 1 */}
+          <section className="space-y-3">
+            <h2 className="text-xl font-black text-[var(--theme-fg)] font-display flex items-center gap-2">
+              <span className="text-amber-400">1.</span> The Service
             </h2>
-            <p className="text-[var(--theme-muted)] leading-relaxed">
-              By accessing and using our music discovery web application ("GrooveEstrella: Music Recommender"), you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to abide by the above, please do not use this service.
+            <p className="text-sm text-[var(--theme-muted)] leading-relaxed font-body">
+              GrooveEstrella is a music discovery, journaling, and community platform. We provide music metadata, links to third-party streaming services, user ratings, reviews, lists, and related features.
+            </p>
+            <p className="text-sm font-bold text-[var(--theme-fg)] bg-[var(--theme-surface)] p-3.5 rounded-xl border border-[var(--theme-border)]">
+              We do <strong className="text-amber-300">not</strong> host, stream, sell, or distribute copyrighted musical recordings.
             </p>
           </section>
 
-          <section className="space-y-4">
-            <h2 className="text-2xl font-semibold text-[var(--theme-fg)]">2. Description of Service</h2>
-            <p className="text-[var(--theme-muted)] leading-relaxed">
-              Our App is a music discovery platform that provides personalized music recommendations based on user preferences and survey data. The service includes:
-            </p>
-            <ul className="list-disc pl-6 space-y-2 text-[var(--theme-muted)]">
-              <li>Music recommendation engine powered by survey data and Spotify API integration</li>
-              <li>Interactive chatbot for mood-based music suggestions</li>
-              <li>Music discovery tools and playback features through Spotify</li>
-              <li>User preference tracking and personalization stored locally</li>
-              <li>Direct integration with Spotify for accurate music data and playback functionality</li>
-            </ul>
-          </section>
-
-          <section className="space-y-4">
-            <h2 className="text-2xl font-semibold text-[var(--theme-fg)]">3. Spotify Integration and Third-Party Services</h2>
-            <div className="bg-[var(--theme-surface)] border border-[var(--theme-border)] rounded-xl p-4">
-              <h3 className="font-semibold text-[var(--theme-accent)] mb-2 flex items-center gap-2">
-                <Headphones className="w-5 h-5" />
-                Spotify API Integration
-              </h3>
-              <p className="text-[var(--theme-muted)] mb-2">
-                Our App primarily uses the Spotify API to provide accurate music data, including track information, artist details, album artwork, and playback functionality.
-              </p>
-              <ul className="list-disc pl-4 space-y-1 text-[var(--theme-muted)] text-sm">
-                <li>Music data and metadata are sourced from Spotify's database</li>
-                <li>Playback features require a valid Spotify account and may require Spotify Premium</li>
-                <li>Your use of Spotify-related features is subject to Spotify's Terms of Service</li>
-                <li>We do not control Spotify's availability or functionality</li>
-              </ul>
-            </div>
-          </section>
-
-          <section className="space-y-4">
-            <h2 className="text-2xl font-semibold text-[var(--theme-fg)] flex items-center gap-2">
-              <AlertTriangle className="w-6 h-6 text-orange-400" />
-              4. Content Disclaimer and Explicit Material
+          {/* Section 2 */}
+          <section className="space-y-3">
+            <h2 className="text-xl font-black text-[var(--theme-fg)] font-display flex items-center gap-2">
+              <span className="text-amber-400">2.</span> Eligibility
             </h2>
-            <div className="bg-orange-500/10 border border-orange-500/35 rounded-xl p-4">
-              <p className="text-orange-400 font-semibold mb-2">Important Notice About Explicit Content:</p>
-              <p className="text-[var(--theme-muted)] mb-2">
-                Our music recommendations may include explicit content as sourced from Spotify's database. We have no control over the explicit nature of the content recommended by our algorithms.
-              </p>
-              <ul className="list-disc pl-4 space-y-1 text-orange-400 text-sm">
-                <li><strong>Use at Your Own Discretion:</strong> Users are responsible for reviewing content appropriateness</li>
-                <li><strong>Parental Guidance:</strong> Parents should supervise children's use of the App</li>
-                <li><strong>Content Filtering:</strong> We recommend using Spotify's own explicit content filters if desired</li>
-                <li><strong>No Liability:</strong> We are not responsible for any offensive or inappropriate content encountered</li>
-              </ul>
-            </div>
-          </section>
-
-          <section className="space-y-4">
-            <h2 className="text-2xl font-semibold text-[var(--theme-fg)]">5. User Consent and Data Storage</h2>
-            <h3 className="text-lg font-medium text-[var(--theme-fg)]">5.1 Local Storage Consent</h3>
-            <p className="text-[var(--theme-muted)] leading-relaxed">
-              By using our App, you explicitly consent to the storage of data on your device's local storage (localStorage). This consent is required for the App to function properly and provide personalized recommendations.
-            </p>
-            <h3 className="text-lg font-medium text-[var(--theme-fg)]">5.2 Data Storage Location</h3>
-            <p className="text-[var(--theme-muted)] leading-relaxed">
-              All user data, preferences, and interaction history are stored locally on your device. We do not store personal user data on external servers or databases.
+            <p className="text-sm text-[var(--theme-muted)] leading-relaxed font-body">
+              You must be at least 16 years old to use the Service. By using the Service, you represent that you meet this requirement.
             </p>
           </section>
 
-          <section className="space-y-4">
-            <h2 className="text-2xl font-semibold text-[var(--theme-fg)]">6. User Responsibilities</h2>
-            <h3 className="text-lg font-medium text-[var(--theme-fg)]">6.1 Appropriate Use</h3>
-            <p className="text-[var(--theme-muted)] leading-relaxed">You agree to use the App only for lawful purposes and will not:</p>
-            <ul className="list-disc pl-6 space-y-1 text-[var(--theme-muted)]">
-              <li>Use the App to transmit harmful, offensive, or inappropriate content</li>
-              <li>Attempt to reverse engineer, modify, or tamper with the App's functionality</li>
-              <li>Use automated systems to access the App beyond normal usage patterns</li>
-              <li>Violate any applicable laws or regulations</li>
-              <li>Abuse or overload the Spotify API integration</li>
+          {/* Section 3 */}
+          <section className="space-y-3">
+            <h2 className="text-xl font-black text-[var(--theme-fg)] font-display flex items-center gap-2">
+              <span className="text-amber-400">3.</span> Accounts
+            </h2>
+            <p className="text-sm text-[var(--theme-muted)] leading-relaxed font-body">
+              You are responsible for maintaining the security of your account and for all activity that occurs under it. You must provide accurate information and promptly update it. You may not share your account or use another person’s account.
+            </p>
+            <p className="text-sm text-[var(--theme-muted)] leading-relaxed font-body">
+              We may suspend or terminate accounts at our sole discretion.
+            </p>
+          </section>
+
+          {/* Section 4 */}
+          <section className="space-y-3">
+            <h2 className="text-xl font-black text-[var(--theme-fg)] font-display flex items-center gap-2">
+              <span className="text-amber-400">4.</span> User Content
+            </h2>
+            <p className="text-sm text-[var(--theme-muted)] leading-relaxed font-body">
+              “User Content” means any text, ratings, reviews, journal entries, lists, profile information, or other materials you submit to the Service.
+            </p>
+            <ul className="list-disc pl-5 space-y-1.5 text-sm text-[var(--theme-muted)] font-body">
+              <li>You retain ownership of your User Content.</li>
+              <li>By submitting User Content, you grant GrooveEstrella a worldwide, non-exclusive, royalty-free, transferable, and sublicensable license to use, host, store, reproduce, modify, publish, display, and distribute that content in connection with operating and promoting the Service.</li>
+              <li>You are solely responsible for your User Content.</li>
+              <li>You represent and warrant that you have all necessary rights to submit the content and that it does not violate any law or infringe any third-party rights.</li>
             </ul>
-            <h3 className="text-lg font-medium text-[var(--theme-fg)]">6.2 Spotify Account Responsibility</h3>
-            <p className="text-[var(--theme-muted)] leading-relaxed">
-              You are responsible for maintaining the security and compliance of your Spotify account when using integrated features.
-            </p>
-          </section>
-
-          <section className="space-y-4">
-            <h2 className="text-2xl font-semibold text-[var(--theme-fg)]">7. Limitation of Liability</h2>
-            <div className="bg-[var(--theme-surface)] border border-[var(--theme-border)] rounded-xl p-4">
-              <h3 className="font-semibold text-[var(--theme-accent)] mb-2">7.1 No Warranties</h3>
-              <p className="text-[var(--theme-muted)] mb-2">The App is provided "as is" without warranties of any kind, either express or implied.</p>
-              
-              <h3 className="font-semibold text-[var(--theme-accent)] mb-2">7.2 Music Content Disclaimer</h3>
-              <p className="text-[var(--theme-muted)] mb-2">
-                We do not guarantee the accuracy, completeness, appropriateness, or suitability of music recommendations. Users access explicit or potentially offensive content at their own risk.
-              </p>
-              
-              <h3 className="font-semibold text-[var(--theme-accent)] mb-2">7.3 Third-Party Service Limitations</h3>
+            <div className="p-4 rounded-2xl bg-[var(--theme-surface)] border border-amber-400/30 text-xs text-[var(--theme-fg)] space-y-1">
+              <strong className="text-amber-300 block font-bold">Important Notice Regarding Visibility:</strong>
               <p className="text-[var(--theme-muted)]">
-                We are not responsible for Spotify service interruptions, changes to their API, or any issues arising from Spotify's platform.
+                Star ratings are always public. Journal entries may be set to public or private. When a journal entry is public, its text is treated as a public review.
               </p>
             </div>
           </section>
 
-          <section className="space-y-4">
-            <h2 className="text-2xl font-semibold text-[var(--theme-fg)]">8. Service Availability</h2>
-            <p className="text-[var(--theme-muted)] leading-relaxed">
-              We strive to provide continuous access to our App, but we do not guarantee uninterrupted availability. Service may be affected by Spotify API limitations, maintenance, or updates.
+          {/* Section 5 */}
+          <section className="space-y-3">
+            <h2 className="text-xl font-black text-[var(--theme-fg)] font-display flex items-center gap-2">
+              <span className="text-amber-400">5.</span> Prohibited Conduct
+            </h2>
+            <p className="text-sm text-[var(--theme-muted)] leading-relaxed font-body">
+              You agree not to:
+            </p>
+            <ul className="list-disc pl-5 space-y-1.5 text-sm text-[var(--theme-muted)] font-body">
+              <li>Post content that is illegal, infringing, defamatory, harassing, hateful, or otherwise objectionable</li>
+              <li>Impersonate others or misrepresent your identity</li>
+              <li>Attempt to interfere with the Service or other users</li>
+              <li>Scrape, reverse-engineer, or overload the Service</li>
+              <li>Use the Service for any commercial purpose not expressly permitted by us</li>
+            </ul>
+            <p className="text-sm text-[var(--theme-muted)] leading-relaxed font-body">
+              We reserve the right to remove any content and to suspend or terminate accounts at our sole discretion, with or without notice.
             </p>
           </section>
 
-          <section className="space-y-4">
-            <h2 className="text-2xl font-semibold text-[var(--theme-fg)]">9. Intellectual Property Rights</h2>
-            <p className="text-[var(--theme-muted)] leading-relaxed">
-              The App's design, functionality, and algorithms are our intellectual property. Music content and data are provided through Spotify's API and remain subject to their intellectual property rights.
+          {/* Section 6 */}
+          <section className="space-y-3">
+            <h2 className="text-xl font-black text-[var(--theme-fg)] font-display flex items-center gap-2">
+              <span className="text-amber-400">6.</span> Third-Party Services and Data
+            </h2>
+            <p className="text-sm text-[var(--theme-muted)] leading-relaxed font-body">
+              The Service contains links to third-party platforms (including Spotify, Apple Music, and others) and uses data from third-party sources (including MusicBrainz and similar databases).
+            </p>
+            <p className="text-sm text-[var(--theme-muted)] leading-relaxed font-body">
+              We do not control these third parties and are not responsible for their content, availability, accuracy, or practices. Your use of third-party services is governed by their own terms.
             </p>
           </section>
 
-          <section className="space-y-4">
-            <h2 className="text-2xl font-semibold text-[var(--theme-fg)]">10. Changes to Terms</h2>
-            <p className="text-[var(--theme-muted)] leading-relaxed">
-              We reserve the right to modify these Terms at any time. Changes will be effective immediately upon posting. Your continued use of the App after changes constitutes acceptance of the new Terms.
+          {/* Section 7 */}
+          <section className="space-y-3">
+            <h2 className="text-xl font-black text-[var(--theme-fg)] font-display flex items-center gap-2">
+              <span className="text-amber-400">7.</span> Paid Features
+            </h2>
+            <p className="text-sm text-[var(--theme-muted)] leading-relaxed font-body">
+              The Service is currently free. We may introduce paid subscriptions or features in the future. Pricing, billing terms, renewal, and cancellation rules will be presented at the time of purchase. We reserve the right to change pricing with reasonable notice.
             </p>
           </section>
 
-          <section className="space-y-4">
-            <h2 className="text-2xl font-semibold text-[var(--theme-fg)]">11. Contact Information</h2>
-            <div className="bg-[var(--theme-surface)] border border-[var(--theme-border)] rounded-xl p-4">
-              <p className="text-[var(--theme-accent)] mb-2 font-semibold">
-                If you have any questions about these Terms and Conditions, please contact us at:
+          {/* Section 8 */}
+          <section className="space-y-3">
+            <h2 className="text-xl font-black text-[var(--theme-fg)] font-display flex items-center gap-2">
+              <span className="text-amber-400">8.</span> Intellectual Property
+            </h2>
+            <p className="text-sm text-[var(--theme-muted)] leading-relaxed font-body">
+              The Service, including its design, branding, and original content (excluding User Content), is owned by us or our licensors and is protected by applicable intellectual property laws.
+            </p>
+          </section>
+
+          {/* Section 9 */}
+          <section className="space-y-3">
+            <h2 className="text-xl font-black text-[var(--theme-fg)] font-display flex items-center gap-2">
+              <span className="text-amber-400">9.</span> Disclaimer of Warranties
+            </h2>
+            <div className="p-4 rounded-2xl bg-[var(--theme-surface)] border border-[var(--theme-border)] text-xs text-[var(--theme-muted)] uppercase tracking-wide leading-relaxed space-y-2">
+              <p>
+                THE SERVICE IS PROVIDED “AS IS” AND “AS AVAILABLE” WITHOUT WARRANTIES OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE, AND NON-INFRINGEMENT.
               </p>
-              <div className="space-y-1 text-[var(--theme-muted)]">
-                <p><strong>Email:</strong> seinheim@gmail.com</p>
-                <p className='cursor-pointer underline text-[var(--theme-accent)]' onClick={() => router.push("/redirect?page=the-code-breakers")}><strong>Website: </strong>the-code-breakers</p>
-              </div>
+              <p>
+                WE DO NOT WARRANT THAT THE SERVICE WILL BE UNINTERRUPTED, SECURE, OR ERROR-FREE, OR THAT METADATA, RATINGS, REVIEWS, OR LINKS WILL BE ACCURATE OR COMPLETE.
+              </p>
             </div>
           </section>
 
-          <div className="border-t border-[var(--theme-border)] pt-6 mt-8">
-            <p className="text-sm text-[var(--theme-muted)] italic text-center">
-              By using our App, you acknowledge that you have read, understood, and agree to be bound by these Terms and Conditions.
+          {/* Section 10 */}
+          <section className="space-y-3">
+            <h2 className="text-xl font-black text-[var(--theme-fg)] font-display flex items-center gap-2">
+              <span className="text-amber-400">10.</span> Limitation of Liability
+            </h2>
+            <div className="p-4 rounded-2xl bg-[var(--theme-surface)] border border-[var(--theme-border)] text-xs text-[var(--theme-muted)] uppercase tracking-wide leading-relaxed space-y-2">
+              <p>
+                TO THE MAXIMUM EXTENT PERMITTED BY LAW, GROOVEESTRELLA AND ITS OPERATORS SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, PUNITIVE, OR EXEMPLARY DAMAGES, OR ANY LOSS OF PROFITS, DATA, OR GOODWILL, ARISING OUT OF OR RELATED TO YOUR USE OF THE SERVICE.
+              </p>
+              <p>
+                OUR TOTAL LIABILITY FOR ANY CLAIM ARISING OUT OF THESE TERMS OR THE SERVICE SHALL NOT EXCEED THE AMOUNT YOU PAID TO US IN THE TWELVE (12) MONTHS PRIOR TO THE CLAIM (OR ₹0 IF YOU HAVE NOT PAID ANY AMOUNT).
+              </p>
+            </div>
+          </section>
+
+          {/* Section 11 */}
+          <section className="space-y-3">
+            <h2 className="text-xl font-black text-[var(--theme-fg)] font-display flex items-center gap-2">
+              <span className="text-amber-400">11.</span> Indemnification
+            </h2>
+            <p className="text-sm text-[var(--theme-muted)] leading-relaxed font-body">
+              You agree to indemnify, defend, and hold harmless GrooveEstrella and its operators from and against any claims, damages, losses, liabilities, costs, and expenses (including reasonable legal fees) arising out of or related to your User Content, your use of the Service, or your violation of these Terms.
             </p>
-          </div>
+          </section>
+
+          {/* Section 12 */}
+          <section className="space-y-3">
+            <h2 className="text-xl font-black text-[var(--theme-fg)] font-display flex items-center gap-2">
+              <span className="text-amber-400">12.</span> Termination
+            </h2>
+            <p className="text-sm text-[var(--theme-muted)] leading-relaxed font-body">
+              We may suspend or terminate your access to the Service at any time, for any reason or for no reason, without liability to you. Upon termination, your right to use the Service will immediately cease.
+            </p>
+          </section>
+
+          {/* Section 13 */}
+          <section className="space-y-3">
+            <h2 className="text-xl font-black text-[var(--theme-fg)] font-display flex items-center gap-2">
+              <span className="text-amber-400">13.</span> Changes to the Terms
+            </h2>
+            <p className="text-sm text-[var(--theme-muted)] leading-relaxed font-body">
+              We may modify these Terms at any time. We will update the “Last Updated” date and, where appropriate, provide notice. Continued use of the Service after changes become effective constitutes acceptance of the revised Terms.
+            </p>
+          </section>
+
+          {/* Section 14 */}
+          <section className="space-y-3">
+            <h2 className="text-xl font-black text-[var(--theme-fg)] font-display flex items-center gap-2">
+              <span className="text-amber-400">14.</span> Governing Law and Dispute Resolution
+            </h2>
+            <p className="text-sm text-[var(--theme-muted)] leading-relaxed font-body">
+              These Terms shall be governed by and construed in accordance with the laws of India, without regard to conflict of law principles.
+            </p>
+            <p className="text-sm text-[var(--theme-muted)] leading-relaxed font-body">
+              Subject to applicable mandatory consumer protection laws in your country of residence, the courts located in Kolkata, West Bengal, India shall have exclusive jurisdiction over any dispute arising out of these Terms.
+            </p>
+          </section>
+
+          {/* Section 15 */}
+          <section className="space-y-3">
+            <h2 className="text-xl font-black text-[var(--theme-fg)] font-display flex items-center gap-2">
+              <span className="text-amber-400">15.</span> General
+            </h2>
+            <p className="text-sm text-[var(--theme-muted)] leading-relaxed font-body">
+              If any provision of these Terms is found unenforceable, the remaining provisions will remain in effect. These Terms constitute the entire agreement between you and us regarding the Service.
+            </p>
+            <div className="pt-2">
+              <p className="text-sm font-semibold text-[var(--theme-fg)] flex items-center gap-2">
+                <Mail size={16} className="text-amber-400" />
+                <span>Contact:</span>
+                <a href="mailto:support@amplecen.com" className="text-amber-300 hover:underline">
+                  support@amplecen.com
+                </a>
+                <span className="text-[var(--theme-muted)]">/</span>
+                <a href="mailto:legal@amplecen.com" className="text-amber-300 hover:underline">
+                  legal@amplecen.com
+                </a>
+              </p>
+            </div>
+          </section>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

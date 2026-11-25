@@ -382,7 +382,16 @@ export default function LandingPage({ onExplore }) {
             <span>· The Music Collector & Journal Platform</span>
           </div>
 
-          <div className="flex items-center gap-6">
+          <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
+            <Link href="/terms" className="hover:text-[var(--theme-fg)] transition">
+              Terms
+            </Link>
+            <Link href="/privacy" className="hover:text-[var(--theme-fg)] transition">
+              Privacy
+            </Link>
+            <Link href="/guidelines" className="hover:text-[var(--theme-fg)] transition">
+              Guidelines
+            </Link>
             <Link href="/login" className="hover:text-[var(--theme-fg)] transition">
               Sign In
             </Link>

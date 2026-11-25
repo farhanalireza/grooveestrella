@@ -62,6 +62,7 @@ function SignUpContent() {
   const [platform, setPlatform] = useState("none");
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   useEffect(() => {
     const clean = query.trim();
@@ -97,6 +98,10 @@ function SignUpContent() {
       setErrorMsg("Password needs at least 6 characters.");
       return;
     }
+    if (!agreedToTerms) {
+      setErrorMsg("Please agree to the Terms of Service, Privacy Policy, and Community Guidelines to continue.");
+      return;
+    }
     setErrorMsg("");
     setStep(2);
   };
@@ -115,6 +120,10 @@ function SignUpContent() {
 
   const createAccount = async ({ skipTaste = false } = {}) => {
     setErrorMsg("");
+    if (!agreedToTerms) {
+      setErrorMsg("Please agree to the Terms of Service, Privacy Policy, and Community Guidelines to create your account.");
+      return;
+    }
     setLoading(true);
 
     const finalUsername =
@@ -286,6 +295,34 @@ function SignUpContent() {
                   </button>
                 );
               })}
+            </div>
+
+            {/* Terms and Community Guidelines Agreement */}
+            <div className="pt-2">
+              <label className="flex items-start gap-2.5 cursor-pointer select-none group p-3 rounded-2xl bg-[var(--theme-surface)]/60 border border-[var(--theme-border)] hover:border-amber-400/40 transition">
+                <input
+                  type="checkbox"
+                  checked={agreedToTerms}
+                  onChange={(e) => setAgreedToTerms(e.target.checked)}
+                  required
+                  className="mt-0.5 rounded border-[var(--theme-border)] text-amber-400 focus:ring-amber-400 cursor-pointer accent-amber-400"
+                />
+                <span className="text-xs text-[var(--theme-muted)] leading-relaxed">
+                  I agree to the{" "}
+                  <Link href="/terms" target="_blank" className="text-amber-300 font-bold hover:underline">
+                    Terms of Service
+                  </Link>
+                  ,{" "}
+                  <Link href="/privacy" target="_blank" className="text-amber-300 font-bold hover:underline">
+                    Privacy Policy
+                  </Link>
+                  , and{" "}
+                  <Link href="/guidelines" target="_blank" className="text-amber-300 font-bold hover:underline">
+                    Community Guidelines
+                  </Link>
+                  .
+                </span>
+              </label>
             </div>
 
             <div className="flex items-center justify-between pt-2">

@@ -27,6 +27,9 @@ import {
   Check,
   Shield,
   User,
+  FileText,
+  Users,
+  ExternalLink,
 } from "lucide-react";
 import { toast } from "@/lib/toast";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -674,6 +677,67 @@ export default function SettingsPage() {
               <Trash2 size={14} />
               <span>Clear Cache</span>
             </button>
+          </div>
+        </div>
+      </section>
+
+      {/* 6. Legal & Community Guidelines */}
+      <section className="space-y-4">
+        <div className="flex items-center gap-2">
+          <Shield size={18} className="text-amber-400" />
+          <h2 className="text-lg font-bold text-[var(--theme-fg)]">Legal & Community Guidelines</h2>
+        </div>
+
+        <div className="rounded-2xl bg-[var(--theme-card)] border border-[var(--theme-border)] p-5 space-y-3 shadow-sm">
+          <p className="text-xs text-[var(--theme-muted)] leading-relaxed">
+            GrooveEstrella is a platform for music discovery, journaling, and community ratings. Review our policies and guidelines at any time.
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+            <Link
+              href="/terms"
+              className="p-3.5 rounded-xl bg-[var(--theme-surface)] hover:bg-[var(--theme-surface)]/80 border border-[var(--theme-border)] hover:border-amber-400/40 transition group flex flex-col justify-between gap-2"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-[var(--theme-fg)] group-hover:text-amber-300 transition-colors">
+                  Terms of Service
+                </span>
+                <ExternalLink size={13} className="text-[var(--theme-muted)] group-hover:text-amber-300 transition-colors" />
+              </div>
+              <p className="text-[11px] text-[var(--theme-muted)]">
+                Service rules, eligibility, licensing, and liability
+              </p>
+            </Link>
+
+            <Link
+              href="/privacy"
+              className="p-3.5 rounded-xl bg-[var(--theme-surface)] hover:bg-[var(--theme-surface)]/80 border border-[var(--theme-border)] hover:border-cyan-400/40 transition group flex flex-col justify-between gap-2"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-[var(--theme-fg)] group-hover:text-cyan-300 transition-colors">
+                  Privacy Policy
+                </span>
+                <ExternalLink size={13} className="text-[var(--theme-muted)] group-hover:text-cyan-300 transition-colors" />
+              </div>
+              <p className="text-[11px] text-[var(--theme-muted)]">
+                Data collection, usage, rights, and retention
+              </p>
+            </Link>
+
+            <Link
+              href="/guidelines"
+              className="p-3.5 rounded-xl bg-[var(--theme-surface)] hover:bg-[var(--theme-surface)]/80 border border-[var(--theme-border)] hover:border-emerald-400/40 transition group flex flex-col justify-between gap-2"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-[var(--theme-fg)] group-hover:text-emerald-300 transition-colors">
+                  Community Guidelines
+                </span>
+                <ExternalLink size={13} className="text-[var(--theme-muted)] group-hover:text-emerald-300 transition-colors" />
+              </div>
+              <p className="text-[11px] text-[var(--theme-muted)]">
+                Respect, music focus, fair ratings, and conduct
+              </p>
+            </Link>
           </div>
         </div>
       </section>
