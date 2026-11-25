@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { 
-  Music, ArrowRight, Info, AlertCircle, Sparkles, Search, X, 
+  Music, ArrowRight, AlertCircle, Sparkles, Search, X, 
   Flame, Zap, Headphones, Disc, Disc3, Mic, ChevronRight, Compass, Award
 } from "lucide-react";
 import Link from "next/link";
@@ -163,6 +163,31 @@ export default function Home() {
   const [isPending, startTransition] = useTransition();
   const [navigatingId, setNavigatingId] = useState(null);
   const [officialLists, setOfficialLists] = useState([]);
+  const [guestExplore, setGuestExplore] = useState(false);
+  const [showTasteBanner, setShowTasteBanner] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("explore") === "true") {
+        setGuestExplore(true);
+      }
+      const dismissed = localStorage.getItem("groove_taste_banner_dismissed");
+      const hasGenres =
+        Boolean(localStorage.getItem("groove_favorite_genres")) ||
+        Boolean(localStorage.getItem("favoriteGenres"));
+      if (!dismissed && !hasGenres && user) {
+        setShowTasteBanner(true);
+      }
+    }
+  }, [user]);
+
+  const handleDismissTasteBanner = () => {
+    setShowTasteBanner(false);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("groove_taste_banner_dismissed", "true");
+    }
+  };
 
   useEffect(() => {
     let active = true;
@@ -251,13 +276,52 @@ export default function Home() {
     });
   };
 
-  // If visitor is unauthenticated, show marketing landing showcase immediately without blocking
-  if (!user) {
-    return <LandingPage />;
+  // If visitor is unauthenticated and hasn't chosen to explore the catalog, show marketing showcase
+  if (!user && !guestExplore) {
+    return <LandingPage onExplore={() => setGuestExplore(true)} />;
   }
 
   return (
     <div className="flex-grow flex flex-col items-center justify-start py-10 sm:py-14 px-4 sm:px-6 relative z-10 w-full max-w-5xl mx-auto pb-32">
+      {/* Non-intrusive Personalization Banner for new listeners */}
+      {showTasteBanner && (
+        <div className="w-full max-w-xl mb-6 p-4 rounded-3xl bg-gradient-to-r from-amber-400/15 via-yellow-400/10 to-amber-400/15 border border-amber-400/35 flex items-center justify-between gap-4 animate-fade-in shadow-md">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-2xl bg-amber-400/20 border border-amber-400/40 flex items-center justify-center text-amber-300 shrink-0">
+              <Sparkles size={18} />
+            </div>
+            <div className="min-w-0">
+              <h4 className="text-xs sm:text-sm font-black text-[var(--theme-fg)] truncate">
+                Personalize Your Recommendations
+              </h4>
+              <p className="text-[11px] text-[var(--theme-muted)] truncate">
+                Pick your favorite genres &amp; artists to tune your daily music feeds.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => {
+                window.dispatchEvent(new CustomEvent("open-onboarding"));
+                setShowTasteBanner(false);
+              }}
+              className="px-3.5 py-1.5 rounded-full bg-amber-400 text-zinc-950 font-black text-xs hover:opacity-90 active:scale-95 transition shadow-sm cursor-pointer whitespace-nowrap"
+            >
+              Tune Taste
+            </button>
+            <button
+              type="button"
+              onClick={handleDismissTasteBanner}
+              className="p-1 rounded-full text-[var(--theme-muted)] hover:text-[var(--theme-fg)] transition cursor-pointer"
+              title="Dismiss"
+            >
+              <X size={15} />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Hero Header Section */}
       <div className="max-w-2xl w-full text-center mb-10">
         
@@ -327,11 +391,6 @@ export default function Home() {
           </div>
         )}
 
-        {/* Quick info tip */}
-        <div className="flex items-center justify-center gap-2 text-xs text-[var(--theme-muted)]">
-          <Info className="w-4 h-4 text-[var(--theme-muted)]" />
-          <span>Search title/artist or paste direct links to get universal routing paths.</span>
-        </div>
       </div>
 
       {/* DISCOVERIES & SUGGESTIONS SECTION */}

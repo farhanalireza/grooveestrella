@@ -78,16 +78,19 @@ export default function SettingsPage() {
   const [favoriteGenres, setFavoriteGenres] = useState([]);
   const [preferredRatingSystem, setPreferredRatingSystem] = useState("stars"); // 'stars' | 'score'
   const [defaultIsPublic, setDefaultIsPublic] = useState(true);
-  const [preferredPlatform, setPreferredPlatform] = useState("spotify");
+  const [preferredPlatform, setPreferredPlatform] = useState("none");
   const [showVinylSides, setShowVinylSides] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
   // Load Preferences
   useEffect(() => {
     try {
-      const storedGenres = localStorage.getItem("groove_favorite_genres");
+      const storedGenres =
+        localStorage.getItem("groove_favorite_genres") || localStorage.getItem("favoriteGenres");
       if (storedGenres) setFavoriteGenres(JSON.parse(storedGenres));
-      else if (profile?.onboarding_data?.favorite_genres) setFavoriteGenres(profile.onboarding_data.favorite_genres);
+      else if (profile?.onboarding_data?.genres || profile?.onboarding_data?.favorite_genres) {
+        setFavoriteGenres(profile.onboarding_data.genres || profile.onboarding_data.favorite_genres);
+      }
 
       const storedRating = localStorage.getItem("groove_rating_system");
       if (storedRating) setPreferredRatingSystem(storedRating);
@@ -95,10 +98,13 @@ export default function SettingsPage() {
       const storedPublic = localStorage.getItem("groove_journal_default_public");
       if (storedPublic !== null) setDefaultIsPublic(storedPublic === "true");
 
-      const storedPlatform = localStorage.getItem("preferred_streaming_platform");
+      const storedPlatform =
+        localStorage.getItem("preferred_music_platform") ||
+        localStorage.getItem("preferred_streaming_platform");
       if (storedPlatform) setPreferredPlatform(storedPlatform);
 
-      const storedVinyl = localStorage.getItem("show_vinyl_sides");
+      const storedVinyl =
+        localStorage.getItem("groove_show_vinyl_sides") ?? localStorage.getItem("show_vinyl_sides");
       if (storedVinyl !== null) setShowVinylSides(storedVinyl === "true");
     } catch (_) {}
   }, [profile]);
@@ -108,31 +114,37 @@ export default function SettingsPage() {
     if (favoriteGenres.includes(genre)) {
       updated = favoriteGenres.filter((g) => g !== genre);
     } else {
-      if (favoriteGenres.length >= 8) {
-        toast.error("You can select up to 8 favorite genres.");
-        return;
-      }
       updated = [...favoriteGenres, genre];
     }
     setFavoriteGenres(updated);
     localStorage.setItem("groove_favorite_genres", JSON.stringify(updated));
+    localStorage.setItem("favoriteGenres", JSON.stringify(updated));
   };
 
   const handleSavePreferences = async () => {
     setIsSaving(true);
     try {
       localStorage.setItem("groove_favorite_genres", JSON.stringify(favoriteGenres));
+      localStorage.setItem("favoriteGenres", JSON.stringify(favoriteGenres));
       localStorage.setItem("groove_rating_system", preferredRatingSystem);
       localStorage.setItem("groove_journal_default_public", String(defaultIsPublic));
+      localStorage.setItem("preferred_music_platform", preferredPlatform);
       localStorage.setItem("preferred_streaming_platform", preferredPlatform);
+      localStorage.setItem("groove_show_vinyl_sides", String(showVinylSides));
       localStorage.setItem("show_vinyl_sides", String(showVinylSides));
 
-      // Sync to Supabase profile if possible
       if (user && isSupabaseConfigured()) {
         const supabase = createClient();
         await supabase
           .from("profiles")
           .update({
+            onboarding_data: {
+              ...(profile?.onboarding_data || {}),
+              genres: favoriteGenres,
+              platform: preferredPlatform,
+              showVinylSides,
+              completed_at: profile?.onboarding_data?.completed_at || new Date().toISOString(),
+            },
             updated_at: new Date().toISOString(),
           })
           .eq("id", user.id);
@@ -473,6 +485,7 @@ export default function SettingsPage() {
                     type="button"
                     onClick={() => {
                       setPreferredPlatform(plat.id);
+                      localStorage.setItem("preferred_music_platform", plat.id);
                       localStorage.setItem("preferred_streaming_platform", plat.id);
                     }}
                     className={`p-3 rounded-xl border text-left transition cursor-pointer flex flex-col justify-between ${
@@ -507,6 +520,7 @@ export default function SettingsPage() {
               onClick={() => {
                 const next = !showVinylSides;
                 setShowVinylSides(next);
+                localStorage.setItem("groove_show_vinyl_sides", String(next));
                 localStorage.setItem("show_vinyl_sides", String(next));
               }}
               className={`w-12 h-6 rounded-full transition-colors relative cursor-pointer shrink-0 ${
@@ -628,15 +642,13 @@ export default function SettingsPage() {
                 Music Onboarding Experience
               </span>
               <p className="text-xs text-[var(--theme-muted)] mt-0.5">
-                Re-run the initial musical taste survey to adjust recommendations
+                Open the short taste setup again. Your name and existing library stay put.
               </p>
             </div>
             <button
               type="button"
               onClick={() => {
-                localStorage.removeItem("groove_onboarding_completed");
-                toast.info("Onboarding reset. Visit home or account to restart.");
-                router.push("/");
+                window.dispatchEvent(new CustomEvent("open-onboarding"));
               }}
               className="px-4 py-2 rounded-xl bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] border border-[var(--theme-border)] text-xs font-bold text-[var(--theme-fg)] transition flex items-center gap-2 cursor-pointer self-start sm:self-center"
             >

@@ -30,31 +30,33 @@ export default function PWAInstallPrompt() {
     const isSafari = /safari/.test(ua) && !/chrome|crios|fxios|edgios/.test(ua);
     setIsIOS(isIOSDevice);
 
-    // 3. Listen for Android / Chromium beforeinstallprompt event
+    let nudgeTimer;
+    const scheduleInstallNudge = () => {
+      const dismissed = localStorage.getItem("pwa_install_dismissed");
+      if (dismissed && Date.now() - Number(dismissed) < 30 * 24 * 60 * 60 * 1000) return;
+      let signedIn = false;
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith("sb-")) signedIn = true;
+        }
+      } catch {
+        signedIn = false;
+      }
+      if (signedIn && localStorage.getItem("groove_onboarding_completed") !== "true") return;
+      nudgeTimer = setTimeout(() => setShowBanner(true), 12000);
+    };
+
     const handleBeforeInstall = (e) => {
       e.preventDefault();
       setDeferredPrompt(e);
       window.deferredPWAInstallPrompt = e;
-
-      // Check if user dismissed recently (7-day cooldown)
-      const dismissed = localStorage.getItem("pwa_install_dismissed");
-      if (!dismissed || Date.now() - Number(dismissed) > 7 * 24 * 60 * 60 * 1000) {
-        // Small delay so user isn't startled immediately on load
-        const timer = setTimeout(() => setShowBanner(true), 2500);
-        return () => clearTimeout(timer);
-      }
+      scheduleInstallNudge();
     };
 
     window.addEventListener("beforeinstallprompt", handleBeforeInstall);
 
-    // 4. If iOS Safari and not standalone, show prompt after initial exploration
-    if (isIOSDevice && isSafari) {
-      const dismissed = localStorage.getItem("pwa_install_dismissed");
-      if (!dismissed || Date.now() - Number(dismissed) > 7 * 24 * 60 * 60 * 1000) {
-        const timer = setTimeout(() => setShowBanner(true), 3500);
-        return () => clearTimeout(timer);
-      }
-    }
+    if (isIOSDevice && isSafari) scheduleInstallNudge();
 
     // 5. Listen for successful installation
     const handleAppInstalled = () => {
@@ -86,6 +88,7 @@ export default function PWAInstallPrompt() {
     window.addEventListener("open-pwa-install", handleManualOpen);
 
     return () => {
+      clearTimeout(nudgeTimer);
       window.removeEventListener("beforeinstallprompt", handleBeforeInstall);
       window.removeEventListener("appinstalled", handleAppInstalled);
       window.removeEventListener("open-pwa-install", handleManualOpen);

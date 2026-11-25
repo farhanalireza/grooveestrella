@@ -27,7 +27,7 @@ import {
 } from "lucide-react";
 import UserProfileBadge, { NOISE_GRAIN_BG } from "./UserProfileBadge";
 
-export default function LandingPage() {
+export default function LandingPage({ onExplore }) {
   const [activeTab, setActiveTab] = useState("diary"); // 'diary' | 'editions' | 'groovecard' | 'critics'
 
   return (
@@ -101,11 +101,29 @@ export default function LandingPage() {
               <span>Start Your Free Music Journal</span>
               <ArrowRight size={18} />
             </Link>
+            {onExplore ? (
+              <button
+                type="button"
+                onClick={onExplore}
+                className="w-full sm:w-auto px-8 py-4 rounded-full bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] border border-[var(--theme-border)] hover:border-amber-400/50 text-sm sm:text-base font-bold text-[var(--theme-fg)] transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md"
+              >
+                <span>Explore as Guest</span>
+                <ArrowRight size={16} />
+              </button>
+            ) : (
+              <Link
+                href="/?explore=true"
+                className="w-full sm:w-auto px-8 py-4 rounded-full bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] border border-[var(--theme-border)] hover:border-amber-400/50 text-sm sm:text-base font-bold text-[var(--theme-fg)] transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md"
+              >
+                <span>Explore as Guest</span>
+                <ArrowRight size={16} />
+              </Link>
+            )}
             <Link
-              href="/login"
-              className="w-full sm:w-auto px-8 py-4 rounded-full bg-[var(--theme-surface)] hover:bg-[var(--theme-card)] border border-[var(--theme-border)] text-sm sm:text-base font-bold text-[var(--theme-fg)] transition-all flex items-center justify-center gap-2"
+              href="/search"
+              className="w-full sm:w-auto px-6 py-4 rounded-full text-xs sm:text-sm font-semibold text-[var(--theme-muted)] hover:text-[var(--theme-fg)] transition-all flex items-center justify-center gap-1.5"
             >
-              <span>Explore as Member</span>
+              <span>Search catalog</span>
             </Link>
           </div>
 

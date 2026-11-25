@@ -29,13 +29,21 @@ export default function AppLayout({ children }) {
   const router = useRouter();
   const { user, loading: authLoading } = useSupabaseAuth();
 
+  const [isGuestExplore, setIsGuestExplore] = useState(false);
+
   useEffect(() => {
     setMounted(true);
     const saved = localStorage.getItem("groove_sidebar_collapsed");
     if (saved !== null) {
       setSidebarCollapsed(saved === "true");
     }
-  }, []);
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("explore") === "true") {
+        setIsGuestExplore(true);
+      }
+    }
+  }, [pathname]);
 
   const handleToggleSidebar = useCallback(() => {
     setSidebarCollapsed((prev) => {
@@ -46,8 +54,8 @@ export default function AppLayout({ children }) {
   }, []);
 
   const isAuthPage = pathname === "/login" || pathname === "/signup";
-  // Landing page on '/' for unauthenticated visitors hides the internal sidebar chrome
-  const isLanding = pathname === "/" && !user;
+  // Landing page on '/' for unauthenticated visitors hides the internal sidebar chrome unless exploring
+  const isLanding = pathname === "/" && !user && !isGuestExplore;
   const hideAppChrome = isAuthPage || isLanding;
 
   // Protect ONLY authenticated private routes; public music/info pages load freely
@@ -84,7 +92,7 @@ export default function AppLayout({ children }) {
         <>
           <PlaylistPickerModal />
           <PWAInstallPrompt />
-          {user && <OnboardingModal />}
+          <OnboardingModal />
         </>
       )}
       {mounted && <LiquidToastContainer />}

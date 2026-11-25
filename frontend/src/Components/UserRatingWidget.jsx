@@ -319,18 +319,16 @@ export default function UserRatingWidget({
   return (
     <>
       <div className={`relative inline-flex items-center gap-2 select-none flex-wrap ${className}`} ref={quickRateRef}>
-        {/* Primary Action for Albums & Tracks: "Log a Listen" */}
-        {!isArtist && (
-          <button
-            type="button"
-            onClick={() => setIsLogModalOpen(true)}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-black text-zinc-950 bg-gradient-to-r from-amber-400 via-amber-300 to-amber-400 hover:opacity-95 active:scale-95 shadow-md shadow-amber-400/20 transition-all duration-200 cursor-pointer group shrink-0"
-            title="Log a listen with rating, date, review & mood"
-          >
-            <BookOpen size={13} className="text-zinc-950 shrink-0" />
-            <span>Log a Listen</span>
-          </button>
-        )}
+        {/* Primary Action for Albums, Tracks & Artists: "Log a Listen" / "Rate Artist" */}
+        <button
+          type="button"
+          onClick={() => setIsLogModalOpen(true)}
+          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-black text-zinc-950 bg-gradient-to-r from-amber-400 via-amber-300 to-amber-400 hover:opacity-95 active:scale-95 shadow-md shadow-amber-400/20 transition-all duration-200 cursor-pointer group shrink-0"
+          title={isArtist ? "Rate and review this artist" : "Log a listen with rating, date, review & mood"}
+        >
+          <BookOpen size={13} className="text-zinc-950 shrink-0" />
+          <span>{isArtist ? "Rate Artist" : "Log a Listen"}</span>
+        </button>
 
         {/* Ratings Component Capsule: [ ★ Rate ] | [ 🎀 8.5★ (11) ] */}
         <div className="inline-flex items-center gap-1.5 p-1 px-2 sm:px-2.5 rounded-full bg-black/40 backdrop-blur-xl border border-white/15 shadow-md transition-all duration-200 hover:border-amber-400/35 shrink-0">
@@ -456,19 +454,17 @@ export default function UserRatingWidget({
                 <span className="text-[10px] text-[var(--theme-muted)]">
                   {isArtist ? "Rating saved publicly" : "Auto-logged to journal"}
                 </span>
-                {!isArtist && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowQuickRate(false);
-                      setIsLogModalOpen(true);
-                    }}
-                    className="text-[10px] font-bold text-amber-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
-                  >
-                    <BookOpen size={10} />
-                    <span>Write review & notes →</span>
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowQuickRate(false);
+                    setIsLogModalOpen(true);
+                  }}
+                  className="text-[10px] font-bold text-amber-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                >
+                  <BookOpen size={10} />
+                  <span>Write review & notes →</span>
+                </button>
               </div>
             </div>
           </div>

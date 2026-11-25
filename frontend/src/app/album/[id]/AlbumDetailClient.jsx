@@ -54,7 +54,9 @@ export default function AlbumDetailClient({ id, initialAlbum, initialTracks }) {
 
     useEffect(() => {
         if (typeof window !== "undefined") {
-            const savedPref = localStorage.getItem("groove_show_vinyl_sides");
+            const savedPref =
+                localStorage.getItem("groove_show_vinyl_sides") ??
+                localStorage.getItem("show_vinyl_sides");
             if (savedPref !== null) {
                 setShowVinylSides(savedPref === "true");
             } else {

@@ -144,10 +144,17 @@ function AccountDashboardContent() {
       setSavedTracks(songs);
       setSavedArtists(artists);
 
-      const genres = JSON.parse(localStorage.getItem("groove_favorite_genres") || "[]");
+      const rawGenres =
+        localStorage.getItem("groove_favorite_genres") ||
+        localStorage.getItem("favoriteGenres") ||
+        "[]";
+      let genres = JSON.parse(rawGenres);
+      if (!genres.length && authProfile?.onboarding_data) {
+        genres = authProfile.onboarding_data.genres || authProfile.onboarding_data.favorite_genres || [];
+      }
       setFavoriteGenres(genres);
     } catch (_) {}
-  }, []);
+  }, [authProfile]);
 
   // Fetch Journal Logs
   const loadJournalLogs = async () => {
